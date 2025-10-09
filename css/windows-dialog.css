@@ -1,0 +1,115 @@
+/* Classic Windows Dialog Style */
+.windows-dialog {
+    display: none;
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 10000;
+    background: #c0c0c0;
+    border: 2px solid;
+    border-color: #dfdfdf #404040 #404040 #dfdfdf;
+    box-shadow: 2px 2px 0 rgba(0,0,0,0.4);
+    font-family: 'MS Sans Serif', 'Microsoft Sans Serif', sans-serif;
+    font-size: 11px;
+    min-width: 300px;
+    max-width: 500px;
+}
+
+.windows-dialog-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.3);
+    z-index: 9999;
+}
+
+.windows-dialog-title {
+    background: linear-gradient(to right, #000080, #1084d0);
+    color: white;
+    padding: 3px 5px;
+    font-weight: bold;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.windows-dialog-close {
+    width: 16px;
+    height: 14px;
+    background: #c0c0c0;
+    border: 1px solid;
+    border-color: #dfdfdf #404040 #404040 #dfdfdf;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    font-weight: bold;
+    padding: 0;
+}
+
+.windows-dialog-close:active {
+    border-color: #404040 #dfdfdf #dfdfdf #404040;
+}
+
+.windows-dialog-content {
+    padding: 15px;
+    display: flex;
+    gap: 15px;
+    align-items: start;
+}
+
+.windows-dialog-icon {
+    font-size: 32px;
+    min-width: 32px;
+}
+
+.windows-dialog-text {
+    flex: 1;
+    color: #000;
+    line-height: 1.4;
+    word-wrap: break-word;
+}
+
+.windows-dialog-buttons {
+    padding: 10px 15px 15px 15px;
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+}
+
+.windows-btn {
+    min-width: 75px;
+    padding: 4px 12px;
+    background: #c0c0c0;
+    border: 2px solid;
+    border-color: #dfdfdf #404040 #404040 #dfdfdf;
+    cursor: pointer;
+    font-family: 'MS Sans Serif', 'Microsoft Sans Serif', sans-serif;
+    font-size: 11px;
+}
+
+.windows-btn:active {
+    border-color: #404040 #dfdfdf #dfdfdf #404040;
+}
+
+.windows-btn:focus {
+    outline: 1px dotted #000;
+    outline-offset: -4px;
+}
+
+/* Prompt/Input Dialog */
+.windows-dialog-input {
+    width: 100%;
+    padding: 3px;
+    border: 2px solid;
+    border-color: #404040 #dfdfdf #dfdfdf #404040;
+    background: white;
+    font-family: 'MS Sans Serif', 'Microsoft Sans Serif', sans-serif;
+    font-size: 11px;
+    margin-top: 10px;
+}

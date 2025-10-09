@@ -1,0 +1,204 @@
+<!doctype html>
+<html lang="da">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Log ind – Flowfactory Virksomhedsportal</title>
+  <link rel="stylesheet" href="css/login.css" />
+</head>
+<script>
+  // Fallback: gør "Opret demo-bruger" knappen aktiv direkte fra HTML
+  (function () {
+    const btn = document.getElementById('createDemo');
+    const email = document.getElementById('email');
+    const pass  = document.getElementById('password');
+    const msg   = document.getElementById('message');
+
+    if (!btn) return;
+
+    btn.addEventListener('click', async function () {
+      if (msg) msg.textContent = 'Opretter demo-bruger…';
+      try {
+        const res = await fetch('https://flowfactory-backend-production.up.railway.app/api/auth/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: 'Admin',
+            email: 'admin@demo.local',
+            password: 'Password123!'
+          })
+        });
+        const data = await res.json().catch(() => ({}));
+
+        if (res.ok || (data && data.error === 'Email already in use')) {
+          if (email) email.value = 'admin@demo.local';
+          if (pass)  pass.value  = 'Password123!';
+          if (msg)   msg.textContent = 'Demo-bruger klar. Tryk "Log ind".';
+        } else {
+          if (msg) msg.textContent = (data && data.error) || 'Kunne ikke oprette demo-bruger';
+        }
+      } catch (e) {
+        if (msg) msg.textContent = 'Netværksfejl – tjek backend forbindelse';
+      }
+    });
+  })();
+</script>
+
+<body>
+  <div class="login-container">
+    <div class="login-box">
+      <div class="logo" style="text-align:center;margin-bottom:16px;">
+        <img src="logobreeze.png" alt="Logo" style="max-height:80px;opacity:.9" />
+      </div>
+
+      <form id="loginForm">
+        <div class="form-group">
+          <label for="email">E-mail:</label>
+          <input type="email" id="email" name="email" placeholder="mail@firma.dk" required />
+        </div>
+
+        <div class="form-group">
+          <label for="password">Adgangskode:</label>
+          <input type="password" id="password" name="password" placeholder="********" required />
+        </div>
+
+        <button type="submit" class="login-btn">Log ind</button>
+
+        <!-- Demo-bruger knap -->
+        <button type="button" id="createDemo" class="login-btn" style="margin-top:8px;opacity:.8">
+          Opret demo-bruger (admin@demo.local)
+        </button>
+      </form>
+
+      <div id="message" class="message"></div>
+
+      <div style="margin-top:16px;text-align:center;font-size:14px;">
+        <a href="#" onclick="toggleRegister(); return false;" id="registerLink" style="color: #667eea; text-decoration: none;">Ny bruger? Registrer her</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Registrerings formular (skjult som standard) -->
+  <div class="login-container" id="registerContainer" style="display: none;">
+    <div class="login-box">
+      <div class="logo" style="text-align:center;margin-bottom:16px;">
+        <img src="logobreeze.png" alt="Logo" style="max-height:80px;opacity:.9" />
+      </div>
+
+      <h2 style="text-align: center; margin-bottom: 20px;">Opret Bruger</h2>
+
+      <form id="registerForm">
+        <div class="form-group">
+          <label for="regName">Fulde navn:</label>
+          <input type="text" id="regName" placeholder="Dit fulde navn" required />
+        </div>
+
+        <div class="form-group">
+          <label for="regEmail">E-mail:</label>
+          <input type="email" id="regEmail" placeholder="mail@firma.dk" required />
+        </div>
+
+        <div class="form-group">
+          <label for="regPassword">Adgangskode:</label>
+          <input type="password" id="regPassword" placeholder="Mindst 6 tegn" required />
+        </div>
+
+        <div class="form-group">
+          <label for="regPosition">Stilling (valgfri):</label>
+          <input type="text" id="regPosition" placeholder="F.eks. Udvikler" />
+        </div>
+
+        <div class="form-group">
+          <label for="regDepartment">Afdeling (valgfri):</label>
+          <input type="text" id="regDepartment" placeholder="F.eks. IT" />
+        </div>
+
+        <div class="form-group">
+          <label for="regInviteCode">Invite kode (valgfri):</label>
+          <input type="text" id="regInviteCode" placeholder="Hvis du har en invite kode" />
+          <small style="display: block; margin-top: 5px; color: #666;">Med invite kode får du direkte adgang. Uden kode skal en admin godkende dig.</small>
+        </div>
+
+        <button type="submit" class="login-btn">Opret bruger</button>
+      </form>
+
+      <div id="regMessage" class="message"></div>
+
+      <div style="margin-top:16px;text-align:center;font-size:14px;">
+        <a href="#" onclick="toggleRegister(); return false;" style="color: #667eea; text-decoration: none;">← Tilbage til login</a>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function toggleRegister() {
+      const loginContainer = document.querySelector('.login-container:not(#registerContainer)');
+      const registerContainer = document.getElementById('registerContainer');
+      
+      if (loginContainer.style.display === 'none') {
+        loginContainer.style.display = 'flex';
+        registerContainer.style.display = 'none';
+      } else {
+        loginContainer.style.display = 'none';
+        registerContainer.style.display = 'flex';
+      }
+    }
+
+    // Håndter registrering
+    document.getElementById('registerForm')?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const msgEl = document.getElementById('regMessage');
+      msgEl.textContent = 'Opretter bruger...';
+      msgEl.className = 'message';
+      msgEl.style.display = 'block';
+      
+      const data = {
+        name: document.getElementById('regName').value.trim(),
+        email: document.getElementById('regEmail').value.trim(),
+        password: document.getElementById('regPassword').value,
+        position: document.getElementById('regPosition').value.trim(),
+        department: document.getElementById('regDepartment').value.trim(),
+        inviteCode: document.getElementById('regInviteCode').value.trim()
+      };
+      
+      try {
+        const response = await fetch('https://flowfactory-backend-production.up.railway.app/api/auth/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data)
+        });
+        
+        const result = await response.json();
+        
+        if (!response.ok) {
+          throw new Error(result.error || 'Registrering fejlede');
+        }
+        
+        if (result.pending) {
+          msgEl.textContent = '✅ ' + result.message + '\n\nDu får besked når din bruger er godkendt.';
+          msgEl.className = 'message success';
+          setTimeout(() => toggleRegister(), 3000);
+        } else {
+          msgEl.textContent = '✅ Bruger oprettet! Logger ind...';
+          msgEl.className = 'message success';
+          
+          // Auto-login
+          sessionStorage.setItem('token', result.token);
+          sessionStorage.setItem('currentUser', JSON.stringify(result.user));
+          
+          setTimeout(() => {
+            window.location.href = 'dashboard.html';
+          }, 1500);
+        }
+      } catch (err) {
+        msgEl.textContent = '❌ ' + err.message;
+        msgEl.className = 'message error';
+      }
+    });
+  </script>
+
+  <!-- VIGTIGT: module-script så import virker -->
+  <script type="module" src="js/login.js"></script>
+</body>
+</html>
