@@ -1,5 +1,5 @@
 // js/api.js
-const API = 'http://localhost:4000';
+const API = 'https://flowfactory-backend-production.up.railway.app';
 
 function token() {
   return sessionStorage.getItem('token') || '';

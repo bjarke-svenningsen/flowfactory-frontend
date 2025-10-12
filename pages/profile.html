@@ -1,0 +1,90 @@
+<h2 style="margin-bottom: 20px;">Min Profil</h2>
+
+<div class="profile-header">
+    <div style="position: relative;">
+        <div class="profile-avatar" id="profileAvatar">TB</div>
+        <input type="file" id="profilePhotoInput" accept="image/*" style="display: none;" onchange="changeProfilePhoto(event)">
+        <button class="change-photo-btn" onclick="document.getElementById('profilePhotoInput').click()">📷</button>
+    </div>
+    
+    <div class="profile-info">
+        <h2 id="profileName">Test Bruger</h2>
+        <p id="profileEmail">test@firma.dk</p>
+    </div>
+    
+    <button id="editBtn" class="edit-profile-btn" onclick="toggleEditMode()">✏️ Rediger profil</button>
+</div>
+
+<div id="profileViewMode">
+    <div class="info-card">
+        <h3>Personlige oplysninger</h3>
+        <div class="info-row">
+            <div class="info-label">Fulde navn:</div>
+            <div class="info-value" id="infoName">Test Bruger</div>
+        </div>
+        <div class="info-row">
+            <div class="info-label">Email:</div>
+            <div class="info-value" id="infoEmail">test@firma.dk</div>
+        </div>
+        <div class="info-row">
+            <div class="info-label">Stilling:</div>
+            <div class="info-value" id="infoPosition">Medarbejder</div>
+        </div>
+        <div class="info-row">
+            <div class="info-label">Afdeling:</div>
+            <div class="info-value" id="infoDepartment">IT</div>
+        </div>
+        <div class="info-row">
+            <div class="info-label">Telefon:</div>
+            <div class="info-value" id="infoPhone">+45 12 34 56 78</div>
+        </div>
+    </div>
+
+    <div class="info-card">
+        <h3>Aktivitet</h3>
+        <div class="info-row">
+            <div class="info-label">Medlem siden:</div>
+            <div class="info-value" id="infoMemberSince">Indlæser...</div>
+        </div>
+        <div class="info-row">
+            <div class="info-label">Beskeder sendt:</div>
+            <div class="info-value" id="infoMessagesSent">Indlæser...</div>
+        </div>
+        <div class="info-row">
+            <div class="info-label">Opslag lavet:</div>
+            <div class="info-value" id="infoPostsCreated">Indlæser...</div>
+        </div>
+    </div>
+</div>
+
+<div id="profileEditMode" style="display: none;">
+    <div class="info-card">
+        <h3>Rediger Information</h3>
+        <div class="edit-form">
+            <div class="form-group">
+                <label>Fulde navn:</label>
+                <input type="text" id="editName" class="profile-input">
+            </div>
+            <div class="form-group">
+                <label>Email:</label>
+                <input type="email" id="editEmail" class="profile-input" disabled>
+            </div>
+            <div class="form-group">
+                <label>Stilling:</label>
+                <input type="text" id="editPosition" class="profile-input">
+            </div>
+            <div class="form-group">
+                <label>Afdeling:</label>
+                <input type="text" id="editDepartment" class="profile-input">
+            </div>
+            <div class="form-group">
+                <label>Telefon:</label>
+                <input type="tel" id="editPhone" class="profile-input">
+            </div>
+            <div style="display: flex; gap: 10px; margin-top: 20px;">
+                <button class="save-btn" onclick="saveProfile()">💾 Gem ændringer</button>
+                <button class="cancel-btn" onclick="toggleEditMode()">❌ Annuller</button>
+            </div>
+        </div>
+    </div>
+</div>

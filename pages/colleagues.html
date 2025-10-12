@@ -1,0 +1,19 @@
+<h2 style="margin-bottom: 20px;">Kolleger</h2>
+
+<div style="display: flex; gap: 15px; margin-bottom: 20px; align-items: center;">
+    <input type="text" id="colleagueSearch" placeholder="🔍 Søg efter kolleger..." 
+           style="flex: 1; padding: 10px; border: 1px solid #e0e0e0; border-radius: 5px;"
+           onkeyup="filterColleagues()">
+    
+    <select id="departmentFilter" onchange="filterColleagues()" 
+            style="padding: 10px; border: 1px solid #e0e0e0; border-radius: 5px;">
+        <option value="">Alle afdelinger</option>
+    </select>
+    
+    <select id="positionFilter" onchange="filterColleagues()" 
+            style="padding: 10px; border: 1px solid #e0e0e0; border-radius: 5px;">
+        <option value="">Alle stillinger</option>
+    </select>
+</div>
+
+<div id="colleaguesGrid" class="colleagues-grid"></div>

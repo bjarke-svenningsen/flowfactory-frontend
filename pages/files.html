@@ -1,0 +1,74 @@
+<div class="file-explorer">
+    <div class="explorer-title-bar">
+        <span>📁 Filhåndtering</span>
+    </div>
+
+    <div class="explorer-toolbar">
+        <div class="toolbar-left">
+            <button class="toolbar-btn" onclick="navigateBack()" title="Tilbage">◀ Tilbage</button>
+            <button class="toolbar-btn" onclick="navigateUp()" title="Op">⬆</button>
+        </div>
+        <div class="toolbar-center">
+            <span class="address-bar-label">Adresse:</span>
+            <div class="address-bar" id="addressBar">C:\Mine dokumenter</div>
+        </div>
+        <div class="toolbar-right">
+            <button class="toolbar-btn" onclick="showNewFolderDialog()">📁 Ny</button>
+            <button class="toolbar-btn" onclick="document.getElementById('fileExplorerUpload').click()">📤 Upload</button>
+            <button class="toolbar-btn" onclick="downloadFile()">💾 Download</button>
+            <button class="toolbar-btn" onclick="deleteSelected()">🗑️ Slet</button>
+            <button class="toolbar-btn" onclick="searchFiles()">🔍 Søg</button>
+            <button class="toolbar-btn" onclick="refreshExplorer()">🔄</button>
+            <input type="file" id="fileExplorerUpload" style="display: none;" onchange="uploadFileToExplorer(event)">
+        </div>
+    </div>
+
+    <div class="explorer-body">
+        <div class="explorer-tree" id="folderTree"></div>
+
+        <div class="explorer-content">
+            <table class="file-list-view">
+                <thead>
+                    <tr>
+                        <th onclick="sortFiles('name')">Navn</th>
+                        <th onclick="sortFiles('size')" style="width: 100px;">Størrelse</th>
+                        <th onclick="sortFiles('type')" style="width: 120px;">Type</th>
+                        <th onclick="sortFiles('date')" style="width: 140px;">Ændret</th>
+                    </tr>
+                </thead>
+                <tbody id="fileListBody"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="explorer-statusbar">
+        <span class="status-section" id="fileCount">0 objekter</span>
+        <span class="status-section" id="selectedInfo"></span>
+    </div>
+</div>
+
+<div id="contextMenu" class="context-menu">
+    <div class="context-menu-item" onclick="openSelectedFile()">Åbn</div>
+    <div class="context-menu-separator"></div>
+    <div class="context-menu-item" onclick="cutSelected()">Klip</div>
+    <div class="context-menu-item" onclick="copySelected()">Kopier</div>
+    <div class="context-menu-item" onclick="pasteClipboard()">Sæt ind</div>
+    <div class="context-menu-separator"></div>
+    <div class="context-menu-item" onclick="downloadFile()">💾 Download</div>
+    <div class="context-menu-item" onclick="shareFile()">🔗 Del med kolleger</div>
+    <div class="context-menu-item" onclick="transferToOrder()">📦 Overfør til ordre</div>
+    <div class="context-menu-separator"></div>
+    <div class="context-menu-item" onclick="deleteSelected()">Slet</div>
+    <div class="context-menu-item" onclick="renameSelected()">Omdøb</div>
+    <div class="context-menu-separator"></div>
+    <div class="context-menu-item" onclick="showProperties()">Egenskaber</div>
+</div>
+
+<div id="folderContextMenu" class="context-menu">
+    <div class="context-menu-item" onclick="createSubfolder()">📁 Ny undermappe</div>
+    <div class="context-menu-separator"></div>
+    <div class="context-menu-item" onclick="renameFolderSelected()">✏️ Omdøb mappe</div>
+    <div class="context-menu-item" onclick="deleteFolderSelected()">🗑️ Slet mappe</div>
+    <div class="context-menu-separator"></div>
+    <div class="context-menu-item" onclick="showFolderProperties()">📋 Egenskaber</div>
+</div>

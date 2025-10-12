@@ -1,0 +1,115 @@
+<!-- Tab Navigation -->
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+    <h2 style="margin: 0;">📋 Ordrestyring</h2>
+</div>
+
+<div style="display: flex; border-bottom: 2px solid #e0e0e0; margin-bottom: 20px; gap: 5px;">
+    <button id="tabQuotes" onclick="switchOrderTab('quotes')" style="padding: 12px 24px; background: #667eea; color: white; border: none; border-radius: 5px 5px 0 0; cursor: pointer; font-weight: 600;">
+        📄 Tilbud
+    </button>
+    <button id="tabOrders" onclick="switchOrderTab('orders')" style="padding: 12px 24px; background: transparent; color: #666; border: none; border-radius: 5px 5px 0 0; cursor: pointer; font-weight: 600;">
+        📦 Godkendte Ordre
+    </button>
+    <button id="tabInvoiced" onclick="switchOrderTab('invoiced')" style="padding: 12px 24px; background: transparent; color: #666; border: none; border-radius: 5px 5px 0 0; cursor: pointer; font-weight: 600;">
+        💰 Faktureret
+    </button>
+    <button id="tabRejected" onclick="switchOrderTab('rejected')" style="padding: 12px 24px; background: transparent; color: #666; border: none; border-radius: 5px 5px 0 0; cursor: pointer; font-weight: 600;">
+        ❌ Afvist
+    </button>
+    <button id="tabCustomers" onclick="switchOrderTab('customers')" style="padding: 12px 24px; background: transparent; color: #666; border: none; border-radius: 5px 5px 0 0; cursor: pointer; font-weight: 600;">
+        👥 Kunder
+    </button>
+</div>
+
+<!-- TAB 1: TILBUD -->
+<div id="orderTabQuotes" class="order-tab-content">
+    <div id="quotesListView">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <div style="display: flex; gap: 10px;">
+                <button onclick="filterQuotesByStatus('all')" id="filterAll" style="padding: 8px 16px; background: #667eea; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 13px;">
+                    Alle
+                </button>
+                <button onclick="filterQuotesByStatus('draft')" id="filterDraft" style="padding: 8px 16px; background: #e0e0e0; color: #666; border: none; border-radius: 5px; cursor: pointer; font-size: 13px;">
+                    📝 Udkast
+                </button>
+                <button onclick="filterQuotesByStatus('sent')" id="filterSent" style="padding: 8px 16px; background: #e0e0e0; color: #666; border: none; border-radius: 5px; cursor: pointer; font-size: 13px;">
+                    📧 Sendt
+                </button>
+                <button onclick="filterQuotesByStatus('rejected')" id="filterRejected" style="padding: 8px 16px; background: #e0e0e0; color: #666; border: none; border-radius: 5px; cursor: pointer; font-size: 13px;">
+                    ❌ Afvist
+                </button>
+            </div>
+            <button onclick="showCreateQuote()" style="padding: 10px 20px; background: #667eea; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 14px;">
+                ➕ Nyt Tilbud
+            </button>
+        </div>
+        
+        <div id="quotesListContainer"></div>
+    </div>
+</div>
+
+<!-- TAB 2: ORDRE -->
+<div id="orderTabOrders" class="order-tab-content" style="display: none;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <p style="color: #666;">Accepterede ordrer der afventer fakturering</p>
+    </div>
+    
+    <div id="ordersContainer"></div>
+</div>
+
+<!-- TAB 3: FAKTURERET -->
+<div id="orderTabInvoiced" class="order-tab-content" style="display: none;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <p style="color: #666;">Fakturerede ordrer og fakturaer</p>
+    </div>
+    
+    <div id="invoicingContainer"></div>
+</div>
+
+<!-- TAB 4: AFVIST -->
+<div id="orderTabRejected" class="order-tab-content" style="display: none;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <p style="color: #666;">Afviste tilbud</p>
+    </div>
+    
+    <div id="rejectedContainer"></div>
+</div>
+
+<!-- TAB 5: KUNDER -->
+<div id="orderTabCustomers" class="order-tab-content" style="display: none;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <div></div>
+        <button onclick="showCreateCustomer()" style="padding: 10px 20px; background: #4caf50; color: white; border: none; border-radius: 5px; cursor: pointer;">
+            ➕ Opret Ny Kunde
+        </button>
+    </div>
+    
+    <div id="customersListContainer"></div>
+</div>
+
+<!-- Form View -->
+<div id="quotesFormView" style="display: none;">
+    <div style="margin-bottom: 20px;">
+        <button onclick="backToQuotesList()" style="padding: 8px 16px; background: #999; color: white; border: none; border-radius: 5px; cursor: pointer;">
+            ← Tilbage til oversigt
+        </button>
+    </div>
+    
+    <div id="quotesFormContainer"></div>
+</div>
+
+<!-- Preview View -->
+<div id="quotesPreviewView" style="display: none;">
+    <div style="margin-bottom: 20px;">
+        <button onclick="backToQuotesList()" style="padding: 8px 16px; background: #999; color: white; border: none; border-radius: 5px; cursor: pointer;">
+            ← Tilbage til oversigt
+        </button>
+    </div>
+    
+    <div id="quotesPreviewContainer"></div>
+</div>
+
+<!-- Customers View -->
+<div id="quotesCustomersView" style="display: none;">
+    <div id="customersListContainer"></div>
+</div>

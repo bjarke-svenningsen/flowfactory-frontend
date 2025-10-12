@@ -21,7 +21,7 @@ function initChat() {
     try {
         const token = sessionStorage.getItem('token');
         if (token && typeof io !== 'undefined') {
-            socket = io('http://localhost:4000');
+            socket = io('https://flowfactory-backend-production.up.railway.app');
             
             socket.on('connect', () => {
                 console.log('Connected to chat server');
@@ -124,7 +124,7 @@ async function openChatWith(userId) {
     // Hent chat historik fra backend
     try {
         const token = sessionStorage.getItem('token');
-        const response = await fetch(`http://localhost:4000/api/messages/${userId}`, {
+        const response = await fetch(`https://flowfactory-backend-production.up.railway.app/api/messages/${userId}`, {
             headers: {
                 'Authorization': `Bearer ${token}`
             }

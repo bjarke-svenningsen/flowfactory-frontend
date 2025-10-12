@@ -1,0 +1,57 @@
+<h2 style="margin-bottom: 20px;">🛡️ Admin Panel</h2>
+
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin-bottom: 30px;">
+    <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 10px;">
+        <h3 style="margin: 0 0 10px 0;">📊 Statistik</h3>
+        <p style="font-size: 32px; font-weight: bold; margin: 0;" id="adminTotalUsers">-</p>
+        <p style="margin: 5px 0 0 0; opacity: 0.9;">Totale brugere</p>
+    </div>
+    <div style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white; padding: 20px; border-radius: 10px;">
+        <h3 style="margin: 0 0 10px 0;">⏳ Afventende</h3>
+        <p style="font-size: 32px; font-weight: bold; margin: 0;" id="adminPendingUsers">-</p>
+        <p style="margin: 5px 0 0 0; opacity: 0.9;">Godkendelser</p>
+    </div>
+    <div style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); color: white; padding: 20px; border-radius: 10px;">
+        <h3 style="margin: 0 0 10px 0;">🎫 Invite Koder</h3>
+        <p style="font-size: 32px; font-weight: bold; margin: 0;" id="adminInviteCodes">-</p>
+        <p style="margin: 5px 0 0 0; opacity: 0.9;">Aktive koder</p>
+    </div>
+</div>
+
+<!-- Ventende Brugere -->
+<div class="info-card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+        <h3 style="margin: 0;">⏳ Ventende Registreringer</h3>
+        <button onclick="loadPendingUsers()" style="padding: 8px 16px; background: #667eea; color: white; border: none; border-radius: 5px; cursor: pointer;">
+            🔄 Opdater
+        </button>
+    </div>
+    <div id="pendingUsersList"></div>
+</div>
+
+<!-- Invite Koder -->
+<div class="info-card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+        <h3 style="margin: 0;">🎫 Invite Koder</h3>
+        <div style="display: flex; gap: 10px;">
+            <button onclick="sendEmailInvitation()" style="padding: 8px 16px; background: #2196f3; color: white; border: none; border-radius: 5px; cursor: pointer;">
+                📧 Send Email Invitation
+            </button>
+            <button onclick="generateInviteCode()" style="padding: 8px 16px; background: #4caf50; color: white; border: none; border-radius: 5px; cursor: pointer;">
+                ➕ Generer Ny Kode
+            </button>
+        </div>
+    </div>
+    <div id="inviteCodesList"></div>
+</div>
+
+<!-- Alle Brugere -->
+<div class="info-card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+        <h3 style="margin: 0;">👥 Alle Brugere</h3>
+        <button onclick="loadAllUsers()" style="padding: 8px 16px; background: #667eea; color: white; border: none; border-radius: 5px; cursor: pointer;">
+            🔄 Opdater
+        </button>
+    </div>
+    <div id="allUsersList"></div>
+</div>

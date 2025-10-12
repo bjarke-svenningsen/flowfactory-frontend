@@ -6,26 +6,57 @@ let workspaceExpenses = [];
 let workspaceDocuments = [];
 let workspaceTimeline = [];
 let workspaceNotes = [];
+let workspaceExtraWorkOrders = [];
+let workspaceFinancials = null;
 let currentWorkspaceTab = 'overview';
 let extraWorkLines = [];
+let parentOrderId = null; // Track parent order for back navigation
 
 // Open order workspace
-async function openOrderWorkspace(orderId) {
+async function openOrderWorkspace(orderId, fromParentId = null) {
+    console.log('=== openOrderWorkspace called ===');
+    console.log('orderId:', orderId);
+    console.log('fromParentId:', fromParentId);
+    
     try {
         const token = sessionStorage.getItem('token');
-        const response = await fetch(`http://localhost:4000/api/orders/${orderId}/workspace`, {
+        const response = await fetch(`https://flowfactory-backend-production.up.railway.app/api/orders/${orderId}/workspace`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         
         if (!response.ok) throw new Error('Failed to load workspace');
         
         const data = await response.json();
+        
+        console.log('Received workspace data:', data.order);
+        console.log('Order ID from backend:', data.order.id);
+        console.log('Order number from backend:', data.order.order_number);
+        console.log('Is extra work?', data.order.is_extra_work);
+        
+        // If this is extra work being opened from parent, save parent ID
+        if (data.order.is_extra_work && data.order.parent_order_id && fromParentId === null) {
+            // When opening extra work, set parent to the parent_order_id from data
+            parentOrderId = data.order.parent_order_id;
+        } else if (fromParentId) {
+            // Explicitly passed parent (when clicking from parent workspace)
+            parentOrderId = fromParentId;
+        } else {
+            // Opening main order - clear parent
+            parentOrderId = null;
+        }
+        
         currentWorkspaceOrder = data.order;
         currentWorkspaceInvoice = data.invoice;
         workspaceExpenses = data.expenses.items;
         workspaceDocuments = data.documents;
         workspaceTimeline = data.timeline;
         workspaceNotes = data.notes;
+        workspaceExtraWorkOrders = data.extra_work_orders || [];
+        workspaceFinancials = data.financials;
+        
+        // Update browser URL with current order
+        const url = `#/orders/${orderId}/workspace`;
+        history.pushState({ orderId, parentOrderId }, '', url);
         
         renderWorkspace(data);
     } catch (error) {
@@ -148,33 +179,103 @@ function switchWorkspaceTab(tab) {
 
 // Render overview tab with pie chart
 function renderWorkspaceOverview(container) {
-    const totalExpenses = workspaceExpenses.reduce((sum, exp) => sum + exp.amount, 0);
-    const revenue = currentWorkspaceOrder.total || 0;
-    const profit = revenue - totalExpenses;
+    // Use aggregated financials from backend (includes main order + extra work)
+    const revenue = workspaceFinancials ? workspaceFinancials.revenue : (currentWorkspaceOrder.total || 0);
+    const totalExpenses = workspaceFinancials ? workspaceFinancials.expenses : workspaceExpenses.reduce((sum, exp) => sum + exp.amount, 0);
+    const profit = workspaceFinancials ? workspaceFinancials.profit : (revenue - totalExpenses);
+    const profitMargin = workspaceFinancials ? workspaceFinancials.profit_margin : (revenue > 0 ? ((profit / revenue) * 100).toFixed(1) : 0);
+    
+    // Check if we have extra work (split stats available)
+    const hasExtraWork = workspaceExtraWorkOrders && workspaceExtraWorkOrders.length > 0;
     
     container.innerHTML = `
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px;">
             <!-- Left column: Stats and Chart -->
             <div>
-                <!-- Stats cards -->
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 30px;">
-                    <div style="background: white; padding: 20px; border-radius: 10px; border: 2px solid #e0e0e0;">
-                        <div style="color: #666; font-size: 14px; margin-bottom: 5px;">💰 Omsætning</div>
-                        <div style="font-size: 28px; font-weight: 600; color: #667eea;">${formatCurrency(revenue)}</div>
+                ${hasExtraWork ? `
+                    <!-- Split Statistics Cards -->
+                    <div style="background: white; padding: 25px; border-radius: 10px; border: 2px solid #e0e0e0; margin-bottom: 30px;">
+                        <h3 style="margin: 0 0 20px 0; color: #333;">📊 Opdelt Statistik</h3>
+                        
+                        <!-- Revenue -->
+                        <div style="margin-bottom: 20px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                                <div style="font-weight: 600; font-size: 16px;">💰 Omsætning</div>
+                                <div style="font-size: 20px; font-weight: 600; color: #667eea;">${formatCurrency(workspaceFinancials.revenue)}</div>
+                            </div>
+                            <div style="padding-left: 25px; font-size: 14px; color: #666;">
+                                <div style="display: flex; justify-content: space-between; padding: 5px 0;">
+                                    <div>└─ Hovedordre:</div>
+                                    <div style="font-weight: 600;">${formatCurrency(workspaceFinancials.revenue_main)}</div>
+                                </div>
+                                <div style="display: flex; justify-content: space-between; padding: 5px 0;">
+                                    <div>└─ Ekstraarbejde (${workspaceExtraWorkOrders.length}):</div>
+                                    <div style="font-weight: 600;">${formatCurrency(workspaceFinancials.revenue_extra)}</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div style="border-top: 1px solid #e0e0e0; margin: 20px 0;"></div>
+                        
+                        <!-- Expenses -->
+                        <div style="margin-bottom: 20px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                                <div style="font-weight: 600; font-size: 16px;">📊 Udgifter</div>
+                                <div style="font-size: 20px; font-weight: 600; color: #f44336;">${formatCurrency(workspaceFinancials.expenses)}</div>
+                            </div>
+                            <div style="padding-left: 25px; font-size: 14px; color: #666;">
+                                <div style="display: flex; justify-content: space-between; padding: 5px 0;">
+                                    <div>└─ Hovedordre:</div>
+                                    <div style="font-weight: 600;">${formatCurrency(workspaceFinancials.expenses_main || 0)}</div>
+                                </div>
+                                <div style="display: flex; justify-content: space-between; padding: 5px 0;">
+                                    <div>└─ Ekstraarbejde (${workspaceExtraWorkOrders.length}):</div>
+                                    <div style="font-weight: 600;">${formatCurrency(workspaceFinancials.expenses_extra || 0)}</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div style="border-top: 1px solid #e0e0e0; margin: 20px 0;"></div>
+                        
+                        <!-- Profit -->
+                        <div>
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                                <div style="font-weight: 600; font-size: 16px;">✅ Profit</div>
+                                <div style="font-size: 20px; font-weight: 600; color: ${profit >= 0 ? '#4caf50' : '#f44336'};">${formatCurrency(workspaceFinancials.profit)} (${profitMargin}%)</div>
+                            </div>
+                            <div style="padding-left: 25px; font-size: 14px; color: #666;">
+                                <div style="display: flex; justify-content: space-between; padding: 5px 0;">
+                                    <div>└─ Hovedordre:</div>
+                                    <div style="font-weight: 600;">${formatCurrency(workspaceFinancials.profit_main || 0)}</div>
+                                </div>
+                                <div style="display: flex; justify-content: space-between; padding: 5px 0;">
+                                    <div>└─ Ekstraarbejde (${workspaceExtraWorkOrders.length}):</div>
+                                    <div style="font-weight: 600;">${formatCurrency(workspaceFinancials.profit_extra || 0)}</div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                    <div style="background: white; padding: 20px; border-radius: 10px; border: 2px solid #e0e0e0;">
-                        <div style="color: #666; font-size: 14px; margin-bottom: 5px;">📊 Udgifter</div>
-                        <div style="font-size: 28px; font-weight: 600; color: #f44336;">${formatCurrency(totalExpenses)}</div>
+                ` : `
+                    <!-- Simple Stats cards (no extra work) -->
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 30px;">
+                        <div style="background: white; padding: 20px; border-radius: 10px; border: 2px solid #e0e0e0;">
+                            <div style="color: #666; font-size: 14px; margin-bottom: 5px;">💰 Omsætning</div>
+                            <div style="font-size: 28px; font-weight: 600; color: #667eea;">${formatCurrency(revenue)}</div>
+                        </div>
+                        <div style="background: white; padding: 20px; border-radius: 10px; border: 2px solid #e0e0e0;">
+                            <div style="color: #666; font-size: 14px; margin-bottom: 5px;">📊 Udgifter</div>
+                            <div style="font-size: 28px; font-weight: 600; color: #f44336;">${formatCurrency(totalExpenses)}</div>
+                        </div>
+                        <div style="background: white; padding: 20px; border-radius: 10px; border: 2px solid #e0e0e0;">
+                            <div style="color: #666; font-size: 14px; margin-bottom: 5px;">✅ Profit</div>
+                            <div style="font-size: 28px; font-weight: 600; color: ${profit >= 0 ? '#4caf50' : '#f44336'};">${formatCurrency(profit)}</div>
+                        </div>
+                        <div style="background: white; padding: 20px; border-radius: 10px; border: 2px solid #e0e0e0;">
+                            <div style="color: #666; font-size: 14px; margin-bottom: 5px;">📈 Margin</div>
+                            <div style="font-size: 28px; font-weight: 600; color: ${profit >= 0 ? '#4caf50' : '#f44336'};">${revenue > 0 ? ((profit / revenue) * 100).toFixed(1) : 0}%</div>
+                        </div>
                     </div>
-                    <div style="background: white; padding: 20px; border-radius: 10px; border: 2px solid #e0e0e0;">
-                        <div style="color: #666; font-size: 14px; margin-bottom: 5px;">✅ Profit</div>
-                        <div style="font-size: 28px; font-weight: 600; color: ${profit >= 0 ? '#4caf50' : '#f44336'};">${formatCurrency(profit)}</div>
-                    </div>
-                    <div style="background: white; padding: 20px; border-radius: 10px; border: 2px solid #e0e0e0;">
-                        <div style="color: #666; font-size: 14px; margin-bottom: 5px;">📈 Margin</div>
-                        <div style="font-size: 28px; font-weight: 600; color: ${profit >= 0 ? '#4caf50' : '#f44336'};">${revenue > 0 ? ((profit / revenue) * 100).toFixed(1) : 0}%</div>
-                    </div>
-                </div>
+                `}
                 
                 <!-- Profit Chart -->
                 <div style="background: white; padding: 30px; border-radius: 10px; border: 2px solid #e0e0e0;">
@@ -232,6 +333,32 @@ function renderWorkspaceOverview(container) {
                 </div>
             </div>
         </div>
+        
+        <!-- Extra Work Orders Section -->
+        ${workspaceExtraWorkOrders && workspaceExtraWorkOrders.length > 0 ? `
+            <div style="margin-top: 30px;">
+                <div style="background: white; padding: 30px; border-radius: 10px; border: 2px solid #ff9800;">
+                    <h3 style="margin: 0 0 20px 0; color: #ff9800;">🔧 Ekstraarbejde (${workspaceExtraWorkOrders.length})</h3>
+                    <div style="display: grid; gap: 15px;">
+                        ${workspaceExtraWorkOrders.map(extraOrder => `
+                            <div style="background: #fff3e0; padding: 20px; border-radius: 8px; border: 1px solid #ff9800;">
+                                <div style="display: flex; justify-content: space-between; align-items: start;">
+                                    <div style="flex: 1;">
+                                        <h4 style="margin: 0 0 10px 0; color: #ff9800;">Ordre ${extraOrder.full_order_number}</h4>
+                                        <p style="margin: 5px 0;"><strong>Titel:</strong> ${extraOrder.title}</p>
+                                        <p style="margin: 5px 0;"><strong>Total:</strong> ${formatCurrency(extraOrder.total)}</p>
+                                        <p style="margin: 5px 0; font-size: 12px; color: #666;">Oprettet: ${new Date(extraOrder.created_at).toLocaleDateString('da-DK')}</p>
+                                    </div>
+                                    <button onclick="openOrderWorkspace(${extraOrder.id}, ${currentWorkspaceOrder.id})" style="padding: 10px 20px; background: #ff9800; color: white; border: none; border-radius: 5px; cursor: pointer; white-space: nowrap;">
+                                        👁️ Åbn
+                                    </button>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            </div>
+        ` : ''}
     `;
     
     // Draw pie chart (simple Canvas implementation)
@@ -476,9 +603,13 @@ async function saveExpense() {
         return;
     }
     
+    // Debug: Log which order we're adding expense to
+    console.log('Adding expense to order:', currentWorkspaceOrder.id, currentWorkspaceOrder.order_number);
+    console.log('Current workspace order:', currentWorkspaceOrder);
+    
     try {
         const token = sessionStorage.getItem('token');
-        const response = await fetch(`http://localhost:4000/api/orders/${currentWorkspaceOrder.id}/expenses`, {
+        const response = await fetch(`https://flowfactory-backend-production.up.railway.app/api/orders/${currentWorkspaceOrder.id}/expenses`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -577,7 +708,7 @@ async function updateExpense(expenseId) {
     
     try {
         const token = sessionStorage.getItem('token');
-        const response = await fetch(`http://localhost:4000/api/orders/${currentWorkspaceOrder.id}/expenses/${expenseId}`, {
+        const response = await fetch(`https://flowfactory-backend-production.up.railway.app/api/orders/${currentWorkspaceOrder.id}/expenses/${expenseId}`, {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',
@@ -607,7 +738,7 @@ async function deleteExpense(expenseId) {
     
     try {
         const token = sessionStorage.getItem('token');
-        const response = await fetch(`http://localhost:4000/api/orders/${currentWorkspaceOrder.id}/expenses/${expenseId}`, {
+        const response = await fetch(`https://flowfactory-backend-production.up.railway.app/api/orders/${currentWorkspaceOrder.id}/expenses/${expenseId}`, {
             method: 'DELETE',
             headers: { 'Authorization': `Bearer ${token}` }
         });
@@ -626,14 +757,341 @@ async function deleteExpense(expenseId) {
     }
 }
 
-// Render documents tab (placeholder)
+// Render documents tab
 function renderWorkspaceDocuments(container) {
     container.innerHTML = `
         <div style="background: white; padding: 30px; border-radius: 10px; border: 2px solid #e0e0e0;">
-            <h3 style="margin: 0 0 20px 0;">📎 Dokumenter</h3>
-            <p style="color: #666;">Dokument upload funktionalitet kommer snart...</p>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
+                <div>
+                    <h3 style="margin: 0 0 10px 0;">📎 Dokumenter</h3>
+                    <p style="margin: 0; color: #666;">Dokumenter tilknyttet denne ordre (${workspaceDocuments.length})</p>
+                </div>
+                <button onclick="showUploadDocument()" style="padding: 12px 24px; background: #667eea; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: 600;">
+                    ➕ Upload Dokument
+                </button>
+            </div>
+            
+            <div id="documentsList"></div>
         </div>
     `;
+    
+    renderDocumentsList();
+}
+
+// Render documents list
+function renderDocumentsList() {
+    const container = document.getElementById('documentsList');
+    
+    if (workspaceDocuments.length === 0) {
+        container.innerHTML = `
+            <div style="text-align: center; padding: 60px 20px; color: #999;">
+                <div style="font-size: 64px; margin-bottom: 20px;">📎</div>
+                <h3>Ingen dokumenter endnu</h3>
+                <p>Upload dokumenter for at dele dem med teamet</p>
+            </div>
+        `;
+        return;
+    }
+    
+    container.innerHTML = `
+        <div style="display: grid; gap: 15px;">
+            ${workspaceDocuments.map(doc => {
+                const icon = getDocumentIcon(doc.original_name);
+                const size = formatFileSize(doc.file_size);
+                const date = new Date(doc.created_at).toLocaleDateString('da-DK');
+                
+                return `
+                    <div style="background: #f9f9f9; padding: 20px; border-radius: 8px; border: 2px solid #e0e0e0; display: flex; justify-content: space-between; align-items: center;">
+                        <div style="display: flex; align-items: center; gap: 15px; flex: 1;">
+                            <div style="font-size: 32px;">${icon}</div>
+                            <div style="flex: 1;">
+                                <div style="font-weight: 600; margin-bottom: 5px;">${doc.original_name}</div>
+                                <div style="font-size: 13px; color: #666;">
+                                    ${size} • ${doc.document_type || 'Dokument'} • Uploadet af ${doc.uploaded_by_name} • ${date}
+                                </div>
+                            </div>
+                        </div>
+                        <div style="display: flex; gap: 10px;">
+                            <button onclick="previewDocument(${doc.id}, '${doc.original_name.replace(/'/g, "\\'")}')" style="padding: 8px 16px; background: #2196f3; color: white; border: none; border-radius: 5px; cursor: pointer;">
+                                👁️ Preview
+                            </button>
+                            <button onclick="downloadDocument(${doc.id}, '${doc.original_name.replace(/'/g, "\\'")}')" style="padding: 8px 16px; background: #667eea; color: white; border: none; border-radius: 5px; cursor: pointer;">
+                                💾 Download
+                            </button>
+                            <button onclick="deleteDocument(${doc.id})" style="padding: 8px 16px; background: #f44336; color: white; border: none; border-radius: 5px; cursor: pointer;">
+                                🗑️ Slet
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join('')}
+        </div>
+    `;
+}
+
+// Get document icon
+function getDocumentIcon(filename) {
+    const ext = filename.split('.').pop().toLowerCase();
+    const icons = {
+        'pdf': '📄',
+        'doc': '📝', 'docx': '📝',
+        'xls': '📊', 'xlsx': '📊',
+        'ppt': '📊', 'pptx': '📊',
+        'jpg': '🖼️', 'jpeg': '🖼️', 'png': '🖼️', 'gif': '🖼️',
+        'zip': '📦', 'rar': '📦',
+        'txt': '📃'
+    };
+    return icons[ext] || '📄';
+}
+
+// Format file size
+function formatFileSize(bytes) {
+    if (!bytes) return '0 B';
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / 1048576).toFixed(1) + ' MB';
+}
+
+// Show upload document dialog
+function showUploadDocument() {
+    const modal = document.createElement('div');
+    modal.id = 'documentModal';
+    modal.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 10000; display: flex; align-items: center; justify-content: center;';
+    
+    modal.innerHTML = `
+        <div style="background: white; border-radius: 10px; padding: 30px; max-width: 500px; width: 90%;">
+            <h2 style="margin: 0 0 20px 0;">📎 Upload Dokument</h2>
+            
+            <form id="documentForm" onsubmit="event.preventDefault(); uploadDocument();">
+                <div style="margin-bottom: 20px;">
+                    <label style="display: block; margin-bottom: 8px; font-weight: 600;">Vælg fil *</label>
+                    <input type="file" id="documentFile" required style="width: 100%; padding: 10px; border: 1px solid #e0e0e0; border-radius: 5px; font-size: 14px;">
+                </div>
+                
+                <div style="margin-bottom: 30px;">
+                    <label style="display: block; margin-bottom: 8px; font-weight: 600;">Dokument Type</label>
+                    <select id="documentType" style="width: 100%; padding: 10px; border: 1px solid #e0e0e0; border-radius: 5px; font-size: 14px;">
+                        <option value="general">Generelt</option>
+                        <option value="contract">Kontrakt</option>
+                        <option value="invoice">Faktura</option>
+                        <option value="receipt">Kvittering</option>
+                        <option value="photo">Foto</option>
+                        <option value="drawing">Tegning</option>
+                        <option value="transferred">Overført fra filer</option>
+                    </select>
+                </div>
+                
+                <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                    <button type="button" onclick="closeDocumentModal()" style="padding: 12px 24px; background: #999; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 14px;">
+                        Annuller
+                    </button>
+                    <button type="submit" style="padding: 12px 24px; background: #667eea; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 14px;">
+                        📤 Upload
+                    </button>
+                </div>
+            </form>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+}
+
+// Close document modal
+function closeDocumentModal() {
+    const modal = document.getElementById('documentModal');
+    if (modal) modal.remove();
+}
+
+// Upload document
+async function uploadDocument() {
+    const fileInput = document.getElementById('documentFile');
+    const documentType = document.getElementById('documentType').value;
+    
+    if (!fileInput.files || !fileInput.files[0]) {
+        alert('Vælg en fil');
+        return;
+    }
+    
+    const file = fileInput.files[0];
+    
+    if (file.size > 100 * 1024 * 1024) {
+        alert('Filen er for stor! Max 100MB');
+        return;
+    }
+    
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('document_type', documentType);
+    
+    try {
+        const token = sessionStorage.getItem('token');
+        const response = await fetch(`https://flowfactory-backend-production.up.railway.app/api/orders/${currentWorkspaceOrder.id}/documents`, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${token}` },
+            body: formData
+        });
+        
+        if (!response.ok) throw new Error('Failed to upload document');
+        
+        const document = await response.json();
+        workspaceDocuments.unshift(document);
+        
+        closeDocumentModal();
+        alert('✅ Dokument uploadet!');
+        
+        // Refresh documents list
+        renderDocumentsList();
+        
+        // Update tab count
+        const tab = document.getElementById('workspaceTabDocuments');
+        if (tab) {
+            tab.textContent = `📎 Dokumenter (${workspaceDocuments.length})`;
+        }
+        
+    } catch (error) {
+        console.error('Upload error:', error);
+        alert('Kunne ikke uploade dokument: ' + error.message);
+    }
+}
+
+// Preview document
+async function previewDocument(documentId, filename) {
+    try {
+        const doc = workspaceDocuments.find(d => d.id === documentId);
+        if (!doc) {
+            alert('Dokument ikke fundet');
+            return;
+        }
+        
+        const ext = filename.split('.').pop().toLowerCase();
+        const imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp'];
+        const pdfExtensions = ['pdf'];
+        
+        const fileUrl = `https://flowfactory-backend-production.up.railway.app${doc.file_path}`;
+        
+        if (imageExtensions.includes(ext)) {
+            // Show image in modal
+            const modal = document.createElement('div');
+            modal.id = 'documentPreviewModal';
+            modal.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.9); z-index: 10001; display: flex; align-items: center; justify-content: center; cursor: pointer;';
+            
+            modal.innerHTML = `
+                <div style="position: relative; max-width: 90%; max-height: 90%; padding: 20px;">
+                    <div style="position: absolute; top: 10px; right: 10px; background: white; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-weight: 600;" onclick="closePreviewModal()">
+                        ✕ Luk
+                    </div>
+                    <img src="${fileUrl}" alt="${filename}" style="max-width: 100%; max-height: 85vh; border-radius: 8px; box-shadow: 0 10px 40px rgba(0,0,0,0.5);">
+                    <div style="text-align: center; color: white; margin-top: 20px; font-size: 18px;">
+                        ${filename}
+                    </div>
+                </div>
+            `;
+            
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    modal.remove();
+                }
+            });
+            
+            document.body.appendChild(modal);
+            
+        } else if (pdfExtensions.includes(ext)) {
+            // Show PDF in modal with iframe
+            const modal = document.createElement('div');
+            modal.id = 'documentPreviewModal';
+            modal.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.9); z-index: 10001; display: flex; align-items: center; justify-content: center;';
+            
+            modal.innerHTML = `
+                <div style="position: relative; width: 90%; height: 90%; background: white; border-radius: 10px; padding: 20px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                        <h3 style="margin: 0;">${filename}</h3>
+                        <button onclick="closePreviewModal()" style="padding: 10px 20px; background: #f44336; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: 600;">
+                            ✕ Luk
+                        </button>
+                    </div>
+                    <iframe src="${fileUrl}" style="width: 100%; height: calc(100% - 60px); border: none; border-radius: 5px;"></iframe>
+                </div>
+            `;
+            
+            document.body.appendChild(modal);
+            
+        } else {
+            // For other file types, open in new tab
+            window.open(fileUrl, '_blank');
+        }
+        
+    } catch (error) {
+        console.error('Preview error:', error);
+        alert('Kunne ikke vise preview: ' + error.message);
+    }
+}
+
+// Close preview modal
+function closePreviewModal() {
+    const modal = document.getElementById('documentPreviewModal');
+    if (modal) modal.remove();
+}
+
+// Download document
+async function downloadDocument(documentId, filename) {
+    try {
+        const token = sessionStorage.getItem('token');
+        
+        // Find document to get file path
+        const doc = workspaceDocuments.find(d => d.id === documentId);
+        if (!doc) {
+            alert('Dokument ikke fundet');
+            return;
+        }
+        
+        // Construct download URL
+        const downloadUrl = `https://flowfactory-backend-production.up.railway.app${doc.file_path}`;
+        
+        // Create temporary link and trigger download
+        const a = document.createElement('a');
+        a.href = downloadUrl;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        
+    } catch (error) {
+        console.error('Download error:', error);
+        alert('Kunne ikke downloade dokument: ' + error.message);
+    }
+}
+
+// Delete document
+async function deleteDocument(documentId) {
+    if (!confirm('Slet dette dokument?')) return;
+    
+    try {
+        const token = sessionStorage.getItem('token');
+        const response = await fetch(`https://flowfactory-backend-production.up.railway.app/api/orders/${currentWorkspaceOrder.id}/documents/${documentId}`, {
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        
+        if (!response.ok) throw new Error('Failed to delete document');
+        
+        alert('✅ Dokument slettet!');
+        
+        // Remove from array
+        workspaceDocuments = workspaceDocuments.filter(d => d.id !== documentId);
+        
+        // Refresh
+        renderDocumentsList();
+        
+        // Update tab count
+        const tab = document.getElementById('workspaceTabDocuments');
+        if (tab) {
+            tab.textContent = `📎 Dokumenter (${workspaceDocuments.length})`;
+        }
+        
+    } catch (error) {
+        console.error('Delete error:', error);
+        alert('Kunne ikke slette dokument: ' + error.message);
+    }
 }
 
 // Render timeline tab
@@ -665,8 +1123,22 @@ function renderWorkspaceNotes(container) {
 }
 
 // Close workspace
-function closeWorkspace() {
+async function closeWorkspace() {
+    // If we have a parent order ID, navigate back to it instead of closing
+    if (parentOrderId) {
+        const tempParentId = parentOrderId;
+        parentOrderId = null; // Clear before opening parent
+        await openOrderWorkspace(tempParentId);
+        return;
+    }
+    
+    // Otherwise, close workspace and go to orders list
     currentWorkspaceOrder = null;
+    parentOrderId = null;
+    
+    // Update URL to clear workspace state
+    history.pushState(null, '', '#/orders');
+    
     switchOrderTab('orders');
     loadOrders();
 }
@@ -874,7 +1346,7 @@ async function saveExtraWork(parentOrderId) {
     
     try {
         const token = sessionStorage.getItem('token');
-        const response = await fetch(`http://localhost:4000/api/quotes/${parentOrderId}/extra-work`, {
+        const response = await fetch(`https://flowfactory-backend-production.up.railway.app/api/quotes/${parentOrderId}/extra-work`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -893,8 +1365,8 @@ async function saveExtraWork(parentOrderId) {
         closeExtraWorkModal();
         alert(`✅ Ekstraarbejde ${extraWork.full_order_number} oprettet!`);
         
-        // Refresh workspace or navigate to the new extra work
-        await openOrderWorkspace(extraWork.id);
+        // Refresh parent workspace to show the new extra work
+        await openOrderWorkspace(parentOrderId);
         
     } catch (error) {
         console.error('Create extra work error:', error);
@@ -920,6 +1392,13 @@ window.saveExpense = saveExpense;
 window.editExpense = editExpense;
 window.updateExpense = updateExpense;
 window.deleteExpense = deleteExpense;
+window.showUploadDocument = showUploadDocument;
+window.closeDocumentModal = closeDocumentModal;
+window.uploadDocument = uploadDocument;
+window.previewDocument = previewDocument;
+window.closePreviewModal = closePreviewModal;
+window.downloadDocument = downloadDocument;
+window.deleteDocument = deleteDocument;
 window.createExtraWork = createExtraWork;
 window.addExtraWorkLine = addExtraWorkLine;
 window.removeExtraWorkLine = removeExtraWorkLine;

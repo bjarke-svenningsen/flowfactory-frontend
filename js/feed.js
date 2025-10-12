@@ -14,7 +14,7 @@ async function addPost() {
     // Prøv at sende til backend
     try {
         const token = sessionStorage.getItem('token');
-        const response = await fetch('http://localhost:4000/api/posts', {
+        const response = await fetch('https://flowfactory-backend-production.up.railway.app/api/posts', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -30,7 +30,8 @@ async function addPost() {
                 id: newPost.id,
                 author: newPost.user_name,
                 content: newPost.content,
-                timestamp: new Date(newPost.created_at),
+                // Fix timezone: SQLite returnerer UTC tid, tilføj 'Z' for at parse korrekt
+                timestamp: new Date(newPost.created_at + (newPost.created_at.includes('Z') ? '' : 'Z')),
                 likes: newPost.likes || 0,
                 attachments: [...currentAttachments],
                 avatar_url: newPost.avatar_url,
@@ -146,9 +147,23 @@ function formatFileSize(bytes) {
 
 // Indlæs posts fra backend
 async function loadPosts() {
+    // Opdater post composer avatar
+    const feedAvatar = document.getElementById('feedAvatar');
+    if (feedAvatar && window.currentUser) {
+        if (window.currentUser.profilePhoto) {
+            feedAvatar.style.backgroundImage = `url(${window.currentUser.profilePhoto})`;
+            feedAvatar.style.backgroundSize = 'cover';
+            feedAvatar.style.backgroundPosition = 'center';
+            feedAvatar.textContent = '';
+        } else {
+            const initials = window.currentUser.name.split(' ').map(n => n[0]).join('');
+            feedAvatar.textContent = initials;
+        }
+    }
+    
     try {
         const token = sessionStorage.getItem('token');
-        const response = await fetch('http://localhost:4000/api/posts', {
+        const response = await fetch('https://flowfactory-backend-production.up.railway.app/api/posts', {
             headers:
 {
                 'Authorization': `Bearer ${token}`
@@ -161,7 +176,8 @@ async function loadPosts() {
                 id: p.id,
                 author: p.user_name,
                 content: p.content,
-                timestamp: new Date(p.created_at),
+                // Fix timezone: SQLite returnerer UTC tid, tilføj 'Z' for at parse korrekt
+                timestamp: new Date(p.created_at + (p.created_at.includes('Z') ? '' : 'Z')),
                 likes: p.likes || 0,
                 likedByUser: false, // Initialiser til false for alle posts
                 attachments: [],
@@ -203,7 +219,7 @@ function renderPosts() {
             avatarHTML = `<div class="user-avatar" style="background-image: url(${post.localPhoto}); background-size: cover; background-position: center;"></div>`;
         } else if (post.avatar_url) {
             // 3. SÅ: Brug avatar fra backend
-            avatarHTML = `<div class="user-avatar" style="background-image: url(http://localhost:4000${post.avatar_url}); background-size: cover; background-position: center;"></div>`;
+            avatarHTML = `<div class="user-avatar" style="background-image: url(https://flowfactory-backend-production.up.railway.app${post.avatar_url}); background-size: cover; background-position: center;"></div>`;
         } else {
             // 4. SIDST: Fallback til initialer
             avatarHTML = `<div class="user-avatar">${postInitials}</div>`;
@@ -239,12 +255,14 @@ function renderPosts() {
             youtubeMatches.forEach(match => {
                 const videoId = match[1];
                 const youtubeEmbed = `
-                    <div style="position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden; margin-top: 10px; border-radius: 8px;">
-                        <iframe 
-                            src="https://www.youtube.com/embed/${videoId}" 
-                            style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 0;" 
-                            allowfullscreen>
-                        </iframe>
+                    <div style="max-width: 560px; margin: 10px 0;">
+                        <div style="position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden; border-radius: 8px;">
+                            <iframe 
+                                src="https://www.youtube.com/embed/${videoId}" 
+                                style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 0;" 
+                                allowfullscreen>
+                            </iframe>
+                        </div>
                     </div>
                 `;
                 attachmentsHTML += youtubeEmbed;
@@ -300,7 +318,7 @@ async function likePost(postId) {
     // Gem til backend (men fortsæt selv hvis det fejler)
     try {
         const token = sessionStorage.getItem('token');
-        await fetch(`http://localhost:4000/api/posts/${postId}/like`, {
+        await fetch(`https://flowfactory-backend-production.up.railway.app/api/posts/${postId}/like`, {
             method: 'POST',
             headers: { 'Authorization': `Bearer ${token}` }
         });
@@ -395,13 +413,29 @@ function cancelEdit(postId, originalContent) {
 }
 
 // Slet opslag
-function deletePost(postId) {
-    const post = posts.find(p => p.id !== postId);
+async function deletePost(postId) {
+    const post = posts.find(p => p.id === postId);
     if (!post || post.author !== window.currentUser.name) return;
 
     if (confirm('Er du sikker på at du vil slette dette opslag?')) {
-        posts = posts.filter(p => p.id !== postId);
-        renderPosts();
+        try {
+            const token = sessionStorage.getItem('token');
+            const response = await fetch(`https://flowfactory-backend-production.up.railway.app/api/posts/${postId}`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            
+            if (response.ok) {
+                // Backend sletning lykkedes - fjern fra lokal liste
+                posts = posts.filter(p => p.id !== postId);
+                renderPosts();
+            } else {
+                alert('❌ Kunne ikke slette opslag - prøv igen');
+            }
+        } catch (error) {
+            console.error('Delete error:', error);
+            alert('❌ Kunne ikke slette opslag - ingen forbindelse til server');
+        }
     }
 }
 

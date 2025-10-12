@@ -1,0 +1,21 @@
+<h2 style="margin-bottom: 20px;">FlowFactory's Feed</h2>
+
+<div class="create-post">
+    <div style="display: flex; gap: 15px; align-items: flex-start;">
+        <div class="user-avatar" id="feedAvatar">TB</div>
+        <div style="flex: 1;">
+            <textarea id="postContent" placeholder="Hvad vil du dele med dine kolleger?" rows="3"></textarea>
+            
+            <div id="filePreview" style="margin-top: 10px;"></div>
+            
+            <div style="display: flex; gap: 10px; margin-top: 10px;">
+                <button onclick="addPost()" class="post-btn">Del opslag</button>
+                <button class="attach-btn" onclick="document.getElementById('imageInput').click()">📷 Billede</button>
+            </div>
+            
+            <input type="file" id="imageInput" accept="image/*,video/*" style="display: none;" onchange="handleImageUpload(event)">
+        </div>
+    </div>
+</div>
+
+<div id="feedPosts"></div>

@@ -14,7 +14,7 @@ async function loadRealFiles() {
         await loadFolders();
         
         // Then load files
-        const response = await fetch('http://localhost:4000/api/files', {
+        const response = await fetch('https://flowfactory-backend-production.up.railway.app/api/files', {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         
@@ -29,7 +29,10 @@ async function loadRealFiles() {
     }
 }
 
-// Render folder tree
+// Track expanded folders
+let expandedFolders = new Set();
+
+// Render folder tree with hierarchy
 function renderFolderTree() {
     const tree = document.getElementById('folderTree');
     if (!tree) return;
@@ -57,18 +60,57 @@ function renderFolderTree() {
         html += '<div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid #e0e0e0;"></div>';
         html += '<div style="padding: 5px 10px; font-size: 12px; color: #999; font-weight: 600;">DINE MAPPER</div>';
         
-        allFolders.forEach(folder => {
-            const fileCount = allFiles.filter(f => f.folder_id === folder.id).length;
-            const isSelected = currentFolderId === folder.id;
-            html += `
-                <div class="tree-item ${isSelected ? 'selected' : ''}" onclick="openFolder(${folder.id}, '${folder.name.replace(/'/g, "\\'")}')">
-                    <span class="tree-expand">📁</span> ${folder.name} ${fileCount > 0 ? `(${fileCount})` : ''}
-                </div>
-            `;
-        });
+        // Build hierarchical tree
+        const rootFolders = allFolders.filter(f => !f.parent_id);
+        html += renderFolderBranch(rootFolders, 0);
     }
     
     tree.innerHTML = html;
+}
+
+// Render folder branch recursively
+function renderFolderBranch(folders, level) {
+    let html = '';
+    
+    folders.forEach(folder => {
+        const fileCount = allFiles.filter(f => f.folder_id === folder.id).length;
+        const childFolders = allFolders.filter(f => f.parent_id === folder.id);
+        const hasChildren = childFolders.length > 0;
+        const isExpanded = expandedFolders.has(folder.id);
+        const isSelected = currentFolderId === folder.id;
+        
+        const indent = level * 15;
+        const expandIcon = hasChildren ? (isExpanded ? '▼' : '▶') : '　';
+        
+        html += `
+            <div class="tree-item ${isSelected ? 'selected' : ''}" style="padding-left: ${indent + 10}px;" data-folder-id="${folder.id}">
+                <span class="tree-expand-icon" onclick="toggleFolder(event, ${folder.id})" style="cursor: ${hasChildren ? 'pointer' : 'default'}; display: inline-block; width: 15px;">${expandIcon}</span>
+                <span onclick="openFolder(${folder.id}, '${folder.name.replace(/'/g, "\\'")}');" oncontextmenu="showFolderContextMenu(event, ${folder.id}, '${folder.name.replace(/'/g, "\\'")}'); return false;" style="cursor: pointer;">
+                    📁 ${folder.name} ${fileCount > 0 ? `(${fileCount})` : ''}
+                </span>
+            </div>
+        `;
+        
+        // Render children if expanded
+        if (hasChildren && isExpanded) {
+            html += renderFolderBranch(childFolders, level + 1);
+        }
+    });
+    
+    return html;
+}
+
+// Toggle folder expansion
+function toggleFolder(event, folderId) {
+    event.stopPropagation();
+    
+    if (expandedFolders.has(folderId)) {
+        expandedFolders.delete(folderId);
+    } else {
+        expandedFolders.add(folderId);
+    }
+    
+    renderFolderTree();
 }
 
 // Filter files by category
@@ -189,7 +231,7 @@ async function uploadFileToExplorer(event) {
         
         console.log('Uploading file...', file.name);
         
-        const response = await fetch('http://localhost:4000/api/files/upload', {
+        const response = await fetch('https://flowfactory-backend-production.up.railway.app/api/files/upload', {
             method: 'POST',
             headers: { 'Authorization': `Bearer ${token}` },
             body: formData
@@ -242,7 +284,7 @@ async function openRealFile(fileId) {
 async function previewImage(fileId, filename) {
     try {
         const token = sessionStorage.getItem('token');
-        const response = await fetch(`http://localhost:4000/api/files/download/${fileId}`, {
+        const response = await fetch(`https://flowfactory-backend-production.up.railway.app/api/files/download/${fileId}`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         
@@ -270,7 +312,7 @@ async function previewImage(fileId, filename) {
 async function downloadRealFile(fileId) {
     try {
         const token = sessionStorage.getItem('token');
-        const response = await fetch(`http://localhost:4000/api/files/download/${fileId}`, {
+        const response = await fetch(`https://flowfactory-backend-production.up.railway.app/api/files/download/${fileId}`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         
@@ -305,7 +347,7 @@ async function deleteSelected() {
     
     try {
         const token = sessionStorage.getItem('token');
-        const response = await fetch(`http://localhost:4000/api/files/${selectedFileId}`, {
+        const response = await fetch(`https://flowfactory-backend-production.up.railway.app/api/files/${selectedFileId}`, {
             method: 'DELETE',
             headers: { 'Authorization': `Bearer ${token}` }
         });
@@ -367,7 +409,7 @@ function formatFileSize(bytes) {
 async function loadFolders() {
     try {
         const token = sessionStorage.getItem('token');
-        const response = await fetch('http://localhost:4000/api/folders', {
+        const response = await fetch('https://flowfactory-backend-production.up.railway.app/api/folders', {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         
@@ -393,7 +435,7 @@ async function showNewFolderDialog() {
     
     try {
         const token = sessionStorage.getItem('token');
-        const response = await fetch('http://localhost:4000/api/folders', {
+        const response = await fetch('https://flowfactory-backend-production.up.railway.app/api/folders', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -460,6 +502,10 @@ function searchFiles() {
     document.getElementById('addressBar').textContent = `Søgeresultat: "${query}"`;
 }
 
+let selectedFolderId = null;
+let selectedFolderName = '';
+
+// File context menu
 function showContextMenu(event, fileId) {
     event.preventDefault();
     selectRealFile(fileId);
@@ -472,10 +518,189 @@ function showContextMenu(event, fileId) {
     return false;
 }
 
+// Folder context menu
+function showFolderContextMenu(event, folderId, folderName) {
+    event.preventDefault();
+    event.stopPropagation();
+    
+    selectedFolderId = folderId;
+    selectedFolderName = folderName;
+    
+    const folderContextMenu = document.getElementById('folderContextMenu');
+    folderContextMenu.style.display = 'block';
+    folderContextMenu.style.left = event.pageX + 'px';
+    folderContextMenu.style.top = event.pageY + 'px';
+    
+    return false;
+}
+
+// Create subfolder
+async function createSubfolder() {
+    const folderContextMenu = document.getElementById('folderContextMenu');
+    if (folderContextMenu) folderContextMenu.style.display = 'none';
+    
+    const folderName = prompt('Indtast mappenavn:');
+    if (!folderName || !folderName.trim()) return;
+    
+    try {
+        const token = sessionStorage.getItem('token');
+        const response = await fetch('https://flowfactory-backend-production.up.railway.app/api/folders', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({
+                name: folderName.trim(),
+                parent_id: selectedFolderId
+            })
+        });
+        
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error || 'Failed to create folder');
+        }
+        
+        alert(`✅ Mappe "${folderName}" oprettet!`);
+        expandedFolders.add(selectedFolderId); // Auto-expand parent
+        await loadFolders();
+        renderFolderTree();
+    } catch (error) {
+        console.error('Create folder error:', error);
+        alert('Kunne ikke oprette mappe: ' + error.message);
+    }
+}
+
+// Rename folder
+async function renameFolderSelected() {
+    const folderContextMenu = document.getElementById('folderContextMenu');
+    if (folderContextMenu) folderContextMenu.style.display = 'none';
+    
+    const newName = prompt('Indtast nyt mappenavn:', selectedFolderName);
+    if (!newName || !newName.trim() || newName === selectedFolderName) return;
+    
+    try {
+        const token = sessionStorage.getItem('token');
+        const response = await fetch(`https://flowfactory-backend-production.up.railway.app/api/folders/${selectedFolderId}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ name: newName.trim() })
+        });
+        
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error || 'Failed to rename folder');
+        }
+        
+        alert(`✅ Mappe omdøbt til "${newName}"`);
+        await loadFolders();
+        renderFolderTree();
+    } catch (error) {
+        console.error('Rename folder error:', error);
+        alert('Kunne ikke omdøbe mappe: ' + error.message);
+    }
+}
+
+// Delete folder
+async function deleteFolderSelected() {
+    const folderContextMenu = document.getElementById('folderContextMenu');
+    if (folderContextMenu) folderContextMenu.style.display = 'none';
+    
+    if (!confirm(`Er du sikker på at du vil slette mappen "${selectedFolderName}"?`)) return;
+    
+    try {
+        const token = sessionStorage.getItem('token');
+        const response = await fetch(`https://flowfactory-backend-production.up.railway.app/api/folders/${selectedFolderId}`, {
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error || 'Delete failed');
+        }
+        
+        alert('✅ Mappe slettet');
+        await loadFolders();
+        renderFolderTree();
+    } catch (error) {
+        console.error('Delete folder error:', error);
+        alert('Slet fejlede: ' + error.message);
+    }
+}
+
+// Show folder properties
+function showFolderProperties() {
+    const folderContextMenu = document.getElementById('folderContextMenu');
+    if (folderContextMenu) folderContextMenu.style.display = 'none';
+    
+    const folder = allFolders.find(f => f.id === selectedFolderId);
+    if (!folder) return;
+    
+    const fileCount = allFiles.filter(f => f.folder_id === folder.id).length;
+    const subfolderCount = allFolders.filter(f => f.parent_id === folder.id).length;
+    
+    alert(
+        `Mappe: ${folder.name}\n\n` +
+        `Filer: ${fileCount}\n` +
+        `Undermapper: ${subfolderCount}\n\n` +
+        `Oprettet af: ${folder.creator_name}\n` +
+        `Oprettet: ${new Date(folder.created_at).toLocaleString('da-DK')}`
+    );
+}
+
+// Transfer file to order
+async function transferToOrder() {
+    const contextMenu = document.getElementById('contextMenu');
+    if (contextMenu) contextMenu.style.display = 'none';
+    
+    if (!selectedFileId) {
+        alert('Vælg en fil først');
+        return;
+    }
+    
+    const file = allFiles.find(f => f.id === selectedFileId);
+    if (!file) return;
+    
+    const orderNumber = prompt(`Overfør "${file.original_name}" til ordre:\n\nIndtast ordrenummer:`);
+    if (!orderNumber || !orderNumber.trim()) return;
+    
+    try {
+        const token = sessionStorage.getItem('token');
+        const response = await fetch(`https://flowfactory-backend-production.up.railway.app/api/files/${selectedFileId}/transfer-to-order`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ order_number: orderNumber.trim() })
+        });
+        
+        const result = await response.json();
+        
+        if (!response.ok) {
+            throw new Error(result.error || 'Transfer failed');
+        }
+        
+        alert(`✅ ${result.message}\n\nOrdre: ${result.order.title}`);
+        
+    } catch (error) {
+        console.error('Transfer error:', error);
+        alert('Overførsel fejlede: ' + error.message);
+    }
+}
+
 document.addEventListener('click', function() {
     const contextMenu = document.getElementById('contextMenu');
     if (contextMenu) {
         contextMenu.style.display = 'none';
+    }
+    const folderContextMenu = document.getElementById('folderContextMenu');
+    if (folderContextMenu) {
+        folderContextMenu.style.display = 'none';
     }
 });
 
@@ -538,7 +763,7 @@ async function renameSelected() {
     
     try {
         const token = sessionStorage.getItem('token');
-        const response = await fetch(`http://localhost:4000/api/files/${selectedFileId}/rename`, {
+        const response = await fetch(`https://flowfactory-backend-production.up.railway.app/api/files/${selectedFileId}/rename`, {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',
@@ -581,7 +806,7 @@ async function shareFile() {
     
     try {
         const token = sessionStorage.getItem('token');
-        const response = await fetch('http://localhost:4000/api/users', {
+        const response = await fetch('https://flowfactory-backend-production.up.railway.app/api/users', {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         

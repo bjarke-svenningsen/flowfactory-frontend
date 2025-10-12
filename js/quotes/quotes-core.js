@@ -10,7 +10,7 @@ let currentOrderTab = 'quotes';
 async function loadQuotes() {
     try {
         const token = sessionStorage.getItem('token');
-        const response = await fetch('http://localhost:4000/api/quotes', {
+        const response = await fetch('https://flowfactory-backend-production.up.railway.app/api/quotes', {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         
@@ -138,7 +138,7 @@ function showCreateQuote() {
 async function viewQuote(quoteId) {
     try {
         const token = sessionStorage.getItem('token');
-        const response = await fetch(`http://localhost:4000/api/quotes/${quoteId}`, {
+        const response = await fetch(`https://flowfactory-backend-production.up.railway.app/api/quotes/${quoteId}`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         
@@ -163,7 +163,7 @@ async function viewQuote(quoteId) {
 async function editQuote(quoteId) {
     try {
         const token = sessionStorage.getItem('token');
-        const response = await fetch(`http://localhost:4000/api/quotes/${quoteId}`, {
+        const response = await fetch(`https://flowfactory-backend-production.up.railway.app/api/quotes/${quoteId}`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         
@@ -184,7 +184,7 @@ async function deleteQuote(quoteId) {
     
     try {
         const token = sessionStorage.getItem('token');
-        const response = await fetch(`http://localhost:4000/api/quotes/${quoteId}`, {
+        const response = await fetch(`https://flowfactory-backend-production.up.railway.app/api/quotes/${quoteId}`, {
             method: 'DELETE',
             headers: { 'Authorization': `Bearer ${token}` }
         });
@@ -205,7 +205,7 @@ async function sendQuote(quoteId) {
     
     try {
         const token = sessionStorage.getItem('token');
-        const response = await fetch(`http://localhost:4000/api/quotes/${quoteId}/send`, {
+        const response = await fetch(`https://flowfactory-backend-production.up.railway.app/api/quotes/${quoteId}/send`, {
             method: 'POST',
             headers: { 'Authorization': `Bearer ${token}` }
         });
@@ -471,7 +471,7 @@ async function loadQuoteContactPersons() {
     
     try {
         const token = sessionStorage.getItem('token');
-        const response = await fetch(`http://localhost:4000/api/customers/${customerId}/contacts`, {
+        const response = await fetch(`https://flowfactory-backend-production.up.railway.app/api/customers/${customerId}/contacts`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         
@@ -563,8 +563,8 @@ async function saveQuote(status = 'draft') {
     try {
         const token = sessionStorage.getItem('token');
         const url = currentView === 'edit' 
-            ? `http://localhost:4000/api/quotes/${currentQuote.id}`
-            : 'http://localhost:4000/api/quotes';
+            ? `https://flowfactory-backend-production.up.railway.app/api/quotes/${currentQuote.id}`
+            : 'https://flowfactory-backend-production.up.railway.app/api/quotes';
         
         const method = currentView === 'edit' ? 'PUT' : 'POST';
         
@@ -750,7 +750,7 @@ async function acceptQuote(quoteId) {
     
     try {
         const token = sessionStorage.getItem('token');
-        const response = await fetch(`http://localhost:4000/api/quotes/${quoteId}/accept`, {
+        const response = await fetch(`https://flowfactory-backend-production.up.railway.app/api/quotes/${quoteId}/accept`, {
             method: 'POST',
             headers: { 'Authorization': `Bearer ${token}` }
         });
@@ -777,7 +777,7 @@ async function rejectQuote(quoteId) {
     
     try {
         const token = sessionStorage.getItem('token');
-        const response = await fetch(`http://localhost:4000/api/quotes/${quoteId}/reject`, {
+        const response = await fetch(`https://flowfactory-backend-production.up.railway.app/api/quotes/${quoteId}/reject`, {
             method: 'POST',
             headers: { 'Authorization': `Bearer ${token}` }
         });
@@ -868,14 +868,15 @@ function filterQuotesByStatus(status) {
 async function loadOrders() {
     try {
         const token = sessionStorage.getItem('token');
-        const response = await fetch('http://localhost:4000/api/quotes', {
+        const response = await fetch('https://flowfactory-backend-production.up.railway.app/api/quotes', {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         
         if (!response.ok) throw new Error('Failed to load quotes');
         
         const allQuotes = await response.json();
-        const orders = allQuotes.filter(q => q.status === 'accepted');
+        // Filter: only accepted orders that are NOT extra work (main orders only)
+        const orders = allQuotes.filter(q => q.status === 'accepted' && !q.is_extra_work);
         
         renderOrdersContent(orders);
     } catch (error) {
@@ -937,7 +938,7 @@ function renderOrdersContent(orders) {
 async function loadRejected() {
     try {
         const token = sessionStorage.getItem('token');
-        const response = await fetch('http://localhost:4000/api/quotes', {
+        const response = await fetch('https://flowfactory-backend-production.up.railway.app/api/quotes', {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         
@@ -1005,7 +1006,7 @@ async function moveOrderBackToQuote(quoteId) {
     
     try {
         const token = sessionStorage.getItem('token');
-        const response = await fetch(`http://localhost:4000/api/quotes/${quoteId}/revert`, {
+        const response = await fetch(`https://flowfactory-backend-production.up.railway.app/api/quotes/${quoteId}/revert`, {
             method: 'POST',
             headers: { 'Authorization': `Bearer ${token}` }
         });
@@ -1032,7 +1033,7 @@ async function moveRejectedBackToQuote(quoteId) {
     
     try {
         const token = sessionStorage.getItem('token');
-        const response = await fetch(`http://localhost:4000/api/quotes/${quoteId}/revert`, {
+        const response = await fetch(`https://flowfactory-backend-production.up.railway.app/api/quotes/${quoteId}/revert`, {
             method: 'POST',
             headers: { 'Authorization': `Bearer ${token}` }
         });

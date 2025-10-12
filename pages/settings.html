@@ -1,0 +1,79 @@
+<h2 style="margin-bottom: 20px;">⚙️ Indstillinger</h2>
+
+<div class="info-card">
+    <h3>📢 Notifikationer</h3>
+    <div style="padding: 15px 0;">
+        <label style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px; cursor: pointer;">
+            <input type="checkbox" id="notifPosts" checked style="width: 18px; height: 18px;">
+            <span>Få besked når nogen laver et nyt opslag</span>
+        </label>
+        <label style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px; cursor: pointer;">
+            <input type="checkbox" id="notifMessages" checked style="width: 18px; height: 18px;">
+            <span>Få besked ved nye chat beskeder</span>
+        </label>
+        <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
+            <input type="checkbox" id="notifFiles" checked style="width: 18px; height: 18px;">
+            <span>Få besked når filer deles med dig</span>
+        </label>
+    </div>
+</div>
+
+<div class="info-card">
+    <h3>🌙 Udseende</h3>
+    <div style="padding: 15px 0;">
+        <label style="display: block; margin-bottom: 10px; font-weight: 600;">Vælg tema:</label>
+        <select id="themeSelect" onchange="changeTheme(this.value)" style="width: 100%; padding: 10px; border: 1px solid #e0e0e0; border-radius: 5px; font-size: 14px;">
+            <option value="light" selected>☀️ Lyst tema</option>
+            <option value="dark">🌙 Mørkt tema</option>
+            <option value="auto">🔄 Automatisk (følg system)</option>
+        </select>
+    </div>
+</div>
+
+<div class="info-card">
+    <h3>🔒 Privatliv & Sikkerhed</h3>
+    <div style="padding: 15px 0;">
+        <label style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px; cursor: pointer;">
+            <input type="checkbox" id="showOnlineStatus" checked style="width: 18px; height: 18px;">
+            <span>Vis min online status til kolleger</span>
+        </label>
+        <label style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px; cursor: pointer;">
+            <input type="checkbox" id="showEmail" checked style="width: 18px; height: 18px;">
+            <span>Vis min email til kolleger</span>
+        </label>
+        <button onclick="changePassword()" style="padding: 10px 20px; background: #667eea; color: white; border: none; border-radius: 5px; cursor: pointer; margin-top: 10px;">
+            🔐 Skift adgangskode
+        </button>
+    </div>
+</div>
+
+<div class="info-card">
+    <h3>📱 Applikation</h3>
+    <div style="padding: 15px 0;">
+        <div style="margin-bottom: 15px;">
+            <strong>Version:</strong> 1.0.0
+        </div>
+        <div style="margin-bottom: 15px;">
+            <strong>Sidst opdateret:</strong> 09/10/2025
+        </div>
+        <button onclick="clearCache()" style="padding: 10px 20px; background: #f44336; color: white; border: none; border-radius: 5px; cursor: pointer; margin-right: 10px;">
+            🗑️ Ryd cache
+        </button>
+        <button onclick="exportData()" style="padding: 10px 20px; background: #4caf50; color: white; border: none; border-radius: 5px; cursor: pointer;">
+            📥 Eksporter mine data
+        </button>
+    </div>
+</div>
+
+<div class="info-card">
+    <h3>ℹ️ Om FlowFactory Portal</h3>
+    <div style="padding: 15px 0; line-height: 1.8;">
+        <p>FlowFactory Virksomhedsportal er udviklet til at forbinde medarbejdere og forbedre samarbejdet.</p>
+        <p style="margin-top: 10px;">
+            <strong>Support:</strong> <a href="mailto:support@flowfactory.dk" style="color: #667eea;">support@flowfactory.dk</a>
+        </p>
+        <p style="margin-top: 5px;">
+            <strong>Dokumentation:</strong> <a href="#" style="color: #667eea;">Læs brugervejledningen</a>
+        </p>
+    </div>
+</div>

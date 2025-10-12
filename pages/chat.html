@@ -1,0 +1,61 @@
+<div class="chat-container">
+    <div class="chat-users">
+        <h3>Medarbejdere</h3>
+        <div class="user-search">
+            <input type="text" placeholder="🔍 Søg..." id="userSearch" onkeyup="filterUsers()">
+        </div>
+        <div id="userList"></div>
+    </div>
+
+    <div class="chat-main">
+        <div class="no-chat-selected" id="noChatSelected">
+            <div style="text-align: center; color: #999;">
+                <div style="font-size: 60px;">💬</div>
+                <h3>Vælg en medarbejder</h3>
+                <p>Vælg en person fra listen for at starte en chat</p>
+            </div>
+        </div>
+
+        <div class="chat-active" id="chatActive" style="display: none;">
+            <div class="chat-header">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <div class="user-avatar-small" id="chatUserAvatar">AB</div>
+                    <div>
+                        <div class="chat-user-name" id="chatUserName">Anders Berg</div>
+                        <div class="chat-user-status" id="chatUserStatus">Online</div>
+                    </div>
+                </div>
+                <button class="close-chat-btn" onclick="closeChat()">✕</button>
+            </div>
+
+            <div class="chat-messages" id="chatMessages"></div>
+
+            <div class="chat-input-area">
+                <button class="emoji-btn" onclick="toggleEmojiPicker()">😊</button>
+                <input type="text" id="chatInput" placeholder="Skriv en besked..." onkeypress="if(event.key==='Enter') sendMessage()">
+                <button class="send-btn" onclick="sendMessage()">Send</button>
+            </div>
+
+            <div class="emoji-picker" id="emojiPicker" style="display: none;">
+                <div class="emoji-grid">
+                    <span class="emoji-item" onclick="insertEmoji('😊')">😊</span>
+                    <span class="emoji-item" onclick="insertEmoji('😂')">😂</span>
+                    <span class="emoji-item" onclick="insertEmoji('❤️')">❤️</span>
+                    <span class="emoji-item" onclick="insertEmoji('👍')">👍</span>
+                    <span class="emoji-item" onclick="insertEmoji('👎')">👎</span>
+                    <span class="emoji-item" onclick="insertEmoji('🔥')">🔥</span>
+                    <span class="emoji-item" onclick="insertEmoji('🎉')">🎉</span>
+                    <span class="emoji-item" onclick="insertEmoji('😎')">😎</span>
+                    <span class="emoji-item" onclick="insertEmoji('🤔')">🤔</span>
+                    <span class="emoji-item" onclick="insertEmoji('😢')">😢</span>
+                    <span class="emoji-item" onclick="insertEmoji('😡')">😡</span>
+                    <span class="emoji-item" onclick="insertEmoji('👋')">👋</span>
+                    <span class="emoji-item" onclick="insertEmoji('✅')">✅</span>
+                    <span class="emoji-item" onclick="insertEmoji('❌')">❌</span>
+                    <span class="emoji-item" onclick="insertEmoji('⚠️')">⚠️</span>
+                    <span class="emoji-item" onclick="insertEmoji('💪')">💪</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
