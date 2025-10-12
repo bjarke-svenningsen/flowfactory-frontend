@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Godkend Bjarke</title>
+    <style>
+        body { font-family: Arial; padding: 50px; text-align: center; }
+        button { padding: 20px 40px; font-size: 18px; background: #667eea; color: white; border: none; border-radius: 10px; cursor: pointer; }
+        button:hover { background: #5568d3; }
+        #result { margin-top: 30px; font-size: 16px; }
+    </style>
+</head>
+<body>
+    <h1>🔧 Godkend Bjarke som Admin</h1>
+    <p>Email: bjarke.sv@outlook.dk</p>
+    
+    <button onclick="approve()">✅ Godkend og gør til Admin</button>
+    
+    <div id="result"></div>
+    
+    <script>
+        async function approve() {
+            const result = document.getElementById('result');
+            result.innerHTML = '⏳ Arbejder...';
+            result.style.color = '#666';
+            
+            try {
+                const response = await fetch('https://flowfactory-backend-production.up.railway.app/api/admin/approve-first', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email: 'bjarke.sv@outlook.dk' })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    result.innerHTML = '✅ SUCCES! Du er nu admin!<br><br>Log ind nu på:<br><a href="https://flowfactory-denmark.netlify.app">flowfactory-denmark.netlify.app</a>';
+                    result.style.color = 'green';
+                } else {
+                    result.innerHTML = '❌ Fejl: ' + (data.error || response.status) + '<br><br>Måske er brugeren ikke oprettet endnu?';
+                    result.style.color = 'red';
+                }
+            } catch (error) {
+                result.innerHTML = '❌ Netværksfejl: ' + error.message + '<br><br>Backend endpointet er måske ikke deployed endnu.';
+                result.style.color = 'red';
+            }
+        }
+    </script>
+</body>
+</html>

@@ -52,7 +52,7 @@ if (createDemoBtn) {
         msgEl.textContent = 'Demo-bruger findes allerede. Tryk "Log ind".';
         msgEl.className = 'message success';
       } else {
-        msgEl.textContent = 'Fejl: ' + err.message + '\n\nBackend URL: https://flowfactory-backend-production.up.railway.app';
+        msgEl.textContent = 'Fejl: ' + err.message + '\n\nBackend URL: http://localhost:4000';
         msgEl.className = 'message error';
       }
     }

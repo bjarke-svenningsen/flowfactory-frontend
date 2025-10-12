@@ -14,7 +14,7 @@ async function addPost() {
     // Prøv at sende til backend
     try {
         const token = sessionStorage.getItem('token');
-        const response = await fetch('https://flowfactory-backend-production.up.railway.app/api/posts', {
+        const response = await fetch('http://localhost:4000/api/posts', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -148,7 +148,7 @@ function formatFileSize(bytes) {
 async function loadPosts() {
     try {
         const token = sessionStorage.getItem('token');
-        const response = await fetch('https://flowfactory-backend-production.up.railway.app/api/posts', {
+        const response = await fetch('http://localhost:4000/api/posts', {
             headers:
 {
                 'Authorization': `Bearer ${token}`
@@ -163,6 +163,7 @@ async function loadPosts() {
                 content: p.content,
                 timestamp: new Date(p.created_at),
                 likes: p.likes || 0,
+                likedByUser: false, // Initialiser til false for alle posts
                 attachments: [],
                 avatar_url: p.avatar_url,
                 localPhoto: null
@@ -202,7 +203,7 @@ function renderPosts() {
             avatarHTML = `<div class="user-avatar" style="background-image: url(${post.localPhoto}); background-size: cover; background-position: center;"></div>`;
         } else if (post.avatar_url) {
             // 3. SÅ: Brug avatar fra backend
-            avatarHTML = `<div class="user-avatar" style="background-image: url(https://flowfactory-backend-production.up.railway.app${post.avatar_url}); background-size: cover; background-position: center;"></div>`;
+            avatarHTML = `<div class="user-avatar" style="background-image: url(http://localhost:4000${post.avatar_url}); background-size: cover; background-position: center;"></div>`;
         } else {
             // 4. SIDST: Fallback til initialer
             avatarHTML = `<div class="user-avatar">${postInitials}</div>`;
@@ -216,10 +217,12 @@ function renderPosts() {
                     return `<img src="${att.data}" alt="${att.name}" class="post-image" onclick="openImageModal('${att.data}')">`;
                 } else if (att.type === 'video') {
                     return `
-                        <video controls style="max-width: 100%; max-height: 500px; border-radius: 8px; margin-top: 10px;">
-                            <source src="${att.data}" type="video/mp4">
-                            Din browser understøtter ikke video afspilning.
-                        </video>
+                        <div class="video-size-limiter" style="display: inline-block;">
+                            <video controls class="feed-video-player">
+                                <source src="${att.data}" type="video/mp4">
+                                Din browser understøtter ikke video afspilning.
+                            </video>
+                        </div>
                     `;
                 } else {
                     return `<div class="post-file">📎 ${att.name} (${att.size})</div>`;
@@ -272,39 +275,79 @@ function renderPosts() {
                 ${attachmentsHTML}
                 <div class="post-actions">
                     <button class="post-action-btn" onclick="likePost(${post.id})">👍 Synes godt om (${post.likes})</button>
-                    <button class="post-action-btn">💬 Kommenter</button>
-                    <button class="post-action-btn">↗️ Del</button>
+                    <button class="post-action-btn" onclick="commentOnPost(${post.id})">💬 Kommenter</button>
+                    <button class="post-action-btn" onclick="sharePost(${post.id})">↗️ Del</button>
                 </div>
             </div>
         `;
     }).join('');
 }
 
-// Like et post
+// Like et post - NU MED TOGGLE!
 async function likePost(postId) {
     const post = posts.find(p => p.id === postId);
     if (!post) return;
 
-    try {
-        const token = sessionStorage.getItem('token');
-        const response = await fetch(`https://flowfactory-backend-production.up.railway.app/api/posts/${postId}/like`, {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${token}`
-            }
-        });
-
-        if (response.ok) {
-            const data = await response.json();
-            post.likes = data.likes;
-        } else {
-            throw new Error('Backend offline');
-        }
-    } catch (error) {
-        // Fallback: Bare øg lokalt
+    // Toggle like status
+    if (!post.likedByUser) {
+        post.likedByUser = true;
         post.likes++;
+    } else {
+        post.likedByUser = false;
+        post.likes = Math.max(0, post.likes - 1);
     }
     
+    // Gem til backend (men fortsæt selv hvis det fejler)
+    try {
+        const token = sessionStorage.getItem('token');
+        await fetch(`http://localhost:4000/api/posts/${postId}/like`, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+    } catch (error) {
+        console.log('Could not sync like to backend');
+    }
+    
+    renderPosts();
+}
+
+// Del et post
+function sharePost(postId) {
+    const post = posts.find(p => p.id === postId);
+    if (!post) return;
+    
+    const shareText = `${post.author}: ${post.content.substring(0, 100)}${post.content.length > 100 ? '...' : ''}`;
+    
+    // Kopier til clipboard
+    navigator.clipboard.writeText(shareText).then(() => {
+        alert('✅ Opslag kopieret til udklipsholder!\n\nDu kan nu dele det hvor som helst.');
+    }).catch(() => {
+        // Fallback
+        alert(`📤 Del dette opslag:\n\n${shareText}`);
+    });
+}
+
+// Kommenter på et post
+function commentOnPost(postId) {
+    const comment = prompt('💬 Skriv din kommentar:');
+    if (!comment || !comment.trim()) return;
+    
+    const post = posts.find(p => p.id === postId);
+    if (!post) return;
+    
+    // Initialiser comments array hvis den ikke findes
+    if (!post.comments) {
+        post.comments = [];
+    }
+    
+    // Tilføj kommentar
+    post.comments.push({
+        author: window.currentUser.name,
+        content: comment.trim(),
+        timestamp: new Date()
+    });
+    
+    alert('✅ Kommentar tilføjet!');
     renderPosts();
 }
 

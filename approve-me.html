@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Godkend Bruger</title>
+</head>
+<body>
+    <h1>Godkend din bruger</h1>
+    <button onclick="approve()">Godkend bjarke.sv@gmail.com</button>
+    <p id="result"></p>
+    
+    <script>
+        async function approve() {
+            const result = document.getElementById('result');
+            result.textContent = 'Prøver...';
+            
+            try {
+                // Godkend bruger direkte
+                const response = await fetch('https://flowfactory-backend-production.up.railway.app/api/admin/approve-first', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email: 'bjarke.sv@gmail.com' })
+                });
+                
+                if (response.ok) {
+                    result.textContent = '✅ DU ER NU GODKENDT OG ADMIN! Gå til sitet og log ind!';
+                    result.style.color = 'green';
+                    setTimeout(() => {
+                        window.location.href = 'https://flowfactory-denmark.netlify.app';
+                    }, 2000);
+                } else {
+                    result.textContent = '❌ Fejl: ' + response.status;
+                    result.style.color = 'red';
+                }
+            } catch (error) {
+                result.textContent = '❌ Fejl: ' + error.message;
+                result.style.color = 'red';
+            }
+        }
+    </script>
+</body>
+</html>

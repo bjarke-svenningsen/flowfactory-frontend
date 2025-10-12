@@ -14,7 +14,7 @@ async function loadRealFiles() {
         await loadFolders();
         
         // Then load files
-        const response = await fetch('https://flowfactory-backend-production.up.railway.app/api/files', {
+        const response = await fetch('http://localhost:4000/api/files', {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         
@@ -186,23 +186,39 @@ async function uploadFileToExplorer(event) {
     
     try {
         const token = sessionStorage.getItem('token');
-        const response = await fetch('https://flowfactory-backend-production.up.railway.app/api/files/upload', {
+        
+        console.log('Uploading file...', file.name);
+        
+        const response = await fetch('http://localhost:4000/api/files/upload', {
             method: 'POST',
             headers: { 'Authorization': `Bearer ${token}` },
             body: formData
         });
         
-        if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.error || 'Upload failed');
+        console.log('Upload response status:', response.status);
+        
+        const contentType = response.headers.get('content-type');
+        console.log('Response content-type:', contentType);
+        
+        if (!contentType || !contentType.includes('application/json')) {
+            throw new Error('Server returnerede ikke JSON. Tjek at backend kører korrekt.');
         }
         
         const result = await response.json();
+        console.log('Upload result:', result);
+        
+        if (!response.ok) {
+            throw new Error(result.error || 'Upload failed');
+        }
+        
         alert(`✅ ${file.name} uploadet succesfuldt!`);
         
+        console.log('Reloading files...');
         await loadRealFiles();
+        console.log('Files reloaded successfully');
+        
     } catch (error) {
-        console.error('Upload error:', error);
+        console.error('Upload error details:', error);
         alert('Upload fejlede: ' + error.message);
     }
     
@@ -226,7 +242,7 @@ async function openRealFile(fileId) {
 async function previewImage(fileId, filename) {
     try {
         const token = sessionStorage.getItem('token');
-        const response = await fetch(`https://flowfactory-backend-production.up.railway.app/api/files/download/${fileId}`, {
+        const response = await fetch(`http://localhost:4000/api/files/download/${fileId}`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         
@@ -254,7 +270,7 @@ async function previewImage(fileId, filename) {
 async function downloadRealFile(fileId) {
     try {
         const token = sessionStorage.getItem('token');
-        const response = await fetch(`https://flowfactory-backend-production.up.railway.app/api/files/download/${fileId}`, {
+        const response = await fetch(`http://localhost:4000/api/files/download/${fileId}`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         
@@ -289,7 +305,7 @@ async function deleteSelected() {
     
     try {
         const token = sessionStorage.getItem('token');
-        const response = await fetch(`https://flowfactory-backend-production.up.railway.app/api/files/${selectedFileId}`, {
+        const response = await fetch(`http://localhost:4000/api/files/${selectedFileId}`, {
             method: 'DELETE',
             headers: { 'Authorization': `Bearer ${token}` }
         });
@@ -351,7 +367,7 @@ function formatFileSize(bytes) {
 async function loadFolders() {
     try {
         const token = sessionStorage.getItem('token');
-        const response = await fetch('https://flowfactory-backend-production.up.railway.app/api/folders', {
+        const response = await fetch('http://localhost:4000/api/folders', {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         
@@ -377,7 +393,7 @@ async function showNewFolderDialog() {
     
     try {
         const token = sessionStorage.getItem('token');
-        const response = await fetch('https://flowfactory-backend-production.up.railway.app/api/folders', {
+        const response = await fetch('http://localhost:4000/api/folders', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -522,7 +538,7 @@ async function renameSelected() {
     
     try {
         const token = sessionStorage.getItem('token');
-        const response = await fetch(`https://flowfactory-backend-production.up.railway.app/api/files/${selectedFileId}/rename`, {
+        const response = await fetch(`http://localhost:4000/api/files/${selectedFileId}/rename`, {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',
@@ -565,7 +581,7 @@ async function shareFile() {
     
     try {
         const token = sessionStorage.getItem('token');
-        const response = await fetch('https://flowfactory-backend-production.up.railway.app/api/users', {
+        const response = await fetch('http://localhost:4000/api/users', {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         

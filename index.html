@@ -6,43 +6,6 @@
   <title>Log ind – Flowfactory Virksomhedsportal</title>
   <link rel="stylesheet" href="css/login.css" />
 </head>
-<script>
-  // Fallback: gør "Opret demo-bruger" knappen aktiv direkte fra HTML
-  (function () {
-    const btn = document.getElementById('createDemo');
-    const email = document.getElementById('email');
-    const pass  = document.getElementById('password');
-    const msg   = document.getElementById('message');
-
-    if (!btn) return;
-
-    btn.addEventListener('click', async function () {
-      if (msg) msg.textContent = 'Opretter demo-bruger…';
-      try {
-        const res = await fetch('https://flowfactory-backend-production.up.railway.app/api/auth/register', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            name: 'Admin',
-            email: 'admin@demo.local',
-            password: 'Password123!'
-          })
-        });
-        const data = await res.json().catch(() => ({}));
-
-        if (res.ok || (data && data.error === 'Email already in use')) {
-          if (email) email.value = 'admin@demo.local';
-          if (pass)  pass.value  = 'Password123!';
-          if (msg)   msg.textContent = 'Demo-bruger klar. Tryk "Log ind".';
-        } else {
-          if (msg) msg.textContent = (data && data.error) || 'Kunne ikke oprette demo-bruger';
-        }
-      } catch (e) {
-        if (msg) msg.textContent = 'Netværksfejl – tjek backend forbindelse';
-      }
-    });
-  })();
-</script>
 
 <body>
   <div class="login-container">
@@ -63,11 +26,6 @@
         </div>
 
         <button type="submit" class="login-btn">Log ind</button>
-
-        <!-- Demo-bruger knap -->
-        <button type="button" id="createDemo" class="login-btn" style="margin-top:8px;opacity:.8">
-          Opret demo-bruger (admin@demo.local)
-        </button>
       </form>
 
       <div id="message" class="message"></div>

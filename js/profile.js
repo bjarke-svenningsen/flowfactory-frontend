@@ -52,7 +52,7 @@ function renderAvatar(url) {
   if (!el) return;
   
   if (url) {
-    el.src = `https://flowfactory-backend-production.up.railway.app${url}`;
+    el.src = `http://localhost:4000${url}`;
   } else {
     el.removeAttribute('src');
   }
