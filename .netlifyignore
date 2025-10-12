@@ -1,0 +1,16 @@
+# Ignorer backend mapper
+backend/
+temp-backend/
+
+# Ignorer deployment scripts
+update-urls.js
+deploy-to-production.bat
+push-backend.bat
+RESTART-BACKEND.bat
+
+# Ignorer dokumentation
+RAILWAY-DEPLOYMENT.md
+DEPLOYMENT-GUIDE.md
+README.md
+SETUP.md
+MODULÆR-STRUKTUR.md
