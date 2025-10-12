@@ -200,10 +200,18 @@ app.post('/api/auth/login', (req, res) => {
   const { email, password } = req.body;
   const user = db.prepare('SELECT * FROM users WHERE email = ?').get(email.toLowerCase());
   if (!user) return res.status(401).json({ error: 'Invalid email or password' });
-  const ok = bcrypt.compareSync(password, user.password_hash);
+  
+  // Railway uses 'password', SQLite uses 'password_hash'
+  const passwordField = user.password_hash !== undefined ? user.password_hash : user.password;
+  const ok = bcrypt.compareSync(password, passwordField);
+  
   if (!ok) return res.status(401).json({ error: 'Invalid email or password' });
   const token = signToken(user);
-  const safeUser = { id: user.id, name: user.name, email: user.email, position: user.position, department: user.department, phone: user.phone, avatar_url: user.avatar_url, is_admin: user.is_admin };
+  
+  // Railway uses 'role', SQLite uses 'is_admin'
+  const is_admin = user.is_admin !== undefined ? user.is_admin : (user.role === 'admin' ? 1 : 0);
+  
+  const safeUser = { id: user.id, name: user.name, email: user.email, position: user.position, department: user.department, phone: user.phone, avatar_url: user.avatar_url, is_admin };
   res.json({ user: safeUser, token });
 });
 
