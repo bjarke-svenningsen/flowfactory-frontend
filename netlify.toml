@@ -2,6 +2,7 @@
   base = ""
   publish = "."
   command = ""
+  ignore = "git diff --quiet HEAD^ HEAD backend/"
 
 [[redirects]]
   from = "/*"
@@ -13,3 +14,9 @@
   [headers.values]
     X-Frame-Options = "DENY"
     X-XSS-Protection = "1; mode=block"
+
+# Ignorer backend folder
+[[headers]]
+  for = "/backend/*"
+  [headers.values]
+    X-Robots-Tag = "noindex"
