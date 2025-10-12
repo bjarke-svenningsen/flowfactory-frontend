@@ -2694,6 +2694,235 @@ app.get('/api/orders/:orderId/workspace', auth, (req, res) => {
   });
 });
 
+// --- POSTGRESQL SETUP ENDPOINTS (Browser-friendly, no auth needed for initial setup) ---
+
+// Setup PostgreSQL database tables (browser accessible)
+app.get('/api/setup-database', async (req, res) => {
+  // Only allow if DATABASE_URL is set (PostgreSQL mode)
+  if (!process.env.DATABASE_URL) {
+    return res.status(400).json({ 
+      error: 'PostgreSQL not configured',
+      message: 'DATABASE_URL environment variable not found. Add PostgreSQL to Railway first.'
+    });
+  }
+
+  try {
+    const { Pool } = await import('pg');
+    const pool = new Pool({
+      connectionString: process.env.DATABASE_URL,
+      ssl: { rejectUnauthorized: false }
+    });
+
+    // Create all tables
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS users (
+        id SERIAL PRIMARY KEY,
+        name TEXT NOT NULL,
+        email TEXT UNIQUE NOT NULL,
+        password_hash TEXT NOT NULL,
+        position TEXT DEFAULT '',
+        department TEXT DEFAULT '',
+        phone TEXT DEFAULT '',
+        avatar_url TEXT DEFAULT '',
+        is_admin INTEGER DEFAULT 0,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS messages (
+        id SERIAL PRIMARY KEY,
+        sender_id INTEGER REFERENCES users(id),
+        recipient_id INTEGER REFERENCES users(id),
+        text TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS posts (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER REFERENCES users(id),
+        content TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS reactions (
+        id SERIAL PRIMARY KEY,
+        post_id INTEGER REFERENCES posts(id),
+        user_id INTEGER REFERENCES users(id),
+        type TEXT DEFAULT 'like',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(post_id, user_id)
+      )
+    `);
+
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS files (
+        id SERIAL PRIMARY KEY,
+        filename TEXT NOT NULL,
+        original_name TEXT NOT NULL,
+        file_path TEXT NOT NULL,
+        file_size INTEGER NOT NULL,
+        mime_type TEXT,
+        folder_id INTEGER DEFAULT NULL,
+        uploaded_by INTEGER REFERENCES users(id),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS folders (
+        id SERIAL PRIMARY KEY,
+        name TEXT NOT NULL,
+        parent_id INTEGER REFERENCES folders(id),
+        created_by INTEGER REFERENCES users(id),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS customers (
+        id SERIAL PRIMARY KEY,
+        customer_number TEXT UNIQUE,
+        company_name TEXT NOT NULL,
+        contact_person TEXT,
+        att_person TEXT,
+        email TEXT,
+        phone TEXT,
+        address TEXT,
+        postal_code TEXT,
+        city TEXT,
+        cvr_number TEXT,
+        created_by INTEGER REFERENCES users(id),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS quotes (
+        id SERIAL PRIMARY KEY,
+        quote_number TEXT,
+        order_number TEXT NOT NULL,
+        parent_order_id INTEGER REFERENCES quotes(id),
+        sub_number INTEGER DEFAULT NULL,
+        is_extra_work INTEGER DEFAULT 0,
+        customer_id INTEGER REFERENCES customers(id),
+        contact_person_id INTEGER,
+        title TEXT NOT NULL,
+        requisition_number TEXT,
+        date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        valid_until TEXT,
+        status TEXT DEFAULT 'draft',
+        notes TEXT,
+        terms TEXT,
+        subtotal REAL DEFAULT 0,
+        vat_rate REAL DEFAULT 25,
+        vat_amount REAL DEFAULT 0,
+        total REAL DEFAULT 0,
+        created_by INTEGER REFERENCES users(id),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        sent_at TIMESTAMP,
+        accepted_at TIMESTAMP
+      )
+    `);
+
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS quote_lines (
+        id SERIAL PRIMARY KEY,
+        quote_id INTEGER REFERENCES quotes(id) ON DELETE CASCADE,
+        description TEXT NOT NULL,
+        quantity REAL NOT NULL,
+        unit TEXT NOT NULL,
+        unit_price REAL NOT NULL,
+        discount_percent REAL DEFAULT 0,
+        discount_amount REAL DEFAULT 0,
+        line_total REAL NOT NULL,
+        sort_order INTEGER DEFAULT 0
+      )
+    `);
+
+    await pool.end();
+
+    res.json({ 
+      success: true, 
+      message: '🎉 PostgreSQL database tables created successfully!',
+      next_step: 'Now open: /api/create-first-admin?email=bjarke.sv@gmail.com&password=Olineersej123&name=Bjarke'
+    });
+  } catch (error) {
+    console.error('Setup error:', error);
+    res.status(500).json({ error: 'Setup failed: ' + error.message });
+  }
+});
+
+// Create first admin user (browser accessible)
+app.get('/api/create-first-admin', async (req, res) => {
+  const { email, password, name } = req.query;
+  
+  if (!email || !password || !name) {
+    return res.status(400).json({ 
+      error: 'Missing parameters',
+      usage: '/api/create-first-admin?email=your@email.com&password=yourpassword&name=YourName'
+    });
+  }
+
+  try {
+    // Check if using PostgreSQL
+    if (process.env.DATABASE_URL) {
+      const { Pool } = await import('pg');
+      const pool = new Pool({
+        connectionString: process.env.DATABASE_URL,
+        ssl: { rejectUnauthorized: false }
+      });
+
+      // Check if user already exists
+      const existing = await pool.query('SELECT id FROM users WHERE email = $1', [email.toLowerCase()]);
+      if (existing.rows.length > 0) {
+        await pool.end();
+        return res.status(409).json({ error: 'User already exists' });
+      }
+
+      const password_hash = bcrypt.hashSync(password, 10);
+      
+      await pool.query(`
+        INSERT INTO users (name, email, password_hash, is_admin)
+        VALUES ($1, $2, $3, 1)
+      `, [name, email.toLowerCase(), password_hash]);
+
+      await pool.end();
+
+      res.json({ 
+        success: true, 
+        message: '🎉 Admin user created successfully!',
+        email: email,
+        next_step: 'Go to https://flowfactory-denmark.netlify.app and login!'
+      });
+    } else {
+      // SQLite mode (local development)
+      const exists = db.prepare('SELECT id FROM users WHERE email = ?').get(email.toLowerCase());
+      if (exists) {
+        return res.status(409).json({ error: 'User already exists' });
+      }
+
+      const password_hash = bcrypt.hashSync(password, 10);
+      
+      db.prepare('INSERT INTO users (name, email, password_hash, is_admin) VALUES (?, ?, ?, 1)')
+        .run(name, email.toLowerCase(), password_hash);
+
+      res.json({ 
+        success: true, 
+        message: '🎉 Admin user created successfully!',
+        email: email
+      });
+    }
+  } catch (error) {
+    console.error('Create admin error:', error);
+    res.status(500).json({ error: 'Failed to create admin: ' + error.message });
+  }
+});
+
 // Special endpoint: Approve first user without auth (for initial setup)
 app.post('/api/admin/approve-first', async (req, res) => {
   const { email } = req.body;
