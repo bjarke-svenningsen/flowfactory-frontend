@@ -11,7 +11,9 @@ const __dirname = path.dirname(__filename);
 const { Pool } = pg;
 
 // Check if we're in production (Railway provides DATABASE_URL)
-const isProduction = !!process.env.DATABASE_URL;
+// Ignore empty, undefined, or invalid DATABASE_URL values
+const DATABASE_URL = process.env.DATABASE_URL?.trim();
+const isProduction = DATABASE_URL && DATABASE_URL.length > 10 && DATABASE_URL.startsWith('postgresql://');
 
 console.log(`📊 Database Mode: ${isProduction ? 'PostgreSQL (Production)' : 'SQLite (Development)'}`);
 

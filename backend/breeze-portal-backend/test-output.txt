@@ -1,0 +1,66 @@
+
+📊 Testing database at: C:\Users\bjark\OneDrive - SG Seest GulvTeknik ApS\Skrivebord\Virksomhedsportal\backend\breeze-portal-backend\breeze.db
+================================================================================
+
+✅ TEST 1: Customers in database
+--------------------------------------------------------------------------------
+Found 2 customers:
+  - ID: 1, Name: Novo Nordisk A/S, Number: 1
+  - ID: 2, Name: Arla Mejericenter Chr. Feld, Number: 2
+
+✅ TEST 2: Posts in database
+--------------------------------------------------------------------------------
+Found 5 posts:
+  - ID: 1, User: 1, Content: https://www.youtube.com/watch?v=EH5jx5qPabU...
+  - ID: 2, User: 1, Content: https://www.youtube.com/watch?v=lKPrvHVXPKE...
+  - ID: 3, User: 1, Content: https://www.youtube.com/watch?v=WIcyMTAPEY0...
+  - ID: 4, User: 1, Content: https://www.youtube.com/watch?v=HUUtx88YM9g...
+  - ID: 5, User: 1, Content: https://www.youtube.com/watch?v=JQjWweClqz8...
+
+✅ TEST 3: Quotes in database
+--------------------------------------------------------------------------------
+Found 5 quotes:
+  - ID: 1, Customer: 1, Title: Polyuretanbelægning i Produktion, Order: 0001
+  - ID: 2, Customer: 2, Title: Nye gulvbelægninger i administrationsbygningen, Order: 0002
+  - ID: 3, Customer: 2, Title: Epoxybelægning på rampe i terminal, Order: 0003
+  - ID: 4, Customer: 2, Title: Nye gulvbelægninger i administrationsbygningen, Order: 0004
+  - ID: 5, Customer: 1, Title: ekstra rum i kantinen, Order: 0001
+
+✅ TEST 4: Invoices in database
+--------------------------------------------------------------------------------
+Found 1 invoices:
+  - ID: 7, Number: 5000, Order: 1
+
+✅ TEST 5: Folders in database
+--------------------------------------------------------------------------------
+Found 7 folders:
+  - ID: 1, Name: Leverandører, Parent: null
+  - ID: 2, Name: Certifikater, Parent: null
+  - ID: 3, Name: Tegninger, Parent: null
+  - ID: 4, Name: Min personlige mappe, Parent: null
+  - ID: 6, Name: BASF, Parent: 1
+  - ID: 7, Name: STO Danmark, Parent: 1
+  - ID: 8, Name: Eradur, Parent: 1
+
+✅ TEST 6: Files in database
+--------------------------------------------------------------------------------
+Found 2 files:
+  - ID: 1, Name: byggeri_koncepter (1).png, Folder: null
+  - ID: 2, Name: 1758981020061.jpg, Folder: null
+
+✅ TEST 7: Users in database
+--------------------------------------------------------------------------------
+Found 1 users:
+  - ID: 1, Name: Bjarke Lüthi Svenningsen, Email: bjarke.sv@gmail.com, Admin: 1
+
+================================================================================
+📊 DATABASE CONTENT SUMMARY
+================================================================================
+✓ 2 customers
+✓ 5 posts
+✓ 5 quotes
+✓ 1 invoices
+✓ 7 folders
+✓ 2 files
+✓ 1 users
+================================================================================

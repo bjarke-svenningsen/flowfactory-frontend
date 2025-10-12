@@ -1,53 +1,44 @@
 @echo off
-echo ================================================
-echo    FlowFactory Portal - Quick Start
-echo ================================================
-echo.
-echo Dette script starter portalen automatisk!
-echo.
-echo [1/4] Checker at Node.js er installeret...
-node --version >nul 2>&1
-if errorlevel 1 (
-    echo FEJL: Node.js er ikke installeret!
-    echo.
-    echo Download Node.js fra: https://nodejs.org
-    echo Installer og genstart derefter denne fil.
-    pause
-    exit
-)
-echo ✓ Node.js er installeret
+echo ========================================
+echo   STARTER BREEZE PORTAL (LOKAL)
+echo ========================================
 echo.
 
-echo [2/4] Starter backend server...
-cd backend\breeze-portal-backend
-start cmd /k "echo Backend Server && npm run dev"
-timeout /t 3 >nul
+REM Start backend in SQLite mode
+echo [1/2] Starter backend (SQLite database)...
+start "Backend Server" cmd /k "cd /d backend\breeze-portal-backend && START-BACKEND.bat"
 
-echo [3/4] Venter på backend starter...
-timeout /t 5 >nul
+REM Wait for backend to start
+echo Venter 3 sekunder på at backend starter...
+timeout /t 3 /nobreak >nul
 
-echo [4/4] Starter frontend server...
-cd ..\..
-start cmd /k "echo Frontend Server && python -m http.server 8000"
-timeout /t 2 >nul
+REM Start frontend
+echo [2/2] Starter frontend...
+start "Frontend Server" cmd /k "python -m http.server 8000"
+
+REM Wait a bit more for frontend to start
+timeout /t 2 /nobreak >nul
+
+REM Open browser
+echo [3/3] Åbner browser...
+start http://localhost:8000
 
 echo.
-echo ================================================
-echo    PORTALEN STARTER NU!
-echo ================================================
+echo ========================================
+echo   PORTAL ER STARTET!
+echo ========================================
 echo.
 echo Backend:  http://localhost:4000
 echo Frontend: http://localhost:8000
+echo Browser:  Åbnet automatisk
 echo.
-echo Din browser åbner om 5 sekunder...
+echo Login:
+echo   Email: bjarke.sv@gmail.com
+echo   Password: Olineersej123
 echo.
-echo VIGTIGT: Luk IKKE de to nye vinduer der åbnede!
-echo De skal køre i baggrunden.
+echo TJEK at backend vinduet viser:
+echo   "Database Mode: SQLite (Development)"
 echo.
-timeout /t 5 >nul
-start http://localhost:8000
-echo.
-echo Portalen er åben i din browser!
-echo Du kan lukke DETTE vindue nu.
+echo Luk begge vinduer for at stoppe serverne.
 echo.
 pause
