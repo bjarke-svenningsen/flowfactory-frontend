@@ -1,9 +1,6 @@
 // js/api.js
-// LOKAL UDVIKLING: Brug localhost backend
-const API = 'https://flowfactory-backend-production.up.railway.app';
-
-// PRODUCTION: Brug Railway backend
-// const API = 'https://flowfactory-backend-production.up.railway.app';
+// PRODUCTION: Backend hosted on Render with Supabase database
+const API = 'https://flowfactory-frontend.onrender.com';
 
 function token() {
   return sessionStorage.getItem('token') || '';
