@@ -524,39 +524,39 @@ app.post('/api/files/upload', auth, upload.single('file'), (req, res) => {
 // --- Folder Management ---
 
 // Create folder
-app.post('/api/folders', auth, (req, res) => {
+app.post('/api/folders', auth, async (req, res) => {
   const { name, parent_id } = req.body;
   if (!name) return res.status(400).json({ error: 'Folder name required' });
   
-  const info = db.prepare(`
+  const info = await db.run(`
     INSERT INTO folders (name, parent_id, created_by)
     VALUES (?, ?, ?)
-  `).run(name, parent_id || null, req.user.id);
+  `, [name, parent_id || null, req.user.id]);
   
-  const folder = db.prepare(`
+  const folder = await db.get(`
     SELECT f.*, u.name as creator_name
     FROM folders f
     JOIN users u ON f.created_by = u.id
     WHERE f.id = ?
-  `).get(info.lastInsertRowid);
+  `, [info.lastInsertRowid]);
   
   res.json(folder);
 });
 
 // Get all folders
-app.get('/api/folders', auth, (req, res) => {
-  const folders = db.prepare(`
+app.get('/api/folders', auth, async (req, res) => {
+  const folders = await db.all(`
     SELECT f.*, u.name as creator_name
     FROM folders f
     JOIN users u ON f.created_by = u.id
     ORDER BY f.name ASC
-  `).all();
+  `);
   
   res.json(folders);
 });
 
 // Rename folder
-app.put('/api/folders/:id', auth, (req, res) => {
+app.put('/api/folders/:id', auth, async (req, res) => {
   const folderId = Number(req.params.id);
   const { name } = req.body;
   
@@ -564,63 +564,63 @@ app.put('/api/folders/:id', auth, (req, res) => {
     return res.status(400).json({ error: 'Folder name required' });
   }
   
-  const folder = db.prepare('SELECT * FROM folders WHERE id = ?').get(folderId);
+  const folder = await db.get('SELECT * FROM folders WHERE id = ?', [folderId]);
   
   if (!folder) {
     return res.status(404).json({ error: 'Folder not found' });
   }
   
   // Check if user owns folder or is admin
-  const user = db.prepare('SELECT is_admin FROM users WHERE id = ?').get(req.user.id);
+  const user = await db.get('SELECT is_admin FROM users WHERE id = ?', [req.user.id]);
   if (folder.created_by !== req.user.id && !user.is_admin) {
     return res.status(403).json({ error: 'Permission denied' });
   }
   
-  db.prepare('UPDATE folders SET name = ? WHERE id = ?').run(name.trim(), folderId);
+  await db.run('UPDATE folders SET name = ? WHERE id = ?', [name.trim(), folderId]);
   
-  const updated = db.prepare(`
+  const updated = await db.get(`
     SELECT f.*, u.name as creator_name
     FROM folders f
     JOIN users u ON f.created_by = u.id
     WHERE f.id = ?
-  `).get(folderId);
+  `, [folderId]);
   
   res.json(updated);
 });
 
 // Delete folder
-app.delete('/api/folders/:id', auth, (req, res) => {
+app.delete('/api/folders/:id', auth, async (req, res) => {
   const folderId = Number(req.params.id);
-  const folder = db.prepare('SELECT * FROM folders WHERE id = ?').get(folderId);
+  const folder = await db.get('SELECT * FROM folders WHERE id = ?', [folderId]);
   
   if (!folder) {
     return res.status(404).json({ error: 'Folder not found' });
   }
   
   // Check if user owns folder or is admin
-  const user = db.prepare('SELECT is_admin FROM users WHERE id = ?').get(req.user.id);
+  const user = await db.get('SELECT is_admin FROM users WHERE id = ?', [req.user.id]);
   if (folder.created_by !== req.user.id && !user.is_admin) {
     return res.status(403).json({ error: 'Permission denied' });
   }
   
   // Check if folder has files
-  const fileCount = db.prepare('SELECT COUNT(*) as cnt FROM files WHERE folder_id = ?').get(folderId).cnt;
-  if (fileCount > 0) {
+  const fileCountResult = await db.get('SELECT COUNT(*) as cnt FROM files WHERE folder_id = ?', [folderId]);
+  if (fileCountResult.cnt > 0) {
     return res.status(400).json({ error: 'Folder contains files. Delete files first.' });
   }
   
   // Check if folder has subfolders
-  const subfolderCount = db.prepare('SELECT COUNT(*) as cnt FROM folders WHERE parent_id = ?').get(folderId).cnt;
-  if (subfolderCount > 0) {
+  const subfolderCountResult = await db.get('SELECT COUNT(*) as cnt FROM folders WHERE parent_id = ?', [folderId]);
+  if (subfolderCountResult.cnt > 0) {
     return res.status(400).json({ error: 'Folder contains subfolders. Delete subfolders first.' });
   }
   
-  db.prepare('DELETE FROM folders WHERE id = ?').run(folderId);
+  await db.run('DELETE FROM folders WHERE id = ?', [folderId]);
   res.json({ success: true });
 });
 
 // Get all files (backwards compatible)
-app.get('/api/files', auth, (req, res) => {
+app.get('/api/files', auth, async (req, res) => {
   const { folder_id } = req.query;
   
   let query = `
@@ -640,23 +640,23 @@ app.get('/api/files', auth, (req, res) => {
   query += ` ORDER BY f.created_at DESC LIMIT 1000`;
   
   const files = (folder_id && folder_id !== 'all' && folder_id !== 'root')
-    ? db.prepare(query).all(Number(folder_id))
-    : db.prepare(query).all();
+    ? await db.all(query, [Number(folder_id)])
+    : await db.all(query);
   
   res.json(files);
 });
 
 // Delete file (Server Storage)
-app.delete('/api/files/:id', auth, (req, res) => {
+app.delete('/api/files/:id', auth, async (req, res) => {
   const fileId = Number(req.params.id);
-  const file = db.prepare('SELECT * FROM files WHERE id = ?').get(fileId);
+  const file = await db.get('SELECT * FROM files WHERE id = ?', [fileId]);
   
   if (!file) {
     return res.status(404).json({ error: 'File not found' });
   }
   
   // Check if user owns the file or is admin
-  const user = db.prepare('SELECT is_admin FROM users WHERE id = ?').get(req.user.id);
+  const user = await db.get('SELECT is_admin FROM users WHERE id = ?', [req.user.id]);
   if (file.uploaded_by !== req.user.id && !user.is_admin) {
     return res.status(403).json({ error: 'Permission denied' });
   }
@@ -668,13 +668,13 @@ app.delete('/api/files/:id', auth, (req, res) => {
   }
   
   // Delete from database
-  db.prepare('DELETE FROM files WHERE id = ?').run(fileId);
+  await db.run('DELETE FROM files WHERE id = ?', [fileId]);
   
   res.json({ success: true });
 });
 
 // Rename file
-app.put('/api/files/:id/rename', auth, (req, res) => {
+app.put('/api/files/:id/rename', auth, async (req, res) => {
   const fileId = Number(req.params.id);
   const { new_name } = req.body;
   
@@ -682,35 +682,35 @@ app.put('/api/files/:id/rename', auth, (req, res) => {
     return res.status(400).json({ error: 'New name required' });
   }
   
-  const file = db.prepare('SELECT * FROM files WHERE id = ?').get(fileId);
+  const file = await db.get('SELECT * FROM files WHERE id = ?', [fileId]);
   
   if (!file) {
     return res.status(404).json({ error: 'File not found' });
   }
   
   // Check if user owns file or is admin
-  const user = db.prepare('SELECT is_admin FROM users WHERE id = ?').get(req.user.id);
+  const user = await db.get('SELECT is_admin FROM users WHERE id = ?', [req.user.id]);
   if (file.uploaded_by !== req.user.id && !user.is_admin) {
     return res.status(403).json({ error: 'Permission denied' });
   }
   
   // Update file name
-  db.prepare('UPDATE files SET original_name = ? WHERE id = ?').run(new_name.trim(), fileId);
+  await db.run('UPDATE files SET original_name = ? WHERE id = ?', [new_name.trim(), fileId]);
   
-  const updatedFile = db.prepare(`
+  const updatedFile = await db.get(`
     SELECT f.*, u.name as uploader_name
     FROM files f
     JOIN users u ON f.uploaded_by = u.id
     WHERE f.id = ?
-  `).get(fileId);
+  `, [fileId]);
   
   res.json(updatedFile);
 });
 
 // Download file (Server Storage)
-app.get('/api/files/download/:id', auth, (req, res) => {
+app.get('/api/files/download/:id', auth, async (req, res) => {
   const fileId = Number(req.params.id);
-  const file = db.prepare('SELECT * FROM files WHERE id = ?').get(fileId);
+  const file = await db.get('SELECT * FROM files WHERE id = ?', [fileId]);
   
   if (!file) {
     return res.status(404).json({ error: 'File not found' });
