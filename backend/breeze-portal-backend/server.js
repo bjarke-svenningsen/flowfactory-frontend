@@ -12,6 +12,7 @@ import { fileURLToPath } from 'url';
 import fs from 'fs';
 import nodemailer from 'nodemailer';
 import { db } from './database-config.js';
+import { initializeDatabase } from './init-database.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -58,19 +59,21 @@ const upload = multer({
 // --- DB Setup ---
 // Database is now initialized in database-config.js to ensure consistent path
 
-// users
-db.prepare(`CREATE TABLE IF NOT EXISTS users (
-  id ${db._isProduction ? 'SERIAL' : 'INTEGER'} PRIMARY KEY ${db._isProduction ? '' : 'AUTOINCREMENT'},
-  name TEXT NOT NULL,
-  email TEXT UNIQUE NOT NULL,
-  password_hash TEXT NOT NULL,
-  position TEXT DEFAULT '',
-  department TEXT DEFAULT '',
-  phone TEXT DEFAULT '',
-  profile_image TEXT DEFAULT '',
-  is_admin INTEGER DEFAULT 0,
-  created_at ${db._isProduction ? 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP' : "TEXT DEFAULT (datetime('now'))"}
-);`).run();
+// Initialize database tables (async for PostgreSQL compatibility)
+async function initializeDatabase() {
+  // users
+  await db.run(`CREATE TABLE IF NOT EXISTS users (
+    id ${db._isProduction ? 'SERIAL' : 'INTEGER'} PRIMARY KEY ${db._isProduction ? '' : 'AUTOINCREMENT'},
+    name TEXT NOT NULL,
+    email TEXT UNIQUE NOT NULL,
+    password_hash TEXT NOT NULL,
+    position TEXT DEFAULT '',
+    department TEXT DEFAULT '',
+    phone TEXT DEFAULT '',
+    profile_image TEXT DEFAULT '',
+    is_admin INTEGER DEFAULT 0,
+    created_at ${db._isProduction ? 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP' : "TEXT DEFAULT (datetime('now'))"}
+  )`);
 
 // invite codes
 db.prepare(`CREATE TABLE IF NOT EXISTS invite_codes (
@@ -2949,8 +2952,18 @@ app.post('/api/admin/approve-first', async (req, res) => {
   res.status(404).json({ error: 'User not found' });
 });
 
-// Start server
-httpServer.listen(PORT, () => {
-  console.log(`🚀 Breeze backend kører på http://localhost:${PORT}`);
-  console.log(`📊 Database: breeze.db`);
-});
+// Initialize database and start server
+async function startServer() {
+  try {
+    await initializeDatabase();
+    httpServer.listen(PORT, () => {
+      console.log(`🚀 Breeze backend kører på http://localhost:${PORT}`);
+      console.log(`📊 Database: ${db._isProduction ? 'PostgreSQL (Railway)' : 'SQLite (breeze.db)'}`);
+    });
+  } catch (error) {
+    console.error('❌ Failed to start server:', error);
+    process.exit(1);
+  }
+}
+
+startServer();
