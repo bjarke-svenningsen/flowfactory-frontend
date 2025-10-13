@@ -14,7 +14,7 @@ async function addPost() {
     // Prøv at sende til backend
     try {
         const token = sessionStorage.getItem('token');
-        const response = await fetch('https://flowfactory-backend-production.up.railway.app/api/posts', {
+        const response = await fetch('https://flowfactory-frontend.onrender.com/api/posts', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -163,7 +163,7 @@ async function loadPosts() {
     
     try {
         const token = sessionStorage.getItem('token');
-        const response = await fetch('https://flowfactory-backend-production.up.railway.app/api/posts', {
+        const response = await fetch('https://flowfactory-frontend.onrender.com/api/posts', {
             headers:
 {
                 'Authorization': `Bearer ${token}`
@@ -219,7 +219,7 @@ function renderPosts() {
             avatarHTML = `<div class="user-avatar" style="background-image: url(${post.localPhoto}); background-size: cover; background-position: center;"></div>`;
         } else if (post.avatar_url) {
             // 3. SÅ: Brug avatar fra backend
-            avatarHTML = `<div class="user-avatar" style="background-image: url(https://flowfactory-backend-production.up.railway.app${post.avatar_url}); background-size: cover; background-position: center;"></div>`;
+            avatarHTML = `<div class="user-avatar" style="background-image: url(https://flowfactory-frontend.onrender.com${post.avatar_url}); background-size: cover; background-position: center;"></div>`;
         } else {
             // 4. SIDST: Fallback til initialer
             avatarHTML = `<div class="user-avatar">${postInitials}</div>`;
@@ -318,7 +318,7 @@ async function likePost(postId) {
     // Gem til backend (men fortsæt selv hvis det fejler)
     try {
         const token = sessionStorage.getItem('token');
-        await fetch(`https://flowfactory-backend-production.up.railway.app/api/posts/${postId}/like`, {
+        await fetch(`https://flowfactory-frontend.onrender.com/api/posts/${postId}/like`, {
             method: 'POST',
             headers: { 'Authorization': `Bearer ${token}` }
         });
@@ -420,7 +420,7 @@ async function deletePost(postId) {
     if (confirm('Er du sikker på at du vil slette dette opslag?')) {
         try {
             const token = sessionStorage.getItem('token');
-            const response = await fetch(`https://flowfactory-backend-production.up.railway.app/api/posts/${postId}`, {
+            const response = await fetch(`https://flowfactory-frontend.onrender.com/api/posts/${postId}`, {
                 method: 'DELETE',
                 headers: { 'Authorization': `Bearer ${token}` }
             });

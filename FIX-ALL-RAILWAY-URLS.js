@@ -1,6 +1,6 @@
 // FIX-ALL-RAILWAY-URLS.js - Replace ALL hardcoded Railway URLs with Render URL
-import fs from 'fs';
-import path from 'path';
+const fs = require('fs');
+const path = require('path');
 
 const OLD_URL = 'https://flowfactory-backend-production.up.railway.app';
 const NEW_URL = 'https://flowfactory-frontend.onrender.com';
@@ -30,10 +30,11 @@ for (const file of filesToFix) {
     const filePath = path.join(process.cwd(), file);
     const content = fs.readFileSync(filePath, 'utf8');
     
-    const count = (content.match(new RegExp(OLD_URL.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g')) || []).length;
+    const regex = new RegExp(OLD_URL.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g');
+    const count = (content.match(regex) || []).length;
     
     if (count > 0) {
-      const newContent = content.replaceAll(OLD_URL, NEW_URL);
+      const newContent = content.replace(regex, NEW_URL);
       fs.writeFileSync(filePath, newContent, 'utf8');
       console.log(`✅ ${file}: Replaced ${count} occurrences`);
       totalReplacements += count;
@@ -48,7 +49,7 @@ for (const file of filesToFix) {
 console.log(`\n🎉 Total replacements: ${totalReplacements}`);
 console.log('\n📋 Next steps:');
 console.log('1. git add -A');
-console.log('2. git commit -m "Fix all hardcoded Railway URLs to Render"');
+console.log('2. git commit -m "Actually fix all Railway URLs - replace with Render"');
 console.log('3. git push origin main');
 console.log('4. Wait 2 minutes for Netlify deployment');
 console.log('5. Hard refresh browser and test!\n');

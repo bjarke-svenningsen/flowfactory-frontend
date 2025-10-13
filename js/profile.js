@@ -35,7 +35,7 @@ async function saveProfile() {
 
     try {
         const token = sessionStorage.getItem('token');
-        const response = await fetch('https://flowfactory-backend-production.up.railway.app/api/users/me', {
+        const response = await fetch('https://flowfactory-frontend.onrender.com/api/users/me', {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',
@@ -113,7 +113,7 @@ function changeProfilePhoto(event) {
 async function loadUserActivity() {
     try {
         const token = sessionStorage.getItem('token');
-        const response = await fetch('https://flowfactory-backend-production.up.railway.app/api/users/activity', {
+        const response = await fetch('https://flowfactory-frontend.onrender.com/api/users/activity', {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         

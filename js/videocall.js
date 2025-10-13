@@ -23,7 +23,7 @@ function initVideoCallSocket() {
         videoSocket = socket;
         console.log('Reusing existing socket for video calls');
     } else {
-        videoSocket = io('https://flowfactory-backend-production.up.railway.app');
+        videoSocket = io('https://flowfactory-frontend.onrender.com');
         
         // Authenticate socket
         const token = sessionStorage.getItem('token');

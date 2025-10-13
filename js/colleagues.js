@@ -6,7 +6,7 @@ let filteredColleagues = [];
 async function loadColleagues() {
     try {
         const token = sessionStorage.getItem('token');
-        const response = await fetch('https://flowfactory-backend-production.up.railway.app/api/users', {
+        const response = await fetch('https://flowfactory-frontend.onrender.com/api/users', {
             headers: {
                 'Authorization': `Bearer ${token}`
             }
@@ -166,7 +166,7 @@ function renderColleagues() {
         if (isCurrentUser && window.currentUser.profilePhoto) {
             avatarHTML = `<div class="colleague-avatar" style="background-image: url(${window.currentUser.profilePhoto}); background-size: cover; background-position: center;"></div>`;
         } else if (colleague.avatar_url) {
-            avatarHTML = `<div class="colleague-avatar" style="background-image: url(https://flowfactory-backend-production.up.railway.app${colleague.avatar_url}); background-size: cover; background-position: center;"></div>`;
+            avatarHTML = `<div class="colleague-avatar" style="background-image: url(https://flowfactory-frontend.onrender.com${colleague.avatar_url}); background-size: cover; background-position: center;"></div>`;
         } else {
             avatarHTML = `<div class="colleague-avatar">${initials}</div>`;
         }

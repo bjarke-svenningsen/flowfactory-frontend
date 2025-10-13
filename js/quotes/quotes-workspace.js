@@ -20,7 +20,7 @@ async function openOrderWorkspace(orderId, fromParentId = null) {
     
     try {
         const token = sessionStorage.getItem('token');
-        const response = await fetch(`https://flowfactory-backend-production.up.railway.app/api/orders/${orderId}/workspace`, {
+        const response = await fetch(`https://flowfactory-frontend.onrender.com/api/orders/${orderId}/workspace`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         
@@ -609,7 +609,7 @@ async function saveExpense() {
     
     try {
         const token = sessionStorage.getItem('token');
-        const response = await fetch(`https://flowfactory-backend-production.up.railway.app/api/orders/${currentWorkspaceOrder.id}/expenses`, {
+        const response = await fetch(`https://flowfactory-frontend.onrender.com/api/orders/${currentWorkspaceOrder.id}/expenses`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -708,7 +708,7 @@ async function updateExpense(expenseId) {
     
     try {
         const token = sessionStorage.getItem('token');
-        const response = await fetch(`https://flowfactory-backend-production.up.railway.app/api/orders/${currentWorkspaceOrder.id}/expenses/${expenseId}`, {
+        const response = await fetch(`https://flowfactory-frontend.onrender.com/api/orders/${currentWorkspaceOrder.id}/expenses/${expenseId}`, {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',
@@ -738,7 +738,7 @@ async function deleteExpense(expenseId) {
     
     try {
         const token = sessionStorage.getItem('token');
-        const response = await fetch(`https://flowfactory-backend-production.up.railway.app/api/orders/${currentWorkspaceOrder.id}/expenses/${expenseId}`, {
+        const response = await fetch(`https://flowfactory-frontend.onrender.com/api/orders/${currentWorkspaceOrder.id}/expenses/${expenseId}`, {
             method: 'DELETE',
             headers: { 'Authorization': `Bearer ${token}` }
         });
@@ -925,7 +925,7 @@ async function uploadDocument() {
     
     try {
         const token = sessionStorage.getItem('token');
-        const response = await fetch(`https://flowfactory-backend-production.up.railway.app/api/orders/${currentWorkspaceOrder.id}/documents`, {
+        const response = await fetch(`https://flowfactory-frontend.onrender.com/api/orders/${currentWorkspaceOrder.id}/documents`, {
             method: 'POST',
             headers: { 'Authorization': `Bearer ${token}` },
             body: formData
@@ -967,7 +967,7 @@ async function previewDocument(documentId, filename) {
         const imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp'];
         const pdfExtensions = ['pdf'];
         
-        const fileUrl = `https://flowfactory-backend-production.up.railway.app${doc.file_path}`;
+        const fileUrl = `https://flowfactory-frontend.onrender.com${doc.file_path}`;
         
         if (imageExtensions.includes(ext)) {
             // Show image in modal
@@ -1045,7 +1045,7 @@ async function downloadDocument(documentId, filename) {
         }
         
         // Construct download URL
-        const downloadUrl = `https://flowfactory-backend-production.up.railway.app${doc.file_path}`;
+        const downloadUrl = `https://flowfactory-frontend.onrender.com${doc.file_path}`;
         
         // Create temporary link and trigger download
         const a = document.createElement('a');
@@ -1067,7 +1067,7 @@ async function deleteDocument(documentId) {
     
     try {
         const token = sessionStorage.getItem('token');
-        const response = await fetch(`https://flowfactory-backend-production.up.railway.app/api/orders/${currentWorkspaceOrder.id}/documents/${documentId}`, {
+        const response = await fetch(`https://flowfactory-frontend.onrender.com/api/orders/${currentWorkspaceOrder.id}/documents/${documentId}`, {
             method: 'DELETE',
             headers: { 'Authorization': `Bearer ${token}` }
         });
@@ -1346,7 +1346,7 @@ async function saveExtraWork(parentOrderId) {
     
     try {
         const token = sessionStorage.getItem('token');
-        const response = await fetch(`https://flowfactory-backend-production.up.railway.app/api/quotes/${parentOrderId}/extra-work`, {
+        const response = await fetch(`https://flowfactory-frontend.onrender.com/api/quotes/${parentOrderId}/extra-work`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',

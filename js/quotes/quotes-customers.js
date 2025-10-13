@@ -7,7 +7,7 @@ let customerContacts = [];
 async function loadCustomers() {
     try {
         const token = sessionStorage.getItem('token');
-        const response = await fetch('https://flowfactory-backend-production.up.railway.app/api/customers', {
+        const response = await fetch('https://flowfactory-frontend.onrender.com/api/customers', {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         
@@ -201,7 +201,7 @@ async function saveCustomerForm(fromQuoteForm = false) {
     
     try {
         const token = sessionStorage.getItem('token');
-        const response = await fetch('https://flowfactory-backend-production.up.railway.app/api/customers', {
+        const response = await fetch('https://flowfactory-frontend.onrender.com/api/customers', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -358,7 +358,7 @@ async function updateCustomer(customerId) {
     
     try {
         const token = sessionStorage.getItem('token');
-        const response = await fetch(`https://flowfactory-backend-production.up.railway.app/api/customers/${customerId}`, {
+        const response = await fetch(`https://flowfactory-frontend.onrender.com/api/customers/${customerId}`, {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',
@@ -393,7 +393,7 @@ async function deleteCustomer(customerId) {
     
     try {
         const token = sessionStorage.getItem('token');
-        const response = await fetch(`https://flowfactory-backend-production.up.railway.app/api/customers/${customerId}`, {
+        const response = await fetch(`https://flowfactory-frontend.onrender.com/api/customers/${customerId}`, {
             method: 'DELETE',
             headers: { 'Authorization': `Bearer ${token}` }
         });
@@ -419,7 +419,7 @@ async function deleteCustomer(customerId) {
 async function loadCustomerContacts(customerId) {
     try {
         const token = sessionStorage.getItem('token');
-        const response = await fetch(`https://flowfactory-backend-production.up.railway.app/api/customers/${customerId}/contacts`, {
+        const response = await fetch(`https://flowfactory-frontend.onrender.com/api/customers/${customerId}/contacts`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         
@@ -557,7 +557,7 @@ async function saveContact(customerId) {
     
     try {
         const token = sessionStorage.getItem('token');
-        const response = await fetch(`https://flowfactory-backend-production.up.railway.app/api/customers/${customerId}/contacts`, {
+        const response = await fetch(`https://flowfactory-frontend.onrender.com/api/customers/${customerId}/contacts`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -658,7 +658,7 @@ async function updateContact(customerId, contactId) {
     
     try {
         const token = sessionStorage.getItem('token');
-        const response = await fetch(`https://flowfactory-backend-production.up.railway.app/api/customers/${customerId}/contacts/${contactId}`, {
+        const response = await fetch(`https://flowfactory-frontend.onrender.com/api/customers/${customerId}/contacts/${contactId}`, {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',
@@ -688,7 +688,7 @@ async function deleteContact(customerId, contactId) {
     
     try {
         const token = sessionStorage.getItem('token');
-        const response = await fetch(`https://flowfactory-backend-production.up.railway.app/api/customers/${customerId}/contacts/${contactId}`, {
+        const response = await fetch(`https://flowfactory-frontend.onrender.com/api/customers/${customerId}/contacts/${contactId}`, {
             method: 'DELETE',
             headers: { 'Authorization': `Bearer ${token}` }
         });

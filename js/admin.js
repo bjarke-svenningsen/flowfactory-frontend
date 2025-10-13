@@ -12,19 +12,19 @@ async function loadAdminData() {
         const token = sessionStorage.getItem('token');
         
         // Load stats
-        const usersRes = await fetch('https://flowfactory-backend-production.up.railway.app/api/admin/users', {
+        const usersRes = await fetch('https://flowfactory-frontend.onrender.com/api/admin/users', {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         const users = await usersRes.json();
         document.getElementById('adminTotalUsers').textContent = users.length;
         
-        const pendingRes = await fetch('https://flowfactory-backend-production.up.railway.app/api/admin/pending-users', {
+        const pendingRes = await fetch('https://flowfactory-frontend.onrender.com/api/admin/pending-users', {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         const pending = await pendingRes.json();
         document.getElementById('adminPendingUsers').textContent = pending.length;
         
-        const codesRes = await fetch('https://flowfactory-backend-production.up.railway.app/api/admin/invite-codes', {
+        const codesRes = await fetch('https://flowfactory-frontend.onrender.com/api/admin/invite-codes', {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         const codes = await codesRes.json();
@@ -39,7 +39,7 @@ async function loadAdminData() {
 async function loadPendingUsers() {
     try {
         const token = sessionStorage.getItem('token');
-        const response = await fetch('https://flowfactory-backend-production.up.railway.app/api/admin/pending-users', {
+        const response = await fetch('https://flowfactory-frontend.onrender.com/api/admin/pending-users', {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         const pending = await response.json();
@@ -82,7 +82,7 @@ async function approveUser(userId) {
     
     try {
         const token = sessionStorage.getItem('token');
-        const response = await fetch(`https://flowfactory-backend-production.up.railway.app/api/admin/approve-user/${userId}`, {
+        const response = await fetch(`https://flowfactory-frontend.onrender.com/api/admin/approve-user/${userId}`, {
             method: 'POST',
             headers: { 'Authorization': `Bearer ${token}` }
         });
@@ -102,7 +102,7 @@ async function rejectUser(userId) {
     
     try {
         const token = sessionStorage.getItem('token');
-        const response = await fetch(`https://flowfactory-backend-production.up.railway.app/api/admin/reject-user/${userId}`, {
+        const response = await fetch(`https://flowfactory-frontend.onrender.com/api/admin/reject-user/${userId}`, {
             method: 'POST',
             headers: { 'Authorization': `Bearer ${token}` }
         });
@@ -125,7 +125,7 @@ async function sendEmailInvitation() {
     
     try {
         const token = sessionStorage.getItem('token');
-        const response = await fetch('https://flowfactory-backend-production.up.railway.app/api/admin/send-invitation', {
+        const response = await fetch('https://flowfactory-frontend.onrender.com/api/admin/send-invitation', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -159,7 +159,7 @@ async function generateInviteCode() {
     
     try {
         const token = sessionStorage.getItem('token');
-        const response = await fetch('https://flowfactory-backend-production.up.railway.app/api/admin/generate-invite', {
+        const response = await fetch('https://flowfactory-frontend.onrender.com/api/admin/generate-invite', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -182,7 +182,7 @@ async function generateInviteCode() {
 async function loadInviteCodes() {
     try {
         const token = sessionStorage.getItem('token');
-        const response = await fetch('https://flowfactory-backend-production.up.railway.app/api/admin/invite-codes', {
+        const response = await fetch('https://flowfactory-frontend.onrender.com/api/admin/invite-codes', {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         const codes = await response.json();
@@ -229,7 +229,7 @@ async function deleteInviteCode(codeId) {
     
     try {
         const token = sessionStorage.getItem('token');
-        await fetch(`https://flowfactory-backend-production.up.railway.app/api/admin/invite-codes/${codeId}`, {
+        await fetch(`https://flowfactory-frontend.onrender.com/api/admin/invite-codes/${codeId}`, {
             method: 'DELETE',
             headers: { 'Authorization': `Bearer ${token}` }
         });
@@ -245,7 +245,7 @@ async function deleteInviteCode(codeId) {
 async function loadAllUsers() {
     try {
         const token = sessionStorage.getItem('token');
-        const response = await fetch('https://flowfactory-backend-production.up.railway.app/api/admin/users', {
+        const response = await fetch('https://flowfactory-frontend.onrender.com/api/admin/users', {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         const users = await response.json();
@@ -305,7 +305,7 @@ async function makeAdmin(userId) {
     
     try {
         const token = sessionStorage.getItem('token');
-        await fetch(`https://flowfactory-backend-production.up.railway.app/api/admin/make-admin/${userId}`, {
+        await fetch(`https://flowfactory-frontend.onrender.com/api/admin/make-admin/${userId}`, {
             method: 'POST',
             headers: { 'Authorization': `Bearer ${token}` }
         });
@@ -322,7 +322,7 @@ async function removeAdmin(userId) {
     
     try {
         const token = sessionStorage.getItem('token');
-        await fetch(`https://flowfactory-backend-production.up.railway.app/api/admin/remove-admin/${userId}`, {
+        await fetch(`https://flowfactory-frontend.onrender.com/api/admin/remove-admin/${userId}`, {
             method: 'POST',
             headers: { 'Authorization': `Bearer ${token}` }
         });
@@ -344,7 +344,7 @@ async function deleteUser(userId, userName, userEmail) {
     
     try {
         const token = sessionStorage.getItem('token');
-        const response = await fetch(`https://flowfactory-backend-production.up.railway.app/api/admin/users/${userId}`, {
+        const response = await fetch(`https://flowfactory-frontend.onrender.com/api/admin/users/${userId}`, {
             method: 'DELETE',
             headers: { 'Authorization': `Bearer ${token}` }
         });

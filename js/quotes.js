@@ -16,7 +16,7 @@ let currentView = 'list'; // 'list', 'create', 'edit', 'preview'
 async function loadQuotes() {
     try {
         const token = sessionStorage.getItem('token');
-        const response = await fetch('https://flowfactory-backend-production.up.railway.app/api/quotes', {
+        const response = await fetch('https://flowfactory-frontend.onrender.com/api/quotes', {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         
@@ -36,7 +36,7 @@ async function loadQuotes() {
 async function loadCustomers() {
     try {
         const token = sessionStorage.getItem('token');
-        const response = await fetch('https://flowfactory-backend-production.up.railway.app/api/customers', {
+        const response = await fetch('https://flowfactory-frontend.onrender.com/api/customers', {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         
@@ -187,7 +187,7 @@ function createEmptyLine() {
 async function viewQuote(quoteId) {
     try {
         const token = sessionStorage.getItem('token');
-        const response = await fetch(`https://flowfactory-backend-production.up.railway.app/api/quotes/${quoteId}`, {
+        const response = await fetch(`https://flowfactory-frontend.onrender.com/api/quotes/${quoteId}`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         
@@ -212,7 +212,7 @@ async function viewQuote(quoteId) {
 async function editQuote(quoteId) {
     try {
         const token = sessionStorage.getItem('token');
-        const response = await fetch(`https://flowfactory-backend-production.up.railway.app/api/quotes/${quoteId}`, {
+        const response = await fetch(`https://flowfactory-frontend.onrender.com/api/quotes/${quoteId}`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         
@@ -233,7 +233,7 @@ async function deleteQuote(quoteId) {
     
     try {
         const token = sessionStorage.getItem('token');
-        const response = await fetch(`https://flowfactory-backend-production.up.railway.app/api/quotes/${quoteId}`, {
+        const response = await fetch(`https://flowfactory-frontend.onrender.com/api/quotes/${quoteId}`, {
             method: 'DELETE',
             headers: { 'Authorization': `Bearer ${token}` }
         });
@@ -254,7 +254,7 @@ async function sendQuote(quoteId) {
     
     try {
         const token = sessionStorage.getItem('token');
-        const response = await fetch(`https://flowfactory-backend-production.up.railway.app/api/quotes/${quoteId}/send`, {
+        const response = await fetch(`https://flowfactory-frontend.onrender.com/api/quotes/${quoteId}/send`, {
             method: 'POST',
             headers: { 'Authorization': `Bearer ${token}` }
         });
@@ -535,7 +535,7 @@ async function loadQuoteContactPersons() {
     
     try {
         const token = sessionStorage.getItem('token');
-        const response = await fetch(`https://flowfactory-backend-production.up.railway.app/api/customers/${customerId}/contacts`, {
+        const response = await fetch(`https://flowfactory-frontend.onrender.com/api/customers/${customerId}/contacts`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         
@@ -627,8 +627,8 @@ async function saveQuote(status = 'draft') {
     try {
         const token = sessionStorage.getItem('token');
         const url = currentView === 'edit' 
-            ? `https://flowfactory-backend-production.up.railway.app/api/quotes/${currentQuote.id}`
-            : 'https://flowfactory-backend-production.up.railway.app/api/quotes';
+            ? `https://flowfactory-frontend.onrender.com/api/quotes/${currentQuote.id}`
+            : 'https://flowfactory-frontend.onrender.com/api/quotes';
         
         const method = currentView === 'edit' ? 'PUT' : 'POST';
         
@@ -928,7 +928,7 @@ async function saveCustomerForm(fromQuoteForm = false) {
     
     try {
         const token = sessionStorage.getItem('token');
-        const response = await fetch('https://flowfactory-backend-production.up.railway.app/api/customers', {
+        const response = await fetch('https://flowfactory-frontend.onrender.com/api/customers', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -1138,7 +1138,7 @@ async function updateCustomer(customerId) {
     
     try {
         const token = sessionStorage.getItem('token');
-        const response = await fetch(`https://flowfactory-backend-production.up.railway.app/api/customers/${customerId}`, {
+        const response = await fetch(`https://flowfactory-frontend.onrender.com/api/customers/${customerId}`, {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',
@@ -1173,7 +1173,7 @@ async function deleteCustomer(customerId) {
     
     try {
         const token = sessionStorage.getItem('token');
-        const response = await fetch(`https://flowfactory-backend-production.up.railway.app/api/customers/${customerId}`, {
+        const response = await fetch(`https://flowfactory-frontend.onrender.com/api/customers/${customerId}`, {
             method: 'DELETE',
             headers: { 'Authorization': `Bearer ${token}` }
         });
@@ -1201,7 +1201,7 @@ let customerContacts = [];
 async function loadCustomerContacts(customerId) {
     try {
         const token = sessionStorage.getItem('token');
-        const response = await fetch(`https://flowfactory-backend-production.up.railway.app/api/customers/${customerId}/contacts`, {
+        const response = await fetch(`https://flowfactory-frontend.onrender.com/api/customers/${customerId}/contacts`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         
@@ -1339,7 +1339,7 @@ async function saveContact(customerId) {
     
     try {
         const token = sessionStorage.getItem('token');
-        const response = await fetch(`https://flowfactory-backend-production.up.railway.app/api/customers/${customerId}/contacts`, {
+        const response = await fetch(`https://flowfactory-frontend.onrender.com/api/customers/${customerId}/contacts`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -1440,7 +1440,7 @@ async function updateContact(customerId, contactId) {
     
     try {
         const token = sessionStorage.getItem('token');
-        const response = await fetch(`https://flowfactory-backend-production.up.railway.app/api/customers/${customerId}/contacts/${contactId}`, {
+        const response = await fetch(`https://flowfactory-frontend.onrender.com/api/customers/${customerId}/contacts/${contactId}`, {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',
@@ -1470,7 +1470,7 @@ async function deleteContact(customerId, contactId) {
     
     try {
         const token = sessionStorage.getItem('token');
-        const response = await fetch(`https://flowfactory-backend-production.up.railway.app/api/customers/${customerId}/contacts/${contactId}`, {
+        const response = await fetch(`https://flowfactory-frontend.onrender.com/api/customers/${customerId}/contacts/${contactId}`, {
             method: 'DELETE',
             headers: { 'Authorization': `Bearer ${token}` }
         });
@@ -1599,13 +1599,13 @@ async function loadInvoicing() {
         const token = sessionStorage.getItem('token');
         
         // Load accepted orders
-        const quotesRes = await fetch('https://flowfactory-backend-production.up.railway.app/api/quotes', {
+        const quotesRes = await fetch('https://flowfactory-frontend.onrender.com/api/quotes', {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         const allQuotes = await quotesRes.json();
         
         // Load invoices
-        const invoicesRes = await fetch('https://flowfactory-backend-production.up.railway.app/api/invoices', {
+        const invoicesRes = await fetch('https://flowfactory-frontend.onrender.com/api/invoices', {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         const invoices = await invoicesRes.json();
@@ -1737,7 +1737,7 @@ async function createInvoiceFromOrder(orderId) {
     
     try {
         const token = sessionStorage.getItem('token');
-        const response = await fetch(`https://flowfactory-backend-production.up.railway.app/api/invoices/from-order/${orderId}`, {
+        const response = await fetch(`https://flowfactory-frontend.onrender.com/api/invoices/from-order/${orderId}`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -1766,7 +1766,7 @@ async function createInvoiceFromOrder(orderId) {
 async function viewInvoice(invoiceId) {
     try {
         const token = sessionStorage.getItem('token');
-        const response = await fetch(`https://flowfactory-backend-production.up.railway.app/api/invoices/${invoiceId}`, {
+        const response = await fetch(`https://flowfactory-frontend.onrender.com/api/invoices/${invoiceId}`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         
@@ -1911,7 +1911,7 @@ async function sendInvoice(invoiceId) {
     
     try {
         const token = sessionStorage.getItem('token');
-        const response = await fetch(`https://flowfactory-backend-production.up.railway.app/api/invoices/${invoiceId}/send`, {
+        const response = await fetch(`https://flowfactory-frontend.onrender.com/api/invoices/${invoiceId}/send`, {
             method: 'POST',
             headers: { 'Authorization': `Bearer ${token}` }
         });
@@ -1936,7 +1936,7 @@ async function deleteInvoice(invoiceId) {
     
     try {
         const token = sessionStorage.getItem('token');
-        const response = await fetch(`https://flowfactory-backend-production.up.railway.app/api/invoices/${invoiceId}`, {
+        const response = await fetch(`https://flowfactory-frontend.onrender.com/api/invoices/${invoiceId}`, {
             method: 'DELETE',
             headers: { 'Authorization': `Bearer ${token}` }
         });
@@ -1961,7 +1961,7 @@ async function deleteInvoiceFromPreview(invoiceId) {
     
     try {
         const token = sessionStorage.getItem('token');
-        const response = await fetch(`https://flowfactory-backend-production.up.railway.app/api/invoices/${invoiceId}`, {
+        const response = await fetch(`https://flowfactory-frontend.onrender.com/api/invoices/${invoiceId}`, {
             method: 'DELETE',
             headers: { 'Authorization': `Bearer ${token}` }
         });
@@ -1985,7 +1985,7 @@ async function deleteInvoiceFromPreview(invoiceId) {
 async function loadOrders() {
     try {
         const token = sessionStorage.getItem('token');
-        const response = await fetch('https://flowfactory-backend-production.up.railway.app/api/quotes', {
+        const response = await fetch('https://flowfactory-frontend.onrender.com/api/quotes', {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         
@@ -2054,7 +2054,7 @@ function renderOrdersContent(orders) {
 async function loadInvoiced() {
     try {
         const token = sessionStorage.getItem('token');
-        const response = await fetch('https://flowfactory-backend-production.up.railway.app/api/invoices', {
+        const response = await fetch('https://flowfactory-frontend.onrender.com/api/invoices', {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         
@@ -2136,7 +2136,7 @@ function renderInvoicedContent(invoices) {
 async function loadRejected() {
     try {
         const token = sessionStorage.getItem('token');
-        const response = await fetch('https://flowfactory-backend-production.up.railway.app/api/quotes', {
+        const response = await fetch('https://flowfactory-frontend.onrender.com/api/quotes', {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         
@@ -2204,7 +2204,7 @@ async function acceptQuote(quoteId) {
     
     try {
         const token = sessionStorage.getItem('token');
-        const response = await fetch(`https://flowfactory-backend-production.up.railway.app/api/quotes/${quoteId}/accept`, {
+        const response = await fetch(`https://flowfactory-frontend.onrender.com/api/quotes/${quoteId}/accept`, {
             method: 'POST',
             headers: { 'Authorization': `Bearer ${token}` }
         });
@@ -2231,7 +2231,7 @@ async function rejectQuote(quoteId) {
     
     try {
         const token = sessionStorage.getItem('token');
-        const response = await fetch(`https://flowfactory-backend-production.up.railway.app/api/quotes/${quoteId}/reject`, {
+        const response = await fetch(`https://flowfactory-frontend.onrender.com/api/quotes/${quoteId}/reject`, {
             method: 'POST',
             headers: { 'Authorization': `Bearer ${token}` }
         });
@@ -2256,7 +2256,7 @@ async function moveOrderBackToQuote(quoteId) {
     
     try {
         const token = sessionStorage.getItem('token');
-        const response = await fetch(`https://flowfactory-backend-production.up.railway.app/api/quotes/${quoteId}/revert`, {
+        const response = await fetch(`https://flowfactory-frontend.onrender.com/api/quotes/${quoteId}/revert`, {
             method: 'POST',
             headers: { 'Authorization': `Bearer ${token}` }
         });
@@ -2483,7 +2483,7 @@ async function saveExtraWork(parentOrderId) {
     
     try {
         const token = sessionStorage.getItem('token');
-        const response = await fetch(`https://flowfactory-backend-production.up.railway.app/api/quotes/${parentOrderId}/extra-work`, {
+        const response = await fetch(`https://flowfactory-frontend.onrender.com/api/quotes/${parentOrderId}/extra-work`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -2613,7 +2613,7 @@ let currentWorkspaceTab = 'overview';
 async function openOrderWorkspace(orderId) {
     try {
         const token = sessionStorage.getItem('token');
-        const response = await fetch(`https://flowfactory-backend-production.up.railway.app/api/orders/${orderId}/workspace`, {
+        const response = await fetch(`https://flowfactory-frontend.onrender.com/api/orders/${orderId}/workspace`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         
@@ -3059,7 +3059,7 @@ async function saveExpense() {
     
     try {
         const token = sessionStorage.getItem('token');
-        const response = await fetch(`https://flowfactory-backend-production.up.railway.app/api/orders/${currentWorkspaceOrder.id}/expenses`, {
+        const response = await fetch(`https://flowfactory-frontend.onrender.com/api/orders/${currentWorkspaceOrder.id}/expenses`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -3158,7 +3158,7 @@ async function updateExpense(expenseId) {
     
     try {
         const token = sessionStorage.getItem('token');
-        const response = await fetch(`https://flowfactory-backend-production.up.railway.app/api/orders/${currentWorkspaceOrder.id}/expenses/${expenseId}`, {
+        const response = await fetch(`https://flowfactory-frontend.onrender.com/api/orders/${currentWorkspaceOrder.id}/expenses/${expenseId}`, {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',
@@ -3188,7 +3188,7 @@ async function deleteExpense(expenseId) {
     
     try {
         const token = sessionStorage.getItem('token');
-        const response = await fetch(`https://flowfactory-backend-production.up.railway.app/api/orders/${currentWorkspaceOrder.id}/expenses/${expenseId}`, {
+        const response = await fetch(`https://flowfactory-frontend.onrender.com/api/orders/${currentWorkspaceOrder.id}/expenses/${expenseId}`, {
             method: 'DELETE',
             headers: { 'Authorization': `Bearer ${token}` }
         });
@@ -3297,7 +3297,7 @@ async function moveRejectedBackToQuote(quoteId) {
     
     try {
         const token = sessionStorage.getItem('token');
-        const response = await fetch(`https://flowfactory-backend-production.up.railway.app/api/quotes/${quoteId}/revert`, {
+        const response = await fetch(`https://flowfactory-frontend.onrender.com/api/quotes/${quoteId}/revert`, {
             method: 'POST',
             headers: { 'Authorization': `Bearer ${token}` }
         });
