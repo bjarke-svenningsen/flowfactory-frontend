@@ -620,7 +620,7 @@ app.post('/api/admin/generate-invite', auth, adminAuth, async (req, res) => {
   
   const info = await db.run(`
     INSERT INTO invite_codes (code, created_by, expires_at)
-    VALUES (?, ?, datetime(?))
+    VALUES (?, ?, ?)
   `, [code, req.user.id, expiresAt.toISOString()]);
   
   const invite = await db.get('SELECT * FROM invite_codes WHERE id = ?', [info.lastInsertRowid]);
