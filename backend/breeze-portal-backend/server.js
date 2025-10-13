@@ -662,7 +662,7 @@ app.post('/api/admin/send-invitation', auth, adminAuth, async (req, res) => {
   
   try {
     // Check if email already exists
-    const exists = db.prepare('SELECT id FROM users WHERE email = ?').get(email.toLowerCase());
+    const exists = await db.get('SELECT id FROM users WHERE email = ?', [email.toLowerCase()]);
     if (exists) {
       return res.status(409).json({ error: 'User with this email already exists' });
     }
@@ -674,10 +674,10 @@ app.post('/api/admin/send-invitation', auth, adminAuth, async (req, res) => {
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + 7); // 7 days validity
     
-    const info = db.prepare(`
+    const info = await db.run(`
       INSERT INTO invite_codes (code, created_by, expires_at)
       VALUES (?, ?, datetime(?))
-    `).run(code, req.user.id, expiresAt.toISOString());
+    `, [code, req.user.id, expiresAt.toISOString()]);
     
     // Create registration URL
     const registrationUrl = `https://flowfactory-denmark.netlify.app/register.html?code=${code}`;
