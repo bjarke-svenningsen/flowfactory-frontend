@@ -144,44 +144,44 @@ function auth(req, res, next) {
 app.get('/', (req, res) => res.json({ ok: true, message: 'Breeze API kører!' }));
 
 // Auth - Registration with invite code OR pending approval
-app.post('/api/auth/register', (req, res) => {
+app.post('/api/auth/register', async (req, res) => {
   const { name, email, password, inviteCode, position, department, phone } = req.body;
   if (!name || !email || !password) return res.status(400).json({ error: 'Missing fields' });
   
   // Check if email already exists
-  const exists = db.prepare('SELECT id FROM users WHERE email = ?').get(email.toLowerCase());
-  const pendingExists = db.prepare('SELECT id FROM pending_users WHERE email = ?').get(email.toLowerCase());
+  const exists = await db.get('SELECT id FROM users WHERE email = ?', [email.toLowerCase()]);
+  const pendingExists = await db.get('SELECT id FROM pending_users WHERE email = ?', [email.toLowerCase()]);
   if (exists || pendingExists) return res.status(409).json({ error: 'Email already in use' });
   
   const password_hash = bcrypt.hashSync(password, 10);
   
   // If invite code provided, validate and create user directly
   if (inviteCode) {
-    const invite = db.prepare(`
+    const invite = await db.get(`
       SELECT * FROM invite_codes 
       WHERE code = ? AND used_by IS NULL AND datetime(expires_at) > datetime('now')
-    `).get(inviteCode);
+    `, [inviteCode]);
     
     if (!invite) {
       return res.status(400).json({ error: 'Invalid or expired invite code' });
     }
     
     // Create user directly
-    const info = db.prepare('INSERT INTO users (name, email, password_hash, position, department, phone) VALUES (?, ?, ?, ?, ?, ?)')
-      .run(name, email.toLowerCase(), password_hash, position || '', department || '', phone || '');
+    const info = await db.run('INSERT INTO users (name, email, password_hash, position, department, phone) VALUES (?, ?, ?, ?, ?, ?)',
+      [name, email.toLowerCase(), password_hash, position || '', department || '', phone || '']);
     
     // Mark invite as used
-    db.prepare('UPDATE invite_codes SET used_by = ? WHERE id = ?').run(info.lastInsertRowid, invite.id);
+    await db.run('UPDATE invite_codes SET used_by = ? WHERE id = ?', [info.lastInsertRowid, invite.id]);
     
-    const user = db.prepare('SELECT id, name, email, position, department, phone, profile_image, is_admin FROM users WHERE id = ?')
-      .get(info.lastInsertRowid);
+    const user = await db.get('SELECT id, name, email, position, department, phone, profile_image, is_admin FROM users WHERE id = ?',
+      [info.lastInsertRowid]);
     const token = signToken(user);
     return res.json({ user, token, message: 'Account created successfully!' });
   }
   
   // No invite code - create pending user for admin approval
-  db.prepare('INSERT INTO pending_users (name, email, password_hash, position, department, phone) VALUES (?, ?, ?, ?, ?, ?)')
-    .run(name, email.toLowerCase(), password_hash, position || '', department || '', phone || '');
+  await db.run('INSERT INTO pending_users (name, email, password_hash, position, department, phone) VALUES (?, ?, ?, ?, ?, ?)',
+    [name, email.toLowerCase(), password_hash, position || '', department || '', phone || '']);
   
   res.json({ 
     pending: true, 
@@ -279,23 +279,24 @@ app.get('/api/posts', auth, async (req, res) => {
   }
 });
 
-app.post('/api/posts', auth, (req, res) => {
+app.post('/api/posts', auth, async (req, res) => {
   const { content } = req.body;
   if (!content) return res.status(400).json({ error: 'Missing content' });
-  const info = db.prepare('INSERT INTO posts (user_id, content) VALUES (?, ?)').run(req.user.id, content);
-  const post = db.prepare(`
+  const info = await db.run('INSERT INTO posts (user_id, content) VALUES (?, ?)', [req.user.id, content]);
+  const post = await db.get(`
     SELECT p.id, p.content, p.created_at, u.id as user_id, u.name as user_name, u.profile_image
     FROM posts p JOIN users u ON u.id = p.user_id WHERE p.id = ?
-  `).get(info.lastInsertRowid);
+  `, [info.lastInsertRowid]);
   res.json(post);
   io.emit('feed:new_post', post);
 });
 
-app.post('/api/posts/:id/like', auth, (req, res) => {
+app.post('/api/posts/:id/like', auth, async (req, res) => {
   const postId = Number(req.params.id);
   try {
-    db.prepare('INSERT OR IGNORE INTO reactions (post_id, user_id, type) VALUES (?, ?, ?)').run(postId, req.user.id, 'like');
-    const likes = db.prepare('SELECT COUNT(*) as cnt FROM reactions WHERE post_id = ?').get(postId).cnt;
+    await db.run('INSERT OR IGNORE INTO reactions (post_id, user_id, type) VALUES (?, ?, ?)', [postId, req.user.id, 'like']);
+    const result = await db.get('SELECT COUNT(*) as cnt FROM reactions WHERE post_id = ?', [postId]);
+    const likes = result.cnt;
     io.emit('feed:like_updated', { postId, likes });
     res.json({ postId, likes });
   } catch {
@@ -304,9 +305,9 @@ app.post('/api/posts/:id/like', auth, (req, res) => {
 });
 
 // Delete post
-app.delete('/api/posts/:id', auth, (req, res) => {
+app.delete('/api/posts/:id', auth, async (req, res) => {
   const postId = Number(req.params.id);
-  const post = db.prepare('SELECT * FROM posts WHERE id = ?').get(postId);
+  const post = await db.get('SELECT * FROM posts WHERE id = ?', [postId]);
   
   if (!post) {
     return res.status(404).json({ error: 'Post not found' });
@@ -318,22 +319,22 @@ app.delete('/api/posts/:id', auth, (req, res) => {
   }
   
   // Delete post (reactions will be cascade deleted if foreign key constraints are set)
-  db.prepare('DELETE FROM reactions WHERE post_id = ?').run(postId);
-  db.prepare('DELETE FROM posts WHERE id = ?').run(postId);
+  await db.run('DELETE FROM reactions WHERE post_id = ?', [postId]);
+  await db.run('DELETE FROM posts WHERE id = ?', [postId]);
   
   res.json({ success: true });
 });
 
 // Messages (history)
-app.get('/api/messages/:otherUserId', auth, (req, res) => {
+app.get('/api/messages/:otherUserId', auth, async (req, res) => {
   const otherId = Number(req.params.otherUserId);
-  const rows = db.prepare(`
+  const rows = await db.all(`
     SELECT * FROM messages
     WHERE (sender_id = ? AND recipient_id = ?)
        OR (sender_id = ? AND recipient_id = ?)
     ORDER BY id ASC
     LIMIT 500
-  `).all(req.user.id, otherId, otherId, req.user.id);
+  `, [req.user.id, otherId, otherId, req.user.id]);
   res.json(rows);
 });
 
