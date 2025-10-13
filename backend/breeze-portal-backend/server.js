@@ -250,7 +250,7 @@ app.get('/api/users', auth, (req, res) => {
   const rows = db.prepare(`
     SELECT id, name, email, position, department, phone, avatar_url, created_at
     FROM users
-    ORDER BY name COLLATE NOCASE ASC
+    ORDER BY name ASC
   `).all();
   res.json(rows);
 });
@@ -539,7 +539,7 @@ app.get('/api/folders', auth, (req, res) => {
     SELECT f.*, u.name as creator_name
     FROM folders f
     JOIN users u ON f.created_by = u.id
-    ORDER BY f.name COLLATE NOCASE ASC
+    ORDER BY f.name ASC
   `).all();
   
   res.json(folders);
@@ -1152,7 +1152,7 @@ app.get('/api/customers', auth, (req, res) => {
     SELECT c.*, u.name as created_by_name
     FROM customers c
     JOIN users u ON c.created_by = u.id
-    ORDER BY c.company_name COLLATE NOCASE ASC
+    ORDER BY c.company_name ASC
   `).all();
   res.json(customers);
 });
@@ -1266,7 +1266,7 @@ app.get('/api/customers/:customerId/contacts', auth, (req, res) => {
   const contacts = db.prepare(`
     SELECT * FROM customer_contacts
     WHERE customer_id = ?
-    ORDER BY is_primary DESC, name COLLATE NOCASE ASC
+    ORDER BY is_primary DESC, name ASC
   `).all(customerId);
   
   res.json(contacts);
@@ -1340,7 +1340,7 @@ app.get('/api/customers/:customerId/contacts', auth, (req, res) => {
   const contacts = db.prepare(`
     SELECT * FROM customer_contacts
     WHERE customer_id = ?
-    ORDER BY is_primary DESC, name COLLATE NOCASE ASC
+    ORDER BY is_primary DESC, name ASC
   `).all(customerId);
   
   res.json(contacts);
