@@ -11,9 +11,6 @@ window.onload = function() {
     const lastPage = sessionStorage.getItem('currentPage') || 'feed';
     showPage(lastPage);
     
-    // Initialize chat
-    initChat();
-    
     // Load admin data if admin
     if (window.currentUser && window.currentUser.is_admin) {
         loadAdminData();
@@ -101,6 +98,8 @@ async function showPage(pageName) {
         if (customersView) customersView.style.display = 'none';
         
         initQuotesPage();
+    } else if (pageName === 'chat') {
+        initChat();
     } else if (pageName === 'videocall') {
         loadVideoCallColleagues();
     }

@@ -12,7 +12,11 @@ async function loadInvoiced() {
         
         if (!response.ok) throw new Error('Failed to load invoices');
         
-        const invoices = await response.json();
+        const data = await response.json();
+        
+        // Handle both array format and object format (defensive programming)
+        const invoices = Array.isArray(data) ? data : (data.invoices || []);
+        
         renderInvoicedContent(invoices);
     } catch (error) {
         console.error('Error loading invoiced:', error);

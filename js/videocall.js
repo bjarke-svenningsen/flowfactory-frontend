@@ -343,6 +343,54 @@ function endCall() {
     }
 }
 
+// Load colleagues list for video calls
+function loadVideoCallColleagues() {
+    // Initialize socket if not already done
+    if (!videoSocket) {
+        initVideoCallSocket();
+    }
+    
+    // Fetch colleagues from API
+    const token = sessionStorage.getItem('token');
+    fetch('https://flowfactory-frontend.onrender.com/api/users', {
+        headers: { 'Authorization': `Bearer ${token}` }
+    })
+    .then(res => res.json())
+    .then(colleagues => {
+        const colleaguesList = document.getElementById('colleaguesList');
+        if (!colleaguesList) return;
+        
+        // Filter out current user
+        const others = colleagues.filter(c => c.id !== window.currentUser.id);
+        
+        if (others.length === 0) {
+            colleaguesList.innerHTML = '<p style="text-align: center; color: #999; padding: 20px;">Ingen kolleger fundet</p>';
+            return;
+        }
+        
+        colleaguesList.innerHTML = others.map(colleague => {
+            const initials = colleague.name.split(' ').map(n => n[0]).join('');
+            return `
+                <div class="colleague-item" onclick="startVideoCall(${colleague.id}, '${colleague.name.replace(/'/g, "\\'")}')">
+                    <div class="colleague-avatar">${initials}</div>
+                    <div class="colleague-info">
+                        <div class="colleague-name">${colleague.name}</div>
+                        <div class="colleague-position">${colleague.position || 'Medarbejder'}</div>
+                    </div>
+                    <button class="call-btn">📞 Ring</button>
+                </div>
+            `;
+        }).join('');
+    })
+    .catch(error => {
+        console.error('Error loading colleagues:', error);
+        const colleaguesList = document.getElementById('colleaguesList');
+        if (colleaguesList) {
+            colleaguesList.innerHTML = '<p style="text-align: center; color: #f44336; padding: 20px;">Kunne ikke indlæse kolleger</p>';
+        }
+    });
+}
+
 // Initialize on page load
 if (typeof window !== 'undefined') {
     window.addEventListener('load', () => {
