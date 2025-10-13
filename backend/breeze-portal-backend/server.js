@@ -57,73 +57,8 @@ const upload = multer({
 });
 
 // --- DB Setup ---
-// Database is now initialized in database-config.js to ensure consistent path
-
-// Initialize database tables (async for PostgreSQL compatibility)
-async function initializeDatabase() {
-  // users
-  await db.run(`CREATE TABLE IF NOT EXISTS users (
-    id ${db._isProduction ? 'SERIAL' : 'INTEGER'} PRIMARY KEY ${db._isProduction ? '' : 'AUTOINCREMENT'},
-    name TEXT NOT NULL,
-    email TEXT UNIQUE NOT NULL,
-    password_hash TEXT NOT NULL,
-    position TEXT DEFAULT '',
-    department TEXT DEFAULT '',
-    phone TEXT DEFAULT '',
-    profile_image TEXT DEFAULT '',
-    is_admin INTEGER DEFAULT 0,
-    created_at ${db._isProduction ? 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP' : "TEXT DEFAULT (datetime('now'))"}
-  )`);
-
-// invite codes
-db.prepare(`CREATE TABLE IF NOT EXISTS invite_codes (
-  id ${db._isProduction ? 'SERIAL' : 'INTEGER'} PRIMARY KEY ${db._isProduction ? '' : 'AUTOINCREMENT'},
-  code TEXT UNIQUE NOT NULL,
-  created_by INTEGER NOT NULL,
-  used_by INTEGER DEFAULT NULL,
-  expires_at TEXT NOT NULL,
-  created_at ${db._isProduction ? 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP' : "TEXT DEFAULT (datetime('now'))"}${db._isProduction ? '' : ',\n  FOREIGN KEY(created_by) REFERENCES users(id),\n  FOREIGN KEY(used_by) REFERENCES users(id)'}
-);`).run();
-
-// pending registrations
-db.prepare(`CREATE TABLE IF NOT EXISTS pending_users (
-  id ${db._isProduction ? 'SERIAL' : 'INTEGER'} PRIMARY KEY ${db._isProduction ? '' : 'AUTOINCREMENT'},
-  name TEXT NOT NULL,
-  email TEXT UNIQUE NOT NULL,
-  password_hash TEXT NOT NULL,
-  position TEXT DEFAULT '',
-  department TEXT DEFAULT '',
-  phone TEXT DEFAULT '',
-  status TEXT DEFAULT 'pending',
-  created_at ${db._isProduction ? 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP' : "TEXT DEFAULT (datetime('now'))"}
-);`).run();
-
-// posts (feed)
-db.prepare(`CREATE TABLE IF NOT EXISTS posts (
-  id ${db._isProduction ? 'SERIAL' : 'INTEGER'} PRIMARY KEY ${db._isProduction ? '' : 'AUTOINCREMENT'},
-  user_id INTEGER NOT NULL,
-  content TEXT NOT NULL,
-  created_at ${db._isProduction ? 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP' : "TEXT DEFAULT (datetime('now'))"}${db._isProduction ? '' : ',\n  FOREIGN KEY(user_id) REFERENCES users(id)'}
-);`).run();
-
-// reactions (like)
-db.prepare(`CREATE TABLE IF NOT EXISTS reactions (
-  id ${db._isProduction ? 'SERIAL' : 'INTEGER'} PRIMARY KEY ${db._isProduction ? '' : 'AUTOINCREMENT'},
-  post_id INTEGER NOT NULL,
-  user_id INTEGER NOT NULL,
-  type TEXT DEFAULT 'like',
-  created_at ${db._isProduction ? 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP' : "TEXT DEFAULT (datetime('now'))"},
-  UNIQUE(post_id, user_id)${db._isProduction ? '' : ',\n  FOREIGN KEY(post_id) REFERENCES posts(id),\n  FOREIGN KEY(user_id) REFERENCES users(id)'}
-);`).run();
-
-// messages (1:1)
-db.prepare(`CREATE TABLE IF NOT EXISTS messages (
-  id ${db._isProduction ? 'SERIAL' : 'INTEGER'} PRIMARY KEY ${db._isProduction ? '' : 'AUTOINCREMENT'},
-  sender_id INTEGER NOT NULL,
-  recipient_id INTEGER NOT NULL,
-  text TEXT NOT NULL,
-  created_at ${db._isProduction ? 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP' : "TEXT DEFAULT (datetime('now'))"}${db._isProduction ? '' : ',\n  FOREIGN KEY(sender_id) REFERENCES users(id),\n  FOREIGN KEY(recipient_id) REFERENCES users(id)'}
-);`).run();
+// Database tables are now initialized in init-database.js
+// This runs async before server starts to ensure PostgreSQL compatibility
 
 // --- Helpers ---
 function signToken(user) {
