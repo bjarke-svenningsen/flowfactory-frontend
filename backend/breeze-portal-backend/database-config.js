@@ -10,10 +10,12 @@ const __dirname = path.dirname(__filename);
 
 const { Pool } = pg;
 
-// Check if we're in production (Railway provides DATABASE_URL)
-// Ignore empty, undefined, or invalid DATABASE_URL values
-const DATABASE_URL = process.env.DATABASE_URL?.trim();
+// FORCE SUPABASE CONNECTION (hardcoded for now)
+const DATABASE_URL = process.env.DATABASE_URL?.trim() || 'postgresql://postgres.sggdtvbkvcuufurssklb:Olineersej123@aws-1-eu-west-1.pooler.supabase.com:6543/postgres';
 const isProduction = DATABASE_URL && DATABASE_URL.length > 10 && DATABASE_URL.startsWith('postgresql://');
+
+console.log('🔍 DATABASE_URL exists:', !!DATABASE_URL);
+console.log('🔍 DATABASE_URL length:', DATABASE_URL?.length);
 
 console.log(`📊 Database Mode: ${isProduction ? 'PostgreSQL (Production)' : 'SQLite (Development)'}`);
 
@@ -21,12 +23,13 @@ console.log(`📊 Database Mode: ${isProduction ? 'PostgreSQL (Production)' : 'S
 let pool = null;
 if (isProduction) {
   pool = new Pool({
-    connectionString: process.env.DATABASE_URL,
+    connectionString: DATABASE_URL,
     ssl: {
       rejectUnauthorized: false
     }
   });
   console.log('✅ PostgreSQL connection pool created');
+  console.log('🔗 Connecting to:', DATABASE_URL.substring(0, 30) + '...');
 }
 
 // SQLite database (for development)
