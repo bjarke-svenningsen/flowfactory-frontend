@@ -119,7 +119,7 @@ app.post('/api/auth/register', async (req, res) => {
   if (inviteCode) {
     const invite = await db.get(`
       SELECT * FROM invite_codes 
-      WHERE code = ? AND used_by IS NULL AND datetime(expires_at) > datetime('now')
+      WHERE code = ? AND used_by IS NULL AND expires_at > NOW()
     `, [inviteCode]);
     
     if (!invite) {
@@ -2739,7 +2739,7 @@ async function startServer() {
     await initializeDatabase();
     httpServer.listen(PORT, () => {
       console.log(`🚀 Breeze backend kører på http://localhost:${PORT}`);
-      console.log(`📊 Database: ${db._isProduction ? 'PostgreSQL (Railway)' : 'SQLite (breeze.db)'}`);
+      console.log(`📊 Database: ${db._isProduction ? 'PostgreSQL (Supabase)' : 'SQLite (breeze.db)'}`);
     });
   } catch (error) {
     console.error('❌ Failed to start server:', error);
