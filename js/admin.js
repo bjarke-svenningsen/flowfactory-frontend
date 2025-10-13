@@ -2,11 +2,13 @@
 
 async function loadAdminData() {
     if (!window.currentUser.is_admin) {
-        document.getElementById('adminMenuItem').style.display = 'none';
+        const menuItem = document.getElementById('adminMenuItem');
+        if (menuItem) menuItem.style.display = 'none';
         return;
     }
     
-    document.getElementById('adminMenuItem').style.display = 'block';
+    const menuItem = document.getElementById('adminMenuItem');
+    if (menuItem) menuItem.style.display = 'block';
     
     try {
         const token = sessionStorage.getItem('token');
@@ -15,21 +17,30 @@ async function loadAdminData() {
         const usersRes = await fetch('https://flowfactory-frontend.onrender.com/api/admin/users', {
             headers: { 'Authorization': `Bearer ${token}` }
         });
-        const users = await usersRes.json();
-        document.getElementById('adminTotalUsers').textContent = users.length;
+        const usersData = await usersRes.json();
+        const users = Array.isArray(usersData) ? usersData : (usersData.users || []);
+        
+        const totalUsersEl = document.getElementById('adminTotalUsers');
+        if (totalUsersEl) totalUsersEl.textContent = users.length;
         
         const pendingRes = await fetch('https://flowfactory-frontend.onrender.com/api/admin/pending-users', {
             headers: { 'Authorization': `Bearer ${token}` }
         });
-        const pending = await pendingRes.json();
-        document.getElementById('adminPendingUsers').textContent = pending.length;
+        const pendingData = await pendingRes.json();
+        const pending = Array.isArray(pendingData) ? pendingData : (pendingData.pending || []);
+        
+        const pendingUsersEl = document.getElementById('adminPendingUsers');
+        if (pendingUsersEl) pendingUsersEl.textContent = pending.length;
         
         const codesRes = await fetch('https://flowfactory-frontend.onrender.com/api/admin/invite-codes', {
             headers: { 'Authorization': `Bearer ${token}` }
         });
-        const codes = await codesRes.json();
+        const codesData = await codesRes.json();
+        const codes = Array.isArray(codesData) ? codesData : (codesData.codes || []);
         const activeCodes = codes.filter(c => !c.used_by && new Date(c.expires_at) > new Date());
-        document.getElementById('adminInviteCodes').textContent = activeCodes.length;
+        
+        const inviteCodesEl = document.getElementById('adminInviteCodes');
+        if (inviteCodesEl) inviteCodesEl.textContent = activeCodes.length;
         
     } catch (error) {
         console.error('Failed to load admin data:', error);
@@ -42,7 +53,8 @@ async function loadPendingUsers() {
         const response = await fetch('https://flowfactory-frontend.onrender.com/api/admin/pending-users', {
             headers: { 'Authorization': `Bearer ${token}` }
         });
-        const pending = await response.json();
+        const pendingData = await response.json();
+        const pending = Array.isArray(pendingData) ? pendingData : (pendingData.pending || []);
         
         const container = document.getElementById('pendingUsersList');
         if (pending.length === 0) {
@@ -185,7 +197,8 @@ async function loadInviteCodes() {
         const response = await fetch('https://flowfactory-frontend.onrender.com/api/admin/invite-codes', {
             headers: { 'Authorization': `Bearer ${token}` }
         });
-        const codes = await response.json();
+        const codesData = await response.json();
+        const codes = Array.isArray(codesData) ? codesData : (codesData.codes || []);
         
         const container = document.getElementById('inviteCodesList');
         if (codes.length === 0) {
@@ -248,7 +261,8 @@ async function loadAllUsers() {
         const response = await fetch('https://flowfactory-frontend.onrender.com/api/admin/users', {
             headers: { 'Authorization': `Bearer ${token}` }
         });
-        const users = await response.json();
+        const usersData = await response.json();
+        const users = Array.isArray(usersData) ? usersData : (usersData.users || []);
         
         const container = document.getElementById('allUsersList');
         container.innerHTML = `
