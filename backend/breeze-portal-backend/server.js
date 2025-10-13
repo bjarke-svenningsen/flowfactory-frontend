@@ -601,14 +601,14 @@ app.post('/api/admin/approve-user/:id', auth, adminAuth, async (req, res) => {
 });
 
 // Reject pending user
-app.post('/api/admin/reject-user/:id', auth, adminAuth, (req, res) => {
+app.post('/api/admin/reject-user/:id', auth, adminAuth, async (req, res) => {
   const pendingId = Number(req.params.id);
-  db.prepare('UPDATE pending_users SET status = ? WHERE id = ?').run('rejected', pendingId);
+  await db.run('UPDATE pending_users SET status = ? WHERE id = ?', ['rejected', pendingId]);
   res.json({ success: true });
 });
 
 // Generate invite code
-app.post('/api/admin/generate-invite', auth, adminAuth, (req, res) => {
+app.post('/api/admin/generate-invite', auth, adminAuth, async (req, res) => {
   const { daysValid = 7 } = req.body;
   
   // Generate random code
@@ -618,18 +618,18 @@ app.post('/api/admin/generate-invite', auth, adminAuth, (req, res) => {
   const expiresAt = new Date();
   expiresAt.setDate(expiresAt.getDate() + daysValid);
   
-  const info = db.prepare(`
+  const info = await db.run(`
     INSERT INTO invite_codes (code, created_by, expires_at)
     VALUES (?, ?, datetime(?))
-  `).run(code, req.user.id, expiresAt.toISOString());
+  `, [code, req.user.id, expiresAt.toISOString()]);
   
-  const invite = db.prepare('SELECT * FROM invite_codes WHERE id = ?').get(info.lastInsertRowid);
+  const invite = await db.get('SELECT * FROM invite_codes WHERE id = ?', [info.lastInsertRowid]);
   res.json(invite);
 });
 
 // List all invite codes
-app.get('/api/admin/invite-codes', auth, adminAuth, (req, res) => {
-  const codes = db.prepare(`
+app.get('/api/admin/invite-codes', auth, adminAuth, async (req, res) => {
+  const codes = await db.all(`
     SELECT ic.*, 
            u1.name as created_by_name,
            u2.name as used_by_name
@@ -638,13 +638,13 @@ app.get('/api/admin/invite-codes', auth, adminAuth, (req, res) => {
     LEFT JOIN users u2 ON ic.used_by = u2.id
     ORDER BY ic.created_at DESC
     LIMIT 100
-  `).all();
+  `);
   res.json(codes);
 });
 
 // Delete invite code
-app.delete('/api/admin/invite-codes/:id', auth, adminAuth, (req, res) => {
-  db.prepare('DELETE FROM invite_codes WHERE id = ?').run(Number(req.params.id));
+app.delete('/api/admin/invite-codes/:id', auth, adminAuth, async (req, res) => {
+  await db.run('DELETE FROM invite_codes WHERE id = ?', [Number(req.params.id)]);
   res.json({ success: true });
 });
 
@@ -760,23 +760,23 @@ app.post('/api/admin/send-invitation', auth, adminAuth, async (req, res) => {
 });
 
 // List all users (admin view with more details)
-app.get('/api/admin/users', auth, adminAuth, (req, res) => {
-  const users = db.prepare(`
+app.get('/api/admin/users', auth, adminAuth, async (req, res) => {
+  const users = await db.all(`
     SELECT id, name, email, position, department, phone, is_admin, created_at
     FROM users
     ORDER BY created_at DESC
-  `).all();
+  `);
   res.json(users);
 });
 
 // Make user admin
-app.post('/api/admin/make-admin/:id', auth, adminAuth, (req, res) => {
-  db.prepare('UPDATE users SET is_admin = 1 WHERE id = ?').run(Number(req.params.id));
+app.post('/api/admin/make-admin/:id', auth, adminAuth, async (req, res) => {
+  await db.run('UPDATE users SET is_admin = 1 WHERE id = ?', [Number(req.params.id)]);
   res.json({ success: true });
 });
 
 // Remove admin rights
-app.post('/api/admin/remove-admin/:id', auth, adminAuth, (req, res) => {
+app.post('/api/admin/remove-admin/:id', auth, adminAuth, async (req, res) => {
   const userId = Number(req.params.id);
   
   // Don't allow removing own admin rights
@@ -784,12 +784,12 @@ app.post('/api/admin/remove-admin/:id', auth, adminAuth, (req, res) => {
     return res.status(400).json({ error: 'Cannot remove your own admin rights' });
   }
   
-  db.prepare('UPDATE users SET is_admin = 0 WHERE id = ?').run(userId);
+  await db.run('UPDATE users SET is_admin = 0 WHERE id = ?', [userId]);
   res.json({ success: true });
 });
 
 // Delete user
-app.delete('/api/admin/users/:id', auth, adminAuth, (req, res) => {
+app.delete('/api/admin/users/:id', auth, adminAuth, async (req, res) => {
   const userId = Number(req.params.id);
   
   // Don't allow deleting yourself
@@ -797,20 +797,20 @@ app.delete('/api/admin/users/:id', auth, adminAuth, (req, res) => {
     return res.status(400).json({ error: 'Cannot delete your own account' });
   }
   
-  const user = db.prepare('SELECT * FROM users WHERE id = ?').get(userId);
+  const user = await db.get('SELECT * FROM users WHERE id = ?', [userId]);
   if (!user) {
     return res.status(404).json({ error: 'User not found' });
   }
   
   // Delete user's data
-  db.prepare('DELETE FROM messages WHERE sender_id = ? OR recipient_id = ?').run(userId, userId);
-  db.prepare('DELETE FROM posts WHERE user_id = ?').run(userId);
-  db.prepare('DELETE FROM reactions WHERE user_id = ?').run(userId);
-  db.prepare('DELETE FROM files WHERE uploaded_by = ?').run(userId);
-  db.prepare('DELETE FROM folders WHERE created_by = ?').run(userId);
+  await db.run('DELETE FROM messages WHERE sender_id = ? OR recipient_id = ?', [userId, userId]);
+  await db.run('DELETE FROM posts WHERE user_id = ?', [userId]);
+  await db.run('DELETE FROM reactions WHERE user_id = ?', [userId]);
+  await db.run('DELETE FROM files WHERE uploaded_by = ?', [userId]);
+  await db.run('DELETE FROM folders WHERE created_by = ?', [userId]);
   
   // Finally delete the user
-  db.prepare('DELETE FROM users WHERE id = ?').run(userId);
+  await db.run('DELETE FROM users WHERE id = ?', [userId]);
   
   res.json({ success: true, message: `User ${user.name} deleted` });
 });
