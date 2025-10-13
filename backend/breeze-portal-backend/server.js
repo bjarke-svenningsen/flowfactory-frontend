@@ -676,7 +676,7 @@ app.post('/api/admin/send-invitation', auth, adminAuth, async (req, res) => {
     
     const info = await db.run(`
       INSERT INTO invite_codes (code, created_by, expires_at)
-      VALUES (?, ?, datetime(?))
+      VALUES (?, ?, ?)
     `, [code, req.user.id, expiresAt.toISOString()]);
     
     // Create registration URL
