@@ -66,7 +66,11 @@ export const db = {
   // Get single row
   get: async (sql, params = []) => {
     if (isProduction) {
-      const result = await pool.query(sql, params);
+      // Convert ? placeholders to $1, $2, $3 for PostgreSQL
+      let pgSql = sql;
+      let paramIndex = 1;
+      pgSql = pgSql.replace(/\?/g, () => `$${paramIndex++}`);
+      const result = await pool.query(pgSql, params);
       return result.rows[0];
     } else {
       return sqliteDb.prepare(sql).get(...params);
@@ -76,7 +80,11 @@ export const db = {
   // Get all rows
   all: async (sql, params = []) => {
     if (isProduction) {
-      const result = await pool.query(sql, params);
+      // Convert ? placeholders to $1, $2, $3 for PostgreSQL
+      let pgSql = sql;
+      let paramIndex = 1;
+      pgSql = pgSql.replace(/\?/g, () => `$${paramIndex++}`);
+      const result = await pool.query(pgSql, params);
       return result.rows;
     } else {
       return sqliteDb.prepare(sql).all(...params);
@@ -86,7 +94,11 @@ export const db = {
   // Run statement (INSERT, UPDATE, DELETE)
   run: async (sql, params = []) => {
     if (isProduction) {
-      const result = await pool.query(sql, params);
+      // Convert ? placeholders to $1, $2, $3 for PostgreSQL
+      let pgSql = sql;
+      let paramIndex = 1;
+      pgSql = pgSql.replace(/\?/g, () => `$${paramIndex++}`);
+      const result = await pool.query(pgSql, params);
       return { 
         changes: result.rowCount, 
         lastInsertRowid: result.rows[0]?.id 
