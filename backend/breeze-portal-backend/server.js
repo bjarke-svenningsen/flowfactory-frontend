@@ -214,44 +214,44 @@ app.post('/api/auth/login', async (req, res) => {
 });
 
 // Users
-app.get('/api/users/me', auth, (req, res) => {
-  const user = db.prepare('SELECT id, name, email, position, department, phone, profile_image, is_admin, created_at FROM users WHERE id = ?').get(req.user.id);
+app.get('/api/users/me', auth, async (req, res) => {
+  const user = await db.get('SELECT id, name, email, position, department, phone, profile_image, is_admin, created_at FROM users WHERE id = ?', [req.user.id]);
   res.json({ user });
 });
 
 // Get user activity stats
-app.get('/api/users/activity', auth, (req, res) => {
-  const user = db.prepare('SELECT created_at FROM users WHERE id = ?').get(req.user.id);
-  const messagesSent = db.prepare('SELECT COUNT(*) as cnt FROM messages WHERE sender_id = ?').get(req.user.id).cnt;
-  const postsCreated = db.prepare('SELECT COUNT(*) as cnt FROM posts WHERE user_id = ?').get(req.user.id).cnt;
+app.get('/api/users/activity', auth, async (req, res) => {
+  const user = await db.get('SELECT created_at FROM users WHERE id = ?', [req.user.id]);
+  const messagesSent = await db.get('SELECT COUNT(*) as cnt FROM messages WHERE sender_id = ?', [req.user.id]);
+  const postsCreated = await db.get('SELECT COUNT(*) as cnt FROM posts WHERE user_id = ?', [req.user.id]);
   
   res.json({
     member_since: user.created_at,
-    messages_sent: messagesSent,
-    posts_created: postsCreated
+    messages_sent: messagesSent.cnt,
+    posts_created: postsCreated.cnt
   });
 });
 
-app.put('/api/users/me', auth, (req, res) => {
+app.put('/api/users/me', auth, async (req, res) => {
   const { name, position, department, phone, profile_image } = req.body;
-  db.prepare(`UPDATE users SET
+  await db.run(`UPDATE users SET
     name=COALESCE(?, name),
     position=COALESCE(?, position),
     department=COALESCE(?, department),
     phone=COALESCE(?, phone),
     profile_image=COALESCE(?, profile_image)
-    WHERE id = ?`).run(name, position, department, phone, profile_image, req.user.id);
-  const user = db.prepare('SELECT id, name, email, position, department, phone, profile_image FROM users WHERE id = ?').get(req.user.id);
+    WHERE id = ?`, [name, position, department, phone, profile_image, req.user.id]);
+  const user = await db.get('SELECT id, name, email, position, department, phone, profile_image FROM users WHERE id = ?', [req.user.id]);
   res.json({ user });
 });
 
 // Liste alle brugere (til medarbejder-panelet)
-app.get('/api/users', auth, (req, res) => {
-  const rows = db.prepare(`
+app.get('/api/users', auth, async (req, res) => {
+  const rows = await db.all(`
     SELECT id, name, email, position, department, phone, profile_image, created_at
     FROM users
     ORDER BY name ASC
-  `).all();
+  `);
   res.json(rows);
 });
 
@@ -1156,13 +1156,13 @@ function getFullOrderNumber(quote) {
 }
 
 // Customers endpoints
-app.get('/api/customers', auth, (req, res) => {
-  const customers = db.prepare(`
+app.get('/api/customers', auth, async (req, res) => {
+  const customers = await db.all(`
     SELECT c.*, u.name as created_by_name
     FROM customers c
     JOIN users u ON c.created_by = u.id
     ORDER BY c.company_name ASC
-  `).all();
+  `);
   res.json(customers);
 });
 
@@ -1415,26 +1415,28 @@ app.delete('/api/customers/:customerId/contacts/:contactId', auth, (req, res) =>
 });
 
 // Quotes endpoints
-app.get('/api/quotes', auth, (req, res) => {
-  const quotes = db.prepare(`
+app.get('/api/quotes', auth, async (req, res) => {
+  const quotes = await db.all(`
     SELECT q.*, c.company_name as customer_name, u.name as created_by_name
     FROM quotes q
     JOIN customers c ON q.customer_id = c.id
     JOIN users u ON q.created_by = u.id
     ORDER BY q.id DESC
-  `).all();
+  `);
   
   // For each main order (not extra work), calculate aggregated stats
-  const enrichedQuotes = quotes.map(quote => {
+  const enrichedQuotes = [];
+  for (const quote of quotes) {
     // If this is extra work, return as-is (it's already aggregated in its parent)
     if (quote.is_extra_work || quote.parent_order_id) {
-      return quote;
+      enrichedQuotes.push(quote);
+      continue;
     }
     
     // Get all extra work orders for this main order
-    const extraWorkOrders = db.prepare(`
+    const extraWorkOrders = await db.all(`
       SELECT * FROM quotes WHERE parent_order_id = ?
-    `).all(quote.id);
+    `, [quote.id]);
     
     // Calculate main order revenue
     const revenue_main = quote.total || 0;
@@ -1446,19 +1448,19 @@ app.get('/api/quotes', auth, (req, res) => {
     const revenue = revenue_main + revenue_extra;
     
     // Get main order expenses
-    const mainExpenses = db.prepare(`
+    const mainExpenses = await db.get(`
       SELECT SUM(amount) as total FROM order_expenses WHERE order_id = ?
-    `).get(quote.id);
+    `, [quote.id]);
     const expenses_main = mainExpenses?.total || 0;
     
     // Get extra work expenses
     let expenses_extra = 0;
-    extraWorkOrders.forEach(eo => {
-      const extraExpenses = db.prepare(`
+    for (const eo of extraWorkOrders) {
+      const extraExpenses = await db.get(`
         SELECT SUM(amount) as total FROM order_expenses WHERE order_id = ?
-      `).get(eo.id);
+      `, [eo.id]);
       expenses_extra += (extraExpenses?.total || 0);
-    });
+    }
     
     // Calculate total expenses
     const expenses = expenses_main + expenses_extra;
@@ -1469,7 +1471,7 @@ app.get('/api/quotes', auth, (req, res) => {
     const profit = revenue - expenses;
     
     // Return quote with aggregated stats
-    return {
+    enrichedQuotes.push({
       ...quote,
       revenue,
       revenue_main,
@@ -1482,8 +1484,8 @@ app.get('/api/quotes', auth, (req, res) => {
       profit_extra,
       profit_margin: revenue > 0 ? ((profit / revenue) * 100).toFixed(1) : 0,
       extra_work_count: extraWorkOrders.length
-    };
-  });
+    });
+  }
   
   res.json(enrichedQuotes);
 });
