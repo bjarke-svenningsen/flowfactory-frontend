@@ -96,10 +96,22 @@ app.post('/api/auth/register', async (req, res) => {
   const { name, email, password, inviteCode, position, department, phone } = req.body;
   if (!name || !email || !password) return res.status(400).json({ error: 'Missing fields' });
   
-  // Check if email already exists
-  const exists = await db.get('SELECT id FROM users WHERE email = ?', [email.toLowerCase()]);
-  const pendingExists = await db.get('SELECT id FROM pending_users WHERE email = ?', [email.toLowerCase()]);
-  if (exists || pendingExists) return res.status(409).json({ error: 'Email already in use' });
+  try {
+    // Check if email already exists in users table
+    const exists = await db.get('SELECT id FROM users WHERE email = ?', [email.toLowerCase()]);
+    if (exists && exists.id) {
+      return res.status(409).json({ error: 'Email already in use' });
+    }
+    
+    // Check if email already exists in pending_users table
+    const pendingExists = await db.get('SELECT id FROM pending_users WHERE email = ?', [email.toLowerCase()]);
+    if (pendingExists && pendingExists.id) {
+      return res.status(409).json({ error: 'Email already in use' });
+    }
+  } catch (error) {
+    console.error('Email check error:', error);
+    return res.status(500).json({ error: 'Database error during email validation' });
+  }
   
   const password_hash = bcrypt.hashSync(password, 10);
   
