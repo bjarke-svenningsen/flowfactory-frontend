@@ -67,7 +67,7 @@ db.prepare(`CREATE TABLE IF NOT EXISTS users (
   position TEXT DEFAULT '',
   department TEXT DEFAULT '',
   phone TEXT DEFAULT '',
-  avatar_url TEXT DEFAULT '',
+  profile_image TEXT DEFAULT '',
   is_admin INTEGER DEFAULT 0,
   created_at ${db._isProduction ? 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP' : "TEXT DEFAULT (datetime('now'))"}
 );`).run();
@@ -173,7 +173,7 @@ app.post('/api/auth/register', (req, res) => {
     // Mark invite as used
     db.prepare('UPDATE invite_codes SET used_by = ? WHERE id = ?').run(info.lastInsertRowid, invite.id);
     
-    const user = db.prepare('SELECT id, name, email, position, department, phone, avatar_url, is_admin FROM users WHERE id = ?')
+    const user = db.prepare('SELECT id, name, email, position, department, phone, profile_image, is_admin FROM users WHERE id = ?')
       .get(info.lastInsertRowid);
     const token = signToken(user);
     return res.json({ user, token, message: 'Account created successfully!' });
@@ -205,7 +205,7 @@ app.post('/api/auth/login', async (req, res) => {
     // Railway uses 'role', SQLite uses 'is_admin'
     const is_admin = user.is_admin !== undefined ? user.is_admin : (user.role === 'admin' ? 1 : 0);
     
-    const safeUser = { id: user.id, name: user.name, email: user.email, position: user.position, department: user.department, phone: user.phone, avatar_url: user.avatar_url, is_admin };
+    const safeUser = { id: user.id, name: user.name, email: user.email, position: user.position, department: user.department, phone: user.phone, profile_image: user.profile_image, is_admin };
     res.json({ user: safeUser, token });
   } catch (error) {
     console.error('Login error:', error);
@@ -215,7 +215,7 @@ app.post('/api/auth/login', async (req, res) => {
 
 // Users
 app.get('/api/users/me', auth, (req, res) => {
-  const user = db.prepare('SELECT id, name, email, position, department, phone, avatar_url, is_admin, created_at FROM users WHERE id = ?').get(req.user.id);
+  const user = db.prepare('SELECT id, name, email, position, department, phone, profile_image, is_admin, created_at FROM users WHERE id = ?').get(req.user.id);
   res.json({ user });
 });
 
@@ -233,22 +233,22 @@ app.get('/api/users/activity', auth, (req, res) => {
 });
 
 app.put('/api/users/me', auth, (req, res) => {
-  const { name, position, department, phone, avatar_url } = req.body;
+  const { name, position, department, phone, profile_image } = req.body;
   db.prepare(`UPDATE users SET
     name=COALESCE(?, name),
     position=COALESCE(?, position),
     department=COALESCE(?, department),
     phone=COALESCE(?, phone),
-    avatar_url=COALESCE(?, avatar_url)
-    WHERE id = ?`).run(name, position, department, phone, avatar_url, req.user.id);
-  const user = db.prepare('SELECT id, name, email, position, department, phone, avatar_url FROM users WHERE id = ?').get(req.user.id);
+    profile_image=COALESCE(?, profile_image)
+    WHERE id = ?`).run(name, position, department, phone, profile_image, req.user.id);
+  const user = db.prepare('SELECT id, name, email, position, department, phone, profile_image FROM users WHERE id = ?').get(req.user.id);
   res.json({ user });
 });
 
 // Liste alle brugere (til medarbejder-panelet)
 app.get('/api/users', auth, (req, res) => {
   const rows = db.prepare(`
-    SELECT id, name, email, position, department, phone, avatar_url, created_at
+    SELECT id, name, email, position, department, phone, profile_image, created_at
     FROM users
     ORDER BY name ASC
   `).all();
@@ -284,7 +284,7 @@ app.post('/api/posts', auth, (req, res) => {
   if (!content) return res.status(400).json({ error: 'Missing content' });
   const info = db.prepare('INSERT INTO posts (user_id, content) VALUES (?, ?)').run(req.user.id, content);
   const post = db.prepare(`
-    SELECT p.id, p.content, p.created_at, u.id as user_id, u.name as user_name, u.avatar_url
+    SELECT p.id, p.content, p.created_at, u.id as user_id, u.name as user_name, u.profile_image
     FROM posts p JOIN users u ON u.id = p.user_id WHERE p.id = ?
   `).get(info.lastInsertRowid);
   res.json(post);
@@ -2422,7 +2422,7 @@ app.get('/api/orders/:orderId/timeline', auth, (req, res) => {
   const orderId = Number(req.params.orderId);
   
   const timeline = db.prepare(`
-    SELECT t.*, u.name as user_name, u.avatar_url
+    SELECT t.*, u.name as user_name, u.profile_image
     FROM order_timeline t
     JOIN users u ON t.user_id = u.id
     WHERE t.order_id = ?
@@ -2448,7 +2448,7 @@ app.post('/api/orders/:orderId/timeline', auth, (req, res) => {
   `).run(orderId, activity_type, description, req.user.id);
   
   const entry = db.prepare(`
-    SELECT t.*, u.name as user_name, u.avatar_url
+    SELECT t.*, u.name as user_name, u.profile_image
     FROM order_timeline t
     JOIN users u ON t.user_id = u.id
     WHERE t.id = ?
@@ -2464,7 +2464,7 @@ app.get('/api/orders/:orderId/notes', auth, (req, res) => {
   const orderId = Number(req.params.orderId);
   
   const notes = db.prepare(`
-    SELECT n.*, u.name as created_by_name, u.avatar_url
+    SELECT n.*, u.name as created_by_name, u.profile_image
     FROM order_notes n
     JOIN users u ON n.created_by = u.id
     WHERE n.order_id = ?
@@ -2495,7 +2495,7 @@ app.post('/api/orders/:orderId/notes', auth, (req, res) => {
   `).run(orderId, 'Note tilføjet', req.user.id);
   
   const note = db.prepare(`
-    SELECT n.*, u.name as created_by_name, u.avatar_url
+    SELECT n.*, u.name as created_by_name, u.profile_image
     FROM order_notes n
     JOIN users u ON n.created_by = u.id
     WHERE n.id = ?
@@ -2518,7 +2518,7 @@ app.put('/api/orders/:orderId/notes/:noteId', auth, (req, res) => {
   `).run(content, is_pinned ? 1 : 0, noteId);
   
   const note = db.prepare(`
-    SELECT n.*, u.name as created_by_name, u.avatar_url
+    SELECT n.*, u.name as created_by_name, u.profile_image
     FROM order_notes n
     JOIN users u ON n.created_by = u.id
     WHERE n.id = ?
@@ -2605,7 +2605,7 @@ app.get('/api/orders/:orderId/workspace', auth, (req, res) => {
   
   // Get timeline
   const timeline = db.prepare(`
-    SELECT t.*, u.name as user_name, u.avatar_url
+    SELECT t.*, u.name as user_name, u.profile_image
     FROM order_timeline t
     JOIN users u ON t.user_id = u.id
     WHERE t.order_id = ?
@@ -2615,7 +2615,7 @@ app.get('/api/orders/:orderId/workspace', auth, (req, res) => {
   
   // Get notes
   const notes = db.prepare(`
-    SELECT n.*, u.name as created_by_name, u.avatar_url
+    SELECT n.*, u.name as created_by_name, u.profile_image
     FROM order_notes n
     JOIN users u ON n.created_by = u.id
     WHERE n.order_id = ?
@@ -2715,7 +2715,7 @@ app.get('/api/setup-database', async (req, res) => {
         position TEXT DEFAULT '',
         department TEXT DEFAULT '',
         phone TEXT DEFAULT '',
-        avatar_url TEXT DEFAULT '',
+        profile_image TEXT DEFAULT '',
         is_admin INTEGER DEFAULT 0,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
