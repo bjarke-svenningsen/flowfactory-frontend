@@ -256,18 +256,27 @@ app.get('/api/users', auth, (req, res) => {
 });
 
 // Feed
-app.get('/api/posts', auth, (req, res) => {
-  const posts = db.prepare(`
-    SELECT p.id, p.content, p.created_at,
-           u.id as user_id, u.name as user_name, u.avatar_url
-    FROM posts p
-    JOIN users u ON u.id = p.user_id
-    ORDER BY p.id DESC
-    LIMIT 100
-  `).all();
-  const likeCounts = db.prepare('SELECT post_id, COUNT(*) as likes FROM reactions GROUP BY post_id').all();
-  const likeMap = Object.fromEntries(likeCounts.map(r => [r.post_id, r.likes]));
-  res.json(posts.map(p => ({...p, likes: likeMap[p.id] || 0 })));
+app.get('/api/posts', auth, async (req, res) => {
+  try {
+    const posts = await db.all(`
+      SELECT p.id, p.content, p.created_at,
+             u.id as user_id, u.name as user_name, u.profile_image as avatar_url
+      FROM posts p
+      JOIN users u ON u.id = p.user_id
+      ORDER BY p.id DESC
+      LIMIT 100
+    `);
+    const likeCounts = await db.all('SELECT post_id, COUNT(*) as likes FROM reactions GROUP BY post_id');
+    
+    // Ensure likeCounts is an array
+    const likeCountsArray = Array.isArray(likeCounts) ? likeCounts : [];
+    const likeMap = Object.fromEntries(likeCountsArray.map(r => [r.post_id, r.likes]));
+    
+    res.json(posts.map(p => ({...p, likes: likeMap[p.id] || 0 })));
+  } catch (error) {
+    console.error('Get posts error:', error);
+    res.status(500).json({ error: 'Failed to fetch posts' });
+  }
 });
 
 app.post('/api/posts', auth, (req, res) => {
