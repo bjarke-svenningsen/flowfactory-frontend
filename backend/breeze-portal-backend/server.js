@@ -198,7 +198,7 @@ app.get('/api/posts', auth, async (req, res) => {
   try {
     const posts = await db.all(`
       SELECT p.id, p.content, p.created_at,
-             u.id as user_id, u.name as user_name, u.profile_image as avatar_url
+             u.id as user_id, u.name as user_name, u.profile_image
       FROM posts p
       JOIN users u ON u.id = p.user_id
       ORDER BY p.id DESC
@@ -206,9 +206,13 @@ app.get('/api/posts', auth, async (req, res) => {
     `);
     const likeCounts = await db.all('SELECT post_id, COUNT(*) as likes FROM reactions GROUP BY post_id');
     
-    // Ensure likeCounts is an array
-    const likeCountsArray = Array.isArray(likeCounts) ? likeCounts : [];
-    const likeMap = Object.fromEntries(likeCountsArray.map(r => [r.post_id, r.likes]));
+    // Build like map safely
+    const likeMap = {};
+    if (likeCounts && Array.isArray(likeCounts)) {
+      likeCounts.forEach(r => {
+        likeMap[r.post_id] = r.likes;
+      });
+    }
     
     res.json(posts.map(p => ({...p, likes: likeMap[p.id] || 0 })));
   } catch (error) {
