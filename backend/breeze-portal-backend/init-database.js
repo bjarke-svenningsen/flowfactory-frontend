@@ -265,6 +265,79 @@ export async function initializeDatabase() {
       updated_at ${db._isProduction ? 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP' : "TEXT DEFAULT (datetime('now'))"}${db._isProduction ? '' : ',\n  FOREIGN KEY(order_id) REFERENCES quotes(id) ON DELETE CASCADE,\n  FOREIGN KEY(created_by) REFERENCES users(id)'}
     )`);
 
+    // Email accounts (IMAP/SMTP configurations per user)
+    await db.run(`CREATE TABLE IF NOT EXISTS email_accounts (
+      id ${db._isProduction ? 'SERIAL' : 'INTEGER'} PRIMARY KEY ${db._isProduction ? '' : 'AUTOINCREMENT'},
+      user_id INTEGER NOT NULL,
+      email TEXT NOT NULL,
+      display_name TEXT,
+      imap_host TEXT NOT NULL,
+      imap_port INTEGER DEFAULT 993,
+      imap_username TEXT NOT NULL,
+      imap_password TEXT NOT NULL,
+      smtp_host TEXT NOT NULL,
+      smtp_port INTEGER DEFAULT 587,
+      smtp_username TEXT NOT NULL,
+      smtp_password TEXT NOT NULL,
+      is_active INTEGER DEFAULT 1,
+      last_sync ${db._isProduction ? 'TIMESTAMP' : 'TEXT'},
+      created_at ${db._isProduction ? 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP' : "TEXT DEFAULT (datetime('now'))"}${db._isProduction ? '' : ',\n  FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE'}
+    )`);
+
+    // Emails (synced from IMAP)
+    await db.run(`CREATE TABLE IF NOT EXISTS emails (
+      id ${db._isProduction ? 'SERIAL' : 'INTEGER'} PRIMARY KEY ${db._isProduction ? '' : 'AUTOINCREMENT'},
+      account_id INTEGER NOT NULL,
+      message_id TEXT NOT NULL,
+      uid INTEGER NOT NULL,
+      folder TEXT DEFAULT 'INBOX',
+      from_address TEXT NOT NULL,
+      from_name TEXT,
+      to_address TEXT NOT NULL,
+      to_name TEXT,
+      cc TEXT,
+      bcc TEXT,
+      subject TEXT,
+      body_text TEXT,
+      body_html TEXT,
+      received_date ${db._isProduction ? 'TIMESTAMP' : 'TEXT'},
+      is_read INTEGER DEFAULT 0,
+      is_starred INTEGER DEFAULT 0,
+      has_attachments INTEGER DEFAULT 0,
+      created_at ${db._isProduction ? 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP' : "TEXT DEFAULT (datetime('now'))"},
+      UNIQUE(account_id, uid, folder)${db._isProduction ? '' : ',\n  FOREIGN KEY(account_id) REFERENCES email_accounts(id) ON DELETE CASCADE'}
+    )`);
+
+    // Email attachments
+    await db.run(`CREATE TABLE IF NOT EXISTS email_attachments (
+      id ${db._isProduction ? 'SERIAL' : 'INTEGER'} PRIMARY KEY ${db._isProduction ? '' : 'AUTOINCREMENT'},
+      email_id INTEGER NOT NULL,
+      filename TEXT NOT NULL,
+      original_name TEXT NOT NULL,
+      file_path TEXT NOT NULL,
+      file_size INTEGER NOT NULL,
+      mime_type TEXT,
+      created_at ${db._isProduction ? 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP' : "TEXT DEFAULT (datetime('now'))"}${db._isProduction ? '' : ',\n  FOREIGN KEY(email_id) REFERENCES emails(id) ON DELETE CASCADE'}
+    )`);
+
+    // Email labels (custom tags)
+    await db.run(`CREATE TABLE IF NOT EXISTS email_labels (
+      id ${db._isProduction ? 'SERIAL' : 'INTEGER'} PRIMARY KEY ${db._isProduction ? '' : 'AUTOINCREMENT'},
+      email_id INTEGER NOT NULL,
+      label TEXT NOT NULL,
+      created_at ${db._isProduction ? 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP' : "TEXT DEFAULT (datetime('now'))"}${db._isProduction ? '' : ',\n  FOREIGN KEY(email_id) REFERENCES emails(id) ON DELETE CASCADE'}
+    )`);
+
+    // Email to order links (for "Send to ordre" feature)
+    await db.run(`CREATE TABLE IF NOT EXISTS email_ordre_links (
+      id ${db._isProduction ? 'SERIAL' : 'INTEGER'} PRIMARY KEY ${db._isProduction ? '' : 'AUTOINCREMENT'},
+      email_id INTEGER NOT NULL,
+      order_id INTEGER NOT NULL,
+      pdf_document_id INTEGER,
+      linked_by INTEGER NOT NULL,
+      created_at ${db._isProduction ? 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP' : "TEXT DEFAULT (datetime('now'))"}${db._isProduction ? '' : ',\n  FOREIGN KEY(email_id) REFERENCES emails(id) ON DELETE CASCADE,\n  FOREIGN KEY(order_id) REFERENCES quotes(id) ON DELETE CASCADE,\n  FOREIGN KEY(pdf_document_id) REFERENCES order_documents(id) ON DELETE SET NULL,\n  FOREIGN KEY(linked_by) REFERENCES users(id)'}
+    )`);
+
     console.log('✅ All database tables initialized successfully!');
   } catch (error) {
     console.error('❌ Database initialization failed:', error);

@@ -2473,6 +2473,249 @@ app.get('/api/orders/:orderId/workspace', auth, (req, res) => {
   });
 });
 
+// --- EMAIL INTEGRATION API ---
+import { syncEmails, sendEmail, testImapConnection, testSmtpConnection } from './email-service.js';
+
+// Get user's email accounts
+app.get('/api/email/accounts', auth, async (req, res) => {
+  const accounts = await db.all('SELECT id, email, display_name, imap_host, smtp_host, is_active, last_sync FROM email_accounts WHERE user_id = ?', [req.user.id]);
+  res.json(accounts);
+});
+
+// Add email account
+app.post('/api/email/accounts', auth, async (req, res) => {
+  const { email, display_name, imap_host, imap_port, imap_username, imap_password, smtp_host, smtp_port, smtp_username, smtp_password } = req.body;
+  
+  if (!email || !imap_host || !imap_username || !imap_password || !smtp_host || !smtp_username || !smtp_password) {
+    return res.status(400).json({ error: 'Missing required fields' });
+  }
+  
+  const info = await db.run(`
+    INSERT INTO email_accounts (
+      user_id, email, display_name, imap_host, imap_port, imap_username, imap_password,
+      smtp_host, smtp_port, smtp_username, smtp_password
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `, [req.user.id, email, display_name || null, imap_host, imap_port || 993, imap_username, imap_password, smtp_host, smtp_port || 587, smtp_username, smtp_password]);
+  
+  const account = await db.get('SELECT id, email, display_name, imap_host, smtp_host, is_active FROM email_accounts WHERE id = ?', [info.lastInsertRowid]);
+  res.json(account);
+});
+
+// Delete email account
+app.delete('/api/email/accounts/:id', auth, async (req, res) => {
+  const accountId = Number(req.params.id);
+  const account = await db.get('SELECT * FROM email_accounts WHERE id = ? AND user_id = ?', [accountId, req.user.id]);
+  
+  if (!account) {
+    return res.status(404).json({ error: 'Account not found' });
+  }
+  
+  await db.run('DELETE FROM email_accounts WHERE id = ?', [accountId]);
+  res.json({ success: true });
+});
+
+// Test IMAP connection
+app.post('/api/email/test-imap', auth, async (req, res) => {
+  const { host, port, username, password } = req.body;
+  const result = await testImapConnection({ host, port, username, password });
+  res.json(result);
+});
+
+// Test SMTP connection
+app.post('/api/email/test-smtp', auth, async (req, res) => {
+  const { host, port, username, password } = req.body;
+  const result = await testSmtpConnection({ host, port, username, password });
+  res.json(result);
+});
+
+// Sync emails from IMAP
+app.post('/api/email/sync/:accountId', auth, async (req, res) => {
+  const accountId = Number(req.params.accountId);
+  
+  // Verify account belongs to user
+  const account = await db.get('SELECT * FROM email_accounts WHERE id = ? AND user_id = ?', [accountId, req.user.id]);
+  if (!account) {
+    return res.status(404).json({ error: 'Account not found' });
+  }
+  
+  try {
+    const result = await syncEmails(accountId);
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get emails for user
+app.get('/api/email/emails', auth, async (req, res) => {
+  const { folder, search, limit = 50, offset = 0 } = req.query;
+  
+  // Get user's accounts
+  const accounts = await db.all('SELECT id FROM email_accounts WHERE user_id = ?', [req.user.id]);
+  const accountIds = accounts.map(a => a.id);
+  
+  if (accountIds.length === 0) {
+    return res.json([]);
+  }
+  
+  let query = `
+    SELECT e.*, ea.email as account_email
+    FROM emails e
+    JOIN email_accounts ea ON e.account_id = ea.id
+    WHERE e.account_id IN (${accountIds.map(() => '?').join(',')})
+  `;
+  
+  const params = [...accountIds];
+  
+  if (folder) {
+    query += ' AND e.folder = ?';
+    params.push(folder);
+  }
+  
+  if (search) {
+    query += ' AND (e.subject LIKE ? OR e.from_address LIKE ? OR e.body_text LIKE ?)';
+    const searchParam = `%${search}%`;
+    params.push(searchParam, searchParam, searchParam);
+  }
+  
+  query += ' ORDER BY e.received_date DESC LIMIT ? OFFSET ?';
+  params.push(Number(limit), Number(offset));
+  
+  const emails = await db.all(query, params);
+  res.json(emails);
+});
+
+// Get single email with attachments
+app.get('/api/email/emails/:id', auth, async (req, res) => {
+  const emailId = Number(req.params.id);
+  
+  // Get email and verify user owns the account
+  const email = await db.get(`
+    SELECT e.*, ea.email as account_email
+    FROM emails e
+    JOIN email_accounts ea ON e.account_id = ea.id
+    WHERE e.id = ? AND ea.user_id = ?
+  `, [emailId, req.user.id]);
+  
+  if (!email) {
+    return res.status(404).json({ error: 'Email not found' });
+  }
+  
+  // Get attachments
+  const attachments = await db.all('SELECT * FROM email_attachments WHERE email_id = ?', [emailId]);
+  email.attachments = attachments;
+  
+  // Mark as read
+  await db.run('UPDATE emails SET is_read = 1 WHERE id = ?', [emailId]);
+  
+  res.json(email);
+});
+
+// Send email
+app.post('/api/email/send', auth, async (req, res) => {
+  const { account_id, to, cc, bcc, subject, text, html } = req.body;
+  
+  if (!account_id || !to || !subject) {
+    return res.status(400).json({ error: 'Missing required fields' });
+  }
+  
+  // Verify account belongs to user
+  const account = await db.get('SELECT * FROM email_accounts WHERE id = ? AND user_id = ?', [account_id, req.user.id]);
+  if (!account) {
+    return res.status(404).json({ error: 'Account not found' });
+  }
+  
+  try {
+    const result = await sendEmail(account_id, { to, cc, bcc, subject, text, html });
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Link email to order (Send to ordre)
+app.post('/api/email/link-to-order', auth, async (req, res) => {
+  const { email_id, order_number } = req.body;
+  
+  if (!email_id || !order_number) {
+    return res.status(400).json({ error: 'Missing required fields' });
+  }
+  
+  // Verify email belongs to user's account
+  const email = await db.get(`
+    SELECT e.* FROM emails e
+    JOIN email_accounts ea ON e.account_id = ea.id
+    WHERE e.id = ? AND ea.user_id = ?
+  `, [email_id, req.user.id]);
+  
+  if (!email) {
+    return res.status(404).json({ error: 'Email not found' });
+  }
+  
+  // Find order
+  const order = await db.get('SELECT id FROM quotes WHERE order_number = ? OR quote_number = ?', [order_number, order_number]);
+  if (!order) {
+    return res.status(404).json({ error: 'Order not found' });
+  }
+  
+  // Check if already linked
+  const existing = await db.get('SELECT id FROM email_ordre_links WHERE email_id = ? AND order_id = ?', [email_id, order.id]);
+  if (existing) {
+    return res.status(400).json({ error: 'Email already linked to this order' });
+  }
+  
+  // Create link
+  const info = await db.run(`
+    INSERT INTO email_ordre_links (email_id, order_id, linked_by)
+    VALUES (?, ?, ?)
+  `, [email_id, order.id, req.user.id]);
+  
+  // Log to order timeline
+  await db.run(`
+    INSERT INTO order_timeline (order_id, activity_type, description, user_id)
+    VALUES (?, 'email_linked', ?, ?)
+  `, [order.id, `Email linked: ${email.subject}`, req.user.id]);
+  
+  res.json({ success: true, link_id: info.lastInsertRowid });
+});
+
+// Get emails linked to an order
+app.get('/api/orders/:orderId/emails', auth, async (req, res) => {
+  const orderId = Number(req.params.orderId);
+  
+  const emails = await db.all(`
+    SELECT e.*, eol.created_at as linked_at, u.name as linked_by_name
+    FROM email_ordre_links eol
+    JOIN emails e ON eol.email_id = e.id
+    JOIN users u ON eol.linked_by = u.id
+    WHERE eol.order_id = ?
+    ORDER BY eol.created_at DESC
+  `, [orderId]);
+  
+  res.json(emails);
+});
+
+// Toggle email starred
+app.post('/api/email/emails/:id/star', auth, async (req, res) => {
+  const emailId = Number(req.params.id);
+  
+  const email = await db.get(`
+    SELECT e.*, ea.user_id
+    FROM emails e
+    JOIN email_accounts ea ON e.account_id = ea.id
+    WHERE e.id = ?
+  `, [emailId]);
+  
+  if (!email || email.user_id !== req.user.id) {
+    return res.status(404).json({ error: 'Email not found' });
+  }
+  
+  const newStarred = email.is_starred ? 0 : 1;
+  await db.run('UPDATE emails SET is_starred = ? WHERE id = ?', [newStarred, emailId]);
+  
+  res.json({ success: true, is_starred: newStarred });
+});
+
 // --- POSTGRESQL SETUP ENDPOINTS (Browser-friendly, no auth needed for initial setup) ---
 
 // Setup PostgreSQL database tables (browser accessible)
