@@ -740,8 +740,8 @@ if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
 }
 
 // --- Admin middleware ---
-function adminAuth(req, res, next) {
-  const user = db.prepare('SELECT is_admin FROM users WHERE id = ?').get(req.user.id);
+async function adminAuth(req, res, next) {
+  const user = await db.get('SELECT is_admin FROM users WHERE id = ?', [req.user.id]);
   if (!user || !user.is_admin) {
     return res.status(403).json({ error: 'Admin access required' });
   }
@@ -751,33 +751,33 @@ function adminAuth(req, res, next) {
 // --- Admin Routes ---
 
 // Get pending user registrations
-app.get('/api/admin/pending-users', auth, adminAuth, (req, res) => {
-  const pending = db.prepare(`
+app.get('/api/admin/pending-users', auth, adminAuth, async (req, res) => {
+  const pending = await db.all(`
     SELECT id, name, email, position, department, phone, created_at, status
     FROM pending_users
     WHERE status = 'pending'
     ORDER BY created_at DESC
-  `).all();
+  `);
   res.json(pending);
 });
 
 // Approve pending user
-app.post('/api/admin/approve-user/:id', auth, adminAuth, (req, res) => {
+app.post('/api/admin/approve-user/:id', auth, adminAuth, async (req, res) => {
   const pendingId = Number(req.params.id);
-  const pending = db.prepare('SELECT * FROM pending_users WHERE id = ? AND status = \'pending\'').get(pendingId);
+  const pending = await db.get('SELECT * FROM pending_users WHERE id = ? AND status = \'pending\'', [pendingId]);
   
   if (!pending) {
     return res.status(404).json({ error: 'Pending user not found' });
   }
   
   // Create actual user
-  const info = db.prepare(`
+  const info = await db.run(`
     INSERT INTO users (name, email, password_hash, position, department, phone)
     VALUES (?, ?, ?, ?, ?, ?)
-  `).run(pending.name, pending.email, pending.password_hash, pending.position, pending.department, pending.phone);
+  `, [pending.name, pending.email, pending.password_hash, pending.position, pending.department, pending.phone]);
   
   // Update pending status
-  db.prepare('UPDATE pending_users SET status = ? WHERE id = ?').run('approved', pendingId);
+  await db.run('UPDATE pending_users SET status = ? WHERE id = ?', ['approved', pendingId]);
   
   res.json({ success: true, userId: info.lastInsertRowid });
 });
@@ -1016,11 +1016,11 @@ io.on('connection', (socket) => {
     }
   });
 
-  socket.on('chat:send', ({ toUserId, text }) => {
+  socket.on('chat:send', async ({ toUserId, text }) => {
     if (!socket.user) return;
-    const info = db.prepare('INSERT INTO messages (sender_id, recipient_id, text) VALUES (?, ?, ?)')
-      .run(socket.user.id, toUserId, String(text).slice(0, 2000));
-    const msg = db.prepare('SELECT * FROM messages WHERE id = ?').get(info.lastInsertRowid);
+    const info = await db.run('INSERT INTO messages (sender_id, recipient_id, text) VALUES (?, ?, ?)',
+      [socket.user.id, toUserId, String(text).slice(0, 2000)]);
+    const msg = await db.get('SELECT * FROM messages WHERE id = ?', [info.lastInsertRowid]);
     const targetSocketId = onlineUsers.get(toUserId);
     if (targetSocketId) io.to(targetSocketId).emit('chat:message', msg);
     socket.emit('chat:message', msg); // echo
@@ -1167,13 +1167,13 @@ app.get('/api/customers', auth, async (req, res) => {
   res.json(customers);
 });
 
-app.get('/api/customers/:id', auth, (req, res) => {
-  const customer = db.prepare(`
+app.get('/api/customers/:id', auth, async (req, res) => {
+  const customer = await db.get(`
     SELECT c.*, u.name as created_by_name
     FROM customers c
     JOIN users u ON c.created_by = u.id
     WHERE c.id = ?
-  `).get(Number(req.params.id));
+  `, [Number(req.params.id)]);
   
   if (!customer) {
     return res.status(404).json({ error: 'Customer not found' });
@@ -1181,7 +1181,7 @@ app.get('/api/customers/:id', auth, (req, res) => {
   res.json(customer);
 });
 
-app.post('/api/customers', auth, (req, res) => {
+app.post('/api/customers', auth, async (req, res) => {
   const { customer_number, company_name, contact_person, att_person, email, phone, address, postal_code, city, cvr_number } = req.body;
   
   if (!company_name) {
@@ -1191,7 +1191,7 @@ app.post('/api/customers', auth, (req, res) => {
   // Auto-generate customer number if not provided
   let finalCustomerNumber = customer_number;
   if (!finalCustomerNumber || !finalCustomerNumber.trim()) {
-    const lastCustomer = db.prepare('SELECT customer_number FROM customers WHERE customer_number IS NOT NULL ORDER BY id DESC LIMIT 1').get();
+    const lastCustomer = await db.get('SELECT customer_number FROM customers WHERE customer_number IS NOT NULL ORDER BY id DESC LIMIT 1');
     
     if (lastCustomer && lastCustomer.customer_number) {
       const lastNum = parseInt(lastCustomer.customer_number);
@@ -1205,17 +1205,17 @@ app.post('/api/customers', auth, (req, res) => {
     }
   }
   
-  const info = db.prepare(`
+  const info = await db.run(`
     INSERT INTO customers (customer_number, company_name, contact_person, att_person, email, phone, address, postal_code, city, cvr_number, created_by)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `).run(finalCustomerNumber, company_name, contact_person || null, att_person || null, email || null, phone || null, address || null, postal_code || null, city || null, cvr_number || null, req.user.id);
+  `, [finalCustomerNumber, company_name, contact_person || null, att_person || null, email || null, phone || null, address || null, postal_code || null, city || null, cvr_number || null, req.user.id]);
   
-  const customer = db.prepare(`
+  const customer = await db.get(`
     SELECT c.*, u.name as created_by_name
     FROM customers c
     JOIN users u ON c.created_by = u.id
     WHERE c.id = ?
-  `).get(info.lastInsertRowid);
+  `, [info.lastInsertRowid]);
   
   res.json(customer);
 });
