@@ -155,6 +155,44 @@ const emailClient = {
     // Make dialogs draggable
     this.makeDraggable('compose-dialog');
     this.makeDraggable('account-dialog');
+    
+    // Setup rich text editor features when compose dialog opens
+    this.setupRichTextEditor();
+  },
+  
+  // Setup rich text editor with auto-linkify and dropdown updates
+  setupRichTextEditor() {
+    // Wait for DOM to be ready
+    setTimeout(() => {
+      const editor = document.getElementById('compose-body');
+      if (!editor) return;
+      
+      // Auto-linkify URLs
+      editor.addEventListener('input', (e) => {
+        this.autoLinkifyUrls(editor);
+        this.updateFormattingDropdowns();
+      });
+      
+      // Update dropdowns on selection change
+      editor.addEventListener('mouseup', () => this.updateFormattingDropdowns());
+      editor.addEventListener('keyup', () => this.updateFormattingDropdowns());
+      
+      // Drag and drop inline images
+      editor.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        editor.style.background = '#f0f0ff';
+      });
+      
+      editor.addEventListener('dragleave', () => {
+        editor.style.background = 'white';
+      });
+      
+      editor.addEventListener('drop', (e) => {
+        e.preventDefault();
+        editor.style.background = 'white';
+        this.handleImageDrop(e, editor);
+      });
+    }, 500);
   },
 
   // Make dialog draggable
@@ -181,7 +219,15 @@ const emailClient = {
       initialX = e.clientX - rect.left;
       initialY = e.clientY - rect.top;
 
-      dialog.style.transform = 'none';
+      // BUGFIX: Only remove transform if dialog is centered
+      // Check if dialog is centered (has translate transform)
+      const transform = window.getComputedStyle(dialog).transform;
+      if (transform && transform !== 'none') {
+        // Dialog is centered, convert to absolute positioning
+        dialog.style.left = rect.left + 'px';
+        dialog.style.top = rect.top + 'px';
+        dialog.style.transform = 'none';
+      }
     });
 
     document.addEventListener('mousemove', (e) => {
@@ -2192,6 +2238,103 @@ const emailClient = {
       const text = body.textContent || body.innerText || '';
       const count = text.length;
       counter.textContent = `${count} tegn`;
+    }
+  },
+  
+  // Auto-linkify URLs in editor
+  autoLinkifyUrls(editor) {
+    const selection = window.getSelection();
+    const cursorPos = selection.getRangeAt(0).startOffset;
+    
+    // Get text content
+    let html = editor.innerHTML;
+    
+    // URL regex pattern
+    const urlPattern = /(https?:\/\/[^\s<]+|www\.[^\s<]+)/gi;
+    
+    // Replace URLs with links (but not already linked ones)
+    const newHtml = html.replace(urlPattern, (match) => {
+      // Check if already in a link
+      if (html.indexOf(`href="${match}"`) !== -1 || html.indexOf(`href='${match}'`) !== -1) {
+        return match;
+      }
+      const url = match.startsWith('http') ? match : 'https://' + match;
+      return `<a href="${url}" target="_blank">${match}</a>`;
+    });
+    
+    if (newHtml !== html) {
+      editor.innerHTML = newHtml;
+    }
+  },
+  
+  // Update formatting dropdowns to show current selection
+  updateFormattingDropdowns() {
+    try {
+      const fontSelect = document.getElementById('font-family-select');
+      const sizeSelect = document.getElementById('font-size-select');
+      
+      if (!fontSelect || !sizeSelect) return;
+      
+      // Get current font family
+      const fontFamily = document.queryCommandValue('fontName');
+      if (fontFamily) {
+        const cleanFont = fontFamily.replace(/['"]/g, '');
+        fontSelect.value = cleanFont || '';
+      }
+      
+      // Get current font size
+      const fontSize = document.queryCommandValue('fontSize');
+      if (fontSize) {
+        sizeSelect.value = fontSize || '';
+      }
+    } catch (error) {
+      // Silently fail - selection might not be in editor
+    }
+  },
+  
+  // Handle image drop (inline images)
+  async handleImageDrop(event, editor) {
+    const files = event.dataTransfer.files;
+    if (!files || files.length === 0) return;
+    
+    for (const file of files) {
+      // Only accept images
+      if (!file.type.startsWith('image/')) {
+        this.showNotification('Kun billedfiler kan indsættes inline', 'warning');
+        continue;
+      }
+      
+      // Check file size (max 500KB)
+      const maxSize = 500 * 1024; // 500KB
+      if (file.size > maxSize) {
+        this.showNotification(`Billede er for stort (${this.formatFileSize(file.size)}). Max 500KB`, 'warning');
+        continue;
+      }
+      
+      // Read file as base64
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        // Create image element
+        const img = document.createElement('img');
+        img.src = e.target.result;
+        img.style.maxWidth = '600px';
+        img.style.height = 'auto';
+        img.style.display = 'block';
+        img.style.margin = '10px 0';
+        
+        // Insert at cursor or at end
+        const selection = window.getSelection();
+        if (selection.rangeCount > 0) {
+          const range = selection.getRangeAt(0);
+          range.insertNode(img);
+        } else {
+          editor.appendChild(img);
+        }
+        
+        this.showNotification('Billede indsat!', 'success');
+      };
+      
+      reader.readAsDataURL(file);
     }
   }
 };
