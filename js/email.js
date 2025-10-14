@@ -167,6 +167,19 @@ const emailClient = {
       const editor = document.getElementById('compose-body');
       if (!editor) return;
       
+      // Auto-linkify URLs when user finishes typing (like Outlook/Word)
+      editor.addEventListener('keydown', (e) => {
+        // Only linkify on space or enter
+        if (e.key === ' ' || e.key === 'Enter') {
+          setTimeout(() => this.smartLinkifyUrls(editor), 0);
+        }
+      });
+      
+      // Also linkify when user leaves the editor
+      editor.addEventListener('blur', () => {
+        this.smartLinkifyUrls(editor);
+      });
+      
       // Update formatting dropdowns on input
       editor.addEventListener('input', (e) => {
         this.updateFormattingDropdowns();
@@ -2240,7 +2253,79 @@ const emailClient = {
     }
   },
   
-  // Auto-linkify URLs in editor
+  // Smart URL linkification - only linkify complete URLs (like Outlook/Word)
+  smartLinkifyUrls(editor) {
+    // Get current selection/cursor position
+    const selection = window.getSelection();
+    if (!selection.rangeCount) return;
+    
+    const range = selection.getRangeAt(0);
+    const cursorNode = range.startContainer;
+    
+    // Only process text nodes
+    if (cursorNode.nodeType !== Node.TEXT_NODE) return;
+    
+    const text = cursorNode.textContent;
+    
+    // URL regex - matches complete URLs
+    const urlPattern = /(https?:\/\/[^\s<]+|www\.[^\s<]+)/g;
+    
+    // Find URLs in the text
+    const matches = [...text.matchAll(urlPattern)];
+    if (matches.length === 0) return;
+    
+    // Process each match in reverse order (to maintain positions)
+    for (let i = matches.length - 1; i >= 0; i--) {
+      const match = matches[i];
+      const url = match[0];
+      const startPos = match.index;
+      const endPos = startPos + url.length;
+      
+      // Check if cursor is inside this URL (still typing it)
+      if (range.startOffset > startPos && range.startOffset <= endPos) {
+        continue; // Skip this URL, user is still typing it
+      }
+      
+      // Create the link
+      const fullUrl = url.startsWith('http') ? url : 'https://' + url;
+      const link = document.createElement('a');
+      link.href = fullUrl;
+      link.target = '_blank';
+      link.textContent = url;
+      
+      // Split the text node and insert the link
+      const beforeText = text.substring(0, startPos);
+      const afterText = text.substring(endPos);
+      
+      // Create new text nodes
+      const beforeNode = document.createTextNode(beforeText);
+      const afterNode = document.createTextNode(afterText);
+      
+      // Replace the text node with the new structure
+      const parent = cursorNode.parentNode;
+      parent.insertBefore(beforeNode, cursorNode);
+      parent.insertBefore(link, cursorNode);
+      parent.insertBefore(afterNode, cursorNode);
+      parent.removeChild(cursorNode);
+      
+      // Restore cursor position
+      if (range.startOffset > endPos) {
+        // Cursor was after the URL
+        const newOffset = range.startOffset - endPos;
+        range.setStart(afterNode, newOffset);
+        range.collapse(true);
+      } else {
+        // Cursor was before or at the URL
+        range.setStart(afterNode, 0);
+        range.collapse(true);
+      }
+      
+      selection.removeAllRanges();
+      selection.addRange(range);
+    }
+  },
+  
+  // Auto-linkify URLs in editor (DEPRECATED - kept for compatibility)
   autoLinkifyUrls(editor) {
     // Get text content only (not HTML) to avoid linkifying already-linked URLs
     const text = editor.textContent || editor.innerText || '';
