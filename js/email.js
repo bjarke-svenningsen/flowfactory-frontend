@@ -800,7 +800,8 @@ const emailClient = {
     // Only save if there's actual content (not just signature)
     const to = document.getElementById('compose-to').value.trim();
     const subject = document.getElementById('compose-subject').value.trim();
-    let body = document.getElementById('compose-body').value.trim();
+    const bodyEditor = document.getElementById('compose-body');
+    let body = (bodyEditor.textContent || bodyEditor.innerText || '').trim();
     
     // Remove signature from body to check if there's actual content
     const signature = localStorage.getItem('emailSignature') || '';
