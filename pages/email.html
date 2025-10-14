@@ -290,8 +290,10 @@
   }
 
   .win95-field textarea {
-    resize: vertical;
-    min-height: 200px;
+    resize: both;
+    min-height: 250px;
+    max-height: 600px;
+    min-width: 100%;
   }
 
   .win95-dialog-buttons {
@@ -480,8 +482,17 @@
       <input type="number" id="account-smtp-port" value="587">
     </div>
     <div class="win95-info-box">
-      <strong>💡 Gmail brugere:</strong><br>
-      Brug "App Password" fra Google Account sikkerhedsindstillinger
+      <strong>💡 Sådan tilføjer du Gmail:</strong><br><br>
+      <strong>1. Email:</strong> Din Gmail adresse (f.eks. dit.navn@gmail.com)<br><br>
+      <strong>2. Password:</strong> IKKE dit normale Gmail password!<br>
+      &nbsp;&nbsp;&nbsp;→ Opret "App Password" sådan:<br>
+      &nbsp;&nbsp;&nbsp;→ Gå til https://myaccount.google.com/security<br>
+      &nbsp;&nbsp;&nbsp;→ Slå "2-Step Verification" til (hvis ikke aktiveret)<br>
+      &nbsp;&nbsp;&nbsp;→ Klik "App passwords" (nederst på siden)<br>
+      &nbsp;&nbsp;&nbsp;→ Vælg "Mail" og "Other device"<br>
+      &nbsp;&nbsp;&nbsp;→ Google viser et 16-tegns password<br>
+      &nbsp;&nbsp;&nbsp;→ Kopiér dette password og brug det her!<br><br>
+      <strong>3. IMAP/SMTP er allerede udfyldt korrekt for Gmail</strong>
     </div>
     <div class="win95-dialog-buttons">
       <button class="win95-btn" onclick="emailClient.addEmailAccountFromModal()">Tilføj</button>
