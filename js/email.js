@@ -59,6 +59,61 @@ const emailClient = {
         contextMenu.classList.remove('active');
       }
     });
+
+    // Make dialogs draggable
+    this.makeDraggable('compose-dialog');
+    this.makeDraggable('account-dialog');
+  },
+
+  // Make dialog draggable
+  makeDraggable(dialogId) {
+    const dialog = document.getElementById(dialogId);
+    if (!dialog) return;
+
+    const titleBar = dialog.querySelector('.win95-dialog-title');
+    if (!titleBar) return;
+
+    let isDragging = false;
+    let currentX;
+    let currentY;
+    let initialX;
+    let initialY;
+
+    titleBar.addEventListener('mousedown', (e) => {
+      // Don't drag if clicking close button
+      if (e.target.classList.contains('win95-dialog-close')) return;
+
+      isDragging = true;
+      
+      const rect = dialog.getBoundingClientRect();
+      initialX = e.clientX - rect.left;
+      initialY = e.clientY - rect.top;
+
+      dialog.style.transform = 'none';
+    });
+
+    document.addEventListener('mousemove', (e) => {
+      if (!isDragging) return;
+
+      e.preventDefault();
+
+      currentX = e.clientX - initialX;
+      currentY = e.clientY - initialY;
+
+      // Keep dialog within viewport
+      const maxX = window.innerWidth - dialog.offsetWidth;
+      const maxY = window.innerHeight - dialog.offsetHeight;
+      
+      currentX = Math.max(0, Math.min(currentX, maxX));
+      currentY = Math.max(0, Math.min(currentY, maxY));
+
+      dialog.style.left = currentX + 'px';
+      dialog.style.top = currentY + 'px';
+    });
+
+    document.addEventListener('mouseup', () => {
+      isDragging = false;
+    });
   },
 
   // Load email accounts
@@ -349,8 +404,13 @@ const emailClient = {
     
     if (!dialog || !overlay) return;
 
-    dialog.classList.add('active');
+    dialog.classList.add('active', 'compose');
     overlay.classList.add('active');
+
+    // Center dialog
+    dialog.style.left = '50%';
+    dialog.style.top = '50%';
+    dialog.style.transform = 'translate(-50%, -50%)';
 
     if (replyTo) {
       document.getElementById('compose-to').value = replyTo.from_email;
@@ -564,8 +624,13 @@ const emailClient = {
     
     if (!dialog || !overlay) return;
 
-    dialog.classList.add('active');
+    dialog.classList.add('active', 'account');
     overlay.classList.add('active');
+
+    // Center dialog
+    dialog.style.left = '50%';
+    dialog.style.top = '50%';
+    dialog.style.transform = 'translate(-50%, -50%)';
 
     // Clear/pre-fill fields
     document.getElementById('account-email').value = '';

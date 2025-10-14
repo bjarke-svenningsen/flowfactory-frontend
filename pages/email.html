@@ -189,19 +189,34 @@
   .win95-dialog {
     display: none;
     position: fixed;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
     background: #c0c0c0;
     border: 2px solid;
     border-color: #fff #000 #000 #fff;
     box-shadow: 2px 2px 5px rgba(0,0,0,0.5);
     z-index: 2000;
     min-width: 400px;
+    resize: both;
+    overflow: auto;
   }
 
   .win95-dialog.active {
-    display: block;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .win95-dialog.compose {
+    width: 600px;
+    height: 500px;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+  }
+
+  .win95-dialog.account {
+    width: 450px;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
   }
 
   .win95-dialog-overlay {
@@ -228,6 +243,8 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
+    cursor: move;
+    user-select: none;
   }
 
   .win95-dialog-close {
@@ -247,6 +264,8 @@
 
   .win95-dialog-body {
     padding: 12px;
+    flex: 1;
+    overflow-y: auto;
   }
 
   .win95-field {
