@@ -52,6 +52,7 @@ const emailClient = {
   
   // Phase 3: Folder drag state
   draggedFolderId: null,
+  isDraggingFolder: false,
 
   // Initialize the email client
   async init() {
@@ -1575,6 +1576,7 @@ const emailClient = {
              data-folder="${folderId}"
              draggable="true"
              ondragstart="emailClient.handleFolderDragStart(event, ${folder.id})"
+             ondragend="emailClient.handleFolderDragEnd(event)"
              onclick="emailClient.handleFolderClick(event, '${folderId}', ${folder.id})"
              oncontextmenu="emailClient.showFolderContextMenu(event, ${folder.id})"
              ondragover="emailClient.handleFolderDragOver(event)"
@@ -1595,6 +1597,13 @@ const emailClient = {
   handleFolderClick(event, folderId, folderIdNum) {
     // Prevent click when clicking arrow
     if (event.target.classList.contains('folder-expand-arrow')) return;
+    
+    // Prevent click if we were just dragging
+    if (this.isDraggingFolder) {
+      this.isDraggingFolder = false;
+      return;
+    }
+    
     this.changeFolder(folderId, folderIdNum);
   },
   
@@ -1612,9 +1621,21 @@ const emailClient = {
       return;
     }
     
+    this.isDraggingFolder = true;
     this.draggedFolderId = folderId;
     event.dataTransfer.effectAllowed = 'move';
     event.currentTarget.style.opacity = '0.5';
+  },
+  
+  handleFolderDragEnd(event) {
+    // Reset drag state
+    event.currentTarget.style.opacity = '';
+    
+    // Delay resetting the flag to ensure click doesn't fire
+    setTimeout(() => {
+      this.isDraggingFolder = false;
+      this.draggedFolderId = null;
+    }, 100);
   },
   
   async handleFolderDrop(event, targetFolderId) {
@@ -1631,6 +1652,7 @@ const emailClient = {
     // If dropping folder
     if (!this.draggedFolderId || this.draggedFolderId === targetFolderId) {
       this.draggedFolderId = null;
+      this.isDraggingFolder = false;
       return;
     }
     
