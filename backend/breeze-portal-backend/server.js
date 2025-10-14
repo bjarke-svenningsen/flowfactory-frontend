@@ -2557,7 +2557,7 @@ app.post('/api/email/sync-paginated/:accountId', auth, async (req, res) => {
 
 // Get emails for user (from database, with pagination)
 app.get('/api/email/emails', auth, async (req, res) => {
-  const { folder, search, limit = 50, offset = 0, accountId } = req.query;
+  const { folder, folder_id, search, limit = 50, offset = 0, accountId } = req.query;
   
   // Get user's accounts
   let accountIds = [];
@@ -2585,7 +2585,12 @@ app.get('/api/email/emails', auth, async (req, res) => {
   
   const params = [...accountIds];
   
-  if (folder) {
+  // Filter by custom folder_id (for custom folders)
+  if (folder_id) {
+    query += ' AND e.folder_id = ?';
+    params.push(Number(folder_id));
+  } else if (folder) {
+    // Filter by IMAP folder (inbox, sent, etc)
     query += ' AND LOWER(e.folder) = LOWER(?)';
     params.push(folder);
   }
