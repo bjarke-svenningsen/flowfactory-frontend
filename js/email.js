@@ -616,31 +616,52 @@ const emailClient = {
 
   // Show add account modal
   showAddAccountModal() {
-    const email = prompt('Indtast email adresse:');
-    if (!email) return;
+    const modal = document.getElementById('add-account-modal');
+    modal.classList.add('active');
 
-    const password = prompt('Indtast email password:');
-    if (!password) return;
+    // Clear fields
+    document.getElementById('account-email').value = '';
+    document.getElementById('account-password').value = '';
+    document.getElementById('account-imap-host').value = '';
+    document.getElementById('account-imap-port').value = '993';
+    document.getElementById('account-smtp-host').value = '';
+    document.getElementById('account-smtp-port').value = '587';
 
-    const imapHost = prompt('IMAP host (f.eks. imap.gmail.com):');
-    if (!imapHost) return;
+    // Focus on first field
+    setTimeout(() => {
+      document.getElementById('account-email').focus();
+    }, 100);
+  },
 
-    const imapPort = prompt('IMAP port (normalt 993):', '993');
-    if (!imapPort) return;
+  // Close add account modal
+  closeAddAccountModal() {
+    const modal = document.getElementById('add-account-modal');
+    modal.classList.remove('active');
+  },
 
-    const smtpHost = prompt('SMTP host (f.eks. smtp.gmail.com):');
-    if (!smtpHost) return;
+  // Add email account from modal
+  async addEmailAccountFromModal() {
+    const email = document.getElementById('account-email').value.trim();
+    const password = document.getElementById('account-password').value;
+    const imapHost = document.getElementById('account-imap-host').value.trim();
+    const imapPort = parseInt(document.getElementById('account-imap-port').value);
+    const smtpHost = document.getElementById('account-smtp-host').value.trim();
+    const smtpPort = parseInt(document.getElementById('account-smtp-port').value);
 
-    const smtpPort = prompt('SMTP port (normalt 587):', '587');
-    if (!smtpPort) return;
+    if (!email || !password || !imapHost || !smtpHost) {
+      this.showNotification('Udfyld alle felter', 'warning');
+      return;
+    }
 
-    this.addEmailAccount({
+    this.closeAddAccountModal();
+
+    await this.addEmailAccount({
       email,
       password,
       imapHost,
-      imapPort: parseInt(imapPort),
+      imapPort,
       smtpHost,
-      smtpPort: parseInt(smtpPort)
+      smtpPort
     });
   },
 

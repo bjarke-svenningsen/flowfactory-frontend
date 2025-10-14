@@ -726,6 +726,55 @@
     </div>
   </div>
 
+  <!-- Add Account Modal -->
+  <div class="compose-modal" id="add-account-modal">
+    <div class="compose-form">
+      <div class="compose-header">
+        <div class="compose-title">📧 Tilføj Email Konto</div>
+        <button class="compose-close" onclick="emailClient.closeAddAccountModal()">×</button>
+      </div>
+
+      <div class="compose-fields">
+        <div class="compose-field">
+          <div class="compose-label" style="width: 120px;">Email:</div>
+          <input type="email" class="compose-input" id="account-email" placeholder="din@email.dk">
+        </div>
+        <div class="compose-field">
+          <div class="compose-label" style="width: 120px;">Password:</div>
+          <input type="password" class="compose-input" id="account-password" placeholder="••••••••">
+        </div>
+        <div class="compose-field">
+          <div class="compose-label" style="width: 120px;">IMAP Host:</div>
+          <input type="text" class="compose-input" id="account-imap-host" placeholder="imap.gmail.com">
+        </div>
+        <div class="compose-field">
+          <div class="compose-label" style="width: 120px;">IMAP Port:</div>
+          <input type="number" class="compose-input" id="account-imap-port" value="993">
+        </div>
+        <div class="compose-field">
+          <div class="compose-label" style="width: 120px;">SMTP Host:</div>
+          <input type="text" class="compose-input" id="account-smtp-host" placeholder="smtp.gmail.com">
+        </div>
+        <div class="compose-field">
+          <div class="compose-label" style="width: 120px;">SMTP Port:</div>
+          <input type="number" class="compose-input" id="account-smtp-port" value="587">
+        </div>
+      </div>
+
+      <div style="padding: 16px 24px; font-size: 13px; color: #666; background: #f9f9f9; border-top: 1px solid #e0e0e0;">
+        <strong>💡 Gmail brugere:</strong><br>
+        IMAP: imap.gmail.com:993<br>
+        SMTP: smtp.gmail.com:587<br>
+        Brug "App Password" fra Google Account sikkerhedsindstillinger
+      </div>
+
+      <div class="compose-footer">
+        <button class="send-button" onclick="emailClient.addEmailAccountFromModal()">➕ Tilføj Konto</button>
+        <button class="cancel-button" onclick="emailClient.closeAddAccountModal()">Annuller</button>
+      </div>
+    </div>
+  </div>
+
   <script type="module" src="../js/email.js"></script>
 </body>
 </html>
