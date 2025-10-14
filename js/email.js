@@ -1143,10 +1143,21 @@ const emailClient = {
     
     for (const emailId of emailIds) {
       try {
-        await apiCall(`/api/email/emails/${emailId}`, {
-          method: 'DELETE'
-        });
-        deletedCount++;
+        // Check if this is a draft
+        if (String(emailId).startsWith('draft_')) {
+          const draftId = parseInt(String(emailId).replace('draft_', ''));
+          const drafts = this.loadDrafts();
+          const filtered = drafts.filter(d => d.id !== draftId);
+          localStorage.setItem('emailDrafts', JSON.stringify(filtered));
+          this.updateDraftCount();
+          deletedCount++;
+        } else {
+          // Regular email - delete from API
+          await apiCall(`/api/email/emails/${emailId}`, {
+            method: 'DELETE'
+          });
+          deletedCount++;
+        }
       } catch (error) {
         console.error(`Error deleting email ${emailId}:`, error);
       }
@@ -1170,7 +1181,7 @@ const emailClient = {
       this.currentEmailId = null;
       const viewer = document.getElementById('email-preview');
       if (viewer) {
-        viewer.innerHTML = '<div style="display: flex; align-items: center; justify-content: center; height: 100%; color: #999;">Vælg en email for at læse den</div>';
+        viewer.innerHTML = '<div style=\"display: flex; align-items: center; justify-content: center; height: 100%; color: #999;\">Vælg en email for at læse den</div>';
       }
     }
   },
