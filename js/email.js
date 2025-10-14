@@ -676,9 +676,6 @@ const emailClient = {
     dialog.style.top = '50%';
     dialog.style.transform = 'translate(-50%, -50%)';
 
-    // Load draft if exists
-    const draft = this.loadDraft();
-    
     if (replyTo) {
       // BUG FIX: Use from_address instead of from_email
       const fromAddress = replyTo.from_address || replyTo.from_email || '';
@@ -702,20 +699,9 @@ const emailClient = {
       
       // Add signature
       this.updateSignaturePreview();
-    } else if (draft) {
-      // Load draft
-      document.getElementById('compose-to').value = draft.to || '';
-      document.getElementById('compose-cc').value = draft.cc || '';
-      document.getElementById('compose-bcc').value = draft.bcc || '';
-      document.getElementById('compose-subject').value = draft.subject || '';
-      document.getElementById('compose-body').value = draft.body || '';
-      
-      // Show CC/BCC if they were used
-      if (draft.cc || draft.bcc) {
-        document.getElementById('cc-bcc-fields').style.display = 'block';
-      }
     } else {
-      // Clear all fields
+      // NEW MAIL - Always start empty (NO auto-load of drafts)
+      // Drafts only open when clicked from "Kladder" folder via openDraft()
       document.getElementById('compose-to').value = '';
       document.getElementById('compose-cc').value = '';
       document.getElementById('compose-bcc').value = '';
@@ -747,18 +733,14 @@ const emailClient = {
 
   // Close compose modal
   closeCompose() {
-    // Check for unsaved changes
+    // Auto-save if there's any content (no confirmation dialog)
     const to = document.getElementById('compose-to').value.trim();
     const subject = document.getElementById('compose-subject').value.trim();
     const body = document.getElementById('compose-body').value.trim();
     
-    const hasContent = to || subject || body;
-    
-    if (hasContent) {
-      const confirmClose = confirm('Du har ugemte ændringer. Vil du gemme som kladde før du lukker?');
-      if (confirmClose) {
-        this.saveDraft();
-      }
+    if (to || subject || body) {
+      // Automatically save as draft without asking
+      this.saveDraft();
     }
     
     const dialog = document.getElementById('compose-dialog');
@@ -767,8 +749,8 @@ const emailClient = {
     if (dialog) dialog.classList.remove('active');
     if (overlay) overlay.classList.remove('active');
     
-    // Clear draft
-    localStorage.removeItem('emailDraft');
+    // Clear current draft ID
+    this.currentDraftId = null;
   },
 
   // Send email
