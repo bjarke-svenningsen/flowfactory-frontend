@@ -119,8 +119,8 @@ const emailClient = {
   // Load email accounts
   async loadEmailAccounts() {
     try {
-      const response = await apiCall('/api/email/accounts');
-      this.emailAccounts = response.accounts || [];
+      const accounts = await apiCall('/api/email/accounts');
+      this.emailAccounts = Array.isArray(accounts) ? accounts : [];
       this.renderEmailAccounts();
       
       // Set current account if available
@@ -177,8 +177,8 @@ const emailClient = {
         params.append('accountId', this.currentAccountId);
       }
 
-      const response = await apiCall('/api/email/emails?' + params.toString());
-      this.emails = response.emails || [];
+      const emails = await apiCall('/api/email/emails?' + params.toString());
+      this.emails = Array.isArray(emails) ? emails : [];
       this.renderEmailList();
       this.updateFolderCounts();
       this.updateStatusBar();
