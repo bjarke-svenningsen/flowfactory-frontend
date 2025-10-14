@@ -2475,7 +2475,7 @@ app.get('/api/orders/:orderId/workspace', auth, (req, res) => {
 
 // --- EMAIL INTEGRATION API ---
 // LIGHTWEIGHT PAGINATION SYSTEM - Memory-safe email sync
-import { syncEmailsPaginated, sendEmail, testImapConnection, testSmtpConnection } from './email-service.js';
+import { syncEmailsPaginated, syncNewEmails, sendEmail, testImapConnection, testSmtpConnection } from './email-service.js';
 
 // --- EMAIL ROUTES - LIGHTWEIGHT PAGINATION SYSTEM ---
 // Memory-safe email sync with pagination
@@ -2516,6 +2516,24 @@ app.delete('/api/email/accounts/:id', auth, async (req, res) => {
   
   await db.run('DELETE FROM email_accounts WHERE id = ?', [accountId]);
   res.json({ success: true });
+});
+
+// AUTO-SYNC: Sync NEW (UNSEEN) emails only - for 10-min auto-sync
+app.post('/api/email/sync-new/:accountId', auth, async (req, res) => {
+  const accountId = Number(req.params.accountId);
+  
+  // Verify account belongs to user
+  const account = await db.get('SELECT * FROM email_accounts WHERE id = ? AND user_id = ?', [accountId, req.user.id]);
+  if (!account) {
+    return res.status(404).json({ error: 'Account not found' });
+  }
+  
+  try {
+    const result = await syncNewEmails(accountId);
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
 });
 
 // LIGHTWEIGHT PAGINATION: Sync emails with offset/limit

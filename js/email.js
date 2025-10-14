@@ -59,25 +59,61 @@ const emailClient = {
     console.log('Email client initialized');
   },
 
-  // Start auto-sync timer - TEMPORARILY DISABLED
-  // Will be re-enabled with new lightweight IMAP system
+  // Start auto-sync timer - Enabled with lightweight UNSEEN-only sync
   startAutoSync() {
-    console.log('Auto-sync disabled - use manual sync button instead');
+    console.log('Auto-sync enabled - checking for new emails every 10 minutes');
     
-    /* DISABLED - Will be re-enabled with lightweight pagination
     // Clear any existing timer
     if (this.syncTimer) {
       clearInterval(this.syncTimer);
     }
 
-    // Sync every 30 seconds
+    // Sync every 10 minutes (600,000 ms)
     this.syncTimer = setInterval(async () => {
       if (this.currentAccountId) {
-        console.log('Auto-syncing emails...');
-        await this.syncEmails(true); // true = silent sync
+        console.log('Auto-syncing new emails...');
+        await this.syncNewEmails(true); // true = silent sync
       }
-    }, 30000); // 30 seconds
-    */
+    }, 600000); // 10 minutes
+  },
+  
+  // Auto-sync: Sync ONLY new (UNSEEN) emails - called by timer
+  async syncNewEmails(silent = true) {
+    if (!this.currentAccountId) {
+      return;
+    }
+
+    if (this.isSyncing) {
+      console.log('Already syncing, skipping auto-sync...');
+      return;
+    }
+
+    this.isSyncing = true;
+
+    try {
+      // Use NEW auto-sync endpoint (UNSEEN only)
+      const result = await apiCall(`/api/email/sync-new/${this.currentAccountId}`, {
+        method: 'POST'
+      });
+
+      console.log('Auto-sync result:', result);
+
+      // Only show notification if NEW emails were found
+      if (result.new > 0 && !silent) {
+        this.showNotification(`${result.new} nye email(s) modtaget!`, 'success');
+      }
+
+      // Reload emails from database if new emails found
+      if (result.new > 0) {
+        await this.loadEmails();
+      }
+      
+    } catch (error) {
+      console.error('Error auto-syncing new emails:', error);
+      // Silent failure for auto-sync
+    } finally {
+      this.isSyncing = false;
+    }
   },
 
   // Setup event listeners
@@ -465,9 +501,8 @@ const emailClient = {
       }
 
       if (!silent) {
-        const message = result.new > 0 
-          ? `${result.new} nye email(s) synkroniseret!`
-          : `${result.synced} email(s) synkroniseret`;
+        // Always show synced count (not just new count)
+        const message = `${result.synced} email(s) indlæst`;
         this.showNotification(message, 'success');
       } else if (result.new > 0) {
         this.showNotification(`${result.new} nye email(s) modtaget!`, 'success');
