@@ -33,6 +33,12 @@ const emailClient = {
   emailAccounts: [],
   emails: [],
   currentAccountId: null,
+  
+  // Pagination state
+  currentOffset: 0,
+  hasMoreEmails: false,
+  totalEmailsInbox: 0,
+  isSyncing: false,
 
   // Initialize the email client
   async init() {
@@ -53,8 +59,12 @@ const emailClient = {
     console.log('Email client initialized');
   },
 
-  // Start auto-sync timer
+  // Start auto-sync timer - TEMPORARILY DISABLED
+  // Will be re-enabled with new lightweight IMAP system
   startAutoSync() {
+    console.log('Auto-sync disabled - use manual sync button instead');
+    
+    /* DISABLED - Will be re-enabled with lightweight pagination
     // Clear any existing timer
     if (this.syncTimer) {
       clearInterval(this.syncTimer);
@@ -67,6 +77,7 @@ const emailClient = {
         await this.syncEmails(true); // true = silent sync
       }
     }, 30000); // 30 seconds
+    */
   },
 
   // Setup event listeners
@@ -412,7 +423,7 @@ const emailClient = {
     }
   },
 
-  // Sync emails from IMAP
+  // LIGHTWEIGHT PAGINATION: Sync emails with offset/limit
   async syncEmails(silent = false) {
     if (!this.currentAccountId) {
       if (!silent) {
@@ -421,29 +432,107 @@ const emailClient = {
       return;
     }
 
+    if (this.isSyncing) {
+      console.log('Already syncing, skipping...');
+      return;
+    }
+
+    this.isSyncing = true;
+
     try {
       if (!silent) {
         this.showNotification('Synkroniserer emails...', 'info');
+        this.showSyncingState(true);
       }
 
-      const result = await apiCall(`/api/email/sync/${this.currentAccountId}`, {
-        method: 'POST'
+      // Use paginated sync endpoint
+      const result = await apiCall(`/api/email/sync-paginated/${this.currentAccountId}`, {
+        method: 'POST',
+        body: JSON.stringify({
+          offset: this.currentOffset,
+          limit: 10
+        })
       });
 
+      console.log('Sync result:', result);
+
+      // Update pagination state
+      this.hasMoreEmails = result.hasMore;
+      this.totalEmailsInbox = result.totalEmails;
+      
+      if (result.synced > 0) {
+        this.currentOffset = result.nextOffset;
+      }
+
       if (!silent) {
-        this.showNotification('Emails synkroniseret!', 'success');
+        const message = result.new > 0 
+          ? `${result.new} nye email(s) synkroniseret!`
+          : `${result.synced} email(s) synkroniseret`;
+        this.showNotification(message, 'success');
       } else if (result.new > 0) {
-        // Show notification only if new emails arrived during silent sync
         this.showNotification(`${result.new} nye email(s) modtaget!`, 'success');
       }
 
+      // Reload emails from database
       await this.loadEmails();
+      
+      // Update Load More button
+      this.updateLoadMoreButton();
+      
     } catch (error) {
       console.error('Error syncing emails:', error);
       if (!silent) {
         this.showNotification('Synkronisering fejlede: ' + error.message, 'error');
       }
+    } finally {
+      this.isSyncing = false;
+      if (!silent) {
+        this.showSyncingState(false);
+      }
     }
+  },
+  
+  // Show syncing state
+  showSyncingState(syncing) {
+    const syncButton = document.querySelector('[onclick="emailClient.syncEmails()"]');
+    if (syncButton) {
+      if (syncing) {
+        syncButton.disabled = true;
+        syncButton.textContent = '⏳ Synkroniserer...';
+      } else {
+        syncButton.disabled = false;
+        syncButton.textContent = '🔄 Synkroniser';
+      }
+    }
+  },
+  
+  // Update Load More button
+  updateLoadMoreButton() {
+    const loadMoreContainer = document.getElementById('load-more-container');
+    if (!loadMoreContainer) return;
+    
+    if (this.hasMoreEmails) {
+      const emailsLoaded = this.currentOffset;
+      const totalEmails = this.totalEmailsInbox;
+      
+      loadMoreContainer.innerHTML = `
+        <button class="win95-button" onclick="emailClient.loadMoreEmails()" ${this.isSyncing ? 'disabled' : ''}>
+          📥 Indlæs 10 mere (${emailsLoaded} af ${totalEmails})
+        </button>
+      `;
+      loadMoreContainer.style.display = 'block';
+    } else {
+      loadMoreContainer.innerHTML = `
+        <div style="text-align: center; padding: 10px; color: #666; font-size: 12px;">
+          ✅ Alle emails indlæst (${this.totalEmailsInbox} total)
+        </div>
+      `;
+    }
+  },
+  
+  // Load more emails (next batch)
+  async loadMoreEmails() {
+    await this.syncEmails(false);
   },
 
   // Open compose modal

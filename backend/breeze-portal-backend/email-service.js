@@ -279,3 +279,186 @@ export async function testSmtpConnection(smtpConfig) {
     return { success: false, error: error.message };
   }
 }
+
+// LIGHTWEIGHT PAGINATION: Sync emails with offset/limit
+export async function syncEmailsPaginated(accountId, offset = 0, limit = 10) {
+  let connection = null;
+  
+  try {
+    console.log(`📧 Starting paginated sync: offset=${offset}, limit=${limit}`);
+    
+    // Get account details
+    const account = await db.get('SELECT * FROM email_accounts WHERE id = ?', [accountId]);
+    if (!account) throw new Error('Account not found');
+
+    const config = buildImapConfig(account);
+    connection = await imaps.connect(config);
+
+    // Open inbox
+    await connection.openBox('INBOX');
+
+    // Fetch ALL UIDs (lightweight - just IDs, not full emails)
+    const searchCriteria = ['ALL'];
+    const allMessages = await connection.search(searchCriteria, { bodies: [] });
+    
+    // Sort UIDs descending (newest first)
+    const allUids = allMessages.map(msg => msg.attributes.uid).sort((a, b) => b - a);
+    
+    console.log(`📧 Total emails in INBOX: ${allUids.length}`);
+    
+    // Calculate pagination
+    const totalEmails = allUids.length;
+    const batchUids = allUids.slice(offset, offset + limit);
+    const hasMore = (offset + limit) < totalEmails;
+    const nextOffset = offset + limit;
+    
+    console.log(`📧 Fetching batch: ${batchUids.length} emails (${offset + 1} to ${Math.min(offset + limit, totalEmails)} of ${totalEmails})`);
+    
+    if (batchUids.length === 0) {
+      connection.end();
+      return { 
+        success: true, 
+        synced: 0, 
+        new: 0, 
+        hasMore: false,
+        nextOffset: offset,
+        totalEmails: totalEmails
+      };
+    }
+
+    // Fetch ONLY this batch of emails (full content)
+    const fetchOptions = {
+      bodies: ['HEADER', 'TEXT', ''],
+      markSeen: false
+    };
+    
+    const batchMessages = await connection.fetch(batchUids, fetchOptions);
+    
+    let syncedCount = 0;
+    let newCount = 0;
+
+    // Process each email in this batch
+    for (const item of batchMessages) {
+      try {
+        const all = item.parts.find(part => part.which === '');
+        const uid = item.attributes.uid;
+        const idHeader = 'Imap-Id: ' + uid + '\r\n';
+        
+        const mail = await simpleParser(idHeader + all.body);
+
+        // Check if email already exists
+        const exists = await db.get(
+          'SELECT id FROM emails WHERE account_id = ? AND uid = ? AND folder = ?',
+          [accountId, uid, 'inbox']
+        );
+
+        if (!exists) {
+          // Save email to database
+          const fromAddr = mail.from?.value?.[0]?.address || '';
+          const fromName = mail.from?.value?.[0]?.name || '';
+          const toAddr = mail.to?.value?.[0]?.address || '';
+          const toName = mail.to?.value?.[0]?.name || '';
+
+          const info = await db.run(`
+            INSERT INTO emails (
+              account_id, message_id, uid, folder,
+              from_address, from_name, to_address, to_name,
+              cc, subject, body_text, body_html,
+              received_date, has_attachments
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          `, [
+            accountId,
+            mail.messageId || '',
+            uid,
+            'inbox',
+            fromAddr,
+            fromName,
+            toAddr,
+            toName,
+            mail.cc ? JSON.stringify(mail.cc.value) : null,
+            mail.subject || '(ingen emne)',
+            mail.text || '',
+            mail.html || '',
+            mail.date ? mail.date.toISOString() : new Date().toISOString(),
+            mail.attachments && mail.attachments.length > 0 ? 1 : 0
+          ]);
+
+          const emailId = info.lastInsertRowid;
+
+          // Save attachments
+          if (mail.attachments && mail.attachments.length > 0) {
+            const uploadsDir = path.join(__dirname, 'uploads', 'email-attachments');
+            if (!fs.existsSync(uploadsDir)) {
+              fs.mkdirSync(uploadsDir, { recursive: true });
+            }
+
+            for (const attachment of mail.attachments) {
+              const filename = `${Date.now()}-${Math.random().toString(36).substring(7)}-${attachment.filename}`;
+              const filePath = path.join(uploadsDir, filename);
+              
+              fs.writeFileSync(filePath, attachment.content);
+
+              await db.run(`
+                INSERT INTO email_attachments (
+                  email_id, filename, original_name, file_path, file_size, mime_type
+                ) VALUES (?, ?, ?, ?, ?, ?)
+              `, [
+                emailId,
+                filename,
+                attachment.filename,
+                `/uploads/email-attachments/${filename}`,
+                attachment.size,
+                attachment.contentType
+              ]);
+            }
+          }
+
+          newCount++;
+        }
+
+        syncedCount++;
+        
+        // Clear email object from memory immediately after processing
+        Object.keys(mail).forEach(key => delete mail[key]);
+        
+      } catch (emailError) {
+        console.error('Error processing email:', emailError);
+      }
+    }
+
+    // Close connection ASAP
+    connection.end();
+    connection = null;
+
+    // Update last sync timestamp
+    await db.run(
+      'UPDATE email_accounts SET last_sync = ? WHERE id = ?',
+      [new Date().toISOString(), accountId]
+    );
+
+    console.log(`✅ Synced ${syncedCount} emails (${newCount} new) - hasMore: ${hasMore}`);
+
+    return { 
+      success: true, 
+      synced: syncedCount, 
+      new: newCount,
+      hasMore: hasMore,
+      nextOffset: nextOffset,
+      totalEmails: totalEmails
+    };
+    
+  } catch (error) {
+    console.error('Email sync error:', error);
+    
+    // Ensure connection is closed
+    if (connection) {
+      try {
+        connection.end();
+      } catch (closeError) {
+        console.error('Error closing connection:', closeError);
+      }
+    }
+    
+    throw error;
+  }
+}
