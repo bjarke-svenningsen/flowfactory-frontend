@@ -63,8 +63,9 @@ async function showPage(pageName) {
         'videocall': 4,
         'colleagues': 5,
         'quotes': 6,
-        'settings': 7,
-        'admin': 8
+        'email': 7,
+        'settings': 8,
+        'admin': 9
     };
     
     const menuIndex = pageMapping[pageName];
@@ -102,6 +103,11 @@ async function showPage(pageName) {
         initChat();
     } else if (pageName === 'videocall') {
         loadVideoCallColleagues();
+    } else if (pageName === 'email') {
+        // Email page initializes itself via js/email.js
+        if (window.emailClient) {
+            window.emailClient.init();
+        }
     }
 }
 
