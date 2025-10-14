@@ -335,15 +335,15 @@ const emailClient = {
         <div class="email-item ${isUnread ? 'unread' : ''} ${isSelected ? 'selected' : ''} ${isCurrent ? 'current' : ''}" 
              data-email-id="${email.id}"
              draggable="true"
-             ondragstart="emailClient.handleEmailDragStart(event, ${email.id})">
+             ondragstart="emailClient.handleEmailDragStart(event, '${email.id}')">
           <input type="checkbox" 
                  class="email-checkbox" 
                  ${isSelected ? 'checked' : ''}
-                 onclick="event.stopPropagation(); emailClient.toggleEmailSelection(${email.id})" />
-          <span class="email-star" onclick="event.stopPropagation(); emailClient.toggleStarDirect(${email.id})">
+                 onclick="event.stopPropagation(); emailClient.toggleEmailSelection('${email.id}')" />
+          <span class="email-star" onclick="event.stopPropagation(); emailClient.toggleStarDirect('${email.id}')">
             ${isStarred ? '⭐' : '☆'}
           </span>
-          <div class="email-content" onclick="emailClient.viewEmail(${email.id})" oncontextmenu="emailClient.showContextMenu(event, ${email.id})">
+          <div class="email-content" onclick="emailClient.viewEmail('${email.id}')" oncontextmenu="emailClient.showContextMenu(event, '${email.id}')">
             <div class="email-header-row">
               <span class="email-sender">${this.escapeHtml(email.from_name || email.from_address || 'Unknown')}</span>
               <span class="email-date">${dateStr}</span>
