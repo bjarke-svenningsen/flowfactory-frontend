@@ -673,11 +673,15 @@ const emailClient = {
 
     await this.addEmailAccount({
       email,
-      password,
-      imapHost,
-      imapPort,
-      smtpHost,
-      smtpPort
+      display_name: email,
+      imap_host: imapHost,
+      imap_port: imapPort,
+      imap_username: email,
+      imap_password: password,
+      smtp_host: smtpHost,
+      smtp_port: smtpPort,
+      smtp_username: email,
+      smtp_password: password
     });
   },
 
