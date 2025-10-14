@@ -327,12 +327,14 @@ export async function syncEmailsPaginated(accountId, offset = 0, limit = 10) {
     }
 
     // Fetch ONLY this batch of emails (full content)
+    // Use UID search to fetch specific emails
+    const uidSearchCriteria = [['UID', batchUids.join(',')]];
     const fetchOptions = {
       bodies: ['HEADER', 'TEXT', ''],
       markSeen: false
     };
     
-    const batchMessages = await connection.fetch(batchUids, fetchOptions);
+    const batchMessages = await connection.search(uidSearchCriteria, fetchOptions);
     
     let syncedCount = 0;
     let newCount = 0;
