@@ -884,6 +884,14 @@ const emailClient = {
     }
 
     try {
+      // Check if this is a draft (stored in localStorage only)
+      if (String(emailId).startsWith('draft_')) {
+        const draftId = parseInt(String(emailId).replace('draft_', ''));
+        this.deleteDraft(draftId);
+        return;
+      }
+
+      // Regular email - delete from API
       await apiCall(`/api/email/emails/${emailId}`, {
         method: 'DELETE'
       });
@@ -900,7 +908,7 @@ const emailClient = {
         this.currentEmailId = null;
         const viewer = document.getElementById('email-preview');
         if (viewer) {
-          viewer.innerHTML = '<div style="display: flex; align-items: center; justify-content: center; height: 100%; color: #999;">Vælg en email for at læse den</div>';
+          viewer.innerHTML = '<div style=\"display: flex; align-items: center; justify-content: center; height: 100%; color: #999;\">Vælg en email for at læse den</div>';
         }
       }
     } catch (error) {
