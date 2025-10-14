@@ -54,7 +54,15 @@ export async function syncEmails(accountId) {
     // Fetch ONLY recent emails (last 30 days to avoid memory issues)
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-    const searchCriteria = ['SINCE', thirtyDaysAgo];
+    
+    // Format date as IMAP expects: DD-MMM-YYYY (e.g., "01-Oct-2024")
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const day = String(thirtyDaysAgo.getDate()).padStart(2, '0');
+    const month = months[thirtyDaysAgo.getMonth()];
+    const year = thirtyDaysAgo.getFullYear();
+    const imapDate = `${day}-${month}-${year}`;
+    
+    const searchCriteria = ['SINCE', imapDate];
     const fetchOptions = {
       bodies: ['HEADER', 'TEXT', ''],
       markSeen: false
