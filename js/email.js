@@ -222,17 +222,19 @@ const emailClient = {
     }
 
     tbody.innerHTML = this.emails.map(email => {
-      const date = new Date(email.date);
+      // Backend uses received_date, handle both for compatibility
+      const dateValue = email.received_date || email.date;
+      const date = dateValue ? new Date(dateValue) : new Date();
       const dateStr = this.formatDate(date);
-      const isStarred = email.starred || false;
-      const isUnread = email.unread || false;
+      const isStarred = email.is_starred || email.starred || false;
+      const isUnread = !email.is_read && email.is_read !== undefined ? true : (email.unread || false);
 
       return `
         <tr class="${isUnread ? 'unread' : ''} ${email.id === this.currentEmailId ? 'selected' : ''}"
             onclick="emailClient.viewEmail(${email.id})"
             oncontextmenu="emailClient.showContextMenu(event, ${email.id})">
           <td>${isStarred ? '⭐' : ''}</td>
-          <td>${this.escapeHtml(email.from_name || email.from_email)}</td>
+          <td>${this.escapeHtml(email.from_name || email.from_address || 'Unknown')}</td>
           <td>${this.escapeHtml(email.subject || '(Intet emne)')}</td>
           <td>${dateStr}</td>
         </tr>
@@ -291,13 +293,15 @@ const emailClient = {
     const viewer = document.getElementById('email-preview');
     if (!viewer) return;
 
-    const date = new Date(email.date);
+    // Backend uses received_date, handle both for compatibility
+    const dateValue = email.received_date || email.date;
+    const date = dateValue ? new Date(dateValue) : new Date();
     const dateStr = date.toLocaleString('da-DK');
 
     viewer.innerHTML = `
       <div class="email-preview-header">
-        <div><strong>Fra:</strong> ${this.escapeHtml(email.from_name || email.from_email)}</div>
-        <div><strong>Til:</strong> ${this.escapeHtml(email.to_email || 'Dig')}</div>
+        <div><strong>Fra:</strong> ${this.escapeHtml(email.from_name || email.from_address || 'Unknown')}</div>
+        <div><strong>Til:</strong> ${this.escapeHtml(email.to_name || email.to_address || 'Dig')}</div>
         <div><strong>Emne:</strong> ${this.escapeHtml(email.subject || '(Intet emne)')}</div>
         <div><strong>Dato:</strong> ${dateStr}</div>
       </div>
