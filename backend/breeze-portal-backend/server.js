@@ -2698,15 +2698,27 @@ app.post('/api/email/folders', auth, async (req, res) => {
   }
   
   try {
-    const info = await db.run(`
+    // PostgreSQL-compatible: Use RETURNING to get the inserted row
+    const result = await db.run(`
       INSERT INTO email_folders (user_id, name, parent_folder)
       VALUES (?, ?, ?)
+      RETURNING *
     `, [req.user.id, name.trim(), parent_folder || null]);
     
-    const folder = await db.get(`
-      SELECT * FROM email_folders WHERE id = ?
-    `, [info.lastInsertRowid]);
+    // For PostgreSQL (Supabase), the row is in result.rows[0]
+    // For SQLite, we need to query separately
+    let folder;
+    if (result.rows && result.rows.length > 0) {
+      // PostgreSQL/Supabase
+      folder = result.rows[0];
+    } else {
+      // SQLite fallback
+      folder = await db.get(`
+        SELECT * FROM email_folders WHERE id = ?
+      `, [result.lastInsertRowid]);
+    }
     
+    console.log('Created folder:', folder); // DEBUG
     res.json(folder);
   } catch (error) {
     console.error('Create folder error:', error);
