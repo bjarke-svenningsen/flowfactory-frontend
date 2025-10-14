@@ -2476,6 +2476,28 @@ app.get('/api/orders/:orderId/workspace', auth, (req, res) => {
 // --- EMAIL INTEGRATION API ---
 import { syncEmails, sendEmail, testImapConnection, testSmtpConnection } from './email-service.js';
 
+// ADMIN: Migrate old emails to lowercase folder names (ONE TIME)
+app.post('/api/admin/migrate-email-folders', auth, adminAuth, async (req, res) => {
+  try {
+    // Update all emails with uppercase folder names to lowercase
+    const inboxResult = await db.run("UPDATE emails SET folder = 'inbox' WHERE folder = 'INBOX'");
+    const sentResult = await db.run("UPDATE emails SET folder = 'sent' WHERE folder = 'SENT'");
+    
+    res.json({ 
+      success: true, 
+      migrated: {
+        inbox: inboxResult.changes || 0,
+        sent: sentResult.changes || 0,
+        total: (inboxResult.changes || 0) + (sentResult.changes || 0)
+      },
+      message: 'Email folders migrated successfully!'
+    });
+  } catch (error) {
+    console.error('Migration error:', error);
+    res.status(500).json({ error: 'Migration failed: ' + error.message });
+  }
+});
+
 // Get user's email accounts
 app.get('/api/email/accounts', auth, async (req, res) => {
   const accounts = await db.all('SELECT id, email, display_name, imap_host, smtp_host, is_active, last_sync FROM email_accounts WHERE user_id = ?', [req.user.id]);
