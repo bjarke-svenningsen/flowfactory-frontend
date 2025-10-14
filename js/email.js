@@ -258,7 +258,12 @@ const emailClient = {
         params.append('starred', 'true');
       } else if (this.currentFolder === 'sent') {
         params.append('folder', 'sent');
+      } else if (this.currentFolder.startsWith('custom_')) {
+        // Custom folder - extract folder ID and filter by folder_id
+        const folderId = parseInt(this.currentFolder.replace('custom_', ''));
+        params.append('folder_id', folderId);
       } else {
+        // Inbox (default)
         params.append('folder', 'inbox');
       }
 
