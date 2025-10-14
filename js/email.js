@@ -277,16 +277,22 @@ const emailClient = {
         event.currentTarget.classList.add('selected');
       }
 
-      // Fetch full email details
-      const response = await apiCall(`/api/email/emails/${emailId}`);
-      const email = response.email;
-      const attachments = response.attachments || [];
+      // Fetch full email details - Backend returns email directly, not wrapped
+      const email = await apiCall(`/api/email/emails/${emailId}`);
+      
+      if (!email) {
+        throw new Error('Email ikke fundet');
+      }
+
+      // Attachments are included in email object
+      const attachments = email.attachments || [];
 
       this.renderEmailViewer(email, attachments);
 
       // Mark as read
       const emailItem = this.emails.find(e => e.id === emailId);
       if (emailItem) {
+        emailItem.is_read = true;
         emailItem.unread = false;
         this.updateFolderCounts();
       }
