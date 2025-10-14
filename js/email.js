@@ -167,9 +167,8 @@ const emailClient = {
       const editor = document.getElementById('compose-body');
       if (!editor) return;
       
-      // Auto-linkify URLs
+      // Update formatting dropdowns on input
       editor.addEventListener('input', (e) => {
-        this.autoLinkifyUrls(editor);
         this.updateFormattingDropdowns();
       });
       
@@ -2243,27 +2242,58 @@ const emailClient = {
   
   // Auto-linkify URLs in editor
   autoLinkifyUrls(editor) {
-    const selection = window.getSelection();
-    const cursorPos = selection.getRangeAt(0).startOffset;
+    // Get text content only (not HTML) to avoid linkifying already-linked URLs
+    const text = editor.textContent || editor.innerText || '';
     
-    // Get text content
+    // URL regex pattern - match URLs not already in links
+    const urlPattern = /(https?:\/\/[^\s]+|www\.[^\s]+)/gi;
+    
+    // Find all URLs in plain text
+    const urls = text.match(urlPattern);
+    if (!urls || urls.length === 0) return;
+    
+    // Get current HTML
     let html = editor.innerHTML;
     
-    // URL regex pattern
-    const urlPattern = /(https?:\/\/[^\s<]+|www\.[^\s<]+)/gi;
-    
-    // Replace URLs with links (but not already linked ones)
-    const newHtml = html.replace(urlPattern, (match) => {
-      // Check if already in a link
-      if (html.indexOf(`href="${match}"`) !== -1 || html.indexOf(`href='${match}'`) !== -1) {
-        return match;
+    // Only linkify URLs that are NOT already inside <a> tags or href attributes
+    urls.forEach(url => {
+      // Create regex to find this specific URL in text nodes (not in tags)
+      // This regex ensures we only match URLs that are NOT inside HTML tags
+      const escapedUrl = url.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const textNodePattern = new RegExp(`(?<!href=["'])(${escapedUrl})(?!["'])(?![^<]*>)`, 'g');
+      
+      // Only replace if URL is not already linked
+      if (!html.includes(`href="${url}"`) && !html.includes(`href='${url}'`)) {
+        const fullUrl = url.startsWith('http') ? url : 'https://' + url;
+        html = html.replace(textNodePattern, `<a href="${fullUrl}" target="_blank">${url}</a>`);
       }
-      const url = match.startsWith('http') ? match : 'https://' + match;
-      return `<a href="${url}" target="_blank">${match}</a>`;
     });
     
-    if (newHtml !== html) {
-      editor.innerHTML = newHtml;
+    // Only update if changed
+    if (html !== editor.innerHTML) {
+      // Save cursor position
+      const selection = window.getSelection();
+      let cursorPos = 0;
+      if (selection.rangeCount > 0) {
+        const range = selection.getRangeAt(0);
+        cursorPos = range.startOffset;
+      }
+      
+      editor.innerHTML = html;
+      
+      // Restore cursor position (best effort)
+      try {
+        const range = document.createRange();
+        const sel = window.getSelection();
+        if (editor.childNodes.length > 0) {
+          range.setStart(editor.childNodes[0], Math.min(cursorPos, editor.textContent.length));
+          range.collapse(true);
+          sel.removeAllRanges();
+          sel.addRange(range);
+        }
+      } catch (e) {
+        // Cursor restoration failed, ignore
+      }
     }
   },
   
