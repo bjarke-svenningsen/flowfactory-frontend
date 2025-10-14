@@ -464,9 +464,9 @@ const emailClient = {
       await apiCall('/api/email/send', {
         method: 'POST',
         body: JSON.stringify({
-          accountId: this.currentAccountId,
+          account_id: this.currentAccountId,
           to,
-          subject,
+          subject: subject || '(Intet emne)',
           text: body,
           html: body.replace(/\n/g, '<br>')
         })
