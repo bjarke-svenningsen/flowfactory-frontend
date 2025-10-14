@@ -1,5 +1,5 @@
 // js/email.js
-// Email Client for FlowFactory Portal
+// Windows 95 Style Email Client for FlowFactory Portal
 // Integrates with backend email service on Render
 
 const API_URL = 'https://flowfactory-frontend.onrender.com';
@@ -36,7 +36,7 @@ const emailClient = {
 
   // Initialize the email client
   async init() {
-    console.log('Initializing email client...');
+    console.log('Initializing Windows 95 email client...');
     
     // Load email accounts
     await this.loadEmailAccounts();
@@ -52,35 +52,11 @@ const emailClient = {
 
   // Setup event listeners
   setupEventListeners() {
-    // Search input
-    const searchInput = document.getElementById('email-search');
-    if (searchInput) {
-      searchInput.addEventListener('input', (e) => {
-        this.searchEmails(e.target.value);
-      });
-    }
-
-    // Folder items
-    const folderItems = document.querySelectorAll('.folder-item');
-    folderItems.forEach(item => {
-      item.addEventListener('click', () => {
-        const folder = item.getAttribute('data-folder');
-        this.changeFolder(folder);
-      });
-    });
-
     // Close context menu when clicking outside
     document.addEventListener('click', (e) => {
       const contextMenu = document.getElementById('context-menu');
-      if (!contextMenu.contains(e.target)) {
+      if (contextMenu && !contextMenu.contains(e.target)) {
         contextMenu.classList.remove('active');
-      }
-    });
-
-    // Close compose modal when clicking outside
-    document.getElementById('compose-modal').addEventListener('click', (e) => {
-      if (e.target.id === 'compose-modal') {
-        this.closeCompose();
       }
     });
   },
@@ -95,6 +71,7 @@ const emailClient = {
       // Set current account if available
       if (this.emailAccounts.length > 0 && !this.currentAccountId) {
         this.currentAccountId = this.emailAccounts[0].id;
+        this.updateStatusBar();
       }
     } catch (error) {
       console.error('Error loading email accounts:', error);
@@ -108,14 +85,14 @@ const emailClient = {
     if (!container) return;
 
     if (this.emailAccounts.length === 0) {
-      container.innerHTML = '<div style="padding: 8px; font-size: 12px; color: #999;">Ingen konti tilføjet</div>';
+      container.innerHTML = '<div style="padding: 5px 10px; font-size: 11px; color: #999;">Ingen konti</div>';
       return;
     }
 
     container.innerHTML = this.emailAccounts.map(account => `
-      <div class="account-item ${account.id === this.currentAccountId ? 'active' : ''}" 
+      <div class="folder-tree-item ${account.id === this.currentAccountId ? 'selected' : ''}" 
            onclick="emailClient.selectAccount(${account.id})">
-        📧 ${account.email}
+        📧 ${this.escapeHtml(account.email)}
       </div>
     `).join('');
   },
@@ -124,6 +101,7 @@ const emailClient = {
   async selectAccount(accountId) {
     this.currentAccountId = accountId;
     this.renderEmailAccounts();
+    this.updateStatusBar();
     await this.loadEmails();
   },
 
@@ -148,57 +126,44 @@ const emailClient = {
       this.emails = response.emails || [];
       this.renderEmailList();
       this.updateFolderCounts();
+      this.updateStatusBar();
     } catch (error) {
       console.error('Error loading emails:', error);
       this.showNotification('Kunne ikke indlæse emails: ' + error.message, 'error');
     }
   },
 
-  // Render email list
+  // Render email list in table
   renderEmailList() {
-    const container = document.getElementById('emails-list');
-    if (!container) return;
+    const tbody = document.getElementById('emails-list-body');
+    if (!tbody) return;
 
     if (this.emails.length === 0) {
-      container.innerHTML = `
-        <div class="empty-state">
-          <div class="empty-icon">📧</div>
-          <div class="empty-text">Ingen emails</div>
-        </div>
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="4" style="text-align: center; padding: 20px; color: #999;">Ingen emails</td>
+        </tr>
       `;
       return;
     }
 
-    container.innerHTML = this.emails.map(email => {
+    tbody.innerHTML = this.emails.map(email => {
       const date = new Date(email.date);
       const dateStr = this.formatDate(date);
-      const hasAttachments = email.has_attachments || false;
       const isStarred = email.starred || false;
       const isUnread = email.unread || false;
 
       return `
-        <div class="email-item ${isUnread ? 'unread' : ''} ${email.id === this.currentEmailId ? 'active' : ''}"
-             onclick="emailClient.viewEmail(${email.id})"
-             oncontextmenu="emailClient.showContextMenu(event, ${email.id})">
-          <div class="email-from">${this.escapeHtml(email.from_name || email.from_email)}</div>
-          <div class="email-subject">${this.escapeHtml(email.subject || '(Intet emne)')}</div>
-          <div class="email-preview">${this.escapeHtml(this.getEmailPreview(email))}</div>
-          <div class="email-meta">
-            <div class="email-date">${dateStr}</div>
-            <div class="email-flags">
-              ${isStarred ? '<span class="flag-icon starred">⭐</span>' : ''}
-              ${hasAttachments ? '<span class="flag-icon attachment">📎</span>' : ''}
-            </div>
-          </div>
-        </div>
+        <tr class="${isUnread ? 'unread' : ''} ${email.id === this.currentEmailId ? 'selected' : ''}"
+            onclick="emailClient.viewEmail(${email.id})"
+            oncontextmenu="emailClient.showContextMenu(event, ${email.id})">
+          <td>${isStarred ? '⭐' : ''}</td>
+          <td>${this.escapeHtml(email.from_name || email.from_email)}</td>
+          <td>${this.escapeHtml(email.subject || '(Intet emne)')}</td>
+          <td>${dateStr}</td>
+        </tr>
       `;
     }).join('');
-  },
-
-  // Get email preview text
-  getEmailPreview(email) {
-    const preview = email.body_text || email.body_html || '';
-    return preview.substring(0, 100).replace(/<[^>]*>/g, '');
   },
 
   // Format date for display
@@ -209,8 +174,6 @@ const emailClient = {
 
     if (days === 0) {
       return date.toLocaleTimeString('da-DK', { hour: '2-digit', minute: '2-digit' });
-    } else if (days === 1) {
-      return 'I går';
     } else if (days < 7) {
       return date.toLocaleDateString('da-DK', { weekday: 'short' });
     } else {
@@ -224,10 +187,11 @@ const emailClient = {
       this.currentEmailId = emailId;
       
       // Update active state in list
-      document.querySelectorAll('.email-item').forEach(item => {
-        item.classList.remove('active');
-      });
-      event.currentTarget.classList.add('active');
+      const tbody = document.getElementById('emails-list-body');
+      if (tbody) {
+        tbody.querySelectorAll('tr').forEach(row => row.classList.remove('selected'));
+        event.currentTarget.classList.add('selected');
+      }
 
       // Fetch full email details
       const response = await apiCall(`/api/email/emails/${emailId}`);
@@ -250,49 +214,30 @@ const emailClient = {
 
   // Render email viewer
   renderEmailViewer(email, attachments) {
-    const viewer = document.getElementById('email-viewer');
+    const viewer = document.getElementById('email-preview');
     if (!viewer) return;
 
     const date = new Date(email.date);
     const dateStr = date.toLocaleString('da-DK');
 
     viewer.innerHTML = `
-      <div class="email-viewer-header">
-        <div class="email-viewer-subject">${this.escapeHtml(email.subject || '(Intet emne)')}</div>
-        <div class="email-viewer-meta">
-          <span class="email-viewer-from">Fra: ${this.escapeHtml(email.from_name || email.from_email)}</span>
-          <span>•</span>
-          <span>${dateStr}</span>
-        </div>
-        <div class="email-viewer-actions">
-          <button class="action-btn" onclick="emailClient.replyToEmail()">↩️ Svar</button>
-          <button class="action-btn" onclick="emailClient.forwardEmail()">➡️ Videresend</button>
-          <button class="action-btn primary" onclick="emailClient.linkToOrder()">📦 Send til ordre</button>
-          <button class="action-btn" onclick="emailClient.toggleStar()">
-            ${email.starred ? '⭐ Fjern markering' : '⭐ Marker'}
-          </button>
-        </div>
+      <div class="email-preview-header">
+        <div><strong>Fra:</strong> ${this.escapeHtml(email.from_name || email.from_email)}</div>
+        <div><strong>Til:</strong> ${this.escapeHtml(email.to_email || 'Dig')}</div>
+        <div><strong>Emne:</strong> ${this.escapeHtml(email.subject || '(Intet emne)')}</div>
+        <div><strong>Dato:</strong> ${dateStr}</div>
       </div>
-      <div class="email-viewer-body">
-        <div class="email-body-content">
-          ${email.body_html || this.textToHtml(email.body_text) || '<p style="color: #999;">Ingen indhold</p>'}
-        </div>
+      <div class="email-preview-content">
+        ${email.body_html || this.textToHtml(email.body_text) || '<p style="color: #999;">Ingen indhold</p>'}
         ${attachments.length > 0 ? `
-          <div class="email-attachments">
-            <div class="attachments-title">📎 Vedhæftede filer (${attachments.length})</div>
-            ${attachments.map(att => `
-              <div class="attachment-item">
-                <div class="attachment-icon">📄</div>
-                <div class="attachment-info">
-                  <div class="attachment-name">${this.escapeHtml(att.filename)}</div>
-                  <div class="attachment-size">${this.formatFileSize(att.size)}</div>
-                </div>
-                <button class="attachment-download" onclick="emailClient.downloadAttachment(${att.id})">
-                  ⬇️ Download
-                </button>
-              </div>
-            `).join('')}
-          </div>
+          <hr style="margin: 15px 0;">
+          <strong>📎 Vedhæftede filer (${attachments.length}):</strong><br><br>
+          ${attachments.map(att => `
+            <div style="padding: 5px; margin: 3px 0; background: #f0f0f0;">
+              📄 ${this.escapeHtml(att.filename)} (${this.formatFileSize(att.size)})
+              <button onclick="emailClient.downloadAttachment(${att.id})" style="margin-left: 10px; padding: 2px 8px;">Download</button>
+            </div>
+          `).join('')}
         ` : ''}
       </div>
     `;
@@ -327,28 +272,18 @@ const emailClient = {
     this.currentEmailId = null;
 
     // Update active state
-    document.querySelectorAll('.folder-item').forEach(item => {
-      item.classList.remove('active');
+    document.querySelectorAll('.folder-tree-item[data-folder]').forEach(item => {
+      item.classList.remove('selected');
       if (item.getAttribute('data-folder') === folder) {
-        item.classList.add('active');
+        item.classList.add('selected');
       }
     });
 
-    // Update title
-    const titles = {
-      'inbox': 'Indbakke',
-      'starred': 'Markerede',
-      'sent': 'Sendt'
-    };
-    document.getElementById('current-folder-title').textContent = titles[folder] || folder;
-
     // Clear viewer
-    document.getElementById('email-viewer').innerHTML = `
-      <div class="empty-state">
-        <div class="empty-icon">📭</div>
-        <div class="empty-text">Vælg en email for at læse den</div>
-      </div>
-    `;
+    const viewer = document.getElementById('email-preview');
+    if (viewer) {
+      viewer.innerHTML = '<div style="display: flex; align-items: center; justify-content: center; height: 100%; color: #999;">Vælg en email for at læse den</div>';
+    }
 
     // Load emails for this folder
     await this.loadEmails();
@@ -362,23 +297,27 @@ const emailClient = {
     const inboxCountEl = document.getElementById('inbox-count');
     const starredCountEl = document.getElementById('starred-count');
 
-    if (inboxCountEl) inboxCountEl.textContent = inboxCount;
-    if (starredCountEl) starredCountEl.textContent = starredCount;
+    if (inboxCountEl) inboxCountEl.textContent = `(${inboxCount})`;
+    if (starredCountEl) starredCountEl.textContent = `(${starredCount})`;
   },
 
-  // Search emails
-  searchEmails(query) {
-    const lowerQuery = query.toLowerCase();
-    const items = document.querySelectorAll('.email-item');
+  // Update status bar
+  updateStatusBar() {
+    const statusEmails = document.getElementById('status-emails');
+    const statusAccount = document.getElementById('status-account');
 
-    items.forEach(item => {
-      const text = item.textContent.toLowerCase();
-      if (text.includes(lowerQuery)) {
-        item.style.display = 'block';
+    if (statusEmails) {
+      statusEmails.textContent = `${this.emails.length} email${this.emails.length !== 1 ? 's' : ''}`;
+    }
+
+    if (statusAccount) {
+      if (this.currentAccountId) {
+        const account = this.emailAccounts.find(a => a.id === this.currentAccountId);
+        statusAccount.textContent = account ? account.email : 'Ingen konto valgt';
       } else {
-        item.style.display = 'none';
+        statusAccount.textContent = 'Ingen konto valgt';
       }
-    });
+    }
   },
 
   // Sync emails from IMAP
@@ -388,12 +327,8 @@ const emailClient = {
       return;
     }
 
-    const spinner = document.getElementById('sync-spinner');
-    const syncText = document.getElementById('sync-text');
-    
     try {
-      spinner.style.display = 'inline-block';
-      syncText.textContent = 'Synkroniserer...';
+      this.showNotification('Synkroniserer emails...', 'info');
 
       await apiCall(`/api/email/sync/${this.currentAccountId}`, {
         method: 'POST'
@@ -404,16 +339,18 @@ const emailClient = {
     } catch (error) {
       console.error('Error syncing emails:', error);
       this.showNotification('Synkronisering fejlede: ' + error.message, 'error');
-    } finally {
-      spinner.style.display = 'none';
-      syncText.textContent = '🔄 Synkroniser';
     }
   },
 
   // Open compose modal
   openCompose(replyTo = null, forward = false) {
-    const modal = document.getElementById('compose-modal');
-    modal.classList.add('active');
+    const dialog = document.getElementById('compose-dialog');
+    const overlay = document.getElementById('compose-overlay');
+    
+    if (!dialog || !overlay) return;
+
+    dialog.classList.add('active');
+    overlay.classList.add('active');
 
     if (replyTo) {
       document.getElementById('compose-to').value = replyTo.from_email;
@@ -440,8 +377,11 @@ const emailClient = {
 
   // Close compose modal
   closeCompose() {
-    const modal = document.getElementById('compose-modal');
-    modal.classList.remove('active');
+    const dialog = document.getElementById('compose-dialog');
+    const overlay = document.getElementById('compose-overlay');
+    
+    if (dialog) dialog.classList.remove('active');
+    if (overlay) overlay.classList.remove('active');
   },
 
   // Send email
@@ -512,9 +452,11 @@ const emailClient = {
     this.contextMenuEmailId = emailId;
     const contextMenu = document.getElementById('context-menu');
     
-    contextMenu.style.left = event.pageX + 'px';
-    contextMenu.style.top = event.pageY + 'px';
-    contextMenu.classList.add('active');
+    if (contextMenu) {
+      contextMenu.style.left = event.pageX + 'px';
+      contextMenu.style.top = event.pageY + 'px';
+      contextMenu.classList.add('active');
+    }
   },
 
   // Toggle star on email
@@ -522,7 +464,8 @@ const emailClient = {
     const emailId = this.contextMenuEmailId || this.currentEmailId;
     if (!emailId) return;
 
-    document.getElementById('context-menu').classList.remove('active');
+    const contextMenu = document.getElementById('context-menu');
+    if (contextMenu) contextMenu.classList.remove('active');
 
     try {
       await apiCall(`/api/email/emails/${emailId}/star`, {
@@ -554,7 +497,8 @@ const emailClient = {
     const emailId = this.contextMenuEmailId || this.currentEmailId;
     if (!emailId) return;
 
-    document.getElementById('context-menu').classList.remove('active');
+    const contextMenu = document.getElementById('context-menu');
+    if (contextMenu) contextMenu.classList.remove('active');
 
     if (!confirm('Er du sikker på at du vil slette denne email?')) {
       return;
@@ -575,12 +519,10 @@ const emailClient = {
       // Clear viewer if viewing this email
       if (this.currentEmailId === emailId) {
         this.currentEmailId = null;
-        document.getElementById('email-viewer').innerHTML = `
-          <div class="empty-state">
-            <div class="empty-icon">📭</div>
-            <div class="empty-text">Vælg en email for at læse den</div>
-          </div>
-        `;
+        const viewer = document.getElementById('email-preview');
+        if (viewer) {
+          viewer.innerHTML = '<div style="display: flex; align-items: center; justify-content: center; height: 100%; color: #999;">Vælg en email for at læse den</div>';
+        }
       }
     } catch (error) {
       console.error('Error deleting email:', error);
@@ -593,7 +535,8 @@ const emailClient = {
     const emailId = this.contextMenuEmailId || this.currentEmailId;
     if (!emailId) return;
 
-    document.getElementById('context-menu').classList.remove('active');
+    const contextMenu = document.getElementById('context-menu');
+    if (contextMenu) contextMenu.classList.remove('active');
 
     const orderId = prompt('Indtast ordre ID:');
     if (!orderId) return;
@@ -616,15 +559,20 @@ const emailClient = {
 
   // Show add account modal
   showAddAccountModal() {
-    const modal = document.getElementById('add-account-modal');
-    modal.classList.add('active');
+    const dialog = document.getElementById('account-dialog');
+    const overlay = document.getElementById('account-overlay');
+    
+    if (!dialog || !overlay) return;
 
-    // Clear fields
+    dialog.classList.add('active');
+    overlay.classList.add('active');
+
+    // Clear/pre-fill fields
     document.getElementById('account-email').value = '';
     document.getElementById('account-password').value = '';
-    document.getElementById('account-imap-host').value = '';
+    document.getElementById('account-imap-host').value = 'imap.gmail.com';
     document.getElementById('account-imap-port').value = '993';
-    document.getElementById('account-smtp-host').value = '';
+    document.getElementById('account-smtp-host').value = 'smtp.gmail.com';
     document.getElementById('account-smtp-port').value = '587';
 
     // Focus on first field
@@ -635,8 +583,11 @@ const emailClient = {
 
   // Close add account modal
   closeAddAccountModal() {
-    const modal = document.getElementById('add-account-modal');
-    modal.classList.remove('active');
+    const dialog = document.getElementById('account-dialog');
+    const overlay = document.getElementById('account-overlay');
+    
+    if (dialog) dialog.classList.remove('active');
+    if (overlay) overlay.classList.remove('active');
   },
 
   // Add email account from modal
@@ -696,6 +647,7 @@ const emailClient = {
       box-shadow: 0 4px 12px rgba(0,0,0,0.15);
       z-index: 10000;
       animation: slideIn 0.3s ease;
+      font-size: 13px;
     `;
     notification.textContent = message;
 

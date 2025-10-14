@@ -1,551 +1,318 @@
 <style>
-  .email-container {
-    display: flex;
-    height: calc(100vh - 80px);
-    width: 100%;
-  }
-
-  /* Sidebar */
-  .email-sidebar {
-    width: 250px;
+  /* Windows 95 Email Client Style */
+  .email-explorer {
     background: #fff;
-    border-right: 1px solid #e0e0e0;
+    border: 1px solid #0054a6;
+    height: 650px;
     display: flex;
     flex-direction: column;
+    box-shadow: 2px 2px 5px rgba(0,0,0,0.3);
   }
 
-  .compose-button {
-    margin: 16px;
-    padding: 12px 24px;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  .email-title-bar {
+    background: linear-gradient(to bottom, #0997ff 0%, #0053ee 50%, #0050ee 51%, #06f 100%);
     color: white;
-    border: none;
-    border-radius: 8px;
-    font-size: 15px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: transform 0.2s;
-  }
-
-  .compose-button:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
-  }
-
-  .folder-list {
-    flex: 1;
-    overflow-y: auto;
-    padding: 8px 0;
-  }
-
-  .folder-item {
-    padding: 12px 24px;
-    cursor: pointer;
+    padding: 4px 8px;
+    font-size: 13px;
+    font-weight: bold;
     display: flex;
+    justify-content: space-between;
     align-items: center;
-    gap: 12px;
-    transition: background 0.2s;
   }
 
-  .folder-item:hover {
-    background: #f5f5f5;
-  }
-
-  .folder-item.active {
-    background: #e8eaf6;
-    border-left: 3px solid #667eea;
-  }
-
-  .folder-icon {
-    font-size: 18px;
-  }
-
-  .folder-name {
-    flex: 1;
-    font-size: 14px;
-  }
-
-  .folder-count {
-    font-size: 12px;
-    color: #999;
+  .email-toolbar {
     background: #f0f0f0;
-    padding: 2px 8px;
-    border-radius: 10px;
+    border-bottom: 1px solid #999;
+    padding: 5px;
+    display: flex;
+    gap: 3px;
+    align-items: center;
+    flex-wrap: wrap;
   }
 
-  .account-section {
-    border-top: 1px solid #e0e0e0;
-    padding: 16px;
+  .email-toolbar-btn {
+    padding: 4px 8px;
+    background: linear-gradient(to bottom, #fff 0%, #d8d8d8 100%);
+    border: 1px solid #888;
+    cursor: pointer;
+    font-size: 11px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    min-height: 22px;
   }
 
-  .account-item {
-    padding: 8px 12px;
-    border-radius: 6px;
+  .email-toolbar-btn:hover {
+    background: linear-gradient(to bottom, #fff 0%, #c8c8c8 100%);
+    border-color: #666;
+  }
+
+  .email-toolbar-btn:active {
+    background: #c0c0c0;
+    border-style: inset;
+  }
+
+  .email-body-container {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+    border-top: 1px solid #fff;
+  }
+
+  .email-folders-tree {
+    width: 180px;
+    background: white;
+    border-right: 1px solid #999;
+    overflow-y: auto;
+    font-size: 12px;
+    padding: 5px 0;
+  }
+
+  .folder-tree-item {
+    padding: 4px 5px 4px 15px;
     cursor: pointer;
     display: flex;
     align-items: center;
-    gap: 8px;
-    font-size: 13px;
-    transition: background 0.2s;
+    gap: 5px;
+    user-select: none;
   }
 
-  .account-item:hover {
-    background: #f5f5f5;
+  .folder-tree-item:hover {
+    background: #e0e0f0;
   }
 
-  .add-account-btn {
-    margin-top: 8px;
-    padding: 8px 12px;
-    background: #f5f5f5;
-    border: 1px dashed #ccc;
-    border-radius: 6px;
-    cursor: pointer;
-    font-size: 13px;
-    color: #666;
-    transition: all 0.2s;
-    width: 100%;
+  .folder-tree-item.selected {
+    background: #0a246a;
+    color: white;
   }
 
-  .add-account-btn:hover {
-    background: #e8eaf6;
-    border-color: #667eea;
-    color: #667eea;
-  }
-
-  /* Email List */
-  .email-list {
+  .email-list-panel {
     width: 350px;
-    background: #fff;
-    border-right: 1px solid #e0e0e0;
+    background: white;
+    border-right: 1px solid #999;
     display: flex;
     flex-direction: column;
   }
 
-  .email-list-header {
-    padding: 16px 20px;
-    border-bottom: 1px solid #e0e0e0;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-  }
-
-  .email-list-title {
-    font-size: 18px;
-    font-weight: 600;
-    color: #333;
-  }
-
-  .refresh-button {
-    padding: 8px 12px;
-    background: #f5f5f5;
-    border: none;
-    border-radius: 6px;
-    cursor: pointer;
-    font-size: 13px;
-    color: #666;
-    transition: all 0.2s;
-  }
-
-  .refresh-button:hover {
-    background: #e8eaf6;
-    color: #667eea;
-  }
-
-  .search-box {
-    padding: 12px 20px;
-    border-bottom: 1px solid #e0e0e0;
-  }
-
-  .search-input {
+  .email-list-table {
     width: 100%;
-    padding: 10px 16px;
-    border: 1px solid #e0e0e0;
-    border-radius: 6px;
-    font-size: 14px;
+    border-collapse: collapse;
+    font-size: 12px;
   }
 
-  .search-input:focus {
-    outline: none;
-    border-color: #667eea;
+  .email-list-table thead {
+    background: linear-gradient(to bottom, #fff 0%, #e8e8e8 100%);
+    border-bottom: 1px solid #999;
   }
 
-  .emails-scroll {
-    flex: 1;
-    overflow-y: auto;
+  .email-list-table th {
+    text-align: left;
+    padding: 4px 8px;
+    border-right: 1px solid #ccc;
+    cursor: pointer;
+    font-weight: normal;
   }
 
-  .email-item {
-    padding: 16px 20px;
+  .email-list-table th:hover {
+    background: #d0d0d0;
+  }
+
+  .email-list-table td {
+    padding: 4px 8px;
     border-bottom: 1px solid #f0f0f0;
-    cursor: pointer;
-    transition: background 0.2s;
-  }
-
-  .email-item:hover {
-    background: #f9f9f9;
-  }
-
-  .email-item.active {
-    background: #e8eaf6;
-    border-left: 3px solid #667eea;
-  }
-
-  .email-item.unread {
-    background: #f5f7ff;
-  }
-
-  .email-item.unread .email-subject {
-    font-weight: 600;
-  }
-
-  .email-from {
-    font-size: 14px;
-    font-weight: 600;
-    color: #333;
-    margin-bottom: 4px;
-  }
-
-  .email-subject {
-    font-size: 13px;
-    color: #555;
-    margin-bottom: 4px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
   }
 
-  .email-preview {
-    font-size: 12px;
-    color: #999;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+  .email-list-table tr:hover {
+    background: #e0e0f0;
   }
 
-  .email-meta {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-top: 4px;
-  }
-
-  .email-date {
-    font-size: 11px;
-    color: #999;
-  }
-
-  .email-flags {
-    display: flex;
-    gap: 6px;
-  }
-
-  .flag-icon {
-    font-size: 12px;
-    color: #999;
-  }
-
-  .flag-icon.starred {
-    color: #ffc107;
-  }
-
-  .flag-icon.attachment {
-    color: #666;
-  }
-
-  /* Email Viewer */
-  .email-viewer {
-    flex: 1;
-    background: #fff;
-    display: flex;
-    flex-direction: column;
-  }
-
-  .email-viewer-header {
-    padding: 20px 32px;
-    border-bottom: 1px solid #e0e0e0;
-  }
-
-  .email-viewer-subject {
-    font-size: 22px;
-    font-weight: 600;
-    color: #333;
-    margin-bottom: 16px;
-  }
-
-  .email-viewer-meta {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    font-size: 14px;
-    color: #666;
-  }
-
-  .email-viewer-from {
-    font-weight: 600;
-    color: #333;
-  }
-
-  .email-viewer-actions {
-    display: flex;
-    gap: 8px;
-    margin-top: 12px;
-  }
-
-  .action-btn {
-    padding: 8px 16px;
-    background: #f5f5f5;
-    border: none;
-    border-radius: 6px;
-    cursor: pointer;
-    font-size: 13px;
-    color: #666;
-    transition: all 0.2s;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-  }
-
-  .action-btn:hover {
-    background: #e8eaf6;
-    color: #667eea;
-  }
-
-  .action-btn.primary {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  .email-list-table tr.selected {
+    background: #0a246a;
     color: white;
   }
 
-  .action-btn.primary:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+  .email-list-table tr.unread {
+    font-weight: bold;
   }
 
-  .email-viewer-body {
+  .email-preview-panel {
     flex: 1;
+    background: white;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .email-preview-header {
+    background: linear-gradient(to bottom, #fff 0%, #e8e8e8 100%);
+    border-bottom: 1px solid #999;
+    padding: 8px;
+    font-size: 12px;
+  }
+
+  .email-preview-header strong {
+    display: inline-block;
+    width: 80px;
+  }
+
+  .email-preview-content {
+    flex: 1;
+    padding: 10px;
     overflow-y: auto;
-    padding: 32px;
-  }
-
-  .email-body-content {
-    line-height: 1.6;
-    color: #333;
-  }
-
-  .email-attachments {
-    margin-top: 24px;
-    padding-top: 24px;
-    border-top: 1px solid #e0e0e0;
-  }
-
-  .attachments-title {
-    font-size: 14px;
-    font-weight: 600;
-    margin-bottom: 12px;
-    color: #666;
-  }
-
-  .attachment-item {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 12px;
-    background: #f9f9f9;
-    border-radius: 8px;
-    margin-bottom: 8px;
-  }
-
-  .attachment-icon {
-    font-size: 24px;
-  }
-
-  .attachment-info {
-    flex: 1;
-  }
-
-  .attachment-name {
-    font-size: 13px;
-    font-weight: 600;
-    color: #333;
-  }
-
-  .attachment-size {
-    font-size: 11px;
-    color: #999;
-  }
-
-  .attachment-download {
-    padding: 6px 12px;
-    background: #667eea;
-    color: white;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
     font-size: 12px;
+    line-height: 1.5;
   }
 
-  /* Empty State */
-  .empty-state {
+  .email-statusbar {
+    background: #f0f0f0;
+    border-top: 1px solid #999;
+    padding: 3px 8px;
+    font-size: 11px;
+    color: #000;
     display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    height: 100%;
-    color: #999;
+    gap: 20px;
   }
 
-  .empty-icon {
-    font-size: 64px;
-    margin-bottom: 16px;
-    opacity: 0.5;
+  .status-item {
+    padding: 0 10px;
+    border-right: 1px solid #ccc;
   }
 
-  .empty-text {
-    font-size: 16px;
+  .status-item:last-child {
+    border-right: none;
   }
 
-  /* Compose Modal */
-  .compose-modal {
+  /* Windows 95 Dialog Style */
+  .win95-dialog {
+    display: none;
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: #c0c0c0;
+    border: 2px solid;
+    border-color: #fff #000 #000 #fff;
+    box-shadow: 2px 2px 5px rgba(0,0,0,0.5);
+    z-index: 2000;
+    min-width: 400px;
+  }
+
+  .win95-dialog.active {
+    display: block;
+  }
+
+  .win95-dialog-overlay {
     display: none;
     position: fixed;
     top: 0;
     left: 0;
     right: 0;
     bottom: 0;
-    background: rgba(0, 0, 0, 0.5);
-    z-index: 1000;
+    background: rgba(0,0,0,0.3);
+    z-index: 1999;
+  }
+
+  .win95-dialog-overlay.active {
+    display: block;
+  }
+
+  .win95-dialog-title {
+    background: linear-gradient(to bottom, #0997ff 0%, #0053ee 50%, #0050ee 51%, #06f 100%);
+    color: white;
+    padding: 3px 5px;
+    font-size: 13px;
+    font-weight: bold;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .win95-dialog-close {
+    background: #c0c0c0;
+    border: 2px solid;
+    border-color: #fff #000 #000 #fff;
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+    font-size: 11px;
+    font-weight: bold;
+    display: flex;
     align-items: center;
     justify-content: center;
+    color: #000;
   }
 
-  .compose-modal.active {
-    display: flex;
+  .win95-dialog-body {
+    padding: 12px;
   }
 
-  .compose-form {
-    background: white;
-    width: 90%;
-    max-width: 800px;
-    max-height: 90vh;
-    border-radius: 12px;
-    display: flex;
-    flex-direction: column;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  .win95-field {
+    margin-bottom: 12px;
   }
 
-  .compose-header {
-    padding: 20px 24px;
-    border-bottom: 1px solid #e0e0e0;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
+  .win95-field label {
+    display: block;
+    margin-bottom: 3px;
+    font-size: 11px;
+    font-weight: bold;
   }
 
-  .compose-title {
-    font-size: 18px;
-    font-weight: 600;
-  }
-
-  .compose-close {
-    background: none;
-    border: none;
-    font-size: 24px;
-    cursor: pointer;
-    color: #999;
-  }
-
-  .compose-fields {
-    padding: 0 24px;
-    border-bottom: 1px solid #e0e0e0;
-  }
-
-  .compose-field {
-    display: flex;
-    align-items: center;
-    padding: 12px 0;
-    border-bottom: 1px solid #f0f0f0;
-  }
-
-  .compose-label {
-    width: 60px;
-    font-size: 14px;
-    color: #666;
-  }
-
-  .compose-input {
-    flex: 1;
-    border: none;
-    font-size: 14px;
-    padding: 4px 8px;
-  }
-
-  .compose-input:focus {
-    outline: none;
-  }
-
-  .compose-body {
-    flex: 1;
-    padding: 24px;
-    overflow-y: auto;
-  }
-
-  .compose-textarea {
+  .win95-field input,
+  .win95-field textarea {
     width: 100%;
-    min-height: 300px;
-    border: none;
-    font-size: 14px;
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    line-height: 1.6;
+    padding: 3px;
+    border: 2px solid;
+    border-color: #808080 #fff #fff #808080;
+    font-size: 11px;
+    font-family: 'MS Sans Serif', Tahoma, sans-serif;
+  }
+
+  .win95-field textarea {
     resize: vertical;
+    min-height: 200px;
   }
 
-  .compose-textarea:focus {
-    outline: none;
-  }
-
-  .compose-footer {
-    padding: 16px 24px;
-    border-top: 1px solid #e0e0e0;
+  .win95-dialog-buttons {
     display: flex;
-    gap: 12px;
+    gap: 8px;
+    justify-content: center;
+    padding-top: 10px;
   }
 
-  .send-button {
-    padding: 12px 32px;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    border: none;
-    border-radius: 8px;
-    font-size: 15px;
-    font-weight: 600;
+  .win95-btn {
+    padding: 4px 16px;
+    background: #c0c0c0;
+    border: 2px solid;
+    border-color: #fff #000 #000 #fff;
     cursor: pointer;
-    transition: transform 0.2s;
+    font-size: 11px;
+    font-weight: bold;
+    min-width: 80px;
   }
 
-  .send-button:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+  .win95-btn:active {
+    border-color: #000 #fff #fff #000;
   }
 
-  .cancel-button {
-    padding: 12px 32px;
-    background: #f5f5f5;
-    color: #666;
-    border: none;
-    border-radius: 8px;
-    font-size: 15px;
-    cursor: pointer;
+  .win95-info-box {
+    background: #fff8dc;
+    border: 1px solid #808080;
+    padding: 8px;
+    margin-top: 8px;
+    font-size: 11px;
   }
 
-  /* Context Menu */
   .context-menu {
-    display: none;
     position: fixed;
-    background: white;
-    border: 1px solid #e0e0e0;
-    border-radius: 8px;
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+    background: #f0f0f0;
+    border: 1px solid #999;
+    box-shadow: 2px 2px 5px rgba(0,0,0,0.3);
     z-index: 2000;
-    min-width: 200px;
+    display: none;
+    min-width: 150px;
   }
 
   .context-menu.active {
@@ -553,205 +320,163 @@
   }
 
   .context-menu-item {
-    padding: 12px 16px;
+    padding: 4px 30px 4px 20px;
+    font-size: 12px;
     cursor: pointer;
-    font-size: 14px;
-    color: #333;
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    transition: background 0.2s;
   }
 
   .context-menu-item:hover {
-    background: #f5f5f5;
-  }
-
-  .context-menu-item:first-child {
-    border-radius: 8px 8px 0 0;
-  }
-
-  .context-menu-item:last-child {
-    border-radius: 0 0 8px 8px;
+    background: #0a246a;
+    color: white;
   }
 
   .context-menu-separator {
     height: 1px;
-    background: #e0e0e0;
-    margin: 4px 0;
-  }
-
-  /* Loading */
-  .loading-spinner {
-    display: inline-block;
-    width: 16px;
-    height: 16px;
-    border: 2px solid #f3f3f3;
-    border-top: 2px solid #667eea;
-    border-radius: 50%;
-    animation: spin 1s linear infinite;
-  }
-
-  @keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
+    background: #999;
+    margin: 2px 0;
   }
 </style>
 
-<div class="email-container">
-  <!-- Sidebar -->
-  <div class="email-sidebar">
-    <button class="compose-button" onclick="emailClient.openCompose()">
-      ✉️ Skriv ny email
-    </button>
+<div class="email-explorer">
+  <div class="email-title-bar">
+    <span>📧 FlowFactory Mail</span>
+  </div>
 
-    <div class="folder-list">
-      <div class="folder-item active" data-folder="inbox">
-        <span class="folder-icon">📥</span>
-        <span class="folder-name">Indbakke</span>
-        <span class="folder-count" id="inbox-count">0</span>
-      </div>
-      <div class="folder-item" data-folder="starred">
-        <span class="folder-icon">⭐</span>
-        <span class="folder-name">Markerede</span>
-        <span class="folder-count" id="starred-count">0</span>
-      </div>
-      <div class="folder-item" data-folder="sent">
-        <span class="folder-icon">📤</span>
-        <span class="folder-name">Sendt</span>
-      </div>
-    </div>
+  <div class="email-toolbar">
+    <button class="email-toolbar-btn" onclick="emailClient.openCompose()">✉️ Ny</button>
+    <button class="email-toolbar-btn" onclick="emailClient.replyToEmail()">↩️ Svar</button>
+    <button class="email-toolbar-btn" onclick="emailClient.forwardEmail()">➡️ Videresend</button>
+    <button class="email-toolbar-btn" onclick="emailClient.syncEmails()">🔄 Synkroniser</button>
+    <button class="email-toolbar-btn" onclick="emailClient.deleteEmail()">🗑️ Slet</button>
+    <button class="email-toolbar-btn" onclick="emailClient.linkToOrder()">📦 Til ordre</button>
+    <button class="email-toolbar-btn" onclick="emailClient.showAddAccountModal()">➕ Tilføj konto</button>
+  </div>
 
-    <div class="account-section">
+  <div class="email-body-container">
+    <div class="email-folders-tree">
+      <div class="folder-tree-item selected" data-folder="inbox" onclick="emailClient.changeFolder('inbox')">
+        📥 Indbakke <span id="inbox-count">(0)</span>
+      </div>
+      <div class="folder-tree-item" data-folder="starred" onclick="emailClient.changeFolder('starred')">
+        ⭐ Markerede <span id="starred-count">(0)</span>
+      </div>
+      <div class="folder-tree-item" data-folder="sent" onclick="emailClient.changeFolder('sent')">
+        📤 Sendt
+      </div>
+      <hr style="border: none; border-top: 1px solid #ccc; margin: 5px 0;">
+      <div style="padding: 5px 10px; font-weight: bold; font-size: 11px;">Email konti:</div>
       <div id="email-accounts-list"></div>
-      <button class="add-account-btn" onclick="emailClient.showAddAccountModal()">
-        ➕ Tilføj email konto
-      </button>
-    </div>
-  </div>
-
-  <!-- Email List -->
-  <div class="email-list">
-    <div class="email-list-header">
-      <div class="email-list-title" id="current-folder-title">Indbakke</div>
-      <button class="refresh-button" onclick="emailClient.syncEmails()">
-        <span class="loading-spinner" id="sync-spinner" style="display: none;"></span>
-        <span id="sync-text">🔄 Synkroniser</span>
-      </button>
     </div>
 
-    <div class="search-box">
-      <input type="text" class="search-input" id="email-search" placeholder="Søg i emails...">
+    <div class="email-list-panel">
+      <div style="overflow-y: auto; flex: 1;">
+        <table class="email-list-table">
+          <thead>
+            <tr>
+              <th style="width: 40px;">⭐</th>
+              <th>Fra</th>
+              <th>Emne</th>
+              <th style="width: 80px;">Dato</th>
+            </tr>
+          </thead>
+          <tbody id="emails-list-body">
+            <tr>
+              <td colspan="4" style="text-align: center; padding: 20px; color: #999;">Ingen emails</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
     </div>
 
-    <div class="emails-scroll" id="emails-list">
-      <div class="empty-state">
-        <div class="empty-icon">📧</div>
-        <div class="empty-text">Ingen emails</div>
+    <div class="email-preview-panel" id="email-preview">
+      <div style="display: flex; align-items: center; justify-content: center; height: 100%; color: #999;">
+        Vælg en email for at læse den
       </div>
     </div>
   </div>
 
-  <!-- Email Viewer -->
-  <div class="email-viewer" id="email-viewer">
-    <div class="empty-state">
-      <div class="empty-icon">📭</div>
-      <div class="empty-text">Vælg en email for at læse den</div>
+  <div class="email-statusbar">
+    <span class="status-item" id="status-emails">0 emails</span>
+    <span class="status-item" id="status-account">Ingen konto valgt</span>
+  </div>
+</div>
+
+<!-- Compose Dialog -->
+<div class="win95-dialog-overlay" id="compose-overlay" onclick="emailClient.closeCompose()"></div>
+<div class="win95-dialog" id="compose-dialog">
+  <div class="win95-dialog-title">
+    <span>Ny Email</span>
+    <button class="win95-dialog-close" onclick="emailClient.closeCompose()">✕</button>
+  </div>
+  <div class="win95-dialog-body">
+    <div class="win95-field">
+      <label>Til:</label>
+      <input type="email" id="compose-to" placeholder="modtager@example.com">
+    </div>
+    <div class="win95-field">
+      <label>Emne:</label>
+      <input type="text" id="compose-subject" placeholder="Email emne">
+    </div>
+    <div class="win95-field">
+      <label>Besked:</label>
+      <textarea id="compose-body"></textarea>
+    </div>
+    <div class="win95-dialog-buttons">
+      <button class="win95-btn" onclick="emailClient.sendEmail()">Send</button>
+      <button class="win95-btn" onclick="emailClient.closeCompose()">Annuller</button>
     </div>
   </div>
 </div>
 
-<!-- Compose Modal -->
-<div class="compose-modal" id="compose-modal">
-  <div class="compose-form">
-    <div class="compose-header">
-      <div class="compose-title">Ny Email</div>
-      <button class="compose-close" onclick="emailClient.closeCompose()">×</button>
+<!-- Add Account Dialog -->
+<div class="win95-dialog-overlay" id="account-overlay" onclick="emailClient.closeAddAccountModal()"></div>
+<div class="win95-dialog" id="account-dialog">
+  <div class="win95-dialog-title">
+    <span>Tilføj Email Konto</span>
+    <button class="win95-dialog-close" onclick="emailClient.closeAddAccountModal()">✕</button>
+  </div>
+  <div class="win95-dialog-body">
+    <div class="win95-field">
+      <label>Email:</label>
+      <input type="email" id="account-email" placeholder="din@email.dk">
     </div>
-
-    <div class="compose-fields">
-      <div class="compose-field">
-        <div class="compose-label">Til:</div>
-        <input type="email" class="compose-input" id="compose-to" placeholder="modtager@example.com">
-      </div>
-      <div class="compose-field">
-        <div class="compose-label">Emne:</div>
-        <input type="text" class="compose-input" id="compose-subject" placeholder="Email emne">
-      </div>
+    <div class="win95-field">
+      <label>Password:</label>
+      <input type="password" id="account-password" placeholder="••••••••">
     </div>
-
-    <div class="compose-body">
-      <textarea class="compose-textarea" id="compose-body" placeholder="Skriv din besked..."></textarea>
+    <div class="win95-field">
+      <label>IMAP Host:</label>
+      <input type="text" id="account-imap-host" placeholder="imap.gmail.com" value="imap.gmail.com">
     </div>
-
-    <div class="compose-footer">
-      <button class="send-button" onclick="emailClient.sendEmail()">📤 Send</button>
-      <button class="cancel-button" onclick="emailClient.closeCompose()">Annuller</button>
+    <div class="win95-field">
+      <label>IMAP Port:</label>
+      <input type="number" id="account-imap-port" value="993">
+    </div>
+    <div class="win95-field">
+      <label>SMTP Host:</label>
+      <input type="text" id="account-smtp-host" placeholder="smtp.gmail.com" value="smtp.gmail.com">
+    </div>
+    <div class="win95-field">
+      <label>SMTP Port:</label>
+      <input type="number" id="account-smtp-port" value="587">
+    </div>
+    <div class="win95-info-box">
+      <strong>💡 Gmail brugere:</strong><br>
+      Brug "App Password" fra Google Account sikkerhedsindstillinger
+    </div>
+    <div class="win95-dialog-buttons">
+      <button class="win95-btn" onclick="emailClient.addEmailAccountFromModal()">Tilføj</button>
+      <button class="win95-btn" onclick="emailClient.closeAddAccountModal()">Annuller</button>
     </div>
   </div>
 </div>
 
 <!-- Context Menu -->
 <div class="context-menu" id="context-menu">
-  <div class="context-menu-item" onclick="emailClient.linkToOrder()">
-    📦 Send til ordre
-  </div>
+  <div class="context-menu-item" onclick="emailClient.linkToOrder()">📦 Send til ordre</div>
   <div class="context-menu-separator"></div>
-  <div class="context-menu-item" onclick="emailClient.toggleStar()">
-    ⭐ Marker email
-  </div>
-  <div class="context-menu-item" onclick="emailClient.deleteEmail()">
-    🗑️ Slet email
-  </div>
-</div>
-
-<!-- Add Account Modal -->
-<div class="compose-modal" id="add-account-modal">
-  <div class="compose-form">
-    <div class="compose-header">
-      <div class="compose-title">📧 Tilføj Email Konto</div>
-      <button class="compose-close" onclick="emailClient.closeAddAccountModal()">×</button>
-    </div>
-
-    <div class="compose-fields">
-      <div class="compose-field">
-        <div class="compose-label" style="width: 120px;">Email:</div>
-        <input type="email" class="compose-input" id="account-email" placeholder="din@email.dk">
-      </div>
-      <div class="compose-field">
-        <div class="compose-label" style="width: 120px;">Password:</div>
-        <input type="password" class="compose-input" id="account-password" placeholder="••••••••">
-      </div>
-      <div class="compose-field">
-        <div class="compose-label" style="width: 120px;">IMAP Host:</div>
-        <input type="text" class="compose-input" id="account-imap-host" placeholder="imap.gmail.com">
-      </div>
-      <div class="compose-field">
-        <div class="compose-label" style="width: 120px;">IMAP Port:</div>
-        <input type="number" class="compose-input" id="account-imap-port" value="993">
-      </div>
-      <div class="compose-field">
-        <div class="compose-label" style="width: 120px;">SMTP Host:</div>
-        <input type="text" class="compose-input" id="account-smtp-host" placeholder="smtp.gmail.com">
-      </div>
-      <div class="compose-field">
-        <div class="compose-label" style="width: 120px;">SMTP Port:</div>
-        <input type="number" class="compose-input" id="account-smtp-port" value="587">
-      </div>
-    </div>
-
-    <div style="padding: 16px 24px; font-size: 13px; color: #666; background: #f9f9f9; border-top: 1px solid #e0e0e0;">
-      <strong>💡 Gmail brugere:</strong><br>
-      IMAP: imap.gmail.com:993<br>
-      SMTP: smtp.gmail.com:587<br>
-      Brug "App Password" fra Google Account sikkerhedsindstillinger
-    </div>
-
-    <div class="compose-footer">
-      <button class="send-button" onclick="emailClient.addEmailAccountFromModal()">➕ Tilføj Konto</button>
-      <button class="cancel-button" onclick="emailClient.closeAddAccountModal()">Annuller</button>
-    </div>
-  </div>
+  <div class="context-menu-item" onclick="emailClient.toggleStar()">⭐ Marker email</div>
+  <div class="context-menu-item" onclick="emailClient.deleteEmail()">🗑️ Slet email</div>
 </div>
 
 <script src="js/email.js"></script>
