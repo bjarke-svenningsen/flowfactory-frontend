@@ -189,6 +189,39 @@ export async function sendEmail(accountId, emailData) {
 
     console.log('✅ Email sent:', result.messageId);
 
+    // Save sent email to database
+    try {
+      await db.run(`
+        INSERT INTO emails (
+          account_id, message_id, uid, folder,
+          from_address, from_name, to_address, to_name,
+          cc, subject, body_text, body_html,
+          received_date, has_attachments, is_read
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `, [
+        accountId,
+        result.messageId || '',
+        0, // uid is 0 for sent emails (not from IMAP)
+        'sent',
+        account.email,
+        account.display_name || account.email,
+        emailData.to,
+        emailData.to,
+        emailData.cc || null,
+        emailData.subject || '(Intet emne)',
+        emailData.text || '',
+        emailData.html || '',
+        new Date().toISOString(),
+        0, // no attachments for now
+        1  // sent emails are always "read"
+      ]);
+
+      console.log('✅ Sent email saved to database');
+    } catch (dbError) {
+      console.error('Error saving sent email to database:', dbError);
+      // Don't fail the whole operation if database save fails
+    }
+
     return { success: true, messageId: result.messageId };
   } catch (error) {
     console.error('Send email error:', error);
