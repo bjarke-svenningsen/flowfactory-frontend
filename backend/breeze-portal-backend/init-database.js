@@ -317,6 +317,29 @@ export async function initializeDatabase() {
       sort_order INTEGER DEFAULT 0,
       created_at ${db._isProduction ? 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP' : "TEXT DEFAULT (datetime('now'))"}${db._isProduction ? '' : ',\n  FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE,\n  FOREIGN KEY(parent_folder) REFERENCES email_folders(id) ON DELETE CASCADE'}
     )`);
+    
+    // Add missing columns if they don't exist (migration for existing databases)
+    try {
+      // Try to add folder_id to emails table
+      await db.run(`ALTER TABLE emails ADD COLUMN folder_id INTEGER`);
+      console.log('✅ Added folder_id column to emails table');
+    } catch (error) {
+      if (error.message.includes('duplicate column') || error.message.includes('already exists')) {
+        console.log('ℹ️  folder_id column already exists in emails table');
+      }
+      // Ignore other errors - column might already exist
+    }
+    
+    try {
+      // Try to add sort_order to email_folders table
+      await db.run(`ALTER TABLE email_folders ADD COLUMN sort_order INTEGER DEFAULT 0`);
+      console.log('✅ Added sort_order column to email_folders table');
+    } catch (error) {
+      if (error.message.includes('duplicate column') || error.message.includes('already exists')) {
+        console.log('ℹ️  sort_order column already exists in email_folders table');
+      }
+      // Ignore other errors - column might already exist
+    }
 
     // Email attachments
     await db.run(`CREATE TABLE IF NOT EXISTS email_attachments (
