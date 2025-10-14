@@ -433,9 +433,12 @@ const emailClient = {
   },
 
   // Change folder
-  async changeFolder(folder) {
+  async changeFolder(folder, customFolderId = null) {
     this.currentFolder = folder;
     this.currentEmailId = null;
+    this.customFolderId = customFolderId; // Store custom folder ID if provided
+
+    console.log('Changing folder to:', folder, 'customFolderId:', customFolderId); // DEBUG
 
     // Update active state
     document.querySelectorAll('.folder-tree-item[data-folder]').forEach(item => {
@@ -1350,17 +1353,24 @@ const emailClient = {
       return;
     }
     
+    console.log('Rendering custom folders:', this.customFolders); // DEBUG
+    
     container.innerHTML = `
       <hr style="border: none; border-top: 1px solid #ccc; margin: 5px 0;">
       <div style="padding: 5px 10px; font-weight: bold; font-size: 11px;">Dine mapper:</div>
-      ${this.customFolders.map(folder => `
-        <div class="folder-tree-item" 
-             data-folder="${folder.id}" 
-             onclick="emailClient.changeFolder('${folder.id}')"
-             oncontextmenu="emailClient.showFolderContextMenu(event, '${folder.id}')">
-          📁 ${this.escapeHtml(folder.name)}
-        </div>
-      `).join('')}
+      ${this.customFolders.map(folder => {
+        const folderName = folder.name || 'Unavngivet mappe';
+        const folderId = `custom_${folder.id}`;
+        console.log('Rendering folder:', folder.id, folderName); // DEBUG
+        return `
+          <div class="folder-tree-item" 
+               data-folder="${folderId}" 
+               onclick="emailClient.changeFolder('${folderId}', ${folder.id})"
+               oncontextmenu="emailClient.showFolderContextMenu(event, ${folder.id})">
+            📁 ${this.escapeHtml(folderName)}
+          </div>
+        `;
+      }).join('')}
     `;
   }
 };
