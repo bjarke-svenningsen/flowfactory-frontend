@@ -47,7 +47,26 @@ const emailClient = {
     // Setup event listeners
     this.setupEventListeners();
     
+    // Start auto-sync (every 30 seconds)
+    this.startAutoSync();
+    
     console.log('Email client initialized');
+  },
+
+  // Start auto-sync timer
+  startAutoSync() {
+    // Clear any existing timer
+    if (this.syncTimer) {
+      clearInterval(this.syncTimer);
+    }
+
+    // Sync every 30 seconds
+    this.syncTimer = setInterval(async () => {
+      if (this.currentAccountId) {
+        console.log('Auto-syncing emails...');
+        await this.syncEmails(true); // true = silent sync
+      }
+    }, 30000); // 30 seconds
   },
 
   // Setup event listeners
@@ -376,24 +395,36 @@ const emailClient = {
   },
 
   // Sync emails from IMAP
-  async syncEmails() {
+  async syncEmails(silent = false) {
     if (!this.currentAccountId) {
-      this.showNotification('Vælg en email konto først', 'warning');
+      if (!silent) {
+        this.showNotification('Vælg en email konto først', 'warning');
+      }
       return;
     }
 
     try {
-      this.showNotification('Synkroniserer emails...', 'info');
+      if (!silent) {
+        this.showNotification('Synkroniserer emails...', 'info');
+      }
 
-      await apiCall(`/api/email/sync/${this.currentAccountId}`, {
+      const result = await apiCall(`/api/email/sync/${this.currentAccountId}`, {
         method: 'POST'
       });
 
-      this.showNotification('Emails synkroniseret!', 'success');
+      if (!silent) {
+        this.showNotification('Emails synkroniseret!', 'success');
+      } else if (result.new > 0) {
+        // Show notification only if new emails arrived during silent sync
+        this.showNotification(`${result.new} nye email(s) modtaget!`, 'success');
+      }
+
       await this.loadEmails();
     } catch (error) {
       console.error('Error syncing emails:', error);
-      this.showNotification('Synkronisering fejlede: ' + error.message, 'error');
+      if (!silent) {
+        this.showNotification('Synkronisering fejlede: ' + error.message, 'error');
+      }
     }
   },
 
