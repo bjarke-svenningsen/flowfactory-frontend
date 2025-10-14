@@ -764,7 +764,13 @@ const emailClient = {
       document.getElementById('compose-cc').value = '';
       document.getElementById('compose-bcc').value = '';
       document.getElementById('compose-subject').value = '';
-      document.getElementById('compose-body').value = '';
+      
+      // Clear rich text editor (use innerHTML for contenteditable div)
+      const bodyEditor = document.getElementById('compose-body');
+      if (bodyEditor) {
+        bodyEditor.innerHTML = '';
+      }
+      
       document.getElementById('cc-bcc-fields').style.display = 'none';
       
       // Add signature to new emails
