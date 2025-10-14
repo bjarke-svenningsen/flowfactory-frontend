@@ -97,7 +97,7 @@ export async function syncEmails(accountId) {
             accountId,
             mail.messageId || '',
             id,
-            'INBOX',
+            'inbox',
             fromAddr,
             fromName,
             toAddr,
