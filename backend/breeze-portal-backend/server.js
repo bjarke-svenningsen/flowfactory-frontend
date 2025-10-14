@@ -2763,13 +2763,90 @@ app.delete('/api/email/folders/:id', auth, async (req, res) => {
       return res.status(404).json({ error: 'Folder not found' });
     }
     
-    // TODO: Move emails in this folder back to inbox (if we add folder support for emails later)
+    // Move emails in this folder back to inbox
+    await db.run('UPDATE emails SET folder_id = NULL WHERE folder_id = ?', [folderId]);
     
     await db.run('DELETE FROM email_folders WHERE id = ?', [folderId]);
     res.json({ success: true });
   } catch (error) {
     console.error('Delete folder error:', error);
     res.status(500).json({ error: 'Failed to delete folder' });
+  }
+});
+
+// Move email to folder
+app.put('/api/email/emails/:id/move', auth, async (req, res) => {
+  const emailId = Number(req.params.id);
+  const { folder_id } = req.body;
+  
+  try {
+    // Verify email belongs to user's account
+    const email = await db.get(`
+      SELECT e.* FROM emails e
+      JOIN email_accounts ea ON e.account_id = ea.id
+      WHERE e.id = ? AND ea.user_id = ?
+    `, [emailId, req.user.id]);
+    
+    if (!email) {
+      return res.status(404).json({ error: 'Email not found' });
+    }
+    
+    // If folder_id is provided, verify it belongs to user
+    if (folder_id) {
+      const folder = await db.get('SELECT * FROM email_folders WHERE id = ? AND user_id = ?', [folder_id, req.user.id]);
+      if (!folder) {
+        return res.status(404).json({ error: 'Folder not found' });
+      }
+    }
+    
+    // Update email's folder_id
+    await db.run('UPDATE emails SET folder_id = ? WHERE id = ?', [folder_id || null, emailId]);
+    
+    // Get updated email
+    const updated = await db.get('SELECT * FROM emails WHERE id = ?', [emailId]);
+    res.json(updated);
+  } catch (error) {
+    console.error('Move email error:', error);
+    res.status(500).json({ error: 'Failed to move email' });
+  }
+});
+
+// Reorder folder (for drag-and-drop)
+app.put('/api/email/folders/:id/reorder', auth, async (req, res) => {
+  const folderId = Number(req.params.id);
+  const { sort_order, parent_folder } = req.body;
+  
+  try {
+    const folder = await db.get('SELECT * FROM email_folders WHERE id = ? AND user_id = ?', [folderId, req.user.id]);
+    
+    if (!folder) {
+      return res.status(404).json({ error: 'Folder not found' });
+    }
+    
+    // Prevent circular references
+    if (parent_folder === folderId) {
+      return res.status(400).json({ error: 'Cannot make folder its own parent' });
+    }
+    
+    // If parent_folder is set, verify it exists and belongs to user
+    if (parent_folder) {
+      const parentFolder = await db.get('SELECT * FROM email_folders WHERE id = ? AND user_id = ?', [parent_folder, req.user.id]);
+      if (!parentFolder) {
+        return res.status(404).json({ error: 'Parent folder not found' });
+      }
+    }
+    
+    // Update folder
+    await db.run('UPDATE email_folders SET sort_order = ?, parent_folder = ? WHERE id = ?', 
+      [sort_order !== undefined ? sort_order : folder.sort_order, 
+       parent_folder !== undefined ? parent_folder : folder.parent_folder, 
+       folderId]);
+    
+    const updated = await db.get('SELECT * FROM email_folders WHERE id = ?', [folderId]);
+    res.json(updated);
+  } catch (error) {
+    console.error('Reorder folder error:', error);
+    res.status(500).json({ error: 'Failed to reorder folder' });
   }
 });
 

@@ -291,6 +291,7 @@ export async function initializeDatabase() {
       message_id TEXT NOT NULL,
       uid INTEGER NOT NULL,
       folder TEXT DEFAULT 'INBOX',
+      folder_id INTEGER,
       from_address TEXT NOT NULL,
       from_name TEXT,
       to_address TEXT NOT NULL,
@@ -305,7 +306,16 @@ export async function initializeDatabase() {
       is_starred INTEGER DEFAULT 0,
       has_attachments INTEGER DEFAULT 0,
       created_at ${db._isProduction ? 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP' : "TEXT DEFAULT (datetime('now'))"},
-      UNIQUE(account_id, uid, folder)${db._isProduction ? '' : ',\n  FOREIGN KEY(account_id) REFERENCES email_accounts(id) ON DELETE CASCADE'}
+      UNIQUE(account_id, uid, folder)${db._isProduction ? '' : ',\n  FOREIGN KEY(account_id) REFERENCES email_accounts(id) ON DELETE CASCADE,\n  FOREIGN KEY(folder_id) REFERENCES email_folders(id) ON DELETE SET NULL'}
+    )`);
+    // Email custom folders (for organizing emails)
+    await db.run(`CREATE TABLE IF NOT EXISTS email_folders (
+      id ${db._isProduction ? 'SERIAL' : 'INTEGER'} PRIMARY KEY ${db._isProduction ? '' : 'AUTOINCREMENT'},
+      user_id INTEGER NOT NULL,
+      name TEXT NOT NULL,
+      parent_folder INTEGER,
+      sort_order INTEGER DEFAULT 0,
+      created_at ${db._isProduction ? 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP' : "TEXT DEFAULT (datetime('now'))"}${db._isProduction ? '' : ',\n  FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE,\n  FOREIGN KEY(parent_folder) REFERENCES email_folders(id) ON DELETE CASCADE'}
     )`);
 
     // Email attachments
@@ -336,15 +346,6 @@ export async function initializeDatabase() {
       pdf_document_id INTEGER,
       linked_by INTEGER NOT NULL,
       created_at ${db._isProduction ? 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP' : "TEXT DEFAULT (datetime('now'))"}${db._isProduction ? '' : ',\n  FOREIGN KEY(email_id) REFERENCES emails(id) ON DELETE CASCADE,\n  FOREIGN KEY(order_id) REFERENCES quotes(id) ON DELETE CASCADE,\n  FOREIGN KEY(pdf_document_id) REFERENCES order_documents(id) ON DELETE SET NULL,\n  FOREIGN KEY(linked_by) REFERENCES users(id)'}
-    )`);
-
-    // Email custom folders (for organizing emails)
-    await db.run(`CREATE TABLE IF NOT EXISTS email_folders (
-      id ${db._isProduction ? 'SERIAL' : 'INTEGER'} PRIMARY KEY ${db._isProduction ? '' : 'AUTOINCREMENT'},
-      user_id INTEGER NOT NULL,
-      name TEXT NOT NULL,
-      parent_folder INTEGER,
-      created_at ${db._isProduction ? 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP' : "TEXT DEFAULT (datetime('now'))"}${db._isProduction ? '' : ',\n  FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE,\n  FOREIGN KEY(parent_folder) REFERENCES email_folders(id) ON DELETE CASCADE'}
     )`);
 
     console.log('✅ All database tables initialized successfully!');
