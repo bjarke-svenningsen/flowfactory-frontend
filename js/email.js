@@ -39,6 +39,9 @@ const emailClient = {
   hasMoreEmails: false,
   totalEmailsInbox: 0,
   isSyncing: false,
+  
+  // Bulk selection state
+  selectedEmails: new Set(),
 
   // Initialize the email client
   async init() {
@@ -254,39 +257,54 @@ const emailClient = {
     }
   },
 
-  // Render email list in table
+  // Render email list - NEW: Compact Outlook-style list with checkboxes
   renderEmailList() {
-    const tbody = document.getElementById('emails-list-body');
-    if (!tbody) return;
+    const listContainer = document.getElementById('emails-list');
+    if (!listContainer) return;
 
     if (this.emails.length === 0) {
-      tbody.innerHTML = `
-        <tr>
-          <td colspan="4" style="text-align: center; padding: 20px; color: #999;">Ingen emails</td>
-        </tr>
-      `;
+      listContainer.innerHTML = '<div style="text-align: center; padding: 40px; color: #999;">Ingen emails</div>';
       return;
     }
 
-    tbody.innerHTML = this.emails.map(email => {
+    listContainer.innerHTML = this.emails.map(email => {
       // Backend uses received_date, handle both for compatibility
       const dateValue = email.received_date || email.date;
       const date = dateValue ? new Date(dateValue) : new Date();
       const dateStr = this.formatDate(date);
       const isStarred = email.is_starred || email.starred || false;
       const isUnread = !email.is_read && email.is_read !== undefined ? true : (email.unread || false);
+      const isSelected = this.selectedEmails.has(email.id);
+      const isCurrent = email.id === this.currentEmailId;
+      
+      // Create preview snippet (first 60 chars of body)
+      const bodyText = email.body_text || '';
+      const preview = bodyText.substring(0, 60) + (bodyText.length > 60 ? '...' : '');
 
       return `
-        <tr class="${isUnread ? 'unread' : ''} ${email.id === this.currentEmailId ? 'selected' : ''}"
-            onclick="emailClient.viewEmail(${email.id})"
-            oncontextmenu="emailClient.showContextMenu(event, ${email.id})">
-          <td>${isStarred ? '⭐' : ''}</td>
-          <td>${this.escapeHtml(email.from_name || email.from_address || 'Unknown')}</td>
-          <td>${this.escapeHtml(email.subject || '(Intet emne)')}</td>
-          <td>${dateStr}</td>
-        </tr>
+        <div class="email-item ${isUnread ? 'unread' : ''} ${isSelected ? 'selected' : ''} ${isCurrent ? 'current' : ''}" 
+             data-email-id="${email.id}">
+          <input type="checkbox" 
+                 class="email-checkbox" 
+                 ${isSelected ? 'checked' : ''}
+                 onclick="event.stopPropagation(); emailClient.toggleEmailSelection(${email.id})" />
+          <span class="email-star" onclick="event.stopPropagation(); emailClient.toggleStarDirect(${email.id})">
+            ${isStarred ? '⭐' : '☆'}
+          </span>
+          <div class="email-content" onclick="emailClient.viewEmail(${email.id})" oncontextmenu="emailClient.showContextMenu(event, ${email.id})">
+            <div class="email-header-row">
+              <span class="email-sender">${this.escapeHtml(email.from_name || email.from_address || 'Unknown')}</span>
+              <span class="email-date">${dateStr}</span>
+            </div>
+            <div class="email-subject">${this.escapeHtml(email.subject || '(Intet emne)')}</div>
+            <div class="email-preview">${this.escapeHtml(preview)}</div>
+          </div>
+        </div>
       `;
     }).join('');
+    
+    // Update select all checkbox
+    this.updateSelectAllCheckbox();
   },
 
   // Format date for display
@@ -912,6 +930,175 @@ const emailClient = {
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
+  },
+  
+  // ===== BULK SELECTION METHODS =====
+  
+  // Toggle single email selection
+  toggleEmailSelection(emailId) {
+    if (this.selectedEmails.has(emailId)) {
+      this.selectedEmails.delete(emailId);
+    } else {
+      this.selectedEmails.add(emailId);
+    }
+    this.updateBulkActionsToolbar();
+    this.updateSelectAllCheckbox();
+    this.renderEmailList();
+  },
+  
+  // Toggle select all
+  toggleSelectAll() {
+    const checkbox = document.getElementById('select-all-checkbox');
+    if (checkbox.checked) {
+      // Select all visible emails
+      this.emails.forEach(email => this.selectedEmails.add(email.id));
+    } else {
+      // Deselect all
+      this.selectedEmails.clear();
+    }
+    this.updateBulkActionsToolbar();
+    this.renderEmailList();
+  },
+  
+  // Update select all checkbox state
+  updateSelectAllCheckbox() {
+    const checkbox = document.getElementById('select-all-checkbox');
+    if (!checkbox) return;
+    
+    if (this.selectedEmails.size === 0) {
+      checkbox.checked = false;
+      checkbox.indeterminate = false;
+    } else if (this.selectedEmails.size === this.emails.length) {
+      checkbox.checked = true;
+      checkbox.indeterminate = false;
+    } else {
+      checkbox.checked = false;
+      checkbox.indeterminate = true;
+    }
+  },
+  
+  // Update bulk actions toolbar visibility and count
+  updateBulkActionsToolbar() {
+    const toolbar = document.getElementById('bulk-actions-toolbar');
+    const countSpan = document.getElementById('bulk-selected-count');
+    
+    if (this.selectedEmails.size > 0) {
+      toolbar.classList.add('active');
+      countSpan.textContent = `${this.selectedEmails.size} valgt`;
+    } else {
+      toolbar.classList.remove('active');
+    }
+  },
+  
+  // Clear selection
+  clearSelection() {
+    this.selectedEmails.clear();
+    this.updateBulkActionsToolbar();
+    this.updateSelectAllCheckbox();
+    this.renderEmailList();
+  },
+  
+  // Bulk delete emails
+  async deleteBulkEmails() {
+    if (this.selectedEmails.size === 0) return;
+    
+    if (!confirm(`Er du sikker på at du vil slette ${this.selectedEmails.size} email(s)?`)) {
+      return;
+    }
+    
+    const emailIds = Array.from(this.selectedEmails);
+    let deletedCount = 0;
+    
+    for (const emailId of emailIds) {
+      try {
+        await apiCall(`/api/email/emails/${emailId}`, {
+          method: 'DELETE'
+        });
+        deletedCount++;
+      } catch (error) {
+        console.error(`Error deleting email ${emailId}:`, error);
+      }
+    }
+    
+    this.showNotification(`${deletedCount} email(s) slettet`, 'success');
+    
+    // Remove deleted emails from list
+    this.emails = this.emails.filter(e => !emailIds.includes(e.id));
+    
+    // Clear selection
+    this.selectedEmails.clear();
+    
+    // Re-render
+    this.renderEmailList();
+    this.updateFolderCounts();
+    this.updateBulkActionsToolbar();
+    
+    // Clear viewer if current email was deleted
+    if (emailIds.includes(this.currentEmailId)) {
+      this.currentEmailId = null;
+      const viewer = document.getElementById('email-preview');
+      if (viewer) {
+        viewer.innerHTML = '<div style="display: flex; align-items: center; justify-content: center; height: 100%; color: #999;">Vælg en email for at læse den</div>';
+      }
+    }
+  },
+  
+  // Bulk star emails
+  async starBulkEmails() {
+    if (this.selectedEmails.size === 0) return;
+    
+    const emailIds = Array.from(this.selectedEmails);
+    let starredCount = 0;
+    
+    for (const emailId of emailIds) {
+      try {
+        await apiCall(`/api/email/emails/${emailId}/star`, {
+          method: 'POST'
+        });
+        
+        // Update local state
+        const email = this.emails.find(e => e.id === emailId);
+        if (email) {
+          email.starred = true;
+          email.is_starred = true;
+        }
+        
+        starredCount++;
+      } catch (error) {
+        console.error(`Error starring email ${emailId}:`, error);
+      }
+    }
+    
+    this.showNotification(`${starredCount} email(s) markeret`, 'success');
+    
+    // Clear selection
+    this.selectedEmails.clear();
+    
+    // Re-render
+    this.renderEmailList();
+    this.updateFolderCounts();
+    this.updateBulkActionsToolbar();
+  },
+  
+  // Toggle star directly (from star icon click)
+  async toggleStarDirect(emailId) {
+    try {
+      await apiCall(`/api/email/emails/${emailId}/star`, {
+        method: 'POST'
+      });
+
+      // Update local state
+      const email = this.emails.find(e => e.id === emailId);
+      if (email) {
+        email.starred = !email.starred;
+        email.is_starred = !email.is_starred;
+        this.renderEmailList();
+        this.updateFolderCounts();
+      }
+    } catch (error) {
+      console.error('Error toggling star:', error);
+      this.showNotification('Kunne ikke opdatere markering: ' + error.message, 'error');
+    }
   }
 };
 

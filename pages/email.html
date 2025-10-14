@@ -3,7 +3,8 @@
   .email-explorer {
     background: #fff;
     border: 1px solid #0054a6;
-    height: 650px;
+    height: calc(100vh - 120px);
+    min-height: 700px;
     display: flex;
     flex-direction: column;
     box-shadow: 2px 2px 5px rgba(0,0,0,0.3);
@@ -60,7 +61,7 @@
   }
 
   .email-folders-tree {
-    width: 180px;
+    width: 220px;
     background: white;
     border-right: 1px solid #999;
     overflow-y: auto;
@@ -87,55 +88,133 @@
   }
 
   .email-list-panel {
-    width: 350px;
+    width: 450px;
     background: white;
     border-right: 1px solid #999;
     display: flex;
     flex-direction: column;
   }
 
-  .email-list-table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 12px;
-  }
-
-  .email-list-table thead {
+  /* Compact List Style (Outlook-like) */
+  .email-list-header {
     background: linear-gradient(to bottom, #fff 0%, #e8e8e8 100%);
     border-bottom: 1px solid #999;
+    padding: 6px 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 11px;
   }
 
-  .email-list-table th {
-    text-align: left;
-    padding: 4px 8px;
-    border-right: 1px solid #ccc;
+  .email-list-container {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+  }
+
+  .email-items-list {
+    flex: 1;
+    overflow-y: auto;
+  }
+
+  .email-item {
+    display: flex;
+    gap: 8px;
+    padding: 8px;
+    border-bottom: 1px solid #e0e0e0;
     cursor: pointer;
-    font-weight: normal;
+    align-items: flex-start;
   }
 
-  .email-list-table th:hover {
-    background: #d0d0d0;
+  .email-item:hover {
+    background: #f0f0f0;
   }
 
-  .email-list-table td {
-    padding: 4px 8px;
-    border-bottom: 1px solid #f0f0f0;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+  .email-item.selected {
+    background: #e0e8ff;
   }
 
-  .email-list-table tr:hover {
-    background: #e0e0f0;
-  }
-
-  .email-list-table tr.selected {
+  .email-item.current {
     background: #0a246a;
     color: white;
   }
 
-  .email-list-table tr.unread {
+  .email-item.current .email-preview {
+    color: #ddd;
+  }
+
+  .email-checkbox {
+    margin-top: 2px;
+    cursor: pointer;
+  }
+
+  .email-star {
+    font-size: 14px;
+    cursor: pointer;
+    user-select: none;
+    margin-top: 2px;
+  }
+
+  .email-content {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .email-header-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2px;
+  }
+
+  .email-sender {
+    font-weight: normal;
+    font-size: 12px;
+  }
+
+  .email-item.unread .email-sender,
+  .email-item.unread .email-subject {
     font-weight: bold;
+  }
+
+  .email-date {
+    font-size: 11px;
+    color: #666;
+    white-space: nowrap;
+  }
+
+  .email-item.current .email-date {
+    color: #fff;
+  }
+
+  .email-subject {
+    font-size: 12px;
+    margin-bottom: 2px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .email-preview {
+    font-size: 11px;
+    color: #666;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .bulk-actions-toolbar {
+    background: #fffacd;
+    border-bottom: 1px solid #999;
+    padding: 5px;
+    display: none;
+    gap: 5px;
+    align-items: center;
+    font-size: 11px;
+  }
+
+  .bulk-actions-toolbar.active {
+    display: flex;
   }
 
   .email-preview-panel {
@@ -390,23 +469,26 @@
     </div>
 
     <div class="email-list-panel">
-      <div style="overflow-y: auto; flex: 1;">
-        <table class="email-list-table">
-          <thead>
-            <tr>
-              <th style="width: 40px;">⭐</th>
-              <th>Fra</th>
-              <th>Emne</th>
-              <th style="width: 80px;">Dato</th>
-            </tr>
-          </thead>
-          <tbody id="emails-list-body">
-            <tr>
-              <td colspan="4" style="text-align: center; padding: 20px; color: #999;">Ingen emails</td>
-            </tr>
-          </tbody>
-        </table>
-        
+      <!-- Bulk Actions Toolbar -->
+      <div class="bulk-actions-toolbar" id="bulk-actions-toolbar">
+        <span id="bulk-selected-count">0 valgt</span>
+        <button class="email-toolbar-btn" onclick="emailClient.deleteBulkEmails()" style="margin-left: auto;">🗑️ Slet valgte</button>
+        <button class="email-toolbar-btn" onclick="emailClient.starBulkEmails()">⭐ Marker valgte</button>
+        <button class="email-toolbar-btn" onclick="emailClient.clearSelection()">✕ Ryd</button>
+      </div>
+
+      <div class="email-list-container">
+        <!-- Select All Header -->
+        <div class="email-list-header">
+          <input type="checkbox" id="select-all-checkbox" onchange="emailClient.toggleSelectAll()" />
+          <label for="select-all-checkbox" style="cursor: pointer;">Vælg alle</label>
+        </div>
+
+        <!-- Email Items List -->
+        <div class="email-items-list" id="emails-list">
+          <div style="text-align: center; padding: 40px; color: #999;">Ingen emails</div>
+        </div>
+
         <!-- Load More Button Container -->
         <div id="load-more-container" style="display: none; text-align: center; padding: 15px; border-top: 1px solid #ccc;">
           <!-- Dynamically populated by emailClient.updateLoadMoreButton() -->
