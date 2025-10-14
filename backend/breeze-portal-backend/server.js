@@ -2672,6 +2672,95 @@ app.post('/api/email/emails/:id/star', auth, async (req, res) => {
   res.json({ success: true, is_starred: newStarred });
 });
 
+// --- EMAIL FOLDER MANAGEMENT ENDPOINTS ---
+
+// Get custom email folders for user
+app.get('/api/email/folders', auth, async (req, res) => {
+  try {
+    const folders = await db.all(`
+      SELECT * FROM email_folders 
+      WHERE user_id = ? 
+      ORDER BY name ASC
+    `, [req.user.id]);
+    res.json(folders);
+  } catch (error) {
+    console.error('Get folders error:', error);
+    res.status(500).json({ error: 'Failed to get folders' });
+  }
+});
+
+// Create custom email folder
+app.post('/api/email/folders', auth, async (req, res) => {
+  const { name, parent_folder } = req.body;
+  
+  if (!name || !name.trim()) {
+    return res.status(400).json({ error: 'Folder name required' });
+  }
+  
+  try {
+    const info = await db.run(`
+      INSERT INTO email_folders (user_id, name, parent_folder)
+      VALUES (?, ?, ?)
+    `, [req.user.id, name.trim(), parent_folder || null]);
+    
+    const folder = await db.get(`
+      SELECT * FROM email_folders WHERE id = ?
+    `, [info.lastInsertRowid]);
+    
+    res.json(folder);
+  } catch (error) {
+    console.error('Create folder error:', error);
+    res.status(500).json({ error: 'Failed to create folder' });
+  }
+});
+
+// Rename email folder
+app.put('/api/email/folders/:id', auth, async (req, res) => {
+  const folderId = Number(req.params.id);
+  const { name } = req.body;
+  
+  if (!name || !name.trim()) {
+    return res.status(400).json({ error: 'Folder name required' });
+  }
+  
+  try {
+    const folder = await db.get('SELECT * FROM email_folders WHERE id = ? AND user_id = ?', [folderId, req.user.id]);
+    
+    if (!folder) {
+      return res.status(404).json({ error: 'Folder not found' });
+    }
+    
+    await db.run('UPDATE email_folders SET name = ? WHERE id = ?', [name.trim(), folderId]);
+    
+    const updated = await db.get('SELECT * FROM email_folders WHERE id = ?', [folderId]);
+    res.json(updated);
+  } catch (error) {
+    console.error('Rename folder error:', error);
+    res.status(500).json({ error: 'Failed to rename folder' });
+  }
+});
+
+// Delete email folder
+app.delete('/api/email/folders/:id', auth, async (req, res) => {
+  const folderId = Number(req.params.id);
+  
+  try {
+    const folder = await db.get('SELECT * FROM email_folders WHERE id = ? AND user_id = ?', [folderId, req.user.id]);
+    
+    if (!folder) {
+      return res.status(404).json({ error: 'Folder not found' });
+    }
+    
+    // TODO: Move emails in this folder back to inbox (if we add folder support for emails later)
+    
+    await db.run('DELETE FROM email_folders WHERE id = ?', [folderId]);
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Delete folder error:', error);
+    res.status(500).json({ error: 'Failed to delete folder' });
+  }
+});
+
 // Test IMAP connection
 app.post('/api/email/test-imap', auth, async (req, res) => {
   const { host, port, username, password } = req.body;

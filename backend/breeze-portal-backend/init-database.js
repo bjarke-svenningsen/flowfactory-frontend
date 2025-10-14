@@ -338,6 +338,15 @@ export async function initializeDatabase() {
       created_at ${db._isProduction ? 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP' : "TEXT DEFAULT (datetime('now'))"}${db._isProduction ? '' : ',\n  FOREIGN KEY(email_id) REFERENCES emails(id) ON DELETE CASCADE,\n  FOREIGN KEY(order_id) REFERENCES quotes(id) ON DELETE CASCADE,\n  FOREIGN KEY(pdf_document_id) REFERENCES order_documents(id) ON DELETE SET NULL,\n  FOREIGN KEY(linked_by) REFERENCES users(id)'}
     )`);
 
+    // Email custom folders (for organizing emails)
+    await db.run(`CREATE TABLE IF NOT EXISTS email_folders (
+      id ${db._isProduction ? 'SERIAL' : 'INTEGER'} PRIMARY KEY ${db._isProduction ? '' : 'AUTOINCREMENT'},
+      user_id INTEGER NOT NULL,
+      name TEXT NOT NULL,
+      parent_folder INTEGER,
+      created_at ${db._isProduction ? 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP' : "TEXT DEFAULT (datetime('now'))"}${db._isProduction ? '' : ',\n  FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE,\n  FOREIGN KEY(parent_folder) REFERENCES email_folders(id) ON DELETE CASCADE'}
+    )`);
+
     console.log('✅ All database tables initialized successfully!');
   } catch (error) {
     console.error('❌ Database initialization failed:', error);
