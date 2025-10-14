@@ -51,19 +51,19 @@ export async function syncEmails(accountId) {
     // Open inbox
     await connection.openBox('INBOX');
 
-    // Fetch ALL emails but limit to recent 100 (simpler, avoids date format issues)
+    // Fetch ALL emails but limit to recent 10 ONLY (ultra memory safe)
     const searchCriteria = ['ALL'];
     const fetchOptions = {
-      bodies: ['HEADER', 'TEXT', ''],
+      bodies: ['HEADER'],  // ONLY headers, not full body - saves memory
       markSeen: false
     };
 
     const messages = await connection.search(searchCriteria, fetchOptions);
     
-    // Take ONLY the last 100 most recent emails to avoid memory issues
-    const limitedMessages = messages.slice(-100);
+    // Take ONLY the last 10 most recent emails to avoid memory issues
+    const limitedMessages = messages.slice(-10);
 
-    console.log(`📧 Found ${messages.length} total emails, syncing last 100 for memory safety`);
+    console.log(`📧 Found ${messages.length} total emails, syncing last 10 ONLY for ultra memory safety`);
 
     let syncedCount = 0;
     let newCount = 0;
