@@ -523,6 +523,9 @@
       <div class="folder-tree-item" data-folder="sent" onclick="emailClient.changeFolder('sent')" oncontextmenu="emailClient.showFolderContextMenu(event, 'sent')">
         📤 Sendt
       </div>
+      <div class="folder-tree-item" data-folder="drafts" onclick="emailClient.changeFolder('drafts')" oncontextmenu="emailClient.showFolderContextMenu(event, 'drafts')">
+        📝 Kladder <span id="drafts-count">(0)</span>
+      </div>
       <hr style="border: none; border-top: 1px solid #ccc; margin: 5px 0;">
       <div style="padding: 5px 10px; font-weight: bold; font-size: 11px;">Email konti:</div>
       <div id="email-accounts-list"></div>

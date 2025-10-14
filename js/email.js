@@ -64,6 +64,9 @@ const emailClient = {
     // Load custom folders
     await this.loadCustomFolders();
     
+    // Update draft count
+    this.updateDraftCount();
+    
     // Load emails for default folder
     await this.loadEmails();
     
@@ -252,6 +255,28 @@ const emailClient = {
   // Load emails
   async loadEmails() {
     try {
+      // Special handling for drafts folder
+      if (this.currentFolder === 'drafts') {
+        const drafts = this.loadDrafts();
+        // Convert drafts to email format for rendering
+        this.emails = drafts.map(draft => ({
+          id: `draft_${draft.id}`,
+          isDraft: true,
+          draftId: draft.id,
+          from_name: 'Kladde',
+          from_address: '',
+          to_address: draft.to,
+          subject: draft.subject || '(Intet emne)',
+          body_text: draft.body,
+          received_date: draft.timestamp,
+          is_read: true,
+          is_starred: false
+        }));
+        this.renderEmailList();
+        this.updateStatusBar();
+        return;
+      }
+      
       const params = new URLSearchParams();
       
       if (this.currentFolder === 'starred') {
@@ -374,6 +399,13 @@ const emailClient = {
         if (currentEmailItem) {
           currentEmailItem.classList.add('current');
         }
+      }
+
+      // Check if this is a draft
+      if (String(emailId).startsWith('draft_')) {
+        const draftId = parseInt(String(emailId).replace('draft_', ''));
+        this.openDraft(draftId);
+        return;
       }
 
       // Fetch full email details - Backend returns email directly, not wrapped
@@ -1929,28 +1961,51 @@ const emailClient = {
     this.updateCharCount();
   },
   
-  // Draft management
-  loadDraft() {
+  // Draft management - Multiple drafts support
+  currentDraftId: null, // Track which draft we're editing
+  
+  loadDrafts() {
     try {
-      const draft = localStorage.getItem('emailDraft');
-      return draft ? JSON.parse(draft) : null;
+      const drafts = localStorage.getItem('emailDrafts');
+      return drafts ? JSON.parse(drafts) : [];
     } catch (error) {
-      console.error('Error loading draft:', error);
-      return null;
+      console.error('Error loading drafts:', error);
+      return [];
     }
   },
   
   saveDraft() {
+    const to = document.getElementById('compose-to').value.trim();
+    const subject = document.getElementById('compose-subject').value.trim();
+    const body = document.getElementById('compose-body').value.trim();
+    
+    if (!to && !subject && !body) {
+      this.showNotification('Kladden er tom', 'warning');
+      return;
+    }
+    
+    const drafts = this.loadDrafts();
+    
     const draft = {
+      id: this.currentDraftId || Date.now(),
       to: document.getElementById('compose-to').value,
       cc: document.getElementById('compose-cc').value,
       bcc: document.getElementById('compose-bcc').value,
-      subject: document.getElementById('compose-subject').value,
+      subject: document.getElementById('compose-subject').value || '(Intet emne)',
       body: document.getElementById('compose-body').value,
       timestamp: new Date().toISOString()
     };
     
-    localStorage.setItem('emailDraft', JSON.stringify(draft));
+    // Update existing or add new
+    const existingIndex = drafts.findIndex(d => d.id === draft.id);
+    if (existingIndex >= 0) {
+      drafts[existingIndex] = draft;
+    } else {
+      drafts.push(draft);
+      this.currentDraftId = draft.id;
+    }
+    
+    localStorage.setItem('emailDrafts', JSON.stringify(drafts));
     
     // Show notice
     const notice = document.getElementById('draft-notice');
@@ -1962,6 +2017,51 @@ const emailClient = {
     }
     
     this.showNotification('Kladde gemt!', 'success');
+    this.updateDraftCount();
+  },
+  
+  openDraft(draftId) {
+    const drafts = this.loadDrafts();
+    const draft = drafts.find(d => d.id === draftId);
+    
+    if (!draft) return;
+    
+    this.currentDraftId = draft.id;
+    this.openCompose();
+    
+    // Fill fields
+    document.getElementById('compose-to').value = draft.to || '';
+    document.getElementById('compose-cc').value = draft.cc || '';
+    document.getElementById('compose-bcc').value = draft.bcc || '';
+    document.getElementById('compose-subject').value = draft.subject || '';
+    document.getElementById('compose-body').value = draft.body || '';
+    
+    // Show CC/BCC if they were used
+    if (draft.cc || draft.bcc) {
+      document.getElementById('cc-bcc-fields').style.display = 'block';
+    }
+    
+    this.updateCharCount();
+  },
+  
+  deleteDraft(draftId) {
+    if (!confirm('Er du sikker på at du vil slette denne kladde?')) return;
+    
+    const drafts = this.loadDrafts();
+    const filtered = drafts.filter(d => d.id !== draftId);
+    localStorage.setItem('emailDrafts', JSON.stringify(filtered));
+    
+    this.showNotification('Kladde slettet', 'success');
+    this.loadEmails(); // Refresh list if viewing drafts
+    this.updateDraftCount();
+  },
+  
+  updateDraftCount() {
+    const drafts = this.loadDrafts();
+    const countEl = document.getElementById('drafts-count');
+    if (countEl) {
+      countEl.textContent = `(${drafts.length})`;
+    }
   },
   
   // Auto-save draft (debounced)
@@ -1973,16 +2073,29 @@ const emailClient = {
       const body = document.getElementById('compose-body').value.trim();
       
       if (to || subject || body) {
+        const drafts = this.loadDrafts();
+        
         const draft = {
-          to,
+          id: this.currentDraftId || Date.now(),
+          to: document.getElementById('compose-to').value,
           cc: document.getElementById('compose-cc').value,
           bcc: document.getElementById('compose-bcc').value,
-          subject,
-          body,
+          subject: document.getElementById('compose-subject').value || '(Intet emne)',
+          body: document.getElementById('compose-body').value,
           timestamp: new Date().toISOString()
         };
         
-        localStorage.setItem('emailDraft', JSON.stringify(draft));
+        // Update existing or add new
+        const existingIndex = drafts.findIndex(d => d.id === draft.id);
+        if (existingIndex >= 0) {
+          drafts[existingIndex] = draft;
+        } else {
+          drafts.push(draft);
+          this.currentDraftId = draft.id;
+        }
+        
+        localStorage.setItem('emailDrafts', JSON.stringify(drafts));
+        this.updateDraftCount();
       }
       
       this.updateCharCount();
