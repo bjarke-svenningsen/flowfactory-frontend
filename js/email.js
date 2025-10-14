@@ -733,13 +733,23 @@ const emailClient = {
 
   // Close compose modal
   closeCompose() {
-    // Auto-save if there's any content (no confirmation dialog)
+    // Only save if there's actual content (not just signature)
     const to = document.getElementById('compose-to').value.trim();
     const subject = document.getElementById('compose-subject').value.trim();
-    const body = document.getElementById('compose-body').value.trim();
+    let body = document.getElementById('compose-body').value.trim();
     
+    // Remove signature from body to check if there's actual content
+    const signature = localStorage.getItem('emailSignature') || '';
+    if (signature) {
+      const signatureMarker = '-- ';
+      const markerIndex = body.indexOf(signatureMarker);
+      if (markerIndex !== -1) {
+        body = body.substring(0, markerIndex).trim();
+      }
+    }
+    
+    // Only save if there's real content (not empty or just signature)
     if (to || subject || body) {
-      // Automatically save as draft without asking
       this.saveDraft();
     }
     
@@ -2006,12 +2016,29 @@ const emailClient = {
     const drafts = this.loadDrafts();
     const draft = drafts.find(d => d.id === draftId);
     
-    if (!draft) return;
+    if (!draft) {
+      console.error('Draft not found:', draftId);
+      return;
+    }
     
+    // Set current draft ID BEFORE opening compose
     this.currentDraftId = draft.id;
-    this.openCompose();
     
-    // Fill fields
+    // Open compose dialog
+    const dialog = document.getElementById('compose-dialog');
+    const overlay = document.getElementById('compose-overlay');
+    
+    if (!dialog || !overlay) return;
+
+    dialog.classList.add('active', 'compose');
+    overlay.classList.add('active');
+
+    // Center dialog
+    dialog.style.left = '50%';
+    dialog.style.top = '50%';
+    dialog.style.transform = 'translate(-50%, -50%)';
+    
+    // Fill fields with draft content
     document.getElementById('compose-to').value = draft.to || '';
     document.getElementById('compose-cc').value = draft.cc || '';
     document.getElementById('compose-bcc').value = draft.bcc || '';
@@ -2021,9 +2048,21 @@ const emailClient = {
     // Show CC/BCC if they were used
     if (draft.cc || draft.bcc) {
       document.getElementById('cc-bcc-fields').style.display = 'block';
+    } else {
+      document.getElementById('cc-bcc-fields').style.display = 'none';
     }
     
+    // Reset file attachments
+    this.selectedFiles = [];
+    this.updateAttachmentList();
+    
+    // Update character count
     this.updateCharCount();
+    
+    // Focus on body field
+    setTimeout(() => {
+      document.getElementById('compose-body').focus();
+    }, 100);
   },
   
   deleteDraft(draftId) {
