@@ -51,21 +51,26 @@ export async function syncEmails(accountId) {
     // Open inbox
     await connection.openBox('INBOX');
 
-    // Fetch emails (last 100 for now)
-    const searchCriteria = ['ALL'];
+    // Fetch ONLY recent emails (last 30 days to avoid memory issues)
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    const searchCriteria = ['SINCE', thirtyDaysAgo];
     const fetchOptions = {
       bodies: ['HEADER', 'TEXT', ''],
       markSeen: false
     };
 
     const messages = await connection.search(searchCriteria, fetchOptions);
+    
+    // Limit to 100 most recent to be safe
+    const limitedMessages = messages.slice(-100);
 
-    console.log(`📧 Found ${messages.length} emails to sync`);
+    console.log(`📧 Found ${messages.length} emails (limiting to last 100 for memory safety)`);
 
     let syncedCount = 0;
     let newCount = 0;
 
-    for (const item of messages) {
+    for (const item of limitedMessages) {
       try {
         const all = item.parts.find(part => part.which === '');
         const id = item.attributes.uid;
