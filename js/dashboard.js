@@ -49,6 +49,14 @@ async function showPage(pageName) {
     // Save current page to remember after refresh
     sessionStorage.setItem('currentPage', pageName);
     
+    // Toggle email-mode class for wider layout on email page
+    const mainContent = document.querySelector('.main-content');
+    if (pageName === 'email') {
+        mainContent.classList.add('email-mode');
+    } else {
+        mainContent.classList.remove('email-mode');
+    }
+    
     // Update menu active state
     document.querySelectorAll('.menu-item').forEach(item => {
         item.classList.remove('active');

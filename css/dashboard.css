@@ -1192,3 +1192,21 @@ body {
         grid-template-columns: 1fr;
     }
 }
+
+/* EMAIL MODE - Wider Layout for Email Page */
+.main-content.email-mode {
+    max-width: 1900px; /* +300px wider */
+}
+
+.main-content.email-mode .sidebar {
+    margin-left: -30px; /* Push sidebar slightly left */
+}
+
+.main-content.email-mode .content-area {
+    padding: 10px; /* Less padding = more space */
+}
+
+/* Email window to top */
+.content-area .email-explorer {
+    margin-top: 0;
+}
