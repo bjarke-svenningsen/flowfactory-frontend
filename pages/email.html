@@ -476,6 +476,25 @@
   .folder-context-menu.active {
     display: block;
   }
+
+  /* Folder Picker Styles (Phase 1) */
+  .folder-picker-item {
+    padding: 8px 12px;
+    cursor: pointer;
+    border-bottom: 1px solid #e0e0e0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .folder-picker-item:hover {
+    background: #f0f0f0;
+  }
+
+  .folder-picker-item.selected {
+    background: #0a246a;
+    color: white;
+  }
 </style>
 
 <div class="email-explorer">
@@ -636,10 +655,29 @@
   </div>
 </div>
 
+<!-- Folder Picker Dialog (Phase 1) -->
+<div class="win95-dialog-overlay" id="folder-picker-overlay" onclick="emailClient.closeFolderPicker()"></div>
+<div class="win95-dialog" id="folder-picker-dialog" style="width: 400px;">
+  <div class="win95-dialog-title">
+    <span>Flyt til mappe</span>
+    <button class="win95-dialog-close" onclick="emailClient.closeFolderPicker()">✕</button>
+  </div>
+  <div class="win95-dialog-body">
+    <div style="max-height: 300px; overflow-y: auto; margin-bottom: 15px;" id="folder-picker-list">
+      <!-- Folders rendered here -->
+    </div>
+    <div class="win95-dialog-buttons">
+      <button class="win95-btn" onclick="emailClient.moveEmailToSelectedFolder()">Flyt</button>
+      <button class="win95-btn" onclick="emailClient.closeFolderPicker()">Annuller</button>
+    </div>
+  </div>
+</div>
+
 <!-- Email Context Menu -->
 <div class="context-menu" id="context-menu">
   <div class="context-menu-item" onclick="emailClient.linkToOrder()">📦 Send til ordre</div>
   <div class="context-menu-separator"></div>
+  <div class="context-menu-item" onclick="emailClient.showFolderPicker()">📁 Flyt til mappe</div>
   <div class="context-menu-item" onclick="emailClient.toggleStar()">⭐ Marker email</div>
   <div class="context-menu-item" onclick="emailClient.deleteEmail()">🗑️ Slet email</div>
 </div>

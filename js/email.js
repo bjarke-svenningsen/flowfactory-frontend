@@ -42,6 +42,16 @@ const emailClient = {
   
   // Bulk selection state
   selectedEmails: new Set(),
+  
+  // Phase 1: Folder picker and email drag state
+  selectedFolderForMove: null,
+  draggedEmailId: null,
+  
+  // Phase 2: Nested folder tree state
+  folderTreeExpanded: {}, // Track expanded state: { folderId: true/false }
+  
+  // Phase 3: Folder drag state
+  draggedFolderId: null,
 
   // Initialize the email client
   async init() {
@@ -292,7 +302,9 @@ const emailClient = {
 
       return `
         <div class="email-item ${isUnread ? 'unread' : ''} ${isSelected ? 'selected' : ''} ${isCurrent ? 'current' : ''}" 
-             data-email-id="${email.id}">
+             data-email-id="${email.id}"
+             draggable="true"
+             ondragstart="emailClient.handleEmailDragStart(event, ${email.id})">
           <input type="checkbox" 
                  class="email-checkbox" 
                  ${isSelected ? 'checked' : ''}
@@ -1360,25 +1372,334 @@ const emailClient = {
       return;
     }
     
-    console.log('Rendering custom folders:', this.customFolders); // DEBUG
+    // Build and render folder tree (Phase 2)
+    const tree = this.buildFolderTree(this.customFolders);
     
     container.innerHTML = `
       <hr style="border: none; border-top: 1px solid #ccc; margin: 5px 0;">
       <div style="padding: 5px 10px; font-weight: bold; font-size: 11px;">Dine mapper:</div>
-      ${this.customFolders.map(folder => {
-        const folderName = folder.name || 'Unavngivet mappe';
-        const folderId = `custom_${folder.id}`;
-        console.log('Rendering folder:', folder.id, folderName); // DEBUG
-        return `
-          <div class="folder-tree-item" 
-               data-folder="${folderId}" 
-               onclick="emailClient.changeFolder('${folderId}', ${folder.id})"
-               oncontextmenu="emailClient.showFolderContextMenu(event, ${folder.id})">
-            📁 ${this.escapeHtml(folderName)}
-          </div>
-        `;
-      }).join('')}
+      ${this.renderFolderTree(tree)}
     `;
+  },
+  
+  // ===== PHASE 1: EMAIL-TO-FOLDER MOVEMENT =====
+  
+  // Show folder picker modal
+  showFolderPicker() {
+    const contextMenu = document.getElementById('context-menu');
+    if (contextMenu) contextMenu.classList.remove('active');
+    
+    const dialog = document.getElementById('folder-picker-dialog');
+    const overlay = document.getElementById('folder-picker-overlay');
+    const list = document.getElementById('folder-picker-list');
+    
+    // Render folders
+    list.innerHTML = `
+      <div class="folder-picker-item" onclick="emailClient.selectFolderForMove(null)">
+        📥 Indbakke
+      </div>
+      ${this.customFolders.map(f => `
+        <div class="folder-picker-item" onclick="emailClient.selectFolderForMove(${f.id})">
+          📁 ${this.escapeHtml(f.name)}
+        </div>
+      `).join('')}
+    `;
+    
+    dialog.classList.add('active');
+    overlay.classList.add('active');
+    
+    // Center dialog
+    dialog.style.left = '50%';
+    dialog.style.top = '50%';
+    dialog.style.transform = 'translate(-50%, -50%)';
+  },
+  
+  selectFolderForMove(folderId) {
+    this.selectedFolderForMove = folderId;
+    document.querySelectorAll('.folder-picker-item').forEach(item => {
+      item.classList.remove('selected');
+    });
+    event.currentTarget.classList.add('selected');
+  },
+  
+  closeFolderPicker() {
+    const dialog = document.getElementById('folder-picker-dialog');
+    const overlay = document.getElementById('folder-picker-overlay');
+    if (dialog) dialog.classList.remove('active');
+    if (overlay) overlay.classList.remove('active');
+    this.selectedFolderForMove = null;
+  },
+  
+  async moveEmailToSelectedFolder() {
+    const emailId = this.contextMenuEmailId || this.currentEmailId;
+    if (!emailId) return;
+    
+    try {
+      await apiCall(`/api/email/emails/${emailId}/move`, {
+        method: 'PUT',
+        body: JSON.stringify({ folder_id: this.selectedFolderForMove })
+      });
+      
+      this.showNotification('Email flyttet!', 'success');
+      this.closeFolderPicker();
+      
+      // Remove from current list
+      this.emails = this.emails.filter(e => e.id !== emailId);
+      this.renderEmailList();
+      this.updateFolderCounts();
+    } catch (error) {
+      this.showNotification('Kunne ikke flytte email: ' + error.message, 'error');
+    }
+  },
+  
+  // Email drag-and-drop handlers
+  handleEmailDragStart(event, emailId) {
+    this.draggedEmailId = emailId;
+    event.dataTransfer.effectAllowed = 'move';
+    event.currentTarget.style.opacity = '0.5';
+  },
+  
+  handleFolderDragOver(event) {
+    event.preventDefault();
+    
+    // If dragging email, show folder highlight
+    if (this.draggedEmailId) {
+      event.currentTarget.style.background = '#e0e8ff';
+      return;
+    }
+    
+    // If dragging folder, show drop zone indicator (Phase 3)
+    if (this.draggedFolderId) {
+      const rect = event.currentTarget.getBoundingClientRect();
+      const y = event.clientY - rect.top;
+      
+      // Remove all drop indicators
+      document.querySelectorAll('.folder-tree-item').forEach(el => {
+        el.style.borderTop = '';
+        el.style.borderBottom = '';
+        el.style.background = '';
+      });
+      
+      if (y < rect.height / 3) {
+        // Drop above
+        event.currentTarget.style.borderTop = '2px solid #2196F3';
+      } else if (y > (rect.height * 2) / 3) {
+        // Drop below
+        event.currentTarget.style.borderBottom = '2px solid #2196F3';
+      } else {
+        // Drop on
+        event.currentTarget.style.background = '#e0e8ff';
+      }
+    }
+  },
+  
+  handleFolderDragLeave(event) {
+    event.currentTarget.style.background = '';
+    event.currentTarget.style.borderTop = '';
+    event.currentTarget.style.borderBottom = '';
+  },
+  
+  async handleEmailDropOnFolder(event, folderId) {
+    event.preventDefault();
+    event.currentTarget.style.background = '';
+    
+    if (!this.draggedEmailId) return;
+    
+    try {
+      await apiCall(`/api/email/emails/${this.draggedEmailId}/move`, {
+        method: 'PUT',
+        body: JSON.stringify({ folder_id: folderId })
+      });
+      
+      this.showNotification('Email flyttet!', 'success');
+      
+      // Remove from list
+      this.emails = this.emails.filter(e => e.id !== this.draggedEmailId);
+      this.renderEmailList();
+      this.updateFolderCounts();
+      
+      this.draggedEmailId = null;
+    } catch (error) {
+      this.showNotification('Kunne ikke flytte email: ' + error.message, 'error');
+    }
+  },
+  
+  // ===== PHASE 2: NESTED FOLDER TREE =====
+  
+  buildFolderTree(folders) {
+    const tree = [];
+    const map = {};
+    
+    // Create map
+    folders.forEach(folder => {
+      folder.children = [];
+      folder.isExpanded = this.folderTreeExpanded[folder.id] !== false; // Default expanded
+      map[folder.id] = folder;
+    });
+    
+    // Build tree
+    folders.forEach(folder => {
+      if (folder.parent_folder && map[folder.parent_folder]) {
+        map[folder.parent_folder].children.push(folder);
+      } else {
+        tree.push(folder);
+      }
+    });
+    
+    // Sort by sort_order then name
+    const sortFolders = (folders) => {
+      folders.sort((a, b) => {
+        if (a.sort_order !== b.sort_order) return a.sort_order - b.sort_order;
+        return a.name.localeCompare(b.name);
+      });
+      folders.forEach(f => {
+        if (f.children && f.children.length > 0) {
+          sortFolders(f.children);
+        }
+      });
+    };
+    
+    sortFolders(tree);
+    return tree;
+  },
+  
+  renderFolderTree(folders, depth = 0) {
+    return folders.map(folder => {
+      const hasChildren = folder.children && folder.children.length > 0;
+      const indent = depth * 20; // 20px per level
+      const folderId = `custom_${folder.id}`;
+      
+      return `
+        <div class="folder-tree-item" 
+             style="padding-left: ${indent + 15}px"
+             data-folder="${folderId}"
+             draggable="true"
+             ondragstart="emailClient.handleFolderDragStart(event, ${folder.id})"
+             onclick="emailClient.handleFolderClick(event, '${folderId}', ${folder.id})"
+             oncontextmenu="emailClient.showFolderContextMenu(event, ${folder.id})"
+             ondragover="emailClient.handleFolderDragOver(event)"
+             ondrop="emailClient.handleFolderDrop(event, ${folder.id})"
+             ondragleave="emailClient.handleFolderDragLeave(event)">
+          ${hasChildren ? `
+            <span class="folder-expand-arrow" onclick="event.stopPropagation(); emailClient.toggleFolderExpansion(${folder.id})" style="cursor: pointer; width: 16px; display: inline-block;">
+              ${folder.isExpanded ? '▼' : '▶'}
+            </span>
+          ` : '<span style="width: 16px; display: inline-block;"></span>'}
+          📁 ${this.escapeHtml(folder.name)}
+        </div>
+        ${hasChildren && folder.isExpanded ? this.renderFolderTree(folder.children, depth + 1) : ''}
+      `;
+    }).join('');
+  },
+  
+  handleFolderClick(event, folderId, folderIdNum) {
+    // Prevent click when clicking arrow
+    if (event.target.classList.contains('folder-expand-arrow')) return;
+    this.changeFolder(folderId, folderIdNum);
+  },
+  
+  toggleFolderExpansion(folderId) {
+    this.folderTreeExpanded[folderId] = !this.folderTreeExpanded[folderId];
+    this.renderCustomFolders();
+  },
+  
+  // ===== PHASE 3: FOLDER DRAG-AND-DROP REORDERING =====
+  
+  handleFolderDragStart(event, folderId) {
+    // Don't drag if clicking arrow
+    if (event.target.classList.contains('folder-expand-arrow')) {
+      event.preventDefault();
+      return;
+    }
+    
+    this.draggedFolderId = folderId;
+    event.dataTransfer.effectAllowed = 'move';
+    event.currentTarget.style.opacity = '0.5';
+  },
+  
+  async handleFolderDrop(event, targetFolderId) {
+    event.preventDefault();
+    event.currentTarget.style.background = '';
+    event.currentTarget.style.borderTop = '';
+    event.currentTarget.style.borderBottom = '';
+    
+    // If dropping email, use existing handler
+    if (this.draggedEmailId) {
+      return this.handleEmailDropOnFolder(event, targetFolderId);
+    }
+    
+    // If dropping folder
+    if (!this.draggedFolderId || this.draggedFolderId === targetFolderId) {
+      this.draggedFolderId = null;
+      return;
+    }
+    
+    // Detect drop position
+    const rect = event.currentTarget.getBoundingClientRect();
+    const y = event.clientY - rect.top;
+    
+    if (y < rect.height / 3) {
+      // Drop above - reorder
+      await this.reorderFolder(this.draggedFolderId, targetFolderId, 'before');
+    } else if (y > (rect.height * 2) / 3) {
+      // Drop below - reorder
+      await this.reorderFolder(this.draggedFolderId, targetFolderId, 'after');
+    } else {
+      // Drop on - nest as subfolder
+      await this.nestFolder(this.draggedFolderId, targetFolderId);
+    }
+    
+    // Reset opacity
+    document.querySelectorAll('.folder-tree-item').forEach(el => {
+      el.style.opacity = '';
+    });
+    
+    this.draggedFolderId = null;
+  },
+  
+  async nestFolder(folderId, parentFolderId) {
+    // Prevent nesting folder into itself or its children
+    if (folderId === parentFolderId) {
+      this.showNotification('Kan ikke flytte mappe ind i sig selv', 'warning');
+      return;
+    }
+    
+    try {
+      await apiCall(`/api/email/folders/${folderId}/reorder`, {
+        method: 'PUT',
+        body: JSON.stringify({
+          parent_folder: parentFolderId,
+          sort_order: 999 // Put at end
+        })
+      });
+      
+      this.showNotification('Mappe flyttet!', 'success');
+      await this.loadCustomFolders();
+    } catch (error) {
+      this.showNotification('Kunne ikke flytte mappe: ' + error.message, 'error');
+    }
+  },
+  
+  async reorderFolder(folderId, targetFolderId, position) {
+    const target = this.customFolders.find(f => f.id === targetFolderId);
+    if (!target) return;
+    
+    const newSortOrder = position === 'before' ? target.sort_order - 1 : target.sort_order + 1;
+    
+    try {
+      await apiCall(`/api/email/folders/${folderId}/reorder`, {
+        method: 'PUT',
+        body: JSON.stringify({
+          parent_folder: target.parent_folder,
+          sort_order: newSortOrder
+        })
+      });
+      
+      this.showNotification('Mappe omordnet!', 'success');
+      await this.loadCustomFolders();
+    } catch (error) {
+      this.showNotification('Kunne ikke omordne mappe: ' + error.message, 'error');
+    }
   }
 };
 
