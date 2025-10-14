@@ -45,15 +45,6 @@ export async function syncEmails(accountId) {
     const account = await db.get('SELECT * FROM email_accounts WHERE id = ?', [accountId]);
     if (!account) throw new Error('Account not found');
 
-    // MIGRATION: Fix old emails with uppercase 'INBOX' folder
-    try {
-      await db.run("UPDATE emails SET folder = 'inbox' WHERE folder = 'INBOX'");
-      await db.run("UPDATE emails SET folder = 'sent' WHERE folder = 'SENT'");
-      console.log('✅ Migrated old emails to lowercase folder names');
-    } catch (migError) {
-      console.log('Migration already done or error:', migError.message);
-    }
-
     const config = buildImapConfig(account);
     const connection = await imaps.connect(config);
 
@@ -82,10 +73,10 @@ export async function syncEmails(accountId) {
         
         const mail = await simpleParser(idHeader + all.body);
 
-        // Check if email already exists
+        // Check if email already exists (check both INBOX and inbox for compatibility)
         const exists = await db.get(
-          'SELECT id FROM emails WHERE account_id = ? AND uid = ? AND folder = ?',
-          [accountId, id, 'INBOX']
+          'SELECT id FROM emails WHERE account_id = ? AND uid = ? AND (folder = ? OR folder = ?)',
+          [accountId, id, 'inbox', 'INBOX']
         );
 
         if (!exists) {

@@ -5,11 +5,11 @@ echo ========================================
 echo.
 
 echo [1/3] Tilfojer backend filer til Git...
-git add server.js
+git add server.js email-service.js
 
 echo.
 echo [2/3] Committer aendringer...
-git commit -m "Fix: CORS configuration for Netlify frontend"
+git commit -m "Emergency fix: Remove automatic migration causing out of memory crash"
 
 echo.
 echo [3/3] Pusher til GitHub (Render deployer automatisk)...
