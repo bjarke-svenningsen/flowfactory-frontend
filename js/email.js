@@ -344,11 +344,18 @@ const emailClient = {
     try {
       this.currentEmailId = emailId;
       
-      // Update active state in list
-      const tbody = document.getElementById('emails-list-body');
-      if (tbody) {
-        tbody.querySelectorAll('tr').forEach(row => row.classList.remove('selected'));
-        event.currentTarget.classList.add('selected');
+      // Update active state in list - Remove 'current' from all emails
+      const emailsList = document.getElementById('emails-list');
+      if (emailsList) {
+        emailsList.querySelectorAll('.email-item').forEach(item => {
+          item.classList.remove('current');
+        });
+        
+        // Add 'current' to clicked email
+        const currentEmailItem = emailsList.querySelector(`.email-item[data-email-id="${emailId}"]`);
+        if (currentEmailItem) {
+          currentEmailItem.classList.add('current');
+        }
       }
 
       // Fetch full email details - Backend returns email directly, not wrapped

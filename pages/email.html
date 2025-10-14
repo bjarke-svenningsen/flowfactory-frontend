@@ -124,6 +124,8 @@
     border-bottom: 1px solid #e0e0e0;
     cursor: pointer;
     align-items: flex-start;
+    transition: background 0.15s ease;
+    border-left: 3px solid transparent;
   }
 
   .email-item:hover {
@@ -132,15 +134,21 @@
 
   .email-item.selected {
     background: #e0e8ff;
+    border-left-color: #90caf9;
   }
 
   .email-item.current {
     background: #0a246a;
     color: white;
+    border-left-color: #2196F3;
   }
 
   .email-item.current .email-preview {
     color: #ddd;
+  }
+
+  .email-item.current .email-date {
+    color: #fff;
   }
 
   .email-checkbox {
