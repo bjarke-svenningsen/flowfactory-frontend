@@ -51,18 +51,8 @@ export async function syncEmails(accountId) {
     // Open inbox
     await connection.openBox('INBOX');
 
-    // Fetch ONLY recent emails (last 30 days to avoid memory issues)
-    const thirtyDaysAgo = new Date();
-    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-    
-    // Format date as IMAP expects: DD-MMM-YYYY (e.g., "01-Oct-2024")
-    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    const day = String(thirtyDaysAgo.getDate()).padStart(2, '0');
-    const month = months[thirtyDaysAgo.getMonth()];
-    const year = thirtyDaysAgo.getFullYear();
-    const imapDate = `${day}-${month}-${year}`;
-    
-    const searchCriteria = ['SINCE', imapDate];
+    // Fetch ALL emails but limit to recent 100 (simpler, avoids date format issues)
+    const searchCriteria = ['ALL'];
     const fetchOptions = {
       bodies: ['HEADER', 'TEXT', ''],
       markSeen: false
@@ -70,10 +60,10 @@ export async function syncEmails(accountId) {
 
     const messages = await connection.search(searchCriteria, fetchOptions);
     
-    // Limit to 100 most recent to be safe
+    // Take ONLY the last 100 most recent emails to avoid memory issues
     const limitedMessages = messages.slice(-100);
 
-    console.log(`📧 Found ${messages.length} emails (limiting to last 100 for memory safety)`);
+    console.log(`📧 Found ${messages.length} total emails, syncing last 100 for memory safety`);
 
     let syncedCount = 0;
     let newCount = 0;
