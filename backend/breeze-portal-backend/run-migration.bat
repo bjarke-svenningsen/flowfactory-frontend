@@ -1,33 +1,19 @@
 @echo off
 echo ========================================
-echo MIGRATING DATA TO SUPABASE
+echo RUNNING EMAIL FOLDER MIGRATION
 echo ========================================
 echo.
-echo This will copy ALL data from your local
-echo SQLite database to Supabase PostgreSQL.
-echo.
-echo This includes:
-echo - All users
-echo - All posts and messages
-echo - All customers, quotes, invoices
-echo - All files and folders
-echo - Everything else!
+echo This will update all old emails from INBOX to inbox
 echo.
 pause
 echo.
-echo Starting migration...
+echo Calling migration endpoint...
+curl -X POST https://flowfactory-frontend.onrender.com/api/admin/migrate-email-folders ^
+  -H "Authorization: Bearer %1" ^
+  -H "Content-Type: application/json"
 echo.
-
-cd /d "%~dp0"
-
-node MIGRATE-TO-SUPABASE.js
-
 echo.
 echo ========================================
 echo MIGRATION COMPLETE!
 echo ========================================
-echo.
-echo Now go to: https://flowfactory-denmark.netlify.app
-echo Login and ALL your data should be there!
-echo.
 pause
