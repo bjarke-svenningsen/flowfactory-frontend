@@ -576,29 +576,95 @@
   </div>
 </div>
 
-<!-- Compose Dialog -->
-<div class="win95-dialog-overlay" id="compose-overlay" onclick="emailClient.closeCompose()"></div>
-<div class="win95-dialog" id="compose-dialog">
-  <div class="win95-dialog-title">
-    <span>Ny Email</span>
+<!-- Compose Dialog - Enhanced -->
+<div class="win95-dialog-overlay" id="compose-overlay"></div>
+<div class="win95-dialog" id="compose-dialog" style="width: 700px; height: 650px;">
+  <div class="win95-dialog-title" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+    <span>✉️ Ny Email</span>
     <button class="win95-dialog-close" onclick="emailClient.closeCompose()">✕</button>
+  </div>
+  <div class="win95-dialog-body" style="padding: 15px;">
+    <div class="win95-field">
+      <label>📧 Til:</label>
+      <input type="email" id="compose-to" placeholder="modtager@example.com" onkeyup="emailClient.autoSaveDraft()">
+    </div>
+    
+    <!-- CC/BCC Toggle -->
+    <div style="margin-bottom: 10px;">
+      <a href="#" onclick="emailClient.toggleCcBcc(); return false;" style="font-size: 11px; color: #0000ee;">+ Tilføj CC/BCC</a>
+    </div>
+    
+    <!-- CC/BCC Fields (hidden by default) -->
+    <div id="cc-bcc-fields" style="display: none;">
+      <div class="win95-field">
+        <label>📋 CC (Kopi):</label>
+        <input type="email" id="compose-cc" placeholder="cc@example.com" onkeyup="emailClient.autoSaveDraft()">
+      </div>
+      <div class="win95-field">
+        <label>🔒 BCC (Skjult kopi):</label>
+        <input type="email" id="compose-bcc" placeholder="bcc@example.com" onkeyup="emailClient.autoSaveDraft()">
+      </div>
+    </div>
+    
+    <div class="win95-field">
+      <label>📝 Emne:</label>
+      <input type="text" id="compose-subject" placeholder="Email emne" onkeyup="emailClient.autoSaveDraft()">
+    </div>
+    
+    <!-- File Attachments -->
+    <div class="win95-field">
+      <label>📎 Vedhæft filer:</label>
+      <input type="file" id="compose-files" multiple style="font-size: 11px;" onchange="emailClient.handleFileSelect()">
+      <div id="attachment-list" style="margin-top: 5px; font-size: 11px;"></div>
+    </div>
+    
+    <div class="win95-field">
+      <label>💬 Besked:</label>
+      <textarea id="compose-body" style="min-height: 200px; resize: vertical;" onkeyup="emailClient.autoSaveDraft()"></textarea>
+      <div style="font-size: 10px; color: #666; margin-top: 3px;">
+        <span id="char-count">0 tegn</span>
+      </div>
+    </div>
+    
+    <!-- Signature Toggle -->
+    <div style="margin-bottom: 10px;">
+      <label style="font-size: 11px;">
+        <input type="checkbox" id="include-signature" checked onchange="emailClient.updateSignaturePreview()"> 
+        Inkluder signatur
+      </label>
+      <a href="#" onclick="emailClient.editSignature(); return false;" style="font-size: 11px; margin-left: 10px; color: #0000ee;">⚙️ Redigér signatur</a>
+    </div>
+    
+    <div class="win95-dialog-buttons" style="margin-top: 15px;">
+      <button class="win95-btn" onclick="emailClient.sendEmail()">📤 Send</button>
+      <button class="win95-btn" onclick="emailClient.saveDraft()">💾 Gem kladde</button>
+      <button class="win95-btn" onclick="emailClient.closeCompose()">❌ Annuller</button>
+    </div>
+    
+    <div id="draft-notice" style="display: none; background: #fffacd; padding: 5px; margin-top: 10px; font-size: 11px; border: 1px solid #ccc;">
+      📝 Kladde gemt automatisk
+    </div>
+  </div>
+</div>
+
+<!-- Signature Editor Dialog -->
+<div class="win95-dialog-overlay" id="signature-overlay"></div>
+<div class="win95-dialog" id="signature-dialog" style="width: 500px;">
+  <div class="win95-dialog-title" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+    <span>✍️ Redigér Email Signatur</span>
+    <button class="win95-dialog-close" onclick="emailClient.closeSignatureEditor()">✕</button>
   </div>
   <div class="win95-dialog-body">
     <div class="win95-field">
-      <label>Til:</label>
-      <input type="email" id="compose-to" placeholder="modtager@example.com">
+      <label>Din signatur:</label>
+      <textarea id="signature-text" style="min-height: 150px;" placeholder="Med venlig hilsen,&#10;Dit Navn&#10;Din Stilling&#10;Telefon: +45 12 34 56 78"></textarea>
     </div>
-    <div class="win95-field">
-      <label>Emne:</label>
-      <input type="text" id="compose-subject" placeholder="Email emne">
-    </div>
-    <div class="win95-field">
-      <label>Besked:</label>
-      <textarea id="compose-body"></textarea>
+    <div class="win95-info-box">
+      💡 Signaturen tilføjes automatisk til dine emails. Du kan slå den fra ved at fjerne fluebenet "Inkluder signatur".
     </div>
     <div class="win95-dialog-buttons">
-      <button class="win95-btn" onclick="emailClient.sendEmail()">Send</button>
-      <button class="win95-btn" onclick="emailClient.closeCompose()">Annuller</button>
+      <button class="win95-btn" onclick="emailClient.saveSignature()">💾 Gem</button>
+      <button class="win95-btn" onclick="emailClient.closeSignatureEditor()">Annuller</button>
     </div>
   </div>
 </div>

@@ -644,36 +644,99 @@ const emailClient = {
     dialog.style.top = '50%';
     dialog.style.transform = 'translate(-50%, -50%)';
 
+    // Load draft if exists
+    const draft = this.loadDraft();
+    
     if (replyTo) {
-      document.getElementById('compose-to').value = replyTo.from_email;
+      // BUG FIX: Use from_address instead of from_email
+      const fromAddress = replyTo.from_address || replyTo.from_email || '';
+      
+      // Reply: Set recipient to sender
+      document.getElementById('compose-to').value = forward ? '' : fromAddress;
       document.getElementById('compose-subject').value = 
         (forward ? 'Fwd: ' : 'Re: ') + (replyTo.subject || '');
       
+      // Get body text (strip HTML if needed)
+      let bodyText = replyTo.body_text || this.stripHtml(replyTo.body_html) || '';
+      
       if (forward) {
-        const body = replyTo.body_text || replyTo.body_html || '';
         document.getElementById('compose-body').value = 
-          `\n\n---------- Videresendt besked ----------\nFra: ${replyTo.from_email}\nEmne: ${replyTo.subject}\n\n${body}`;
+          `\n\n---------- Videresendt besked ----------\nFra: ${fromAddress}\nEmne: ${replyTo.subject}\n\n${bodyText}`;
+      } else {
+        // Reply: Include original message
+        document.getElementById('compose-body').value = 
+          `\n\n---------- Original besked ----------\nFra: ${fromAddress}\nDato: ${new Date(replyTo.received_date || replyTo.date).toLocaleString('da-DK')}\nEmne: ${replyTo.subject}\n\n${bodyText}`;
+      }
+      
+      // Add signature
+      this.updateSignaturePreview();
+    } else if (draft) {
+      // Load draft
+      document.getElementById('compose-to').value = draft.to || '';
+      document.getElementById('compose-cc').value = draft.cc || '';
+      document.getElementById('compose-bcc').value = draft.bcc || '';
+      document.getElementById('compose-subject').value = draft.subject || '';
+      document.getElementById('compose-body').value = draft.body || '';
+      
+      // Show CC/BCC if they were used
+      if (draft.cc || draft.bcc) {
+        document.getElementById('cc-bcc-fields').style.display = 'block';
       }
     } else {
-      // Clear fields
+      // Clear all fields
       document.getElementById('compose-to').value = '';
+      document.getElementById('compose-cc').value = '';
+      document.getElementById('compose-bcc').value = '';
       document.getElementById('compose-subject').value = '';
       document.getElementById('compose-body').value = '';
+      document.getElementById('cc-bcc-fields').style.display = 'none';
+      
+      // Add signature to new emails
+      this.updateSignaturePreview();
     }
+    
+    // Reset file attachments
+    this.selectedFiles = [];
+    this.updateAttachmentList();
+    
+    // Update character count
+    this.updateCharCount();
 
     // Focus on first field
     setTimeout(() => {
-      document.getElementById('compose-to').focus();
+      const toField = document.getElementById('compose-to');
+      if (toField && !toField.value) {
+        toField.focus();
+      } else {
+        document.getElementById('compose-subject').focus();
+      }
     }, 100);
   },
 
   // Close compose modal
   closeCompose() {
+    // Check for unsaved changes
+    const to = document.getElementById('compose-to').value.trim();
+    const subject = document.getElementById('compose-subject').value.trim();
+    const body = document.getElementById('compose-body').value.trim();
+    
+    const hasContent = to || subject || body;
+    
+    if (hasContent) {
+      const confirmClose = confirm('Du har ugemte ændringer. Vil du gemme som kladde før du lukker?');
+      if (confirmClose) {
+        this.saveDraft();
+      }
+    }
+    
     const dialog = document.getElementById('compose-dialog');
     const overlay = document.getElementById('compose-overlay');
     
     if (dialog) dialog.classList.remove('active');
     if (overlay) overlay.classList.remove('active');
+    
+    // Clear draft
+    localStorage.removeItem('emailDraft');
   },
 
   // Send email
@@ -1727,6 +1790,203 @@ const emailClient = {
     } catch (error) {
       this.showNotification('Kunne ikke omordne mappe: ' + error.message, 'error');
     }
+  },
+  
+  // ===== NEW COMPOSE DIALOG FEATURES =====
+  
+  // File attachments
+  selectedFiles: [],
+  
+  // Strip HTML tags from text
+  stripHtml(html) {
+    if (!html) return '';
+    const div = document.createElement('div');
+    div.innerHTML = html;
+    return div.textContent || div.innerText || '';
+  },
+  
+  // Toggle CC/BCC fields
+  toggleCcBcc() {
+    const fields = document.getElementById('cc-bcc-fields');
+    if (fields) {
+      fields.style.display = fields.style.display === 'none' ? 'block' : 'none';
+    }
+  },
+  
+  // Handle file selection
+  handleFileSelect() {
+    const input = document.getElementById('compose-files');
+    if (!input || !input.files) return;
+    
+    this.selectedFiles = Array.from(input.files);
+    this.updateAttachmentList();
+  },
+  
+  // Update attachment list display
+  updateAttachmentList() {
+    const list = document.getElementById('attachment-list');
+    if (!list) return;
+    
+    if (this.selectedFiles.length === 0) {
+      list.innerHTML = '';
+      return;
+    }
+    
+    list.innerHTML = this.selectedFiles.map((file, index) => `
+      <div style="padding: 3px; background: #f0f0f0; margin-bottom: 2px; display: flex; justify-content: space-between; align-items: center;">
+        <span>📎 ${this.escapeHtml(file.name)} (${this.formatFileSize(file.size)})</span>
+        <button onclick="emailClient.removeAttachment(${index})" style="padding: 2px 6px; cursor: pointer;">✕</button>
+      </div>
+    `).join('');
+  },
+  
+  // Remove attachment
+  removeAttachment(index) {
+    this.selectedFiles.splice(index, 1);
+    this.updateAttachmentList();
+    
+    // Reset file input
+    const input = document.getElementById('compose-files');
+    if (input) {
+      input.value = '';
+    }
+  },
+  
+  // Update character count
+  updateCharCount() {
+    const body = document.getElementById('compose-body');
+    const counter = document.getElementById('char-count');
+    
+    if (body && counter) {
+      const count = body.value.length;
+      counter.textContent = `${count} tegn`;
+    }
+  },
+  
+  // Signature management
+  editSignature() {
+    const dialog = document.getElementById('signature-dialog');
+    const overlay = document.getElementById('signature-overlay');
+    const textarea = document.getElementById('signature-text');
+    
+    if (!dialog || !overlay || !textarea) return;
+    
+    // Load current signature
+    const signature = localStorage.getItem('emailSignature') || '';
+    textarea.value = signature;
+    
+    dialog.classList.add('active');
+    overlay.classList.add('active');
+    
+    // Center dialog
+    dialog.style.left = '50%';
+    dialog.style.top = '50%';
+    dialog.style.transform = 'translate(-50%, -50%)';
+  },
+  
+  closeSignatureEditor() {
+    const dialog = document.getElementById('signature-dialog');
+    const overlay = document.getElementById('signature-overlay');
+    
+    if (dialog) dialog.classList.remove('active');
+    if (overlay) overlay.classList.remove('active');
+  },
+  
+  saveSignature() {
+    const textarea = document.getElementById('signature-text');
+    if (!textarea) return;
+    
+    localStorage.setItem('emailSignature', textarea.value);
+    this.showNotification('Signatur gemt!', 'success');
+    this.closeSignatureEditor();
+    
+    // Update signature in current compose if open
+    this.updateSignaturePreview();
+  },
+  
+  updateSignaturePreview() {
+    const body = document.getElementById('compose-body');
+    const includeSignature = document.getElementById('include-signature');
+    
+    if (!body || !includeSignature) return;
+    
+    const signature = localStorage.getItem('emailSignature') || '';
+    
+    if (includeSignature.checked && signature) {
+      // Remove old signature if exists
+      let currentBody = body.value;
+      const signatureMarker = '\n\n-- \n';
+      const markerIndex = currentBody.indexOf(signatureMarker);
+      
+      if (markerIndex !== -1) {
+        currentBody = currentBody.substring(0, markerIndex);
+      }
+      
+      // Add signature
+      body.value = currentBody + signatureMarker + signature;
+    }
+    
+    this.updateCharCount();
+  },
+  
+  // Draft management
+  loadDraft() {
+    try {
+      const draft = localStorage.getItem('emailDraft');
+      return draft ? JSON.parse(draft) : null;
+    } catch (error) {
+      console.error('Error loading draft:', error);
+      return null;
+    }
+  },
+  
+  saveDraft() {
+    const draft = {
+      to: document.getElementById('compose-to').value,
+      cc: document.getElementById('compose-cc').value,
+      bcc: document.getElementById('compose-bcc').value,
+      subject: document.getElementById('compose-subject').value,
+      body: document.getElementById('compose-body').value,
+      timestamp: new Date().toISOString()
+    };
+    
+    localStorage.setItem('emailDraft', JSON.stringify(draft));
+    
+    // Show notice
+    const notice = document.getElementById('draft-notice');
+    if (notice) {
+      notice.style.display = 'block';
+      setTimeout(() => {
+        notice.style.display = 'none';
+      }, 2000);
+    }
+    
+    this.showNotification('Kladde gemt!', 'success');
+  },
+  
+  // Auto-save draft (debounced)
+  autoSaveDraft() {
+    clearTimeout(this.draftTimer);
+    this.draftTimer = setTimeout(() => {
+      const to = document.getElementById('compose-to').value.trim();
+      const subject = document.getElementById('compose-subject').value.trim();
+      const body = document.getElementById('compose-body').value.trim();
+      
+      if (to || subject || body) {
+        const draft = {
+          to,
+          cc: document.getElementById('compose-cc').value,
+          bcc: document.getElementById('compose-bcc').value,
+          subject,
+          body,
+          timestamp: new Date().toISOString()
+        };
+        
+        localStorage.setItem('emailDraft', JSON.stringify(draft));
+      }
+      
+      this.updateCharCount();
+    }, 2000); // Save after 2 seconds of no typing
   }
 };
 
