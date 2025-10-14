@@ -2590,8 +2590,8 @@ app.get('/api/email/emails', auth, async (req, res) => {
   const params = [...accountIds];
   
   if (folder) {
-    query += ' AND e.folder = ?';
-    params.push(folder);
+    query += ' AND (LOWER(e.folder) = LOWER(?) OR e.folder = ?)';
+    params.push(folder, folder);
   }
   
   if (search) {
