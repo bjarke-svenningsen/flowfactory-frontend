@@ -248,12 +248,20 @@ const emailClient = {
     const diff = now - date;
     const days = Math.floor(diff / (1000 * 60 * 60 * 24));
 
+    // Always show date, optionally with time
+    const dateStr = date.toLocaleDateString('da-DK', { 
+      day: '2-digit', 
+      month: '2-digit',
+      year: '2-digit'
+    });
+
     if (days === 0) {
-      return date.toLocaleTimeString('da-DK', { hour: '2-digit', minute: '2-digit' });
-    } else if (days < 7) {
-      return date.toLocaleDateString('da-DK', { weekday: 'short' });
+      // Today: Show date + time
+      const timeStr = date.toLocaleTimeString('da-DK', { hour: '2-digit', minute: '2-digit' });
+      return `${dateStr} ${timeStr}`;
     } else {
-      return date.toLocaleDateString('da-DK', { day: 'numeric', month: 'short' });
+      // Other days: Just show date
+      return dateStr;
     }
   },
 
