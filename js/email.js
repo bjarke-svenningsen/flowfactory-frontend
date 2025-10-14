@@ -772,7 +772,9 @@ const emailClient = {
 
     const to = document.getElementById('compose-to').value.trim();
     const subject = document.getElementById('compose-subject').value.trim();
-    const body = document.getElementById('compose-body').value;
+    const bodyEl = document.getElementById('compose-body');
+    const bodyHtml = bodyEl.innerHTML;
+    const bodyText = bodyEl.textContent || bodyEl.innerText || '';
 
     if (!to) {
       this.showNotification('Indtast modtager email', 'warning');
@@ -786,13 +788,22 @@ const emailClient = {
           account_id: this.currentAccountId,
           to,
           subject: subject || '(Intet emne)',
-          text: body,
-          html: body.replace(/\n/g, '<br>')
+          text: bodyText,
+          html: bodyHtml
         })
       });
 
       this.showNotification('Email sendt!', 'success');
       this.closeCompose();
+      
+      // Delete draft if this was from a draft
+      if (this.currentDraftId) {
+        const drafts = this.loadDrafts();
+        const filtered = drafts.filter(d => d.id !== this.currentDraftId);
+        localStorage.setItem('emailDrafts', JSON.stringify(filtered));
+        this.updateDraftCount();
+        this.currentDraftId = null;
+      }
       
       // Reload sent folder if viewing it
       if (this.currentFolder === 'sent') {
@@ -2110,7 +2121,8 @@ const emailClient = {
     this.draftTimer = setTimeout(() => {
       const to = document.getElementById('compose-to').value.trim();
       const subject = document.getElementById('compose-subject').value.trim();
-      const body = document.getElementById('compose-body').value.trim();
+      const bodyEl = document.getElementById('compose-body');
+      const body = bodyEl.innerHTML.trim(); // Use innerHTML for rich text
       
       if (to || subject || body) {
         const drafts = this.loadDrafts();
@@ -2121,7 +2133,7 @@ const emailClient = {
           cc: document.getElementById('compose-cc').value,
           bcc: document.getElementById('compose-bcc').value,
           subject: document.getElementById('compose-subject').value || '(Intet emne)',
-          body: document.getElementById('compose-body').value,
+          body: bodyEl.innerHTML, // Store HTML
           timestamp: new Date().toISOString()
         };
         
@@ -2140,6 +2152,47 @@ const emailClient = {
       
       this.updateCharCount();
     }, 2000); // Save after 2 seconds of no typing
+  },
+  
+  // ===== RICH TEXT FORMATTING FUNCTIONS =====
+  
+  // Apply text formatting
+  formatText(command, value = null) {
+    // Focus on editor first
+    const editor = document.getElementById('compose-body');
+    editor.focus();
+    
+    // Execute formatting command
+    document.execCommand(command, false, value);
+    
+    // Reset select values after use
+    if (command === 'fontName' || command === 'fontSize') {
+      event.target.selectedIndex = 0;
+    }
+  },
+  
+  // Insert hyperlink
+  insertLink() {
+    const editor = document.getElementById('compose-body');
+    editor.focus();
+    
+    const url = prompt('Indtast URL:', 'https://');
+    if (url && url !== 'https://') {
+      document.execCommand('createLink', false, url);
+    }
+  },
+  
+  // Update character count (for rich text editor)
+  updateCharCount() {
+    const body = document.getElementById('compose-body');
+    const counter = document.getElementById('char-count');
+    
+    if (body && counter) {
+      // Get text content (without HTML tags)
+      const text = body.textContent || body.innerText || '';
+      const count = text.length;
+      counter.textContent = `${count} tegn`;
+    }
   }
 };
 

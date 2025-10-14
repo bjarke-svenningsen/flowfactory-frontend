@@ -495,6 +495,42 @@
     background: #0a246a;
     color: white;
   }
+  
+  /* Rich Text Editor Formatting Buttons */
+  .format-btn {
+    padding: 3px 8px;
+    background: linear-gradient(to bottom, #fff 0%, #d8d8d8 100%);
+    border: 1px solid #888;
+    cursor: pointer;
+    font-size: 11px;
+    font-family: Arial, sans-serif;
+    min-height: 22px;
+  }
+  
+  .format-btn:hover {
+    background: linear-gradient(to bottom, #fff 0%, #c8c8c8 100%);
+    border-color: #666;
+  }
+  
+  .format-btn:active {
+    background: #c0c0c0;
+    border-style: inset;
+  }
+  
+  .format-btn.color-picker {
+    width: 30px;
+    padding: 2px;
+    height: 24px;
+  }
+  
+  /* Rich Text Editor Content */
+  #compose-body[contenteditable="true"] {
+    outline: none;
+  }
+  
+  #compose-body[contenteditable="true"]:focus {
+    border-color: #0054a6;
+  }
 </style>
 
 <div class="email-explorer">
@@ -592,15 +628,10 @@
       <input type="email" id="compose-to" placeholder="modtager@example.com" onkeyup="emailClient.autoSaveDraft()">
     </div>
     
-    <!-- CC/BCC Toggle -->
-    <div style="margin-bottom: 10px;">
-      <a href="#" onclick="emailClient.toggleCcBcc(); return false;" style="font-size: 11px; color: #0000ee;">+ Tilføj CC/BCC</a>
-    </div>
-    
-    <!-- CC/BCC Fields (hidden by default) -->
+    <!-- CC/BCC Fields (Hidden by default) -->
     <div id="cc-bcc-fields" style="display: none;">
       <div class="win95-field">
-        <label>📋 CC (Kopi):</label>
+        <label>📧 CC (Kopi):</label>
         <input type="email" id="compose-cc" placeholder="cc@example.com" onkeyup="emailClient.autoSaveDraft()">
       </div>
       <div class="win95-field">
@@ -614,18 +645,87 @@
       <input type="text" id="compose-subject" placeholder="Email emne" onkeyup="emailClient.autoSaveDraft()">
     </div>
     
+    <div style="margin-bottom: 10px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
+        <label style="font-weight: bold;">💬 Besked:</label>
+        <button onclick="emailClient.toggleCcBcc()" class="format-btn" style="font-size: 10px;">CC/BCC</button>
+      </div>
+      
+      <!-- Formatting Toolbar -->
+      <div class="formatting-toolbar" style="display: flex; gap: 5px; padding: 5px; background: #f0f0f0; border: 1px solid #ccc; border-bottom: none; flex-wrap: wrap;">
+          <!-- Font Family -->
+          <select onchange="emailClient.formatText('fontName', this.value)" class="format-btn" title="Skrifttype">
+            <option value="">Skrifttype</option>
+            <option value="Arial">Arial</option>
+            <option value="Times New Roman">Times New Roman</option>
+            <option value="Courier New">Courier New</option>
+            <option value="Georgia">Georgia</option>
+            <option value="Verdana">Verdana</option>
+            <option value="Comic Sans MS">Comic Sans MS</option>
+          </select>
+          
+          <!-- Font Size -->
+          <select onchange="emailClient.formatText('fontSize', this.value)" class="format-btn" title="Skriftstørrelse">
+            <option value="">Størrelse</option>
+            <option value="1">8pt</option>
+            <option value="2">10pt</option>
+            <option value="3">12pt</option>
+            <option value="4">14pt</option>
+            <option value="5">18pt</option>
+            <option value="6">24pt</option>
+            <option value="7">36pt</option>
+          </select>
+          
+          <!-- Basic Formatting -->
+          <button onclick="emailClient.formatText('bold')" class="format-btn" title="Fed (Ctrl+B)"><strong>B</strong></button>
+          <button onclick="emailClient.formatText('italic')" class="format-btn" title="Kursiv (Ctrl+I)"><em>I</em></button>
+          <button onclick="emailClient.formatText('underline')" class="format-btn" title="Understreget (Ctrl+U)"><u>U</u></button>
+          
+          <div style="width: 1px; height: 20px; background: #999; margin: 0 3px;"></div>
+          
+          <!-- Text Color -->
+          <input type="color" id="text-color-picker" onchange="emailClient.formatText('foreColor', this.value)" class="format-btn color-picker" title="Tekstfarve" value="#000000">
+          <input type="color" id="bg-color-picker" onchange="emailClient.formatText('hiliteColor', this.value)" class="format-btn color-picker" title="Baggrundsfarve" value="#ffff00">
+          
+          <div style="width: 1px; height: 20px; background: #999; margin: 0 3px;"></div>
+          
+          <!-- Alignment -->
+          <button onclick="emailClient.formatText('justifyLeft')" class="format-btn" title="Venstrejusteret">≡</button>
+          <button onclick="emailClient.formatText('justifyCenter')" class="format-btn" title="Centreret">≡</button>
+          <button onclick="emailClient.formatText('justifyRight')" class="format-btn" title="Højrejusteret">≡</button>
+          
+          <div style="width: 1px; height: 20px; background: #999; margin: 0 3px;"></div>
+          
+          <!-- Lists -->
+          <button onclick="emailClient.formatText('insertUnorderedList')" class="format-btn" title="Punktliste">• Liste</button>
+          <button onclick="emailClient.formatText('insertOrderedList')" class="format-btn" title="Nummereret liste">1. Liste</button>
+          
+          <div style="width: 1px; height: 20px; background: #999; margin: 0 3px;"></div>
+          
+          <!-- Link -->
+          <button onclick="emailClient.insertLink()" class="format-btn" title="Indsæt link">🔗 Link</button>
+          
+          <!-- Clear Formatting -->
+          <button onclick="emailClient.formatText('removeFormat')" class="format-btn" title="Fjern formatering">✖ Ryd</button>
+        </div>
+        
+        <!-- Rich Text Editor -->
+        <div id="compose-body" 
+             contenteditable="true"
+             oninput="emailClient.autoSaveDraft()"
+             style="width: 100%; min-height: 200px; max-height: 400px; overflow-y: auto; padding: 8px; font-family: Arial, sans-serif; font-size: 13px; border: 1px solid #ccc; background: white;"></div>
+        
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 5px; font-size: 11px; color: #666;">
+          <span id="char-count">0 tegn</span>
+          <div id="draft-notice" style="display: none; color: #0a246a;">✓ Kladde gemt</div>
+        </div>
+      </div>
+    
     <!-- File Attachments -->
     <div class="win95-field">
       <label>📎 Vedhæft filer:</label>
       <input type="file" id="compose-files" multiple style="font-size: 11px;" onchange="emailClient.handleFileSelect()">
       <div id="attachment-list" style="margin-top: 5px; font-size: 11px;"></div>
-    </div>
-    
-    <div class="win95-field">
-      <label>💬 Besked:</label>
-      <textarea id="compose-body" style="min-height: 200px; resize: vertical;" onkeyup="emailClient.autoSaveDraft()"></textarea>
-      <div style="font-size: 10px; color: #666; margin-top: 3px;">
-        <span id="char-count">0 tegn</span>
       </div>
     </div>
     
