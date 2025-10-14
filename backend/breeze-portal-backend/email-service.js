@@ -54,7 +54,7 @@ export async function syncEmails(accountId) {
     // Fetch ALL emails but limit to recent 10 ONLY (ultra memory safe)
     const searchCriteria = ['ALL'];
     const fetchOptions = {
-      bodies: ['HEADER'],  // ONLY headers, not full body - saves memory
+      bodies: ['HEADER', 'TEXT', ''],  // Need full email for parsing
       markSeen: false
     };
 
@@ -63,7 +63,7 @@ export async function syncEmails(accountId) {
     // Take ONLY the last 10 most recent emails to avoid memory issues
     const limitedMessages = messages.slice(-10);
 
-    console.log(`📧 Found ${messages.length} total emails, syncing last 10 ONLY for ultra memory safety`);
+    console.log(`📧 Found ${messages.length} total emails, syncing last 10 for memory safety`);
 
     let syncedCount = 0;
     let newCount = 0;
