@@ -435,6 +435,39 @@
     background: #999;
     margin: 2px 0;
   }
+
+  /* Resize Handles - Draggable dividers */
+  .resize-handle {
+    width: 4px;
+    background: transparent;
+    cursor: col-resize;
+    position: relative;
+    z-index: 10;
+    flex-shrink: 0;
+  }
+
+  .resize-handle:hover {
+    background: #0054a6;
+  }
+
+  .resize-handle.dragging {
+    background: #0054a6;
+  }
+
+  /* Folder Context Menu */
+  .folder-context-menu {
+    position: fixed;
+    background: #f0f0f0;
+    border: 1px solid #999;
+    box-shadow: 2px 2px 5px rgba(0,0,0,0.3);
+    z-index: 2001;
+    display: none;
+    min-width: 180px;
+  }
+
+  .folder-context-menu.active {
+    display: block;
+  }
 </style>
 
 <div class="email-explorer">
@@ -454,19 +487,23 @@
 
   <div class="email-body-container">
     <div class="email-folders-tree">
-      <div class="folder-tree-item selected" data-folder="inbox" onclick="emailClient.changeFolder('inbox')">
+      <div class="folder-tree-item selected" data-folder="inbox" onclick="emailClient.changeFolder('inbox')" oncontextmenu="emailClient.showFolderContextMenu(event, 'inbox')">
         📥 Indbakke <span id="inbox-count">(0)</span>
       </div>
-      <div class="folder-tree-item" data-folder="starred" onclick="emailClient.changeFolder('starred')">
+      <div class="folder-tree-item" data-folder="starred" onclick="emailClient.changeFolder('starred')" oncontextmenu="emailClient.showFolderContextMenu(event, 'starred')">
         ⭐ Markerede <span id="starred-count">(0)</span>
       </div>
-      <div class="folder-tree-item" data-folder="sent" onclick="emailClient.changeFolder('sent')">
+      <div class="folder-tree-item" data-folder="sent" onclick="emailClient.changeFolder('sent')" oncontextmenu="emailClient.showFolderContextMenu(event, 'sent')">
         📤 Sendt
       </div>
       <hr style="border: none; border-top: 1px solid #ccc; margin: 5px 0;">
       <div style="padding: 5px 10px; font-weight: bold; font-size: 11px;">Email konti:</div>
       <div id="email-accounts-list"></div>
+      <div id="custom-folders-list"></div>
     </div>
+
+    <!-- Resize Handle 1: Between folders and list -->
+    <div class="resize-handle" data-resize="folders"></div>
 
     <div class="email-list-panel">
       <!-- Bulk Actions Toolbar -->
@@ -495,6 +532,9 @@
         </div>
       </div>
     </div>
+
+    <!-- Resize Handle 2: Between list and preview -->
+    <div class="resize-handle" data-resize="list"></div>
 
     <div class="email-preview-panel" id="email-preview">
       <div style="display: flex; align-items: center; justify-content: center; height: 100%; color: #999;">
@@ -588,12 +628,21 @@
   </div>
 </div>
 
-<!-- Context Menu -->
+<!-- Email Context Menu -->
 <div class="context-menu" id="context-menu">
   <div class="context-menu-item" onclick="emailClient.linkToOrder()">📦 Send til ordre</div>
   <div class="context-menu-separator"></div>
   <div class="context-menu-item" onclick="emailClient.toggleStar()">⭐ Marker email</div>
   <div class="context-menu-item" onclick="emailClient.deleteEmail()">🗑️ Slet email</div>
+</div>
+
+<!-- Folder Context Menu -->
+<div class="folder-context-menu" id="folder-context-menu">
+  <div class="context-menu-item" onclick="emailClient.createNewFolder()">📁 Opret ny mappe</div>
+  <div class="context-menu-item" onclick="emailClient.renameFolder()">✏️ Omdøb mappe</div>
+  <div class="context-menu-item" onclick="emailClient.deleteFolder()">🗑️ Slet mappe</div>
+  <div class="context-menu-separator"></div>
+  <div class="context-menu-item" onclick="emailClient.markAllAsRead()">✅ Marker alle som læst</div>
 </div>
 
 <script src="js/email.js"></script>

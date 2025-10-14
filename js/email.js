@@ -50,13 +50,22 @@ const emailClient = {
     // Load email accounts
     await this.loadEmailAccounts();
     
+    // Load custom folders
+    await this.loadCustomFolders();
+    
     // Load emails for default folder
     await this.loadEmails();
     
     // Setup event listeners
     this.setupEventListeners();
     
-    // Start auto-sync (every 30 seconds)
+    // Initialize resizable panels
+    this.makeResizable();
+    
+    // Load saved layout preferences
+    this.loadLayoutPreferences();
+    
+    // Start auto-sync (every 10 minutes)
     this.startAutoSync();
     
     console.log('Email client initialized');
@@ -1099,6 +1108,260 @@ const emailClient = {
       console.error('Error toggling star:', error);
       this.showNotification('Kunne ikke opdatere markering: ' + error.message, 'error');
     }
+  },
+  
+  // ===== RESIZABLE PANELS FUNCTIONALITY =====
+  
+  resizing: {
+    isResizing: false,
+    currentHandle: null,
+    startX: 0,
+    startWidth: 0
+  },
+  
+  makeResizable() {
+    const handles = document.querySelectorAll('.resize-handle');
+    
+    handles.forEach(handle => {
+      handle.addEventListener('mousedown', (e) => {
+        this.resizing.isResizing = true;
+        this.resizing.currentHandle = handle.dataset.resize;
+        this.resizing.startX = e.clientX;
+        
+        if (handle.dataset.resize === 'folders') {
+          const panel = document.querySelector('.email-folders-tree');
+          this.resizing.startWidth = panel.offsetWidth;
+        } else if (handle.dataset.resize === 'list') {
+          const panel = document.querySelector('.email-list-panel');
+          this.resizing.startWidth = panel.offsetWidth;
+        }
+        
+        handle.classList.add('dragging');
+        e.preventDefault();
+      });
+    });
+    
+    document.addEventListener('mousemove', (e) => {
+      if (!this.resizing.isResizing) return;
+      
+      const diff = e.clientX - this.resizing.startX;
+      const newWidth = this.resizing.startWidth + diff;
+      
+      // Min/max constraints
+      const minWidth = 150;
+      const maxWidth = 600;
+      const clampedWidth = Math.max(minWidth, Math.min(maxWidth, newWidth));
+      
+      if (this.resizing.currentHandle === 'folders') {
+        document.querySelector('.email-folders-tree').style.width = clampedWidth + 'px';
+      } else if (this.resizing.currentHandle === 'list') {
+        document.querySelector('.email-list-panel').style.width = clampedWidth + 'px';
+      }
+    });
+    
+    document.addEventListener('mouseup', () => {
+      if (this.resizing.isResizing) {
+        document.querySelectorAll('.resize-handle').forEach(h => h.classList.remove('dragging'));
+        this.resizing.isResizing = false;
+        
+        // Save preferences to localStorage
+        this.saveLayoutPreferences();
+      }
+    });
+  },
+  
+  saveLayoutPreferences() {
+    const prefs = {
+      foldersWidth: document.querySelector('.email-folders-tree').offsetWidth,
+      listWidth: document.querySelector('.email-list-panel').offsetWidth
+    };
+    localStorage.setItem('emailLayoutPrefs', JSON.stringify(prefs));
+  },
+  
+  loadLayoutPreferences() {
+    const prefs = localStorage.getItem('emailLayoutPrefs');
+    if (prefs) {
+      try {
+        const parsed = JSON.parse(prefs);
+        if (parsed.foldersWidth) {
+          document.querySelector('.email-folders-tree').style.width = parsed.foldersWidth + 'px';
+        }
+        if (parsed.listWidth) {
+          document.querySelector('.email-list-panel').style.width = parsed.listWidth + 'px';
+        }
+      } catch (error) {
+        console.error('Error loading layout preferences:', error);
+      }
+    }
+  },
+  
+  // ===== FOLDER MANAGEMENT FUNCTIONALITY =====
+  
+  contextMenuFolderId: null,
+  customFolders: [],
+  
+  showFolderContextMenu(event, folderId) {
+    event.preventDefault();
+    
+    this.contextMenuFolderId = folderId;
+    const menu = document.getElementById('folder-context-menu');
+    
+    if (menu) {
+      menu.style.left = event.pageX + 'px';
+      menu.style.top = event.pageY + 'px';
+      menu.classList.add('active');
+    }
+    
+    // Close any other context menus
+    const emailContextMenu = document.getElementById('context-menu');
+    if (emailContextMenu) {
+      emailContextMenu.classList.remove('active');
+    }
+  },
+  
+  async createNewFolder() {
+    const menu = document.getElementById('folder-context-menu');
+    if (menu) menu.classList.remove('active');
+    
+    const folderName = prompt('Indtast mappe navn:');
+    if (!folderName) return;
+    
+    try {
+      const result = await apiCall('/api/email/folders', {
+        method: 'POST',
+        body: JSON.stringify({
+          name: folderName,
+          parent_folder: this.contextMenuFolderId !== 'inbox' && this.contextMenuFolderId !== 'starred' && this.contextMenuFolderId !== 'sent' ? this.contextMenuFolderId : null
+        })
+      });
+      
+      this.showNotification('Mappe oprettet!', 'success');
+      this.customFolders.push(result);
+      this.renderCustomFolders();
+    } catch (error) {
+      console.error('Error creating folder:', error);
+      this.showNotification('Kunne ikke oprette mappe: ' + error.message, 'error');
+    }
+  },
+  
+  async renameFolder() {
+    const menu = document.getElementById('folder-context-menu');
+    if (menu) menu.classList.remove('active');
+    
+    // Can't rename built-in folders
+    if (['inbox', 'starred', 'sent'].includes(this.contextMenuFolderId)) {
+      this.showNotification('Kan ikke omdøbe system mapper', 'warning');
+      return;
+    }
+    
+    const folder = this.customFolders.find(f => f.id === this.contextMenuFolderId);
+    if (!folder) return;
+    
+    const newName = prompt('Nyt navn:', folder.name);
+    if (!newName) return;
+    
+    try {
+      await apiCall(`/api/email/folders/${this.contextMenuFolderId}`, {
+        method: 'PUT',
+        body: JSON.stringify({ name: newName })
+      });
+      
+      this.showNotification('Mappe omdøbt!', 'success');
+      folder.name = newName;
+      this.renderCustomFolders();
+    } catch (error) {
+      console.error('Error renaming folder:', error);
+      this.showNotification('Kunne ikke omdøbe mappe: ' + error.message, 'error');
+    }
+  },
+  
+  async deleteFolder() {
+    const menu = document.getElementById('folder-context-menu');
+    if (menu) menu.classList.remove('active');
+    
+    // Can't delete built-in folders
+    if (['inbox', 'starred', 'sent'].includes(this.contextMenuFolderId)) {
+      this.showNotification('Kan ikke slette system mapper', 'warning');
+      return;
+    }
+    
+    if (!confirm('Er du sikker på at du vil slette denne mappe?')) return;
+    
+    try {
+      await apiCall(`/api/email/folders/${this.contextMenuFolderId}`, {
+        method: 'DELETE'
+      });
+      
+      this.showNotification('Mappe slettet!', 'success');
+      this.customFolders = this.customFolders.filter(f => f.id !== this.contextMenuFolderId);
+      this.renderCustomFolders();
+    } catch (error) {
+      console.error('Error deleting folder:', error);
+      this.showNotification('Kunne ikke slette mappe: ' + error.message, 'error');
+    }
+  },
+  
+  async markAllAsRead() {
+    const menu = document.getElementById('folder-context-menu');
+    if (menu) menu.classList.remove('active');
+    
+    // Mark all emails in current folder as read
+    let markedCount = 0;
+    for (const email of this.emails) {
+      if (!email.is_read) {
+        try {
+          await apiCall(`/api/email/emails/${email.id}/read`, {
+            method: 'POST'
+          });
+          email.is_read = true;
+          email.unread = false;
+          markedCount++;
+        } catch (error) {
+          console.error(`Error marking email ${email.id} as read:`, error);
+        }
+      }
+    }
+    
+    if (markedCount > 0) {
+      this.showNotification(`${markedCount} email(s) markeret som læst`, 'success');
+      this.renderEmailList();
+      this.updateFolderCounts();
+    } else {
+      this.showNotification('Alle emails er allerede læst', 'info');
+    }
+  },
+  
+  async loadCustomFolders() {
+    try {
+      const folders = await apiCall('/api/email/folders');
+      this.customFolders = Array.isArray(folders) ? folders : [];
+      this.renderCustomFolders();
+    } catch (error) {
+      console.error('Error loading custom folders:', error);
+    }
+  },
+  
+  renderCustomFolders() {
+    const container = document.getElementById('custom-folders-list');
+    if (!container) return;
+    
+    if (this.customFolders.length === 0) {
+      container.innerHTML = '';
+      return;
+    }
+    
+    container.innerHTML = `
+      <hr style="border: none; border-top: 1px solid #ccc; margin: 5px 0;">
+      <div style="padding: 5px 10px; font-weight: bold; font-size: 11px;">Dine mapper:</div>
+      ${this.customFolders.map(folder => `
+        <div class="folder-tree-item" 
+             data-folder="${folder.id}" 
+             onclick="emailClient.changeFolder('${folder.id}')"
+             oncontextmenu="emailClient.showFolderContextMenu(event, '${folder.id}')">
+          📁 ${this.escapeHtml(folder.name)}
+        </div>
+      `).join('')}
+    `;
   }
 };
 
