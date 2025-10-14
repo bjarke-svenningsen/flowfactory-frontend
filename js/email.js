@@ -516,7 +516,7 @@ const emailClient = {
       const totalEmails = this.totalEmailsInbox;
       
       loadMoreContainer.innerHTML = `
-        <button class="win95-button" onclick="emailClient.loadMoreEmails()" ${this.isSyncing ? 'disabled' : ''}>
+        <button class="email-toolbar-btn" onclick="emailClient.loadMoreEmails()" style="width: 100%; justify-content: center;">
           📥 Indlæs 10 mere (${emailsLoaded} af ${totalEmails})
         </button>
       `;
@@ -532,6 +532,10 @@ const emailClient = {
   
   // Load more emails (next batch)
   async loadMoreEmails() {
+    if (this.isSyncing) {
+      console.log('Already syncing, please wait...');
+      return;
+    }
     await this.syncEmails(false);
   },
 
