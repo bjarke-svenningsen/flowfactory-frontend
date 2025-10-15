@@ -2262,130 +2262,41 @@ const emailClient = {
   
   // Smart URL linkification - only linkify complete URLs (like Outlook/Word)
   smartLinkifyUrls(editor) {
-    // Get current selection/cursor position
     const selection = window.getSelection();
     if (!selection.rangeCount) return;
-    
     const range = selection.getRangeAt(0);
     const cursorNode = range.startContainer;
-    
-    // Only process text nodes
     if (cursorNode.nodeType !== Node.TEXT_NODE) return;
-    
     const text = cursorNode.textContent;
-    
-    // URL regex - matches complete URLs
     const urlPattern = /(https?:\/\/[^\s<]+|www\.[^\s<]+)/g;
-    
-    // Find URLs in the text
     const matches = [...text.matchAll(urlPattern)];
     if (matches.length === 0) return;
-    
-    // Process each match in reverse order (to maintain positions)
     for (let i = matches.length - 1; i >= 0; i--) {
       const match = matches[i];
       const url = match[0];
       const startPos = match.index;
       const endPos = startPos + url.length;
-      
-      // Check if cursor is inside this URL (still typing it)
-      if (range.startOffset > startPos && range.startOffset <= endPos) {
-        continue; // Skip this URL, user is still typing it
-      }
-      
-      // Create the link
+      if (range.startOffset > startPos && range.startOffset <= endPos) continue;
       const fullUrl = url.startsWith('http') ? url : 'https://' + url;
       const link = document.createElement('a');
       link.href = fullUrl;
       link.target = '_blank';
       link.textContent = url;
-      
-      // Split the text node and insert the link
-      const beforeText = text.substring(0, startPos);
-      const afterText = text.substring(endPos);
-      
-      // Create new text nodes
-      const beforeNode = document.createTextNode(beforeText);
-      const afterNode = document.createTextNode(afterText);
-      
-      // Replace the text node with the new structure
+      const beforeNode = document.createTextNode(text.substring(0, startPos));
+      const afterNode = document.createTextNode(text.substring(endPos));
       const parent = cursorNode.parentNode;
       parent.insertBefore(beforeNode, cursorNode);
       parent.insertBefore(link, cursorNode);
       parent.insertBefore(afterNode, cursorNode);
       parent.removeChild(cursorNode);
-      
-      // Restore cursor position
       if (range.startOffset > endPos) {
-        // Cursor was after the URL
-        const newOffset = range.startOffset - endPos;
-        range.setStart(afterNode, newOffset);
-        range.collapse(true);
+        range.setStart(afterNode, range.startOffset - endPos);
       } else {
-        // Cursor was before or at the URL
         range.setStart(afterNode, 0);
-        range.collapse(true);
       }
-      
+      range.collapse(true);
       selection.removeAllRanges();
       selection.addRange(range);
-    }
-  },
-  
-  // Auto-linkify URLs in editor (DEPRECATED - kept for compatibility)
-  autoLinkifyUrls(editor) {
-    // Get text content only (not HTML) to avoid linkifying already-linked URLs
-    const text = editor.textContent || editor.innerText || '';
-    
-    // URL regex pattern - match URLs not already in links
-    const urlPattern = /(https?:\/\/[^\s]+|www\.[^\s]+)/gi;
-    
-    // Find all URLs in plain text
-    const urls = text.match(urlPattern);
-    if (!urls || urls.length === 0) return;
-    
-    // Get current HTML
-    let html = editor.innerHTML;
-    
-    // Only linkify URLs that are NOT already inside <a> tags or href attributes
-    urls.forEach(url => {
-      // Create regex to find this specific URL in text nodes (not in tags)
-      // This regex ensures we only match URLs that are NOT inside HTML tags
-      const escapedUrl = url.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-      const textNodePattern = new RegExp(`(?<!href=["'])(${escapedUrl})(?!["'])(?![^<]*>)`, 'g');
-      
-      // Only replace if URL is not already linked
-      if (!html.includes(`href="${url}"`) && !html.includes(`href='${url}'`)) {
-        const fullUrl = url.startsWith('http') ? url : 'https://' + url;
-        html = html.replace(textNodePattern, `<a href="${fullUrl}" target="_blank">${url}</a>`);
-      }
-    });
-    
-    // Only update if changed
-    if (html !== editor.innerHTML) {
-      // Save cursor position
-      const selection = window.getSelection();
-      let cursorPos = 0;
-      if (selection.rangeCount > 0) {
-        const range = selection.getRangeAt(0);
-        cursorPos = range.startOffset;
-      }
-      
-      editor.innerHTML = html;
-      
-      // Restore cursor position (best effort)
-      try {
-        const range = document.createRange();
-        const sel = window.getSelection();
-        if (editor.childNodes.length > 0) {
-          range.setStart(editor.childNodes[0], Math.min(cursorPos, editor.textContent.length));
-          range.collapse(true);
-          sel.removeAllRanges();
-          sel.addRange(range);
-        }
-      } catch (e) {
-        // Cursor restoration failed, ignore
-      }
     }
   },
   
