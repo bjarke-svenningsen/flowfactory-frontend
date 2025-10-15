@@ -311,7 +311,7 @@ app.get('/api/messages/:otherUserId', auth, async (req, res) => {
 // All database tables are now created in init-database.js before server starts
 
 // Upload file endpoint (Server Storage)
-app.post('/api/files/upload', auth, upload.single('file'), (req, res) => {
+app.post('/api/files/upload', auth, upload.single('file'), async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ error: 'No file uploaded' });
@@ -329,10 +329,10 @@ app.post('/api/files/upload', auth, upload.single('file'), (req, res) => {
       uploaded_by: req.user.id
     };
 
-    const info = db.prepare(`
+    const info = await db.run(`
       INSERT INTO files (filename, original_name, file_path, file_size, mime_type, folder_id, uploaded_by)
       VALUES (?, ?, ?, ?, ?, ?, ?)
-    `).run(
+    `, [
       fileInfo.filename,
       fileInfo.original_name,
       fileInfo.file_path,
@@ -340,14 +340,14 @@ app.post('/api/files/upload', auth, upload.single('file'), (req, res) => {
       fileInfo.mime_type,
       fileInfo.folder_id,
       fileInfo.uploaded_by
-    );
+    ]);
 
-    const file = db.prepare(`
+    const file = await db.get(`
       SELECT f.*, u.name as uploader_name
       FROM files f
       JOIN users u ON f.uploaded_by = u.id
       WHERE f.id = ?
-    `).get(info.lastInsertRowid);
+    `, [info.lastInsertRowid]);
 
     res.json({ success: true, file });
   } catch (error) {
@@ -2345,11 +2345,11 @@ app.delete('/api/orders/:orderId/notes/:noteId', auth, async (req, res) => {
 // --- ORDER WORKSPACE SUMMARY ENDPOINT ---
 
 // Get complete order workspace data
-app.get('/api/orders/:orderId/workspace', auth, (req, res) => {
+app.get('/api/orders/:orderId/workspace', auth, async (req, res) => {
   const orderId = Number(req.params.orderId);
   
   // Get order details
-  const order = db.prepare(`
+  const order = await db.get(`
     SELECT q.id, q.quote_number, q.order_number, q.parent_order_id, q.sub_number, q.is_extra_work,
            q.customer_id, q.title, q.requisition_number, q.date, q.valid_until, q.status,
            q.notes, q.terms, q.subtotal, q.vat_rate, q.vat_amount, q.total,
@@ -2361,87 +2361,87 @@ app.get('/api/orders/:orderId/workspace', auth, (req, res) => {
     JOIN customers c ON q.customer_id = c.id
     JOIN users u ON q.created_by = u.id
     WHERE q.id = ?
-  `).get(orderId);
+  `, [orderId]);
   
   if (!order) {
     return res.status(404).json({ error: 'Order not found' });
   }
   
   // Get all extra work orders for this main order
-  const extraWorkOrders = db.prepare(`
+  const extraWorkOrders = await db.all(`
     SELECT q.*, u.name as created_by_name
     FROM quotes q
     JOIN users u ON q.created_by = u.id
     WHERE q.parent_order_id = ?
     ORDER BY q.sub_number ASC
-  `).all(orderId);
+  `, [orderId]);
   
   // Get expenses for main order
-  const expenses = db.prepare(`
+  const expenses = await db.all(`
     SELECT e.*, u.name as created_by_name
     FROM order_expenses e
     JOIN users u ON e.created_by = u.id
     WHERE e.order_id = ?
     ORDER BY e.expense_date DESC
-  `).all(orderId);
+  `, [orderId]);
   
   let totalExpenses = expenses.reduce((sum, exp) => sum + exp.amount, 0);
   
   // Get expenses for all extra work orders and aggregate
   let extraWorkExpenses = [];
-  extraWorkOrders.forEach(extraOrder => {
-    const extraExpenses = db.prepare(`
+  for (const extraOrder of extraWorkOrders) {
+    const extraExpenses = await db.all(`
       SELECT e.*, u.name as created_by_name
       FROM order_expenses e
       JOIN users u ON e.created_by = u.id
       WHERE e.order_id = ?
       ORDER BY e.expense_date DESC
-    `).all(extraOrder.id);
+    `, [extraOrder.id]);
     
     extraWorkExpenses = [...extraWorkExpenses, ...extraExpenses];
     totalExpenses += extraExpenses.reduce((sum, exp) => sum + exp.amount, 0);
-  });
+  }
   
   // Get documents
-  const documents = db.prepare(`
+  const documents = await db.all(`
     SELECT d.*, u.name as uploaded_by_name
     FROM order_documents d
     JOIN users u ON d.uploaded_by = u.id
     WHERE d.order_id = ?
     ORDER BY d.created_at DESC
-  `).all(orderId);
+  `, [orderId]);
   
   // Get timeline
-  const timeline = db.prepare(`
+  const timeline = await db.all(`
     SELECT t.*, u.name as user_name, u.profile_image
     FROM order_timeline t
     JOIN users u ON t.user_id = u.id
     WHERE t.order_id = ?
     ORDER BY t.created_at DESC
     LIMIT 50
-  `).all(orderId);
+  `, [orderId]);
   
   // Get notes
-  const notes = db.prepare(`
+  const notes = await db.all(`
     SELECT n.*, u.name as created_by_name, u.profile_image
     FROM order_notes n
     JOIN users u ON n.created_by = u.id
     WHERE n.order_id = ?
     ORDER BY n.is_pinned DESC, n.updated_at DESC
-  `).all(orderId);
+  `, [orderId]);
   
   // Get lines
-  const lines = db.prepare('SELECT * FROM quote_lines WHERE quote_id = ? ORDER BY sort_order, id').all(orderId);
+  const lines = await db.all('SELECT * FROM quote_lines WHERE quote_id = ? ORDER BY sort_order, id', [orderId]);
   
   // Check if order has an invoice
-  const invoice = db.prepare(`
+  const invoice = await db.get(`
     SELECT i.*, u.name as created_by_name
     FROM invoices i
     JOIN users u ON i.created_by = u.id
     WHERE i.order_id = ?
     ORDER BY i.id DESC
     LIMIT 1
-  `).get(orderId);
+  `, [orderId]);
   
   // Calculate aggregated revenue (main order + extra work)
   let totalRevenue = order.total || 0;
@@ -2463,13 +2463,19 @@ app.get('/api/orders/:orderId/workspace', auth, (req, res) => {
   const profitMain = mainOrderRevenue - mainOrderExpenses;
   const profitExtra = extraWorkRevenue - extraWorkExpensesTotal;
   
+  // Get full order numbers for extra work orders
+  const extraWorkOrdersWithNumbers = [];
+  for (const eo of extraWorkOrders) {
+    extraWorkOrdersWithNumbers.push({
+      ...eo,
+      full_order_number: await getFullOrderNumber(eo)
+    });
+  }
+  
   res.json({
     order,
     lines,
-    extra_work_orders: extraWorkOrders.map(eo => ({
-      ...eo,
-      full_order_number: getFullOrderNumber(eo)
-    })),
+    extra_work_orders: extraWorkOrdersWithNumbers,
     invoice: invoice || null,
     expenses: {
       items: expenses,
@@ -3454,25 +3460,25 @@ app.post('/api/admin/approve-first', async (req, res) => {
   if (!email) return res.status(400).json({ error: 'Email required' });
   
   // Find user in pending_users
-  const pending = db.prepare('SELECT * FROM pending_users WHERE email = ? AND status = \'pending\'').get(email.toLowerCase());
+  const pending = await db.get("SELECT * FROM pending_users WHERE email = ? AND status = 'pending'", [email.toLowerCase()]);
   
   if (pending) {
     // Create actual user from pending
-    const info = db.prepare(`
+    const info = await db.run(`
       INSERT INTO users (name, email, password_hash, position, department, phone, is_admin)
       VALUES (?, ?, ?, ?, ?, ?, 1)
-    `).run(pending.name, pending.email, pending.password_hash, pending.position, pending.department, pending.phone);
+    `, [pending.name, pending.email, pending.password_hash, pending.position, pending.department, pending.phone]);
     
     // Update pending status
-    db.prepare('UPDATE pending_users SET status = ? WHERE id = ?').run('approved', pending.id);
+    await db.run('UPDATE pending_users SET status = ? WHERE id = ?', ['approved', pending.id]);
     
     return res.json({ success: true, message: 'User approved and made admin!' });
   }
   
   // Or just approve existing user and make admin
-  const user = db.prepare('SELECT * FROM users WHERE email = ?').get(email.toLowerCase());
+  const user = await db.get('SELECT * FROM users WHERE email = ?', [email.toLowerCase()]);
   if (user) {
-    db.prepare('UPDATE users SET is_admin = 1 WHERE id = ?').run(user.id);
+    await db.run('UPDATE users SET is_admin = 1 WHERE id = ?', [user.id]);
     return res.json({ success: true, message: 'User made admin!' });
   }
   
