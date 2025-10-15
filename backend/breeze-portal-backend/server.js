@@ -934,12 +934,12 @@ io.on('connection', (socket) => {
 // --- QUOTES & CUSTOMERS API ---
 
 // Helper function to generate order number for main orders
-function generateOrderNumber() {
-  const lastQuote = db.prepare(`
+async function generateOrderNumber() {
+  const lastQuote = await db.get(`
     SELECT order_number FROM quotes 
     WHERE parent_order_id IS NULL 
     ORDER BY id DESC LIMIT 1
-  `).get();
+  `);
   
   let nextNum = 1;
   if (lastQuote) {
@@ -950,18 +950,18 @@ function generateOrderNumber() {
 }
 
 // Helper function to generate extra work number (sub-order)
-function generateExtraWorkNumber(parentOrderId) {
-  const parent = db.prepare('SELECT order_number FROM quotes WHERE id = ?').get(parentOrderId);
+async function generateExtraWorkNumber(parentOrderId) {
+  const parent = await db.get('SELECT order_number FROM quotes WHERE id = ?', [parentOrderId]);
   
   if (!parent) {
     throw new Error('Parent order not found');
   }
   
-  const lastSub = db.prepare(`
+  const lastSub = await db.get(`
     SELECT sub_number FROM quotes 
     WHERE parent_order_id = ? 
     ORDER BY sub_number DESC LIMIT 1
-  `).get(parentOrderId);
+  `, [parentOrderId]);
   
   const subNum = lastSub ? lastSub.sub_number + 1 : 1;
   const subStr = String(subNum).padStart(2, '0');
@@ -970,8 +970,8 @@ function generateExtraWorkNumber(parentOrderId) {
 }
 
 // Helper function to generate invoice number
-function generateInvoiceNumber() {
-  const lastInvoice = db.prepare('SELECT invoice_number FROM invoices ORDER BY id DESC LIMIT 1').get();
+async function generateInvoiceNumber() {
+  const lastInvoice = await db.get('SELECT invoice_number FROM invoices ORDER BY id DESC LIMIT 1');
   
   let nextNum = 5000; // Start from 5000
   if (lastInvoice) {
@@ -982,9 +982,9 @@ function generateInvoiceNumber() {
 }
 
 // Helper function to get full order number (for display)
-function getFullOrderNumber(quote) {
+async function getFullOrderNumber(quote) {
   if (quote.is_extra_work && quote.parent_order_id) {
-    const parent = db.prepare('SELECT order_number FROM quotes WHERE id = ?').get(quote.parent_order_id);
+    const parent = await db.get('SELECT order_number FROM quotes WHERE id = ?', [quote.parent_order_id]);
     const subStr = String(quote.sub_number).padStart(2, '0');
     return `${parent.order_number}-${subStr}`;
   }
@@ -1055,16 +1055,16 @@ app.post('/api/customers', auth, async (req, res) => {
   res.json(customer);
 });
 
-app.put('/api/customers/:id', auth, (req, res) => {
+app.put('/api/customers/:id', auth, async (req, res) => {
   const customerId = Number(req.params.id);
   const { customer_number, company_name, contact_person, att_person, email, phone, address, postal_code, city, cvr_number } = req.body;
   
-  const customer = db.prepare('SELECT * FROM customers WHERE id = ?').get(customerId);
+  const customer = await db.get('SELECT * FROM customers WHERE id = ?', [customerId]);
   if (!customer) {
     return res.status(404).json({ error: 'Customer not found' });
   }
   
-  db.prepare(`
+  await db.run(`
     UPDATE customers SET
       customer_number = ?,
       company_name = ?,
@@ -1077,48 +1077,48 @@ app.put('/api/customers/:id', auth, (req, res) => {
       city = ?,
       cvr_number = ?
     WHERE id = ?
-  `).run(customer_number || customer.customer_number, company_name, contact_person || null, att_person || null, email || null, phone || null, address || null, postal_code || null, city || null, cvr_number || null, customerId);
+  `, [customer_number || customer.customer_number, company_name, contact_person || null, att_person || null, email || null, phone || null, address || null, postal_code || null, city || null, cvr_number || null, customerId]);
   
-  const updated = db.prepare(`
+  const updated = await db.get(`
     SELECT c.*, u.name as created_by_name
     FROM customers c
     JOIN users u ON c.created_by = u.id
     WHERE c.id = ?
-  `).get(customerId);
+  `, [customerId]);
   
   res.json(updated);
 });
 
-app.delete('/api/customers/:id', auth, (req, res) => {
+app.delete('/api/customers/:id', auth, async (req, res) => {
   const customerId = Number(req.params.id);
   
   // Check if customer has quotes
-  const quoteCount = db.prepare('SELECT COUNT(*) as cnt FROM quotes WHERE customer_id = ?').get(customerId).cnt;
-  if (quoteCount > 0) {
+  const quoteCount = await db.get('SELECT COUNT(*) as cnt FROM quotes WHERE customer_id = ?', [customerId]);
+  if (quoteCount.cnt > 0) {
     return res.status(400).json({ error: 'Cannot delete customer with existing quotes' });
   }
   
-  db.prepare('DELETE FROM customers WHERE id = ?').run(customerId);
+  await db.run('DELETE FROM customers WHERE id = ?', [customerId]);
   res.json({ success: true });
 });
 
 // --- CUSTOMER CONTACTS API ---
 
 // Get all contacts for a customer
-app.get('/api/customers/:customerId/contacts', auth, (req, res) => {
+app.get('/api/customers/:customerId/contacts', auth, async (req, res) => {
   const customerId = Number(req.params.customerId);
   
-  const contacts = db.prepare(`
+  const contacts = await db.all(`
     SELECT * FROM customer_contacts
     WHERE customer_id = ?
     ORDER BY is_primary DESC, name ASC
-  `).all(customerId);
+  `, [customerId]);
   
   res.json(contacts);
 });
 
 // Create a new contact
-app.post('/api/customers/:customerId/contacts', auth, (req, res) => {
+app.post('/api/customers/:customerId/contacts', auth, async (req, res) => {
   const customerId = Number(req.params.customerId);
   const { name, title, email, phone, is_primary } = req.body;
   
@@ -1128,20 +1128,20 @@ app.post('/api/customers/:customerId/contacts', auth, (req, res) => {
   
   // If this is marked as primary, unmark other primaries
   if (is_primary) {
-    db.prepare('UPDATE customer_contacts SET is_primary = 0 WHERE customer_id = ?').run(customerId);
+    await db.run('UPDATE customer_contacts SET is_primary = 0 WHERE customer_id = ?', [customerId]);
   }
   
-  const info = db.prepare(`
+  const info = await db.run(`
     INSERT INTO customer_contacts (customer_id, name, title, email, phone, is_primary)
     VALUES (?, ?, ?, ?, ?, ?)
-  `).run(customerId, name.trim(), title || null, email || null, phone || null, is_primary ? 1 : 0);
+  `, [customerId, name.trim(), title || null, email || null, phone || null, is_primary ? 1 : 0]);
   
-  const contact = db.prepare('SELECT * FROM customer_contacts WHERE id = ?').get(info.lastInsertRowid);
+  const contact = await db.get('SELECT * FROM customer_contacts WHERE id = ?', [info.lastInsertRowid]);
   res.json(contact);
 });
 
 // Update a contact
-app.put('/api/customers/:customerId/contacts/:contactId', auth, (req, res) => {
+app.put('/api/customers/:customerId/contacts/:contactId', auth, async (req, res) => {
   const customerId = Number(req.params.customerId);
   const contactId = Number(req.params.contactId);
   const { name, title, email, phone, is_primary } = req.body;
@@ -1152,10 +1152,10 @@ app.put('/api/customers/:customerId/contacts/:contactId', auth, (req, res) => {
   
   // If this is marked as primary, unmark other primaries
   if (is_primary) {
-    db.prepare('UPDATE customer_contacts SET is_primary = 0 WHERE customer_id = ? AND id != ?').run(customerId, contactId);
+    await db.run('UPDATE customer_contacts SET is_primary = 0 WHERE customer_id = ? AND id != ?', [customerId, contactId]);
   }
   
-  db.prepare(`
+  await db.run(`
     UPDATE customer_contacts SET
       name = ?,
       title = ?,
@@ -1163,36 +1163,36 @@ app.put('/api/customers/:customerId/contacts/:contactId', auth, (req, res) => {
       phone = ?,
       is_primary = ?
     WHERE id = ? AND customer_id = ?
-  `).run(name.trim(), title || null, email || null, phone || null, is_primary ? 1 : 0, contactId, customerId);
+  `, [name.trim(), title || null, email || null, phone || null, is_primary ? 1 : 0, contactId, customerId]);
   
-  const contact = db.prepare('SELECT * FROM customer_contacts WHERE id = ?').get(contactId);
+  const contact = await db.get('SELECT * FROM customer_contacts WHERE id = ?', [contactId]);
   res.json(contact);
 });
 
 // Delete a contact
-app.delete('/api/customers/:customerId/contacts/:contactId', auth, (req, res) => {
+app.delete('/api/customers/:customerId/contacts/:contactId', auth, async (req, res) => {
   const contactId = Number(req.params.contactId);
-  db.prepare('DELETE FROM customer_contacts WHERE id = ?').run(contactId);
+  await db.run('DELETE FROM customer_contacts WHERE id = ?', [contactId]);
   res.json({ success: true });
 });
 
-// --- CUSTOMER CONTACTS API ---
+// --- CUSTOMER CONTACTS API (duplicate section removed) ---
 
 // Get all contacts for a customer
-app.get('/api/customers/:customerId/contacts', auth, (req, res) => {
+app.get('/api/customers/:customerId/contacts', auth, async (req, res) => {
   const customerId = Number(req.params.customerId);
   
-  const contacts = db.prepare(`
+  const contacts = await db.all(`
     SELECT * FROM customer_contacts
     WHERE customer_id = ?
     ORDER BY is_primary DESC, name ASC
-  `).all(customerId);
+  `, [customerId]);
   
   res.json(contacts);
 });
 
 // Create a new contact
-app.post('/api/customers/:customerId/contacts', auth, (req, res) => {
+app.post('/api/customers/:customerId/contacts', auth, async (req, res) => {
   const customerId = Number(req.params.customerId);
   const { name, title, email, phone, is_primary } = req.body;
   
@@ -1202,20 +1202,20 @@ app.post('/api/customers/:customerId/contacts', auth, (req, res) => {
   
   // If this is marked as primary, unmark other primaries
   if (is_primary) {
-    db.prepare('UPDATE customer_contacts SET is_primary = 0 WHERE customer_id = ?').run(customerId);
+    await db.run('UPDATE customer_contacts SET is_primary = 0 WHERE customer_id = ?', [customerId]);
   }
   
-  const info = db.prepare(`
+  const info = await db.run(`
     INSERT INTO customer_contacts (customer_id, name, title, email, phone, is_primary)
     VALUES (?, ?, ?, ?, ?, ?)
-  `).run(customerId, name.trim(), title || null, email || null, phone || null, is_primary ? 1 : 0);
+  `, [customerId, name.trim(), title || null, email || null, phone || null, is_primary ? 1 : 0]);
   
-  const contact = db.prepare('SELECT * FROM customer_contacts WHERE id = ?').get(info.lastInsertRowid);
+  const contact = await db.get('SELECT * FROM customer_contacts WHERE id = ?', [info.lastInsertRowid]);
   res.json(contact);
 });
 
 // Update a contact
-app.put('/api/customers/:customerId/contacts/:contactId', auth, (req, res) => {
+app.put('/api/customers/:customerId/contacts/:contactId', auth, async (req, res) => {
   const customerId = Number(req.params.customerId);
   const contactId = Number(req.params.contactId);
   const { name, title, email, phone, is_primary } = req.body;
@@ -1226,10 +1226,10 @@ app.put('/api/customers/:customerId/contacts/:contactId', auth, (req, res) => {
   
   // If this is marked as primary, unmark other primaries
   if (is_primary) {
-    db.prepare('UPDATE customer_contacts SET is_primary = 0 WHERE customer_id = ? AND id != ?').run(customerId, contactId);
+    await db.run('UPDATE customer_contacts SET is_primary = 0 WHERE customer_id = ? AND id != ?', [customerId, contactId]);
   }
   
-  db.prepare(`
+  await db.run(`
     UPDATE customer_contacts SET
       name = ?,
       title = ?,
@@ -1237,16 +1237,16 @@ app.put('/api/customers/:customerId/contacts/:contactId', auth, (req, res) => {
       phone = ?,
       is_primary = ?
     WHERE id = ? AND customer_id = ?
-  `).run(name.trim(), title || null, email || null, phone || null, is_primary ? 1 : 0, contactId, customerId);
+  `, [name.trim(), title || null, email || null, phone || null, is_primary ? 1 : 0, contactId, customerId]);
   
-  const contact = db.prepare('SELECT * FROM customer_contacts WHERE id = ?').get(contactId);
+  const contact = await db.get('SELECT * FROM customer_contacts WHERE id = ?', [contactId]);
   res.json(contact);
 });
 
 // Delete a contact
-app.delete('/api/customers/:customerId/contacts/:contactId', auth, (req, res) => {
+app.delete('/api/customers/:customerId/contacts/:contactId', auth, async (req, res) => {
   const contactId = Number(req.params.contactId);
-  db.prepare('DELETE FROM customer_contacts WHERE id = ?').run(contactId);
+  await db.run('DELETE FROM customer_contacts WHERE id = ?', [contactId]);
   res.json({ success: true });
 });
 
@@ -1326,10 +1326,10 @@ app.get('/api/quotes', auth, async (req, res) => {
   res.json(enrichedQuotes);
 });
 
-app.get('/api/quotes/:id', auth, (req, res) => {
+app.get('/api/quotes/:id', auth, async (req, res) => {
   const quoteId = Number(req.params.id);
   
-  const quote = db.prepare(`
+  const quote = await db.get(`
     SELECT q.*, c.*, u.name as created_by_name,
            c.company_name, c.contact_person, c.email as customer_email, 
            c.phone as customer_phone, c.address, c.postal_code, c.city, c.cvr_number
@@ -1337,7 +1337,7 @@ app.get('/api/quotes/:id', auth, (req, res) => {
     JOIN customers c ON q.customer_id = c.id
     JOIN users u ON q.created_by = u.id
     WHERE q.id = ?
-  `).get(quoteId);
+  `, [quoteId]);
   
   if (!quote) {
     return res.status(404).json({ error: 'Quote not found' });
@@ -1345,7 +1345,7 @@ app.get('/api/quotes/:id', auth, (req, res) => {
   
   // If contact_person_id is set, get contact person details
   if (quote.contact_person_id) {
-    const contactPerson = db.prepare('SELECT * FROM customer_contacts WHERE id = ?').get(quote.contact_person_id);
+    const contactPerson = await db.get('SELECT * FROM customer_contacts WHERE id = ?', [quote.contact_person_id]);
     if (contactPerson) {
       quote.selected_contact = contactPerson;
       // Override default contact person with selected one
@@ -1356,13 +1356,13 @@ app.get('/api/quotes/:id', auth, (req, res) => {
     }
   }
   
-  const lines = db.prepare('SELECT * FROM quote_lines WHERE quote_id = ? ORDER BY sort_order, id').all(quoteId);
-  const attachments = db.prepare(`
+  const lines = await db.all('SELECT * FROM quote_lines WHERE quote_id = ? ORDER BY sort_order, id', [quoteId]);
+  const attachments = await db.all(`
     SELECT qa.*, u.name as uploaded_by_name
     FROM quote_attachments qa
     JOIN users u ON qa.uploaded_by = u.id
     WHERE qa.quote_id = ?
-  `).all(quoteId);
+  `, [quoteId]);
   
   quote.lines = lines;
   quote.attachments = attachments;
@@ -1370,7 +1370,7 @@ app.get('/api/quotes/:id', auth, (req, res) => {
   res.json(quote);
 });
 
-app.post('/api/quotes', auth, (req, res) => {
+app.post('/api/quotes', auth, async (req, res) => {
   try {
     const { customer_id, title, valid_until, notes, terms, lines, requisition_number, contact_person_id } = req.body;
     
@@ -1378,7 +1378,7 @@ app.post('/api/quotes', auth, (req, res) => {
       return res.status(400).json({ error: 'Missing required fields' });
     }
     
-    const order_number = generateOrderNumber(); // 0001, 0002...
+    const order_number = await generateOrderNumber(); // 0001, 0002...
   
   // Calculate totals
   let subtotal = 0;
@@ -1394,34 +1394,34 @@ app.post('/api/quotes', auth, (req, res) => {
   
   // Create main quote/order (is_extra_work = 0, parent_order_id = NULL)
   // Use order_number as quote_number for backwards compatibility
-  const quoteInfo = db.prepare(`
+  const quoteInfo = await db.run(`
     INSERT INTO quotes (quote_number, order_number, parent_order_id, sub_number, is_extra_work, customer_id, contact_person_id, title, requisition_number, valid_until, notes, terms, subtotal, vat_rate, vat_amount, total, created_by)
     VALUES (?, ?, NULL, NULL, 0, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `).run(order_number, order_number, customer_id, contact_person_id || null, title, requisition_number || null, valid_until || null, notes || null, terms || null, subtotal, vat_rate, vat_amount, total, req.user.id);
+  `, [order_number, order_number, customer_id, contact_person_id || null, title, requisition_number || null, valid_until || null, notes || null, terms || null, subtotal, vat_rate, vat_amount, total, req.user.id]);
   
   const quoteId = quoteInfo.lastInsertRowid;
   
   // Create lines
-  lines.forEach((line, index) => {
+  for (const [index, line] of lines.entries()) {
     const discount_amount = (line.unit_price * line.quantity * (line.discount_percent || 0)) / 100;
     const line_total = (line.unit_price * line.quantity) - discount_amount;
     
-    db.prepare(`
+    await db.run(`
       INSERT INTO quote_lines (quote_id, description, quantity, unit, unit_price, discount_percent, discount_amount, line_total, sort_order)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(quoteId, line.description, line.quantity, line.unit, line.unit_price, line.discount_percent || 0, discount_amount, line_total, index);
-  });
+    `, [quoteId, line.description, line.quantity, line.unit, line.unit_price, line.discount_percent || 0, discount_amount, line_total, index]);
+  }
   
-  const quote = db.prepare(`
+  const quote = await db.get(`
     SELECT q.*, c.company_name as customer_name, u.name as created_by_name
     FROM quotes q
     JOIN customers c ON q.customer_id = c.id
     JOIN users u ON q.created_by = u.id
     WHERE q.id = ?
-  `).get(quoteId);
+  `, [quoteId]);
   
     // Add full_order_number for display
-    quote.full_order_number = getFullOrderNumber(quote);
+    quote.full_order_number = await getFullOrderNumber(quote);
     
     res.json(quote);
   } catch (error) {
@@ -1430,11 +1430,11 @@ app.post('/api/quotes', auth, (req, res) => {
   }
 });
 
-app.put('/api/quotes/:id', auth, (req, res) => {
+app.put('/api/quotes/:id', auth, async (req, res) => {
   const quoteId = Number(req.params.id);
   const { customer_id, title, valid_until, notes, terms, lines, status, contact_person_id } = req.body;
   
-  const quote = db.prepare('SELECT * FROM quotes WHERE id = ?').get(quoteId);
+  const quote = await db.get('SELECT * FROM quotes WHERE id = ?', [quoteId]);
   if (!quote) {
     return res.status(404).json({ error: 'Quote not found' });
   }
@@ -1454,7 +1454,7 @@ app.put('/api/quotes/:id', auth, (req, res) => {
   const total = subtotal + vat_amount;
   
   // Update quote
-  db.prepare(`
+  await db.run(`
     UPDATE quotes SET
       customer_id = ?,
       contact_person_id = ?,
@@ -1467,73 +1467,73 @@ app.put('/api/quotes/:id', auth, (req, res) => {
       total = ?,
       status = ?
     WHERE id = ?
-  `).run(customer_id, contact_person_id !== undefined ? contact_person_id : quote.contact_person_id, title, valid_until || null, notes || null, terms || null, subtotal, vat_amount, total, status || quote.status, quoteId);
+  `, [customer_id, contact_person_id !== undefined ? contact_person_id : quote.contact_person_id, title, valid_until || null, notes || null, terms || null, subtotal, vat_amount, total, status || quote.status, quoteId]);
   
   // Update lines if provided
   if (lines) {
     // Delete old lines
-    db.prepare('DELETE FROM quote_lines WHERE quote_id = ?').run(quoteId);
+    await db.run('DELETE FROM quote_lines WHERE quote_id = ?', [quoteId]);
     
     // Create new lines
-    lines.forEach((line, index) => {
+    for (const [index, line] of lines.entries()) {
       const discount_amount = (line.unit_price * line.quantity * (line.discount_percent || 0)) / 100;
       const line_total = (line.unit_price * line.quantity) - discount_amount;
       
-      db.prepare(`
+      await db.run(`
         INSERT INTO quote_lines (quote_id, description, quantity, unit, unit_price, discount_percent, discount_amount, line_total, sort_order)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `).run(quoteId, line.description, line.quantity, line.unit, line.unit_price, line.discount_percent || 0, discount_amount, line_total, index);
-    });
+      `, [quoteId, line.description, line.quantity, line.unit, line.unit_price, line.discount_percent || 0, discount_amount, line_total, index]);
+    }
   }
   
-  const updated = db.prepare(`
+  const updated = await db.get(`
     SELECT q.*, c.company_name as customer_name, u.name as created_by_name
     FROM quotes q
     JOIN customers c ON q.customer_id = c.id
     JOIN users u ON q.created_by = u.id
     WHERE q.id = ?
-  `).get(quoteId);
+  `, [quoteId]);
   
   res.json(updated);
 });
 
-app.delete('/api/quotes/:id', auth, (req, res) => {
+app.delete('/api/quotes/:id', auth, async (req, res) => {
   const quoteId = Number(req.params.id);
   
   // Delete quote (cascades to lines and attachments)
-  db.prepare('DELETE FROM quotes WHERE id = ?').run(quoteId);
+  await db.run('DELETE FROM quotes WHERE id = ?', [quoteId]);
   
   res.json({ success: true });
 });
 
 // Quote attachment upload
-app.post('/api/quotes/:id/attachments', auth, upload.single('file'), (req, res) => {
+app.post('/api/quotes/:id/attachments', auth, upload.single('file'), async (req, res) => {
   const quoteId = Number(req.params.id);
   
   if (!req.file) {
     return res.status(400).json({ error: 'No file uploaded' });
   }
   
-  const info = db.prepare(`
+  const info = await db.run(`
     INSERT INTO quote_attachments (quote_id, filename, original_name, file_path, file_size, uploaded_by)
     VALUES (?, ?, ?, ?, ?, ?)
-  `).run(quoteId, req.file.filename, req.file.originalname, `/uploads/${req.file.filename}`, req.file.size, req.user.id);
+  `, [quoteId, req.file.filename, req.file.originalname, `/uploads/${req.file.filename}`, req.file.size, req.user.id]);
   
-  const attachment = db.prepare(`
+  const attachment = await db.get(`
     SELECT qa.*, u.name as uploaded_by_name
     FROM quote_attachments qa
     JOIN users u ON qa.uploaded_by = u.id
     WHERE qa.id = ?
-  `).get(info.lastInsertRowid);
+  `, [info.lastInsertRowid]);
   
   res.json(attachment);
 });
 
 // Delete quote attachment
-app.delete('/api/quotes/:quoteId/attachments/:attachmentId', auth, (req, res) => {
+app.delete('/api/quotes/:quoteId/attachments/:attachmentId', auth, async (req, res) => {
   const attachmentId = Number(req.params.attachmentId);
   
-  const attachment = db.prepare('SELECT * FROM quote_attachments WHERE id = ?').get(attachmentId);
+  const attachment = await db.get('SELECT * FROM quote_attachments WHERE id = ?', [attachmentId]);
   if (!attachment) {
     return res.status(404).json({ error: 'Attachment not found' });
   }
@@ -1544,7 +1544,7 @@ app.delete('/api/quotes/:quoteId/attachments/:attachmentId', auth, (req, res) =>
     fs.unlinkSync(filePath);
   }
   
-  db.prepare('DELETE FROM quote_attachments WHERE id = ?').run(attachmentId);
+  await db.run('DELETE FROM quote_attachments WHERE id = ?', [attachmentId]);
   res.json({ success: true });
 });
 
@@ -1614,7 +1614,7 @@ app.post('/api/quotes/:id/send', auth, async (req, res) => {
 });
 
 // Accept quote (convert to order)
-app.post('/api/quotes/:id/accept', auth, (req, res) => {
+app.post('/api/quotes/:id/accept', auth, async (req, res) => {
   const quoteId = Number(req.params.id);
   
   // Set status to 'accepted' and set accepted_at timestamp
@@ -1622,51 +1622,51 @@ app.post('/api/quotes/:id/accept', auth, (req, res) => {
   // Status should ONLY be 'sent' if email was actually sent via /send endpoint
   // PostgreSQL-compatible: Use CURRENT_TIMESTAMP instead of datetime('now')
   if (db._isProduction) {
-    db.prepare('UPDATE quotes SET status = ?, accepted_at = CURRENT_TIMESTAMP WHERE id = ?').run('accepted', quoteId);
+    await db.run('UPDATE quotes SET status = ?, accepted_at = CURRENT_TIMESTAMP WHERE id = ?', ['accepted', quoteId]);
   } else {
-    db.prepare('UPDATE quotes SET status = ?, accepted_at = datetime(\'now\') WHERE id = ?').run('accepted', quoteId);
+    await db.run('UPDATE quotes SET status = ?, accepted_at = datetime(\'now\') WHERE id = ?', ['accepted', quoteId]);
   }
   
-  const quote = db.prepare(`
+  const quote = await db.get(`
     SELECT q.*, c.company_name as customer_name, u.name as created_by_name
     FROM quotes q
     JOIN customers c ON q.customer_id = c.id
     JOIN users u ON q.created_by = u.id
     WHERE q.id = ?
-  `).get(quoteId);
+  `, [quoteId]);
   
-  quote.full_order_number = getFullOrderNumber(quote);
+  quote.full_order_number = await getFullOrderNumber(quote);
   
   res.json(quote);
 });
 
 // Reject quote
-app.post('/api/quotes/:id/reject', auth, (req, res) => {
+app.post('/api/quotes/:id/reject', auth, async (req, res) => {
   const quoteId = Number(req.params.id);
   
-  const quote = db.prepare('SELECT * FROM quotes WHERE id = ?').get(quoteId);
+  const quote = await db.get('SELECT * FROM quotes WHERE id = ?', [quoteId]);
   if (!quote) {
     return res.status(404).json({ error: 'Quote not found' });
   }
   
-  db.prepare('UPDATE quotes SET status = ? WHERE id = ?').run('rejected', quoteId);
+  await db.run('UPDATE quotes SET status = ? WHERE id = ?', ['rejected', quoteId]);
   
-  const updated = db.prepare(`
+  const updated = await db.get(`
     SELECT q.*, c.company_name as customer_name, u.name as created_by_name
     FROM quotes q
     JOIN customers c ON q.customer_id = c.id
     JOIN users u ON q.created_by = u.id
     WHERE q.id = ?
-  `).get(quoteId);
+  `, [quoteId]);
   
   res.json(updated);
 });
 
 // Revert order/rejected quote back to quote status
-app.post('/api/quotes/:id/revert', auth, (req, res) => {
+app.post('/api/quotes/:id/revert', auth, async (req, res) => {
   const quoteId = Number(req.params.id);
   
-  const quote = db.prepare('SELECT * FROM quotes WHERE id = ?').get(quoteId);
+  const quote = await db.get('SELECT * FROM quotes WHERE id = ?', [quoteId]);
   if (!quote) {
     return res.status(404).json({ error: 'Quote not found' });
   }
@@ -1678,28 +1678,28 @@ app.post('/api/quotes/:id/revert', auth, (req, res) => {
   
   // Only check for invoices if it's an accepted order
   if (quote.status === 'accepted') {
-    const hasInvoice = db.prepare('SELECT COUNT(*) as cnt FROM invoices WHERE order_id = ?').get(quoteId).cnt;
-    if (hasInvoice > 0) {
+    const hasInvoice = await db.get('SELECT COUNT(*) as cnt FROM invoices WHERE order_id = ?', [quoteId]);
+    if (hasInvoice.cnt > 0) {
       return res.status(400).json({ error: 'Cannot revert order that has been invoiced. Delete invoice first.' });
     }
   }
   
   // Revert to 'draft' status (clear both sent_at and accepted_at timestamps)
-  db.prepare('UPDATE quotes SET status = ?, sent_at = NULL, accepted_at = NULL WHERE id = ?').run('draft', quoteId);
+  await db.run('UPDATE quotes SET status = ?, sent_at = NULL, accepted_at = NULL WHERE id = ?', ['draft', quoteId]);
   
-  const updated = db.prepare(`
+  const updated = await db.get(`
     SELECT q.*, c.company_name as customer_name, u.name as created_by_name
     FROM quotes q
     JOIN customers c ON q.customer_id = c.id
     JOIN users u ON q.created_by = u.id
     WHERE q.id = ?
-  `).get(quoteId);
+  `, [quoteId]);
   
   res.json(updated);
 });
 
 // Create extra work on existing order
-app.post('/api/quotes/:id/extra-work', auth, (req, res) => {
+app.post('/api/quotes/:id/extra-work', auth, async (req, res) => {
   const parentOrderId = Number(req.params.id);
   const { title, notes, terms, lines } = req.body;
   
@@ -1707,17 +1707,17 @@ app.post('/api/quotes/:id/extra-work', auth, (req, res) => {
     return res.status(400).json({ error: 'Missing required fields' });
   }
   
-  const parentOrder = db.prepare('SELECT * FROM quotes WHERE id = ?').get(parentOrderId);
+  const parentOrder = await db.get('SELECT * FROM quotes WHERE id = ?', [parentOrderId]);
   if (!parentOrder) {
     return res.status(404).json({ error: 'Parent order not found' });
   }
   
   // Generate extra work number
-  const lastSub = db.prepare(`
+  const lastSub = await db.get(`
     SELECT sub_number FROM quotes 
     WHERE parent_order_id = ? 
     ORDER BY sub_number DESC LIMIT 1
-  `).get(parentOrderId);
+  `, [parentOrderId]);
   
   const subNum = lastSub ? lastSub.sub_number + 1 : 1;
   
@@ -1737,33 +1737,33 @@ app.post('/api/quotes/:id/extra-work', auth, (req, res) => {
   // Note: For extra work, we use the full order number (e.g., "0001-01") as quote_number for backwards compatibility
   const fullOrderNumber = `${parentOrder.order_number}-${String(subNum).padStart(2, '0')}`;
   
-  const info = db.prepare(`
+  const info = await db.run(`
     INSERT INTO quotes (quote_number, order_number, parent_order_id, sub_number, is_extra_work, customer_id, title, notes, terms, subtotal, vat_rate, vat_amount, total, status, created_by)
     VALUES (?, ?, ?, ?, 1, ?, ?, ?, ?, ?, ?, ?, ?, 'accepted', ?)
-  `).run(fullOrderNumber, parentOrder.order_number, parentOrderId, subNum, parentOrder.customer_id, title, notes || null, terms || parentOrder.terms, subtotal, vat_rate, vat_amount, total, req.user.id);
+  `, [fullOrderNumber, parentOrder.order_number, parentOrderId, subNum, parentOrder.customer_id, title, notes || null, terms || parentOrder.terms, subtotal, vat_rate, vat_amount, total, req.user.id]);
   
   const extraWorkId = info.lastInsertRowid;
   
   // Create lines
-  lines.forEach((line, index) => {
+  for (const [index, line] of lines.entries()) {
     const discount_amount = (line.unit_price * line.quantity * (line.discount_percent || 0)) / 100;
     const line_total = (line.unit_price * line.quantity) - discount_amount;
     
-    db.prepare(`
+    await db.run(`
       INSERT INTO quote_lines (quote_id, description, quantity, unit, unit_price, discount_percent, discount_amount, line_total, sort_order)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(extraWorkId, line.description, line.quantity, line.unit, line.unit_price, line.discount_percent || 0, discount_amount, line_total, index);
-  });
+    `, [extraWorkId, line.description, line.quantity, line.unit, line.unit_price, line.discount_percent || 0, discount_amount, line_total, index]);
+  }
   
-  const extraWork = db.prepare(`
+  const extraWork = await db.get(`
     SELECT q.*, c.company_name as customer_name, u.name as created_by_name
     FROM quotes q
     JOIN customers c ON q.customer_id = c.id
     JOIN users u ON q.created_by = u.id
     WHERE q.id = ?
-  `).get(extraWorkId);
+  `, [extraWorkId]);
   
-  extraWork.full_order_number = getFullOrderNumber(extraWork);
+  extraWork.full_order_number = await getFullOrderNumber(extraWork);
   
   res.json(extraWork);
 });
