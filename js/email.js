@@ -1393,11 +1393,14 @@ const emailClient = {
     if (prefs) {
       try {
         const parsed = JSON.parse(prefs);
-        if (parsed.foldersWidth) {
-          document.querySelector('.email-folders-tree').style.width = parsed.foldersWidth + 'px';
+        const foldersTree = document.querySelector('.email-folders-tree');
+        const listPanel = document.querySelector('.email-list-panel');
+        
+        if (parsed.foldersWidth && foldersTree) {
+          foldersTree.style.width = parsed.foldersWidth + 'px';
         }
-        if (parsed.listWidth) {
-          document.querySelector('.email-list-panel').style.width = parsed.listWidth + 'px';
+        if (parsed.listWidth && listPanel) {
+          listPanel.style.width = parsed.listWidth + 'px';
         }
       } catch (error) {
         console.error('Error loading layout preferences:', error);

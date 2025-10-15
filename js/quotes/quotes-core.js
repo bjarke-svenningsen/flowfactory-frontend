@@ -615,6 +615,13 @@ function renderQuotePreview() {
     
     const container = document.getElementById('quotesPreviewContainer');
     
+    // Ensure lines is an array
+    if (!currentQuote.lines || !Array.isArray(currentQuote.lines)) {
+        console.error('Invalid quote lines:', currentQuote.lines);
+        container.innerHTML = '<div style="padding: 40px; text-align: center; color: #f44336;">⚠️ Kunne ikke indlæse tilbudslinjer. Prøv at genindlæse siden.</div>';
+        return;
+    }
+    
     // Modern PDF-style preview
     container.innerHTML = `
         <div style="max-width: 900px; margin: 0 auto;">
