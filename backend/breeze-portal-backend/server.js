@@ -258,7 +258,12 @@ app.post('/api/posts', auth, async (req, res) => {
 app.post('/api/posts/:id/like', auth, async (req, res) => {
   const postId = Number(req.params.id);
   try {
-    await db.run('INSERT OR IGNORE INTO reactions (post_id, user_id, type) VALUES (?, ?, ?)', [postId, req.user.id, 'like']);
+    // PostgreSQL-compatible: Use INSERT ... ON CONFLICT DO NOTHING instead of INSERT OR IGNORE
+    if (db._isProduction) {
+      await db.run('INSERT INTO reactions (post_id, user_id, type) VALUES (?, ?, ?) ON CONFLICT (post_id, user_id) DO NOTHING', [postId, req.user.id, 'like']);
+    } else {
+      await db.run('INSERT OR IGNORE INTO reactions (post_id, user_id, type) VALUES (?, ?, ?)', [postId, req.user.id, 'like']);
+    }
     const result = await db.get('SELECT COUNT(*) as cnt FROM reactions WHERE post_id = ?', [postId]);
     const likes = result.cnt;
     io.emit('feed:like_updated', { postId, likes });
@@ -1579,7 +1584,12 @@ app.post('/api/quotes/:id/send', auth, async (req, res) => {
   
   try {
     // Update quote status and sent_at
-    db.prepare('UPDATE quotes SET status = ?, sent_at = datetime(\'now\') WHERE id = ?').run('sent', quoteId);
+    // PostgreSQL-compatible: Use CURRENT_TIMESTAMP instead of datetime('now')
+    if (db._isProduction) {
+      db.prepare('UPDATE quotes SET status = ?, sent_at = CURRENT_TIMESTAMP WHERE id = ?').run('sent', quoteId);
+    } else {
+      db.prepare('UPDATE quotes SET status = ?, sent_at = datetime(\'now\') WHERE id = ?').run('sent', quoteId);
+    }
     
     const mailOptions = {
       from: process.env.EMAIL_FROM || process.env.EMAIL_USER,
@@ -1610,7 +1620,12 @@ app.post('/api/quotes/:id/accept', auth, (req, res) => {
   // Set status to 'accepted' and set accepted_at timestamp
   // This allows the order to appear in Orders tab
   // Status should ONLY be 'sent' if email was actually sent via /send endpoint
-  db.prepare('UPDATE quotes SET status = ?, accepted_at = datetime(\'now\') WHERE id = ?').run('accepted', quoteId);
+  // PostgreSQL-compatible: Use CURRENT_TIMESTAMP instead of datetime('now')
+  if (db._isProduction) {
+    db.prepare('UPDATE quotes SET status = ?, accepted_at = CURRENT_TIMESTAMP WHERE id = ?').run('accepted', quoteId);
+  } else {
+    db.prepare('UPDATE quotes SET status = ?, accepted_at = datetime(\'now\') WHERE id = ?').run('accepted', quoteId);
+  }
   
   const quote = db.prepare(`
     SELECT q.*, c.company_name as customer_name, u.name as created_by_name
@@ -1960,7 +1975,12 @@ app.post('/api/invoices/:id/send', auth, async (req, res) => {
   }
   
   try {
-    db.prepare('UPDATE invoices SET status = ?, sent_at = datetime(\'now\') WHERE id = ?').run('sent', invoiceId);
+    // PostgreSQL-compatible: Use CURRENT_TIMESTAMP instead of datetime('now')
+    if (db._isProduction) {
+      db.prepare('UPDATE invoices SET status = ?, sent_at = CURRENT_TIMESTAMP WHERE id = ?').run('sent', invoiceId);
+    } else {
+      db.prepare('UPDATE invoices SET status = ?, sent_at = datetime(\'now\') WHERE id = ?').run('sent', invoiceId);
+    }
     
     const mailOptions = {
       from: process.env.EMAIL_FROM || process.env.EMAIL_USER,
