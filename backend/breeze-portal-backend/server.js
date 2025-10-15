@@ -2225,23 +2225,23 @@ app.post('/api/files/:fileId/transfer-to-order', auth, async (req, res) => {
 // --- TIMELINE ENDPOINTS ---
 
 // Get timeline for an order
-app.get('/api/orders/:orderId/timeline', auth, (req, res) => {
+app.get('/api/orders/:orderId/timeline', auth, async (req, res) => {
   const orderId = Number(req.params.orderId);
   
-  const timeline = db.prepare(`
+  const timeline = await db.all(`
     SELECT t.*, u.name as user_name, u.profile_image
     FROM order_timeline t
     JOIN users u ON t.user_id = u.id
     WHERE t.order_id = ?
     ORDER BY t.created_at DESC
     LIMIT 100
-  `).all(orderId);
+  `, [orderId]);
   
   res.json(timeline);
 });
 
 // Manually add timeline entry
-app.post('/api/orders/:orderId/timeline', auth, (req, res) => {
+app.post('/api/orders/:orderId/timeline', auth, async (req, res) => {
   const orderId = Number(req.params.orderId);
   const { activity_type, description } = req.body;
   
@@ -2249,17 +2249,17 @@ app.post('/api/orders/:orderId/timeline', auth, (req, res) => {
     return res.status(400).json({ error: 'Activity type and description required' });
   }
   
-  const info = db.prepare(`
+  const info = await db.run(`
     INSERT INTO order_timeline (order_id, activity_type, description, user_id)
     VALUES (?, ?, ?, ?)
-  `).run(orderId, activity_type, description, req.user.id);
+  `, [orderId, activity_type, description, req.user.id]);
   
-  const entry = db.prepare(`
+  const entry = await db.get(`
     SELECT t.*, u.name as user_name, u.profile_image
     FROM order_timeline t
     JOIN users u ON t.user_id = u.id
     WHERE t.id = ?
-  `).get(info.lastInsertRowid);
+  `, [info.lastInsertRowid]);
   
   res.json(entry);
 });
@@ -2267,22 +2267,22 @@ app.post('/api/orders/:orderId/timeline', auth, (req, res) => {
 // --- NOTES ENDPOINTS ---
 
 // Get all notes for an order
-app.get('/api/orders/:orderId/notes', auth, (req, res) => {
+app.get('/api/orders/:orderId/notes', auth, async (req, res) => {
   const orderId = Number(req.params.orderId);
   
-  const notes = db.prepare(`
+  const notes = await db.all(`
     SELECT n.*, u.name as created_by_name, u.profile_image
     FROM order_notes n
     JOIN users u ON n.created_by = u.id
     WHERE n.order_id = ?
     ORDER BY n.is_pinned DESC, n.updated_at DESC
-  `).all(orderId);
+  `, [orderId]);
   
   res.json(notes);
 });
 
 // Add note to order
-app.post('/api/orders/:orderId/notes', auth, (req, res) => {
+app.post('/api/orders/:orderId/notes', auth, async (req, res) => {
   const orderId = Number(req.params.orderId);
   const { content, is_pinned } = req.body;
   
@@ -2290,23 +2290,23 @@ app.post('/api/orders/:orderId/notes', auth, (req, res) => {
     return res.status(400).json({ error: 'Content required' });
   }
   
-  const info = db.prepare(`
+  const info = await db.run(`
     INSERT INTO order_notes (order_id, content, is_pinned, created_by)
     VALUES (?, ?, ?, ?)
-  `).run(orderId, content.trim(), is_pinned ? 1 : 0, req.user.id);
+  `, [orderId, content.trim(), is_pinned ? 1 : 0, req.user.id]);
   
   // Log activity
-  db.prepare(`
+  await db.run(`
     INSERT INTO order_timeline (order_id, activity_type, description, user_id)
     VALUES (?, 'note_added', ?, ?)
-  `).run(orderId, 'Note tilføjet', req.user.id);
+  `, [orderId, 'Note tilføjet', req.user.id]);
   
-  const note = db.prepare(`
+  const note = await db.get(`
     SELECT n.*, u.name as created_by_name, u.profile_image
     FROM order_notes n
     JOIN users u ON n.created_by = u.id
     WHERE n.id = ?
-  `).get(info.lastInsertRowid);
+  `, [info.lastInsertRowid]);
   
   res.json(note);
 });
@@ -2336,9 +2336,9 @@ app.put('/api/orders/:orderId/notes/:noteId', auth, async (req, res) => {
 });
 
 // Delete note
-app.delete('/api/orders/:orderId/notes/:noteId', auth, (req, res) => {
+app.delete('/api/orders/:orderId/notes/:noteId', auth, async (req, res) => {
   const noteId = Number(req.params.noteId);
-  db.prepare('DELETE FROM order_notes WHERE id = ?').run(noteId);
+  await db.run('DELETE FROM order_notes WHERE id = ?', [noteId]);
   res.json({ success: true });
 });
 
