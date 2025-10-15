@@ -331,6 +331,36 @@ function renderWorkspaceOverview(container) {
                         </button>
                     </div>
                 </div>
+                
+                <!-- Arbejdsbeskrivelse Section -->
+                <div style="background: white; padding: 30px; border-radius: 10px; border: 2px solid #e0e0e0; margin-top: 20px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                        <h3 style="margin: 0;">📋 Arbejdsbeskrivelse</h3>
+                        <button id="workDescEditBtn" onclick="toggleWorkDescriptionEdit()" style="padding: 8px 16px; background: #667eea; color: white; border: none; border-radius: 5px; cursor: pointer;">
+                            ✏️ Rediger
+                        </button>
+                    </div>
+                    
+                    <!-- Read Mode (default) -->
+                    <div id="workDescReadMode" style="display: block;">
+                        <div id="workDescContent" style="min-height: 100px; padding: 15px; background: #f9f9f9; border-radius: 5px; border: 1px solid #e0e0e0;">
+                            ${currentWorkspaceOrder.work_description || '<em style="color: #999;">Ingen beskrivelse endnu...</em>'}
+                        </div>
+                    </div>
+                    
+                    <!-- Edit Mode (hidden) -->
+                    <div id="workDescEditMode" style="display: none;">
+                        <div id="workDescEditor" style="min-height: 200px; background: white;"></div>
+                        <div style="margin-top: 15px; display: flex; gap: 10px; justify-content: flex-end;">
+                            <button onclick="cancelWorkDescriptionEdit()" style="padding: 10px 20px; background: #999; color: white; border: none; border-radius: 5px; cursor: pointer;">
+                                Annuller
+                            </button>
+                            <button onclick="saveWorkDescription()" style="padding: 10px 20px; background: #4caf50; color: white; border: none; border-radius: 5px; cursor: pointer;">
+                                💾 Gem
+                            </button>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
         
@@ -1382,6 +1412,74 @@ function closeExtraWorkModal() {
     extraWorkLines = [];
 }
 
+// --- WORK DESCRIPTION RICH TEXT EDITOR ---
+
+let workDescQuill = null;
+
+function toggleWorkDescriptionEdit() {
+    // Show edit mode
+    document.getElementById('workDescReadMode').style.display = 'none';
+    document.getElementById('workDescEditMode').style.display = 'block';
+    
+    // Initialize Quill if not already
+    if (!workDescQuill) {
+        workDescQuill = new Quill('#workDescEditor', {
+            theme: 'snow',
+            modules: {
+                toolbar: [
+                    [{ 'header': [1, 2, 3, false] }],
+                    ['bold', 'italic', 'underline'],
+                    [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                    [{ 'color': [] }, { 'background': [] }],
+                    ['clean']
+                ]
+            }
+        });
+    }
+    
+    // Load current content (HTML)
+    const currentContent = currentWorkspaceOrder.work_description || '';
+    workDescQuill.root.innerHTML = currentContent;
+}
+
+function cancelWorkDescriptionEdit() {
+    // Hide edit mode, show read mode
+    document.getElementById('workDescEditMode').style.display = 'none';
+    document.getElementById('workDescReadMode').style.display = 'block';
+}
+
+async function saveWorkDescription() {
+    const htmlContent = workDescQuill.root.innerHTML;
+    
+    try {
+        const token = sessionStorage.getItem('token');
+        const response = await fetch(`https://flowfactory-frontend.onrender.com/api/orders/${currentWorkspaceOrder.id}/work-description`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ work_description: htmlContent })
+        });
+        
+        if (!response.ok) throw new Error('Failed to save');
+        
+        // Update current order object
+        currentWorkspaceOrder.work_description = htmlContent;
+        
+        // Update read mode display
+        document.getElementById('workDescContent').innerHTML = htmlContent || '<em style="color: #999;">Ingen beskrivelse...</em>';
+        
+        // Switch back to read mode
+        cancelWorkDescriptionEdit();
+        
+        alert('✅ Arbejdsbeskrivelse gemt!');
+    } catch (error) {
+        console.error('Save work description error:', error);
+        alert('Kunne ikke gemme: ' + error.message);
+    }
+}
+
 // Export functions
 window.openOrderWorkspace = openOrderWorkspace;
 window.switchWorkspaceTab = switchWorkspaceTab;
@@ -1404,3 +1502,6 @@ window.addExtraWorkLine = addExtraWorkLine;
 window.removeExtraWorkLine = removeExtraWorkLine;
 window.updateExtraWorkLine = updateExtraWorkLine;
 window.closeExtraWorkModal = closeExtraWorkModal;
+window.toggleWorkDescriptionEdit = toggleWorkDescriptionEdit;
+window.cancelWorkDescriptionEdit = cancelWorkDescriptionEdit;
+window.saveWorkDescription = saveWorkDescription;

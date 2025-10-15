@@ -2344,6 +2344,34 @@ app.delete('/api/orders/:orderId/notes/:noteId', auth, async (req, res) => {
 
 // --- ORDER WORKSPACE SUMMARY ENDPOINT ---
 
+// Update order work description
+app.put('/api/orders/:orderId/work-description', auth, async (req, res) => {
+  const orderId = Number(req.params.orderId);
+  const { work_description } = req.body;
+  
+  try {
+    // Verify order exists
+    const order = await db.get('SELECT id FROM quotes WHERE id = ?', [orderId]);
+    if (!order) {
+      return res.status(404).json({ error: 'Order not found' });
+    }
+    
+    // Update work description
+    await db.run('UPDATE quotes SET work_description = ? WHERE id = ?', [work_description || null, orderId]);
+    
+    // Log to timeline
+    await db.run(`
+      INSERT INTO order_timeline (order_id, activity_type, description, user_id)
+      VALUES (?, 'work_description_updated', 'Arbejdsbeskrivelse opdateret', ?)
+    `, [orderId, req.user.id]);
+    
+    res.json({ success: true, work_description });
+  } catch (error) {
+    console.error('Update work description error:', error);
+    res.status(500).json({ error: 'Failed to update work description' });
+  }
+});
+
 // Get complete order workspace data
 app.get('/api/orders/:orderId/workspace', auth, async (req, res) => {
   const orderId = Number(req.params.orderId);
@@ -2352,7 +2380,7 @@ app.get('/api/orders/:orderId/workspace', auth, async (req, res) => {
   const order = await db.get(`
     SELECT q.id, q.quote_number, q.order_number, q.parent_order_id, q.sub_number, q.is_extra_work,
            q.customer_id, q.title, q.requisition_number, q.date, q.valid_until, q.status,
-           q.notes, q.terms, q.subtotal, q.vat_rate, q.vat_amount, q.total,
+           q.notes, q.terms, q.work_description, q.subtotal, q.vat_rate, q.vat_amount, q.total,
            q.created_by, q.created_at, q.sent_at, q.accepted_at, q.contact_person_id,
            c.company_name, c.contact_person, c.email as customer_email,
            c.phone as customer_phone, c.address, c.postal_code, c.city, c.cvr_number,

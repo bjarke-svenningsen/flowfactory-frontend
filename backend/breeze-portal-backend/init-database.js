@@ -340,6 +340,17 @@ export async function initializeDatabase() {
       }
       // Ignore other errors - column might already exist
     }
+    
+    try {
+      // Try to add work_description to quotes table (for rich text editor)
+      await db.run(`ALTER TABLE quotes ADD COLUMN work_description TEXT`);
+      console.log('✅ Added work_description column to quotes table');
+    } catch (error) {
+      if (error.message.includes('duplicate column') || error.message.includes('already exists')) {
+        console.log('ℹ️  work_description column already exists in quotes table');
+      }
+      // Ignore other errors - column might already exist
+    }
 
     // Email attachments
     await db.run(`CREATE TABLE IF NOT EXISTS email_attachments (
