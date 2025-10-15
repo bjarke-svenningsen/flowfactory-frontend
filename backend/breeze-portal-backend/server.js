@@ -2292,24 +2292,25 @@ app.post('/api/orders/:orderId/notes', auth, (req, res) => {
 });
 
 // Update note
-app.put('/api/orders/:orderId/notes/:noteId', auth, (req, res) => {
+app.put('/api/orders/:orderId/notes/:noteId', auth, async (req, res) => {
   const noteId = Number(req.params.noteId);
   const { content, is_pinned } = req.body;
   
-  db.prepare(`
+  // Use CURRENT_TIMESTAMP for PostgreSQL compatibility
+  await db.run(`
     UPDATE order_notes SET
       content = ?,
       is_pinned = ?,
-      updated_at = datetime('now')
+      updated_at = ${db._isProduction ? 'CURRENT_TIMESTAMP' : "datetime('now')"}
     WHERE id = ?
-  `).run(content, is_pinned ? 1 : 0, noteId);
+  `, [content, is_pinned ? 1 : 0, noteId]);
   
-  const note = db.prepare(`
+  const note = await db.get(`
     SELECT n.*, u.name as created_by_name, u.profile_image
     FROM order_notes n
     JOIN users u ON n.created_by = u.id
     WHERE n.id = ?
-  `).get(noteId);
+  `, [noteId]);
   
   res.json(note);
 });
