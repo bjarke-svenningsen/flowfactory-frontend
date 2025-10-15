@@ -1771,8 +1771,8 @@ app.post('/api/quotes/:id/extra-work', auth, async (req, res) => {
 // --- INVOICES API ---
 
 // Get all invoices
-app.get('/api/invoices', auth, (req, res) => {
-  const invoices = db.prepare(`
+app.get('/api/invoices', auth, async (req, res) => {
+  const invoices = await db.all(`
     SELECT i.*, q.order_number, q.title as order_title, 
            c.company_name as customer_name, u.name as created_by_name
     FROM invoices i
@@ -1780,15 +1780,15 @@ app.get('/api/invoices', auth, (req, res) => {
     JOIN customers c ON q.customer_id = c.id
     JOIN users u ON i.created_by = u.id
     ORDER BY i.id DESC
-  `).all();
+  `);
   res.json(invoices);
 });
 
 // Get single invoice with details
-app.get('/api/invoices/:id', auth, (req, res) => {
+app.get('/api/invoices/:id', auth, async (req, res) => {
   const invoiceId = Number(req.params.id);
   
-  const invoice = db.prepare(`
+  const invoice = await db.get(`
     SELECT i.*, q.*, c.*, u.name as created_by_name,
            c.company_name, c.contact_person, c.email as customer_email, 
            c.phone as customer_phone, c.address, c.postal_code, c.city, c.cvr_number,
@@ -1798,24 +1798,24 @@ app.get('/api/invoices/:id', auth, (req, res) => {
     JOIN customers c ON q.customer_id = c.id
     JOIN users u ON i.created_by = u.id
     WHERE i.id = ?
-  `).get(invoiceId);
+  `, [invoiceId]);
   
   if (!invoice) {
     return res.status(404).json({ error: 'Invoice not found' });
   }
   
-  const lines = db.prepare('SELECT * FROM invoice_lines WHERE invoice_id = ? ORDER BY sort_order, id').all(invoiceId);
+  const lines = await db.all('SELECT * FROM invoice_lines WHERE invoice_id = ? ORDER BY sort_order, id', [invoiceId]);
   invoice.lines = lines;
   
   res.json(invoice);
 });
 
 // Create invoice from order
-app.post('/api/invoices/from-order/:orderId', auth, (req, res) => {
+app.post('/api/invoices/from-order/:orderId', auth, async (req, res) => {
   const orderId = Number(req.params.orderId);
   const { due_date, payment_terms, notes } = req.body;
   
-  const order = db.prepare('SELECT * FROM quotes WHERE id = ?').get(orderId);
+  const order = await db.get('SELECT * FROM quotes WHERE id = ?', [orderId]);
   if (!order) {
     return res.status(404).json({ error: 'Order not found' });
   }
@@ -1825,15 +1825,15 @@ app.post('/api/invoices/from-order/:orderId', auth, (req, res) => {
   }
   
   // Check if order already has an invoice (prevent duplicates)
-  const existingInvoice = db.prepare('SELECT invoice_number FROM invoices WHERE order_id = ?').get(orderId);
+  const existingInvoice = await db.get('SELECT invoice_number FROM invoices WHERE order_id = ?', [orderId]);
   if (existingInvoice) {
     return res.status(400).json({ 
       error: `Order already has invoice ${existingInvoice.invoice_number}. Delete the existing invoice first if you need to create a new one.` 
     });
   }
   
-  const invoice_number = generateInvoiceNumber();
-  const full_order_number = getFullOrderNumber(order);
+  const invoice_number = await generateInvoiceNumber();
+  const full_order_number = await getFullOrderNumber(order);
   
   // Calculate due date (14 days from now if not provided)
   let finalDueDate = due_date;
@@ -1844,23 +1844,23 @@ app.post('/api/invoices/from-order/:orderId', auth, (req, res) => {
   }
   
   // Create invoice
-  const info = db.prepare(`
+  const info = await db.run(`
     INSERT INTO invoices (invoice_number, order_id, full_order_number, due_date, payment_terms, subtotal, vat_rate, vat_amount, total, notes, created_by)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `).run(invoice_number, orderId, full_order_number, finalDueDate, payment_terms || 'Netto 14 dage', order.subtotal, order.vat_rate, order.vat_amount, order.total, notes || null, req.user.id);
+  `, [invoice_number, orderId, full_order_number, finalDueDate, payment_terms || 'Netto 14 dage', order.subtotal, order.vat_rate, order.vat_amount, order.total, notes || null, req.user.id]);
   
   const invoiceId = info.lastInsertRowid;
   
   // Copy lines from order
-  const orderLines = db.prepare('SELECT * FROM quote_lines WHERE quote_id = ? ORDER BY sort_order, id').all(orderId);
-  orderLines.forEach(line => {
-    db.prepare(`
+  const orderLines = await db.all('SELECT * FROM quote_lines WHERE quote_id = ? ORDER BY sort_order, id', [orderId]);
+  for (const line of orderLines) {
+    await db.run(`
       INSERT INTO invoice_lines (invoice_id, description, quantity, unit, unit_price, discount_percent, discount_amount, line_total, sort_order)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(invoiceId, line.description, line.quantity, line.unit, line.unit_price, line.discount_percent, line.discount_amount, line.line_total, line.sort_order);
-  });
+    `, [invoiceId, line.description, line.quantity, line.unit, line.unit_price, line.discount_percent, line.discount_amount, line.line_total, line.sort_order]);
+  }
   
-  const invoice = db.prepare(`
+  const invoice = await db.get(`
     SELECT i.*, q.order_number, q.title as order_title, 
            c.company_name as customer_name, u.name as created_by_name
     FROM invoices i
@@ -1868,17 +1868,17 @@ app.post('/api/invoices/from-order/:orderId', auth, (req, res) => {
     JOIN customers c ON q.customer_id = c.id
     JOIN users u ON i.created_by = u.id
     WHERE i.id = ?
-  `).get(invoiceId);
+  `, [invoiceId]);
   
   res.json(invoice);
 });
 
 // Update invoice
-app.put('/api/invoices/:id', auth, (req, res) => {
+app.put('/api/invoices/:id', auth, async (req, res) => {
   const invoiceId = Number(req.params.id);
   const { due_date, payment_terms, notes, status, lines } = req.body;
   
-  const invoice = db.prepare('SELECT * FROM invoices WHERE id = ?').get(invoiceId);
+  const invoice = await db.get('SELECT * FROM invoices WHERE id = ?', [invoiceId]);
   if (!invoice) {
     return res.status(404).json({ error: 'Invoice not found' });
   }
@@ -1900,7 +1900,7 @@ app.put('/api/invoices/:id', auth, (req, res) => {
   }
   
   // Update invoice
-  db.prepare(`
+  await db.run(`
     UPDATE invoices SET
       due_date = ?,
       payment_terms = ?,
@@ -1910,24 +1910,24 @@ app.put('/api/invoices/:id', auth, (req, res) => {
       vat_amount = ?,
       total = ?
     WHERE id = ?
-  `).run(due_date || invoice.due_date, payment_terms || invoice.payment_terms, notes !== undefined ? notes : invoice.notes, status || invoice.status, subtotal, vat_amount, total, invoiceId);
+  `, [due_date || invoice.due_date, payment_terms || invoice.payment_terms, notes !== undefined ? notes : invoice.notes, status || invoice.status, subtotal, vat_amount, total, invoiceId]);
   
   // Update lines if provided
   if (lines) {
-    db.prepare('DELETE FROM invoice_lines WHERE invoice_id = ?').run(invoiceId);
+    await db.run('DELETE FROM invoice_lines WHERE invoice_id = ?', [invoiceId]);
     
-    lines.forEach((line, index) => {
+    for (const [index, line] of lines.entries()) {
       const discount_amount = (line.unit_price * line.quantity * (line.discount_percent || 0)) / 100;
       const line_total = (line.unit_price * line.quantity) - discount_amount;
       
-      db.prepare(`
+      await db.run(`
         INSERT INTO invoice_lines (invoice_id, description, quantity, unit, unit_price, discount_percent, discount_amount, line_total, sort_order)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `).run(invoiceId, line.description, line.quantity, line.unit, line.unit_price, line.discount_percent || 0, discount_amount, line_total, index);
-    });
+      `, [invoiceId, line.description, line.quantity, line.unit, line.unit_price, line.discount_percent || 0, discount_amount, line_total, index]);
+    }
   }
   
-  const updated = db.prepare(`
+  const updated = await db.get(`
     SELECT i.*, q.order_number, q.title as order_title, 
            c.company_name as customer_name, u.name as created_by_name
     FROM invoices i
@@ -1935,15 +1935,15 @@ app.put('/api/invoices/:id', auth, (req, res) => {
     JOIN customers c ON q.customer_id = c.id
     JOIN users u ON i.created_by = u.id
     WHERE i.id = ?
-  `).get(invoiceId);
+  `, [invoiceId]);
   
   res.json(updated);
 });
 
 // Delete invoice
-app.delete('/api/invoices/:id', auth, (req, res) => {
+app.delete('/api/invoices/:id', auth, async (req, res) => {
   const invoiceId = Number(req.params.id);
-  db.prepare('DELETE FROM invoices WHERE id = ?').run(invoiceId);
+  await db.run('DELETE FROM invoices WHERE id = ?', [invoiceId]);
   res.json({ success: true });
 });
 
@@ -1951,7 +1951,7 @@ app.delete('/api/invoices/:id', auth, (req, res) => {
 app.post('/api/invoices/:id/send', auth, async (req, res) => {
   const invoiceId = Number(req.params.id);
   
-  const invoice = db.prepare(`
+  const invoice = await db.get(`
     SELECT i.*, q.*, c.*, u.name as created_by_name,
            c.company_name, c.contact_person, c.email as customer_email,
            q.title as order_title
@@ -1960,7 +1960,7 @@ app.post('/api/invoices/:id/send', auth, async (req, res) => {
     JOIN customers c ON q.customer_id = c.id
     JOIN users u ON i.created_by = u.id
     WHERE i.id = ?
-  `).get(invoiceId);
+  `, [invoiceId]);
   
   if (!invoice) {
     return res.status(404).json({ error: 'Invoice not found' });
@@ -1977,9 +1977,9 @@ app.post('/api/invoices/:id/send', auth, async (req, res) => {
   try {
     // PostgreSQL-compatible: Use CURRENT_TIMESTAMP instead of datetime('now')
     if (db._isProduction) {
-      db.prepare('UPDATE invoices SET status = ?, sent_at = CURRENT_TIMESTAMP WHERE id = ?').run('sent', invoiceId);
+      await db.run('UPDATE invoices SET status = ?, sent_at = CURRENT_TIMESTAMP WHERE id = ?', ['sent', invoiceId]);
     } else {
-      db.prepare('UPDATE invoices SET status = ?, sent_at = datetime(\'now\') WHERE id = ?').run('sent', invoiceId);
+      await db.run('UPDATE invoices SET status = ?, sent_at = datetime(\'now\') WHERE id = ?', ['sent', invoiceId]);
     }
     
     const mailOptions = {
