@@ -116,18 +116,23 @@ export const db = {
   prepare: (sql) => {
     if (isProduction) {
       // PostgreSQL doesn't use prepare the same way
+      // Convert ? placeholders to $1, $2, $3 for PostgreSQL
+      let pgSql = sql;
+      let paramIndex = 1;
+      pgSql = pgSql.replace(/\?/g, () => `$${paramIndex++}`);
+      
       // Return object with same interface
       return {
         get: async (...params) => {
-          const result = await pool.query(sql, params);
+          const result = await pool.query(pgSql, params);
           return result.rows[0];
         },
         all: async (...params) => {
-          const result = await pool.query(sql, params);
+          const result = await pool.query(pgSql, params);
           return result.rows;
         },
         run: async (...params) => {
-          const result = await pool.query(sql, params);
+          const result = await pool.query(pgSql, params);
           return { 
             changes: result.rowCount,
             lastInsertRowid: result.rows[0]?.id
