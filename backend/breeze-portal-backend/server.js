@@ -2011,16 +2011,16 @@ app.post('/api/invoices/:id/send', auth, async (req, res) => {
 // All database tables are now created in init-database.js before server starts
 
 // Get all expenses for an order
-app.get('/api/orders/:orderId/expenses', auth, (req, res) => {
+app.get('/api/orders/:orderId/expenses', auth, async (req, res) => {
   const orderId = Number(req.params.orderId);
   
-  const expenses = db.prepare(`
+  const expenses = await db.all(`
     SELECT e.*, u.name as created_by_name
     FROM order_expenses e
     JOIN users u ON e.created_by = u.id
     WHERE e.order_id = ?
     ORDER BY e.expense_date DESC, e.id DESC
-  `).all(orderId);
+  `, [orderId]);
   
   const total = expenses.reduce((sum, exp) => sum + exp.amount, 0);
   
@@ -2028,7 +2028,7 @@ app.get('/api/orders/:orderId/expenses', auth, (req, res) => {
 });
 
 // Add expense to order
-app.post('/api/orders/:orderId/expenses', auth, (req, res) => {
+app.post('/api/orders/:orderId/expenses', auth, async (req, res) => {
   const orderId = Number(req.params.orderId);
   const { description, amount, expense_date, category, receipt_file } = req.body;
   
@@ -2036,77 +2036,77 @@ app.post('/api/orders/:orderId/expenses', auth, (req, res) => {
     return res.status(400).json({ error: 'Description and amount required' });
   }
   
-  const info = db.prepare(`
+  const info = await db.run(`
     INSERT INTO order_expenses (order_id, description, amount, expense_date, category, receipt_file, created_by)
     VALUES (?, ?, ?, ?, ?, ?, ?)
-  `).run(orderId, description, Number(amount), expense_date || new Date().toISOString().split('T')[0], category || null, receipt_file || null, req.user.id);
+  `, [orderId, description, Number(amount), expense_date || new Date().toISOString().split('T')[0], category || null, receipt_file || null, req.user.id]);
   
   // Log activity
-  db.prepare(`
+  await db.run(`
     INSERT INTO order_timeline (order_id, activity_type, description, user_id)
     VALUES (?, 'expense_added', ?, ?)
-  `).run(orderId, `Udgift tilføjet: ${description} (${amount} kr)`, req.user.id);
+  `, [orderId, `Udgift tilføjet: ${description} (${amount} kr)`, req.user.id]);
   
-  const expense = db.prepare(`
+  const expense = await db.get(`
     SELECT e.*, u.name as created_by_name
     FROM order_expenses e
     JOIN users u ON e.created_by = u.id
     WHERE e.id = ?
-  `).get(info.lastInsertRowid);
+  `, [info.lastInsertRowid]);
   
   res.json(expense);
 });
 
 // Update expense
-app.put('/api/orders/:orderId/expenses/:expenseId', auth, (req, res) => {
+app.put('/api/orders/:orderId/expenses/:expenseId', auth, async (req, res) => {
   const expenseId = Number(req.params.expenseId);
   const { description, amount, expense_date, category } = req.body;
   
-  db.prepare(`
+  await db.run(`
     UPDATE order_expenses SET
       description = ?,
       amount = ?,
       expense_date = ?,
       category = ?
     WHERE id = ?
-  `).run(description, amount, expense_date, category || null, expenseId);
+  `, [description, amount, expense_date, category || null, expenseId]);
   
-  const expense = db.prepare(`
+  const expense = await db.get(`
     SELECT e.*, u.name as created_by_name
     FROM order_expenses e
     JOIN users u ON e.created_by = u.id
     WHERE e.id = ?
-  `).get(expenseId);
+  `, [expenseId]);
   
   res.json(expense);
 });
 
 // Delete expense
-app.delete('/api/orders/:orderId/expenses/:expenseId', auth, (req, res) => {
+app.delete('/api/orders/:orderId/expenses/:expenseId', auth, async (req, res) => {
   const expenseId = Number(req.params.expenseId);
-  db.prepare('DELETE FROM order_expenses WHERE id = ?').run(expenseId);
+  await db.run('DELETE FROM order_expenses WHERE id = ?', [expenseId]);
   res.json({ success: true });
 });
 
 // --- ORDER DOCUMENTS ENDPOINTS ---
 
 // Get all documents for an order
-app.get('/api/orders/:orderId/documents', auth, (req, res) => {
+app.get('/api/orders/:orderId/documents', auth, async (req, res) => {
   const orderId = Number(req.params.orderId);
   
-  const documents = db.prepare(`
+  const documents = await db.all(`
     SELECT d.*, u.name as uploaded_by_name
     FROM order_documents d
     JOIN users u ON d.uploaded_by = u.id
     WHERE d.order_id = ?
     ORDER BY d.created_at DESC
-  `).all(orderId);
+  `, [orderId]);
   
   res.json(documents);
 });
 
 // Upload document to order
-app.post('/api/orders/:orderId/documents', auth, upload.single('file'), (req, res) => {
+app.post('/api/orders/:orderId/documents', auth, upload.single('file'), async (req, res) => {
   const orderId = Number(req.params.orderId);
   
   if (!req.file) {
@@ -2115,32 +2115,32 @@ app.post('/api/orders/:orderId/documents', auth, upload.single('file'), (req, re
   
   const { document_type } = req.body;
   
-  const info = db.prepare(`
+  const info = await db.run(`
     INSERT INTO order_documents (order_id, filename, original_name, file_path, file_size, document_type, uploaded_by)
     VALUES (?, ?, ?, ?, ?, ?, ?)
-  `).run(orderId, req.file.filename, req.file.originalname, `/uploads/${req.file.filename}`, req.file.size, document_type || 'general', req.user.id);
+  `, [orderId, req.file.filename, req.file.originalname, `/uploads/${req.file.filename}`, req.file.size, document_type || 'general', req.user.id]);
   
   // Log activity
-  db.prepare(`
+  await db.run(`
     INSERT INTO order_timeline (order_id, activity_type, description, user_id)
     VALUES (?, 'document_added', ?, ?)
-  `).run(orderId, `Dokument uploadet: ${req.file.originalname}`, req.user.id);
+  `, [orderId, `Dokument uploadet: ${req.file.originalname}`, req.user.id]);
   
-  const document = db.prepare(`
+  const document = await db.get(`
     SELECT d.*, u.name as uploaded_by_name
     FROM order_documents d
     JOIN users u ON d.uploaded_by = u.id
     WHERE d.id = ?
-  `).get(info.lastInsertRowid);
+  `, [info.lastInsertRowid]);
   
   res.json(document);
 });
 
 // Delete order document
-app.delete('/api/orders/:orderId/documents/:documentId', auth, (req, res) => {
+app.delete('/api/orders/:orderId/documents/:documentId', auth, async (req, res) => {
   const documentId = Number(req.params.documentId);
   
-  const document = db.prepare('SELECT * FROM order_documents WHERE id = ?').get(documentId);
+  const document = await db.get('SELECT * FROM order_documents WHERE id = ?', [documentId]);
   if (!document) {
     return res.status(404).json({ error: 'Document not found' });
   }
@@ -2151,12 +2151,12 @@ app.delete('/api/orders/:orderId/documents/:documentId', auth, (req, res) => {
     fs.unlinkSync(filePath);
   }
   
-  db.prepare('DELETE FROM order_documents WHERE id = ?').run(documentId);
+  await db.run('DELETE FROM order_documents WHERE id = ?', [documentId]);
   res.json({ success: true });
 });
 
 // Transfer file from files system to order documents
-app.post('/api/files/:fileId/transfer-to-order', auth, (req, res) => {
+app.post('/api/files/:fileId/transfer-to-order', auth, async (req, res) => {
   const fileId = Number(req.params.fileId);
   const { order_number } = req.body;
   
@@ -2165,50 +2165,50 @@ app.post('/api/files/:fileId/transfer-to-order', auth, (req, res) => {
   }
   
   // Find the file
-  const file = db.prepare('SELECT * FROM files WHERE id = ?').get(fileId);
+  const file = await db.get('SELECT * FROM files WHERE id = ?', [fileId]);
   if (!file) {
     return res.status(404).json({ error: 'File not found' });
   }
   
   // Find the order by order_number (could be main order or extra work)
-  const order = db.prepare(`
+  const order = await db.get(`
     SELECT id, order_number, title, customer_id 
     FROM quotes 
     WHERE order_number = ? OR quote_number = ?
-  `).get(order_number.trim(), order_number.trim());
+  `, [order_number.trim(), order_number.trim()]);
   
   if (!order) {
     return res.status(404).json({ error: `Ordre ${order_number} findes ikke` });
   }
   
   // Check if file is already in order documents
-  const existing = db.prepare(`
+  const existing = await db.get(`
     SELECT id FROM order_documents 
     WHERE order_id = ? AND filename = ?
-  `).get(order.id, file.filename);
+  `, [order.id, file.filename]);
   
   if (existing) {
     return res.status(400).json({ error: 'Denne fil findes allerede i ordren' });
   }
   
   // Copy file to order documents
-  const info = db.prepare(`
+  const info = await db.run(`
     INSERT INTO order_documents (order_id, filename, original_name, file_path, file_size, document_type, uploaded_by)
     VALUES (?, ?, ?, ?, ?, 'transferred', ?)
-  `).run(order.id, file.filename, file.original_name, file.file_path, file.file_size, req.user.id);
+  `, [order.id, file.filename, file.original_name, file.file_path, file.file_size, req.user.id]);
   
   // Log activity
-  db.prepare(`
+  await db.run(`
     INSERT INTO order_timeline (order_id, activity_type, description, user_id)
     VALUES (?, 'document_transferred', ?, ?)
-  `).run(order.id, `Fil overført fra filhåndtering: ${file.original_name}`, req.user.id);
+  `, [order.id, `Fil overført fra filhåndtering: ${file.original_name}`, req.user.id]);
   
-  const document = db.prepare(`
+  const document = await db.get(`
     SELECT d.*, u.name as uploaded_by_name
     FROM order_documents d
     JOIN users u ON d.uploaded_by = u.id
     WHERE d.id = ?
-  `).get(info.lastInsertRowid);
+  `, [info.lastInsertRowid]);
   
   res.json({ 
     success: true, 
