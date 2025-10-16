@@ -312,7 +312,7 @@ function renderWorkspaceOverview(container) {
                 `}
                 
                 <!-- Profit Chart (Compact) -->
-                <div style="background: white; padding: 20px; border-radius: 10px; border: 2px solid #e0e0e0; margin: 0;">
+                <div style="background: white; padding: 20px; border-radius: 10px; border: 2px solid #e0e0e0; margin: 0; min-height: 250px;">
                     <h3 style="margin: 0 0 15px 0;">🥧 Profit Oversigt</h3>
                     <div style="display: flex; gap: 20px; align-items: center;">
                         <canvas id="profitChart" width="180" height="180"></canvas>
@@ -359,7 +359,7 @@ function renderWorkspaceOverview(container) {
                 </div>
                 
                 <!-- Quick actions -->
-                <div style="background: white; padding: 20px; border-radius: 10px; border: 2px solid #e0e0e0; margin: 0;">
+                <div style="background: white; padding: 20px; border-radius: 10px; border: 2px solid #e0e0e0; margin: 0; min-height: 250px;">
                     <h3 style="margin: 0 0 15px 0;">⚡ Hurtige Handlinger</h3>
                     <div style="display: flex; flex-direction: column; gap: 10px;">
                         <button onclick="switchWorkspaceTab('expenses')" style="padding: 12px 20px; background: #667eea; color: white; border: none; border-radius: 5px; cursor: pointer; text-align: left;">
