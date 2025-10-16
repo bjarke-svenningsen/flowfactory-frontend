@@ -1177,78 +1177,7 @@ app.delete('/api/customers/:customerId/contacts/:contactId', auth, async (req, r
 });
 
 // --- CUSTOMER CONTACTS API (duplicate section removed) ---
-
-// Get all contacts for a customer
-app.get('/api/customers/:customerId/contacts', auth, async (req, res) => {
-  const customerId = Number(req.params.customerId);
-  
-  const contacts = await db.all(`
-    SELECT * FROM customer_contacts
-    WHERE customer_id = ?
-    ORDER BY is_primary DESC, name ASC
-  `, [customerId]);
-  
-  res.json(contacts);
-});
-
-// Create a new contact
-app.post('/api/customers/:customerId/contacts', auth, async (req, res) => {
-  const customerId = Number(req.params.customerId);
-  const { name, title, email, phone, is_primary } = req.body;
-  
-  if (!name || !name.trim()) {
-    return res.status(400).json({ error: 'Name is required' });
-  }
-  
-  // If this is marked as primary, unmark other primaries
-  if (is_primary) {
-    await db.run('UPDATE customer_contacts SET is_primary = 0 WHERE customer_id = ?', [customerId]);
-  }
-  
-  const info = await db.run(`
-    INSERT INTO customer_contacts (customer_id, name, title, email, phone, is_primary)
-    VALUES (?, ?, ?, ?, ?, ?)
-  `, [customerId, name.trim(), title || null, email || null, phone || null, is_primary ? 1 : 0]);
-  
-  const contact = await db.get('SELECT * FROM customer_contacts WHERE id = ?', [info.lastInsertRowid]);
-  res.json(contact);
-});
-
-// Update a contact
-app.put('/api/customers/:customerId/contacts/:contactId', auth, async (req, res) => {
-  const customerId = Number(req.params.customerId);
-  const contactId = Number(req.params.contactId);
-  const { name, title, email, phone, is_primary } = req.body;
-  
-  if (!name || !name.trim()) {
-    return res.status(400).json({ error: 'Name is required' });
-  }
-  
-  // If this is marked as primary, unmark other primaries
-  if (is_primary) {
-    await db.run('UPDATE customer_contacts SET is_primary = 0 WHERE customer_id = ? AND id != ?', [customerId, contactId]);
-  }
-  
-  await db.run(`
-    UPDATE customer_contacts SET
-      name = ?,
-      title = ?,
-      email = ?,
-      phone = ?,
-      is_primary = ?
-    WHERE id = ? AND customer_id = ?
-  `, [name.trim(), title || null, email || null, phone || null, is_primary ? 1 : 0, contactId, customerId]);
-  
-  const contact = await db.get('SELECT * FROM customer_contacts WHERE id = ?', [contactId]);
-  res.json(contact);
-});
-
-// Delete a contact
-app.delete('/api/customers/:customerId/contacts/:contactId', auth, async (req, res) => {
-  const contactId = Number(req.params.contactId);
-  await db.run('DELETE FROM customer_contacts WHERE id = ?', [contactId]);
-  res.json({ success: true });
-});
+// All customer contacts endpoints have been deduplicated above
 
 // Quotes endpoints
 app.get('/api/quotes', auth, async (req, res) => {
