@@ -98,6 +98,21 @@ function renderWorkspace(data) {
         ordersTab.style.display = 'block';
     }
     
+    // Update tab buttons to highlight "Ordrer" tab
+    const tabs = ['quotes', 'orders', 'invoiced', 'rejected', 'customers'];
+    tabs.forEach(t => {
+        const btn = document.getElementById(`tab${t.charAt(0).toUpperCase() + t.slice(1)}`);
+        if (btn) {
+            if (t === 'orders') {
+                btn.style.background = '#667eea';
+                btn.style.color = 'white';
+            } else {
+                btn.style.background = 'transparent';
+                btn.style.color = '#666';
+            }
+        }
+    });
+    
     const container = document.getElementById('ordersContainer');
     
     const fullOrderNumber = data.order.is_extra_work && data.order.parent_order_id 
