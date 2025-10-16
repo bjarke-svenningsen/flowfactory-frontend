@@ -39,17 +39,21 @@ app.options('*', cors());
 
 app.use(express.json());
 
+// Determine uploads directory - use persistent disk on Render, local uploads otherwise
+const UPLOADS_DIR = process.env.RENDER ? '/opt/render/project/src/persistent/uploads' : path.join(__dirname, 'uploads');
+
+// Ensure uploads directory exists
+if (!fs.existsSync(UPLOADS_DIR)) {
+  fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+}
+
 // Serve static files from uploads directory
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+app.use('/uploads', express.static(UPLOADS_DIR));
 
 // Configure multer for file uploads
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    const uploadsDir = path.join(__dirname, 'uploads');
-    if (!fs.existsSync(uploadsDir)) {
-      fs.mkdirSync(uploadsDir, { recursive: true });
-    }
-    cb(null, uploadsDir);
+    cb(null, UPLOADS_DIR);
   },
   filename: (req, file, cb) => {
     const uniqueName = `${Date.now()}-${Math.round(Math.random() * 1E9)}${path.extname(file.originalname)}`;
@@ -497,7 +501,7 @@ app.delete('/api/files/:id', auth, async (req, res) => {
   }
   
   // Delete physical file
-  const filePath = path.join(__dirname, 'uploads', file.filename);
+  const filePath = path.join(UPLOADS_DIR, file.filename);
   if (fs.existsSync(filePath)) {
     fs.unlinkSync(filePath);
   }
@@ -1468,7 +1472,7 @@ app.delete('/api/quotes/:quoteId/attachments/:attachmentId', auth, async (req, r
   }
   
   // Delete physical file
-  const filePath = path.join(__dirname, 'uploads', attachment.filename);
+  const filePath = path.join(UPLOADS_DIR, attachment.filename);
   if (fs.existsSync(filePath)) {
     fs.unlinkSync(filePath);
   }
@@ -2075,7 +2079,7 @@ app.delete('/api/orders/:orderId/documents/:documentId', auth, async (req, res) 
   }
   
   // Delete physical file
-  const filePath = path.join(__dirname, 'uploads', document.filename);
+  const filePath = path.join(UPLOADS_DIR, document.filename);
   if (fs.existsSync(filePath)) {
     fs.unlinkSync(filePath);
   }

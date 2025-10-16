@@ -1,0 +1,21 @@
+services:
+  - type: web
+    name: flowfactory-backend
+    env: node
+    region: frankfurt
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        sync: false
+      - key: SESSION_SECRET
+        generateValue: true
+      - key: JWT_SECRET
+        generateValue: true
+    disk:
+      name: uploads-storage
+      mountPath: /opt/render/project/src/persistent
+      sizeGB: 1
