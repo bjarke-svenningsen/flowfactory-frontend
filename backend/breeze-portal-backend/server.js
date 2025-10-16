@@ -2340,6 +2340,7 @@ app.get('/api/orders/:orderId/workspace', auth, async (req, res) => {
            q.customer_id, q.title, q.requisition_number, q.date, q.valid_until, q.status,
            q.notes, q.terms, q.work_description, q.subtotal, q.vat_rate, q.vat_amount, q.total,
            q.created_by, q.created_at, q.sent_at, q.accepted_at, q.contact_person_id,
+           q.order_address, q.order_postal_code, q.order_city,
            c.company_name, c.contact_person, c.email as customer_email,
            c.phone as customer_phone, c.address, c.postal_code, c.city, c.cvr_number,
            u.name as created_by_name
@@ -2351,6 +2352,18 @@ app.get('/api/orders/:orderId/workspace', auth, async (req, res) => {
   
   if (!order) {
     return res.status(404).json({ error: 'Order not found' });
+  }
+  
+  // If contact_person_id is set, get contact person details
+  if (order.contact_person_id) {
+    const contactPerson = await db.get('SELECT * FROM customer_contacts WHERE id = ?', [order.contact_person_id]);
+    if (contactPerson) {
+      // Add contact person details to order object
+      order.contact_person_name = contactPerson.name;
+      order.contact_person_title = contactPerson.title;
+      order.contact_person_email = contactPerson.email;
+      order.contact_person_phone = contactPerson.phone;
+    }
   }
   
   // Get all extra work orders for this main order
