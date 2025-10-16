@@ -1027,7 +1027,15 @@ async function previewDocument(documentId, filename) {
         const imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp'];
         const pdfExtensions = ['pdf'];
         
-        const fileUrl = `https://flowfactory-frontend.onrender.com${doc.file_path}`;
+        // Debug logging
+        console.log('Preview document:', doc);
+        console.log('File path from DB:', doc.file_path);
+        
+        // Ensure file_path starts with /
+        const filePath = doc.file_path.startsWith('/') ? doc.file_path : '/' + doc.file_path;
+        const fileUrl = `https://flowfactory-frontend.onrender.com${filePath}`;
+        
+        console.log('Constructed file URL:', fileUrl);
         
         if (imageExtensions.includes(ext)) {
             // Show image in modal
