@@ -2359,12 +2359,6 @@ app.put('/api/orders/:orderId/work-description', auth, async (req, res) => {
     // Update work description
     await db.run('UPDATE quotes SET work_description = ? WHERE id = ?', [work_description || null, orderId]);
     
-    // Log to timeline
-    await db.run(`
-      INSERT INTO order_timeline (order_id, activity_type, description, user_id)
-      VALUES (?, 'work_description_updated', 'Arbejdsbeskrivelse opdateret', ?)
-    `, [orderId, req.user.id]);
-    
     res.json({ success: true, work_description });
   } catch (error) {
     console.error('Update work description error:', error);
