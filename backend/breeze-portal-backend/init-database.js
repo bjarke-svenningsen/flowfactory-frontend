@@ -351,6 +351,36 @@ export async function initializeDatabase() {
       }
       // Ignore other errors - column might already exist
     }
+    
+    try {
+      // Try to add order_address to quotes table (for order details edit)
+      await db.run(`ALTER TABLE quotes ADD COLUMN order_address TEXT`);
+      console.log('✅ Added order_address column to quotes table');
+    } catch (error) {
+      if (error.message.includes('duplicate column') || error.message.includes('already exists')) {
+        console.log('ℹ️  order_address column already exists in quotes table');
+      }
+    }
+    
+    try {
+      // Try to add order_postal_code to quotes table (for order details edit)
+      await db.run(`ALTER TABLE quotes ADD COLUMN order_postal_code TEXT`);
+      console.log('✅ Added order_postal_code column to quotes table');
+    } catch (error) {
+      if (error.message.includes('duplicate column') || error.message.includes('already exists')) {
+        console.log('ℹ️  order_postal_code column already exists in quotes table');
+      }
+    }
+    
+    try {
+      // Try to add order_city to quotes table (for order details edit)
+      await db.run(`ALTER TABLE quotes ADD COLUMN order_city TEXT`);
+      console.log('✅ Added order_city column to quotes table');
+    } catch (error) {
+      if (error.message.includes('duplicate column') || error.message.includes('already exists')) {
+        console.log('ℹ️  order_city column already exists in quotes table');
+      }
+    }
 
     // Email attachments
     await db.run(`CREATE TABLE IF NOT EXISTS email_attachments (
