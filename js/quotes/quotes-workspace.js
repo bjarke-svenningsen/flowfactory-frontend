@@ -223,9 +223,9 @@ function renderWorkspaceOverview(container) {
     const hasExtraWork = workspaceExtraWorkOrders && workspaceExtraWorkOrders.length > 0;
     
     container.innerHTML = `
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px; align-items: start;">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px;">
             <!-- Left column: Stats and Chart -->
-            <div style="margin: 0; padding: 0;">
+            <div style="display: flex; flex-direction: column; gap: 30px;">
                 ${hasExtraWork ? `
                     <!-- Split Statistics Cards -->
                     <div style="background: white; padding: 25px; border-radius: 10px; border: 2px solid #e0e0e0; margin: 0 0 30px 0; min-height: 500px;">
@@ -380,8 +380,8 @@ function renderWorkspaceOverview(container) {
             </div>
             
             <!-- Right column: Quick info -->
-            <div style="margin: 0; padding: 0;">
-                <div style="background: white; padding: 25px; border-radius: 10px; border: 2px solid #e0e0e0; margin: 0 0 30px 0; min-height: 500px;">
+            <div style="display: flex; flex-direction: column; gap: 30px;">
+                <div style="background: white; padding: 25px; border-radius: 10px; border: 2px solid #e0e0e0; flex: 1;">
                     <h3 style="margin: 0 0 20px 0;">🏢 Kunde Information</h3>
                     <div style="display: grid; gap: 15px;">
                         <div style="padding-bottom: 15px; border-bottom: 1px solid #e0e0e0;">
@@ -414,7 +414,7 @@ function renderWorkspaceOverview(container) {
                 </div>
                 
                 <!-- Quick actions -->
-                <div style="background: white; padding: 20px; border-radius: 10px; border: 2px solid #e0e0e0; margin: 0; min-height: 250px;">
+                <div style="background: white; padding: 20px; border-radius: 10px; border: 2px solid #e0e0e0; flex: 1;">
                     <h3 style="margin: 0 0 15px 0;">⚡ Hurtige Handlinger</h3>
                     <div style="display: flex; flex-direction: column; gap: 10px;">
                         <button onclick="switchWorkspaceTab('expenses')" style="padding: 12px 20px; background: #667eea; color: white; border: none; border-radius: 5px; cursor: pointer; text-align: left;">
