@@ -2295,6 +2295,41 @@ app.put('/api/orders/:orderId/work-description', auth, async (req, res) => {
   }
 });
 
+// Update order details (contact person, address)
+app.put('/api/orders/:orderId/details', auth, async (req, res) => {
+  const orderId = Number(req.params.orderId);
+  const { contact_person_id, order_address, order_postal_code, order_city } = req.body;
+  
+  try {
+    // Verify order exists
+    const order = await db.get('SELECT id FROM quotes WHERE id = ?', [orderId]);
+    if (!order) {
+      return res.status(404).json({ error: 'Order not found' });
+    }
+    
+    // Update order details
+    await db.run(`
+      UPDATE quotes SET
+        contact_person_id = ?,
+        order_address = ?,
+        order_postal_code = ?,
+        order_city = ?
+      WHERE id = ?
+    `, [
+      contact_person_id !== undefined ? contact_person_id : order.contact_person_id,
+      order_address !== undefined ? order_address : order.order_address,
+      order_postal_code !== undefined ? order_postal_code : order.order_postal_code,
+      order_city !== undefined ? order_city : order.order_city,
+      orderId
+    ]);
+    
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Update order details error:', error);
+    res.status(500).json({ error: 'Failed to update order details' });
+  }
+});
+
 // Get complete order workspace data
 app.get('/api/orders/:orderId/workspace', auth, async (req, res) => {
   const orderId = Number(req.params.orderId);
