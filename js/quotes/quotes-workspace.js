@@ -453,19 +453,6 @@ function drawProfitChart(revenue, expenses) {
     ctx.fillText(`${(profitPercent * 100).toFixed(1)}%`, centerX, centerY - 10);
     ctx.font = '14px Arial';
     ctx.fillText('Profit', centerX, centerY + 10);
-    
-    // Legend (positioned lower to avoid overlap with chart)
-    ctx.fillStyle = '#4caf50';
-    ctx.fillRect(50, canvas.height - 80, 20, 20);
-    ctx.fillStyle = '#333';
-    ctx.font = '14px Arial';
-    ctx.textAlign = 'left';
-    ctx.fillText(`Profit: ${formatCurrency(profit)}`, 80, canvas.height - 65);
-    
-    ctx.fillStyle = '#f44336';
-    ctx.fillRect(50, canvas.height - 50, 20, 20);
-    ctx.fillStyle = '#333';
-    ctx.fillText(`Udgifter: ${formatCurrency(expenses)}`, 80, canvas.height - 35);
 }
 
 // Render invoice button based on invoice status
@@ -1435,6 +1422,21 @@ function toggleWorkDescriptionEdit() {
                 ]
             }
         });
+        
+        // Add custom CSS for proper list styling
+        const style = document.createElement('style');
+        style.textContent = `
+            #workDescEditor .ql-editor ul,
+            #workDescEditor .ql-editor ol {
+                padding-left: 30px !important;
+            }
+            #workDescContent ul,
+            #workDescContent ol {
+                padding-left: 30px !important;
+                margin: 10px 0;
+            }
+        `;
+        document.head.appendChild(style);
     }
     
     // Load current content (HTML)
