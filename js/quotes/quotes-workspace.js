@@ -228,7 +228,7 @@ function renderWorkspaceOverview(container) {
             <div style="margin: 0; padding: 0;">
                 ${hasExtraWork ? `
                     <!-- Split Statistics Cards -->
-                    <div style="background: white; padding: 25px; border-radius: 10px; border: 2px solid #e0e0e0; margin: 0 0 30px 0;">
+                    <div style="background: white; padding: 25px; border-radius: 10px; border: 2px solid #e0e0e0; margin: 0 0 30px 0; min-height: 500px;">
                         <h3 style="margin: 0 0 20px 0; color: #333;">📊 Opdelt Statistik</h3>
                         
                         <!-- Revenue -->
@@ -320,7 +320,7 @@ function renderWorkspaceOverview(container) {
             
             <!-- Right column: Quick info -->
             <div style="margin: 0; padding: 0;">
-                <div style="background: white; padding: 25px; border-radius: 10px; border: 2px solid #e0e0e0; margin: 0 0 30px 0;">
+                <div style="background: white; padding: 25px; border-radius: 10px; border: 2px solid #e0e0e0; margin: 0 0 30px 0; min-height: 500px;">
                     <h3 style="margin: 0 0 20px 0;">📋 Ordre Detaljer</h3>
                     <div style="display: grid; gap: 15px;">
                         <div style="padding-bottom: 15px; border-bottom: 1px solid #e0e0e0;">
