@@ -381,6 +381,34 @@ export async function initializeDatabase() {
         console.log('ℹ️  order_city column already exists in quotes table');
       }
     }
+    
+    // Migrate old customer contact data to customer_contacts table
+    try {
+      console.log('🔄 Migrating old customer contact data to customer_contacts...');
+      
+      // Get all customers
+      const customers = await db.all('SELECT id, contact_person, email, phone FROM customers WHERE contact_person IS NOT NULL AND contact_person != \'\'');
+      
+      let migratedCount = 0;
+      for (const customer of customers) {
+        // Check if this customer already has a contact with the same name
+        const existingContact = await db.get('SELECT id FROM customer_contacts WHERE customer_id = ? AND name = ?', [customer.id, customer.contact_person]);
+        
+        if (!existingContact) {
+          // Create contact person from customer data
+          await db.run(`
+            INSERT INTO customer_contacts (customer_id, name, email, phone, is_primary)
+            VALUES (?, ?, ?, ?, 1)
+          `, [customer.id, customer.contact_person, customer.email || null, customer.phone || null]);
+          migratedCount++;
+        }
+      }
+      
+      console.log(`✅ Migrated ${migratedCount} customer contacts from customers table`);
+    } catch (error) {
+      console.error('Migration warning:', error.message);
+      // Don't fail - migration is optional
+    }
 
     // Email attachments
     await db.run(`CREATE TABLE IF NOT EXISTS email_attachments (
