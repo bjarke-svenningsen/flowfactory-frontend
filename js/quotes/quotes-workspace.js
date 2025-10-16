@@ -191,10 +191,10 @@ function renderWorkspaceOverview(container) {
     container.innerHTML = `
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px; align-items: start;">
             <!-- Left column: Stats and Chart -->
-            <div>
+            <div style="margin: 0; padding: 0;">
                 ${hasExtraWork ? `
                     <!-- Split Statistics Cards -->
-                    <div style="background: white; padding: 25px; border-radius: 10px; border: 2px solid #e0e0e0; margin-bottom: 30px;">
+                    <div style="background: white; padding: 25px; border-radius: 10px; border: 2px solid #e0e0e0; margin: 0 0 30px 0;">
                         <h3 style="margin: 0 0 20px 0; color: #333;">📊 Opdelt Statistik</h3>
                         
                         <!-- Revenue -->
@@ -257,7 +257,7 @@ function renderWorkspaceOverview(container) {
                     </div>
                 ` : `
                     <!-- Simple Stats cards (no extra work) -->
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 30px;">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin: 0 0 30px 0;">
                         <div style="background: white; padding: 20px; border-radius: 10px; border: 2px solid #e0e0e0;">
                             <div style="color: #666; font-size: 14px; margin-bottom: 5px;">💰 Omsætning</div>
                             <div style="font-size: 28px; font-weight: 600; color: #667eea;">${formatCurrency(revenue)}</div>
@@ -285,8 +285,8 @@ function renderWorkspaceOverview(container) {
             </div>
             
             <!-- Right column: Quick info -->
-            <div>
-                <div style="background: white; padding: 30px; border-radius: 10px; border: 2px solid #e0e0e0; margin-bottom: 20px;">
+            <div style="margin: 0; padding: 0;">
+                <div style="background: white; padding: 30px; border-radius: 10px; border: 2px solid #e0e0e0; margin: 0 0 20px 0;">
                     <h3 style="margin: 0 0 20px 0;">📋 Ordre Detaljer</h3>
                     <div style="display: grid; gap: 15px;">
                         <div style="padding-bottom: 15px; border-bottom: 1px solid #e0e0e0;">
