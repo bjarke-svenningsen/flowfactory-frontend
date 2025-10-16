@@ -88,11 +88,16 @@ async function openOrderWorkspace(orderId, fromParentId = null) {
 
 // Render workspace
 function renderWorkspace(data) {
-    // Hide other views
-    document.getElementById('quotesListView').style.display = 'none';
-    document.getElementById('quotesFormView').style.display = 'none';
-    document.getElementById('quotesPreviewView').style.display = 'none';
-    document.getElementById('quotesCustomersView').style.display = 'none';
+    // Hide other views (safely check if elements exist)
+    const quotesListView = document.getElementById('quotesListView');
+    const quotesFormView = document.getElementById('quotesFormView');
+    const quotesPreviewView = document.getElementById('quotesPreviewView');
+    const quotesCustomersView = document.getElementById('quotesCustomersView');
+    
+    if (quotesListView) quotesListView.style.display = 'none';
+    if (quotesFormView) quotesFormView.style.display = 'none';
+    if (quotesPreviewView) quotesPreviewView.style.display = 'none';
+    if (quotesCustomersView) quotesCustomersView.style.display = 'none';
     
     // Show orders tab (reuse for workspace)
     const ordersTab = document.getElementById('orderTabOrders');
