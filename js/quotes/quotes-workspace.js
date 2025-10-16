@@ -313,30 +313,67 @@ function renderWorkspaceOverview(container) {
                 
                 <!-- Ordre Detaljer (NEW - replaces Profit Chart) -->
                 <div style="background: white; padding: 20px; border-radius: 10px; border: 2px solid #e0e0e0; margin: 0; min-height: 250px;">
-                    <h3 style="margin: 0 0 15px 0;">📋 Ordre Detaljer</h3>
-                    <div style="display: grid; gap: 15px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                        <h3 style="margin: 0;">📋 Ordre Detaljer</h3>
+                        <button id="orderDetailsEditBtn" onclick="toggleOrderDetailsEdit()" style="padding: 6px 12px; background: #667eea; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 13px;">
+                            ✏️ Rediger
+                        </button>
+                    </div>
+                    
+                    <!-- Read Mode -->
+                    <div id="orderDetailsReadMode" style="display: grid; gap: 15px;">
                         <div style="padding-bottom: 15px; border-bottom: 1px solid #e0e0e0;">
                             <div style="color: #666; font-size: 13px; margin-bottom: 5px;">Kontaktperson</div>
-                            <div style="font-weight: 600; font-size: 16px;">${currentWorkspaceOrder.contact_person_name || currentWorkspaceOrder.contact_person || 'Ikke angivet'}</div>
+                            <div id="orderDetailsContactName" style="font-weight: 600; font-size: 16px;">${currentWorkspaceOrder.contact_person_name || currentWorkspaceOrder.contact_person || 'Ikke angivet'}</div>
                         </div>
-                        ${currentWorkspaceOrder.contact_person_phone || currentWorkspaceOrder.customer_phone ? `
                         <div style="padding-bottom: 15px; border-bottom: 1px solid #e0e0e0;">
                             <div style="color: #666; font-size: 13px; margin-bottom: 5px;">Telefon</div>
-                            <div style="font-weight: 600; font-size: 16px;">${currentWorkspaceOrder.contact_person_phone || currentWorkspaceOrder.customer_phone}</div>
+                            <div id="orderDetailsPhone" style="font-weight: 600; font-size: 16px;">${currentWorkspaceOrder.contact_person_phone || currentWorkspaceOrder.customer_phone || 'Ikke angivet'}</div>
                         </div>
-                        ` : ''}
-                        ${currentWorkspaceOrder.contact_person_email || currentWorkspaceOrder.customer_email ? `
                         <div style="padding-bottom: 15px; border-bottom: 1px solid #e0e0e0;">
                             <div style="color: #666; font-size: 13px; margin-bottom: 5px;">Email</div>
-                            <div style="font-weight: 600; font-size: 16px;">${currentWorkspaceOrder.contact_person_email || currentWorkspaceOrder.customer_email}</div>
+                            <div id="orderDetailsEmail" style="font-weight: 600; font-size: 16px;">${currentWorkspaceOrder.contact_person_email || currentWorkspaceOrder.customer_email || 'Ikke angivet'}</div>
                         </div>
-                        ` : ''}
                         <div>
                             <div style="color: #666; font-size: 13px; margin-bottom: 5px;">Ordre Adresse</div>
-                            <div style="font-weight: 600; font-size: 16px;">
+                            <div id="orderDetailsAddress" style="font-weight: 600; font-size: 16px;">
                                 ${currentWorkspaceOrder.order_address || currentWorkspaceOrder.address || 'Ikke angivet'}<br>
                                 ${currentWorkspaceOrder.order_postal_code || currentWorkspaceOrder.postal_code || ''} ${currentWorkspaceOrder.order_city || currentWorkspaceOrder.city || ''}
                             </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Edit Mode (hidden) -->
+                    <div id="orderDetailsEditMode" style="display: none;">
+                        <div style="display: grid; gap: 15px;">
+                            <div>
+                                <label style="display: block; color: #666; font-size: 13px; margin-bottom: 5px;">Kontaktperson</label>
+                                <select id="orderDetailsContactSelect" style="width: 100%; padding: 8px; border: 1px solid #e0e0e0; border-radius: 5px; font-size: 14px;">
+                                    <option value="">Vælg kontaktperson...</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label style="display: block; color: #666; font-size: 13px; margin-bottom: 5px;">Ordre Adresse</label>
+                                <input type="text" id="orderDetailsAddressInput" value="${currentWorkspaceOrder.order_address || currentWorkspaceOrder.address || ''}" style="width: 100%; padding: 8px; border: 1px solid #e0e0e0; border-radius: 5px; font-size: 14px;">
+                            </div>
+                            <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 10px;">
+                                <div>
+                                    <label style="display: block; color: #666; font-size: 13px; margin-bottom: 5px;">Postnummer</label>
+                                    <input type="text" id="orderDetailsPostalInput" value="${currentWorkspaceOrder.order_postal_code || currentWorkspaceOrder.postal_code || ''}" style="width: 100%; padding: 8px; border: 1px solid #e0e0e0; border-radius: 5px; font-size: 14px;">
+                                </div>
+                                <div>
+                                    <label style="display: block; color: #666; font-size: 13px; margin-bottom: 5px;">By</label>
+                                    <input type="text" id="orderDetailsCityInput" value="${currentWorkspaceOrder.order_city || currentWorkspaceOrder.city || ''}" style="width: 100%; padding: 8px; border: 1px solid #e0e0e0; border-radius: 5px; font-size: 14px;">
+                                </div>
+                            </div>
+                        </div>
+                        <div style="margin-top: 15px; display: flex; gap: 10px; justify-content: flex-end;">
+                            <button onclick="cancelOrderDetailsEdit()" style="padding: 8px 16px; background: #999; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 13px;">
+                                Annuller
+                            </button>
+                            <button onclick="saveOrderDetails()" style="padding: 8px 16px; background: #4caf50; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 13px;">
+                                💾 Gem
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -1469,6 +1506,101 @@ async function saveWorkDescription() {
     }
 }
 
+// --- ORDER DETAILS EDIT MODE ---
+
+async function toggleOrderDetailsEdit() {
+    // Show edit mode
+    document.getElementById('orderDetailsReadMode').style.display = 'none';
+    document.getElementById('orderDetailsEditMode').style.display = 'block';
+    
+    // Load contact persons for dropdown
+    await loadOrderDetailsContactPersons();
+}
+
+async function loadOrderDetailsContactPersons() {
+    const customerId = currentWorkspaceOrder.customer_id;
+    const contactSelect = document.getElementById('orderDetailsContactSelect');
+    
+    if (!contactSelect || !customerId) return;
+    
+    try {
+        const token = sessionStorage.getItem('token');
+        const response = await fetch(`https://flowfactory-frontend.onrender.com/api/customers/${customerId}/contacts`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        
+        if (!response.ok) throw new Error('Failed to load contacts');
+        
+        const contacts = await response.json();
+        
+        // Populate dropdown
+        contactSelect.innerHTML = '<option value="">Vælg kontaktperson...</option>';
+        contacts.forEach(contact => {
+            const option = document.createElement('option');
+            option.value = contact.id;
+            option.textContent = contact.name + (contact.title ? ` - ${contact.title}` : '');
+            option.setAttribute('data-phone', contact.phone || '');
+            option.setAttribute('data-email', contact.email || '');
+            if (contact.is_primary) {
+                option.textContent += ' ⭐';
+            }
+            contactSelect.appendChild(option);
+        });
+        
+        // Select current contact if set
+        if (currentWorkspaceOrder.contact_person_id) {
+            contactSelect.value = currentWorkspaceOrder.contact_person_id;
+        }
+        
+    } catch (error) {
+        console.error('Error loading contacts:', error);
+        alert('Kunne ikke indlæse kontaktpersoner: ' + error.message);
+    }
+}
+
+function cancelOrderDetailsEdit() {
+    // Hide edit mode, show read mode
+    document.getElementById('orderDetailsEditMode').style.display = 'none';
+    document.getElementById('orderDetailsReadMode').style.display = 'block';
+}
+
+async function saveOrderDetails() {
+    const contactPersonId = document.getElementById('orderDetailsContactSelect').value;
+    const orderAddress = document.getElementById('orderDetailsAddressInput').value.trim();
+    const orderPostalCode = document.getElementById('orderDetailsPostalInput').value.trim();
+    const orderCity = document.getElementById('orderDetailsCityInput').value.trim();
+    
+    const data = {
+        contact_person_id: contactPersonId ? parseInt(contactPersonId) : null,
+        order_address: orderAddress || null,
+        order_postal_code: orderPostalCode || null,
+        order_city: orderCity || null
+    };
+    
+    try {
+        const token = sessionStorage.getItem('token');
+        const response = await fetch(`https://flowfactory-frontend.onrender.com/api/orders/${currentWorkspaceOrder.id}/details`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify(data)
+        });
+        
+        if (!response.ok) throw new Error('Failed to save');
+        
+        alert('✅ Ordre detaljer opdateret!');
+        
+        // Refresh workspace to show updated data
+        await openOrderWorkspace(currentWorkspaceOrder.id);
+        
+    } catch (error) {
+        console.error('Save order details error:', error);
+        alert('Kunne ikke gemme: ' + error.message);
+    }
+}
+
 // Restore workspace from URL hash on page load
 function restoreWorkspaceFromURL() {
     const hash = window.location.hash;
@@ -1515,3 +1647,6 @@ window.closeExtraWorkModal = closeExtraWorkModal;
 window.toggleWorkDescriptionEdit = toggleWorkDescriptionEdit;
 window.cancelWorkDescriptionEdit = cancelWorkDescriptionEdit;
 window.saveWorkDescription = saveWorkDescription;
+window.toggleOrderDetailsEdit = toggleOrderDetailsEdit;
+window.cancelOrderDetailsEdit = cancelOrderDetailsEdit;
+window.saveOrderDetails = saveOrderDetails;
