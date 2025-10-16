@@ -1,0 +1,22 @@
+{
+  "name": "Breeze Portal",
+  "short_name": "Breeze",
+  "description": "Virksomhedsportal til Breeze",
+  "start_url": "/flowfactory-frontend/",
+  "display": "standalone",
+  "background_color": "#f5f5f5",
+  "theme_color": "#667eea",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "logobreeze.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "logobreeze.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

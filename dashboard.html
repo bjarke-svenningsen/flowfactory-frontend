@@ -5,6 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Breeze - Dashboard</title>
     <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#667eea">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Breeze">
     <link rel="stylesheet" href="css/dashboard.css">
     <link rel="stylesheet" href="css/windows-dialog.css">
     <link rel="stylesheet" href="css/mobile.css">
@@ -68,6 +73,7 @@
     </div>
 
     <!-- Load all JavaScript modules -->
+    <script src="js/pwa-init.js"></script>
     <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
     <script src="js/page-loader.js"></script>
     <script src="js/dashboard.js"></script>
