@@ -189,7 +189,7 @@ function renderWorkspaceOverview(container) {
     const hasExtraWork = workspaceExtraWorkOrders && workspaceExtraWorkOrders.length > 0;
     
     container.innerHTML = `
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px;">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px; align-items: start;">
             <!-- Left column: Stats and Chart -->
             <div>
                 ${hasExtraWork ? `
@@ -1428,12 +1428,13 @@ function toggleWorkDescriptionEdit() {
         style.textContent = `
             #workDescEditor .ql-editor ul,
             #workDescEditor .ql-editor ol {
-                padding-left: 30px !important;
+                padding-left: 50px !important;
+                margin-left: 10px !important;
             }
             #workDescContent ul,
             #workDescContent ol {
-                padding-left: 30px !important;
-                margin: 10px 0;
+                padding-left: 50px !important;
+                margin: 10px 0 10px 10px !important;
             }
         `;
         document.head.appendChild(style);
