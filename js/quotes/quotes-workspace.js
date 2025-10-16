@@ -45,12 +45,14 @@ async function openOrderWorkspace(orderId, fromParentId = null) {
         
         if (!response.ok) throw new Error('Failed to load workspace');
         
-        const data = await response.json();
-        
-        console.log('Received workspace data:', data.order);
-        console.log('Order ID from backend:', data.order.id);
-        console.log('Order number from backend:', data.order.order_number);
-        console.log('Is extra work?', data.order.is_extra_work);
+    const data = await response.json();
+    
+    console.log('Received workspace data:', data.order);
+    console.log('Order ID from backend:', data.order.id);
+    console.log('Order number from backend:', data.order.order_number);
+    console.log('Is extra work?', data.order.is_extra_work);
+    console.log('📄 DOCUMENTS COUNT:', data.documents.length);
+    console.log('📄 DOCUMENTS DATA:', data.documents);
         
         // If this is extra work being opened from parent, save parent ID
         if (data.order.is_extra_work && data.order.parent_order_id && fromParentId === null) {
