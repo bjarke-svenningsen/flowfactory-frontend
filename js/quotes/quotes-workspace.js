@@ -314,7 +314,19 @@ function renderWorkspaceOverview(container) {
                 <!-- Profit Chart (Compact) -->
                 <div style="background: white; padding: 20px; border-radius: 10px; border: 2px solid #e0e0e0; margin: 0;">
                     <h3 style="margin: 0 0 15px 0;">🥧 Profit Oversigt</h3>
-                    <canvas id="profitChart" width="300" height="300"></canvas>
+                    <div style="display: flex; gap: 20px; align-items: center;">
+                        <canvas id="profitChart" width="180" height="180"></canvas>
+                        <div style="flex: 1;">
+                            <div style="margin-bottom: 15px;">
+                                <div style="font-size: 14px; color: #666; margin-bottom: 5px;">Profit</div>
+                                <div id="profitAmount" style="font-size: 24px; font-weight: 600; color: #4caf50;">0,00 kr.</div>
+                            </div>
+                            <div>
+                                <div style="font-size: 14px; color: #666; margin-bottom: 5px;">Profit Margin</div>
+                                <div id="profitPercentage" style="font-size: 24px; font-weight: 600; color: #4caf50;">0%</div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
             
@@ -439,18 +451,32 @@ function drawProfitChart(revenue, expenses) {
     const ctx = canvas.getContext('2d');
     const centerX = canvas.width / 2;
     const centerY = canvas.height / 2;
-    const radius = 150;
+    const radius = 80; // Smaller radius for compact chart
     
     const profit = revenue - expenses;
+    const profitColor = profit >= 0 ? '#4caf50' : '#f44336';
+    
+    // Update stat displays
+    const profitAmountEl = document.getElementById('profitAmount');
+    const profitPercentageEl = document.getElementById('profitPercentage');
+    if (profitAmountEl) {
+        profitAmountEl.textContent = formatCurrency(profit);
+        profitAmountEl.style.color = profitColor;
+    }
+    if (profitPercentageEl) {
+        const margin = revenue > 0 ? ((profit / revenue) * 100).toFixed(1) : 0;
+        profitPercentageEl.textContent = `${margin}%`;
+        profitPercentageEl.style.color = profitColor;
+    }
     
     // Clear canvas
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     
     if (revenue === 0) {
         ctx.fillStyle = '#999';
-        ctx.font = '16px Arial';
+        ctx.font = '14px Arial';
         ctx.textAlign = 'center';
-        ctx.fillText('Ingen data endnu', centerX, centerY);
+        ctx.fillText('Ingen data', centerX, centerY);
         return;
     }
     
@@ -458,6 +484,7 @@ function drawProfitChart(revenue, expenses) {
     const profitPercent = Math.max(0, (profit / revenue));
     const expensePercent = (expenses / revenue);
     
+    // Draw solid pie chart (no donut hole)
     // Draw expense slice (red)
     ctx.beginPath();
     ctx.moveTo(centerX, centerY);
@@ -471,22 +498,8 @@ function drawProfitChart(revenue, expenses) {
     ctx.moveTo(centerX, centerY);
     ctx.arc(centerX, centerY, radius, 2 * Math.PI * expensePercent, 2 * Math.PI);
     ctx.closePath();
-    ctx.fillStyle = '#4caf50';
+    ctx.fillStyle = profitColor;
     ctx.fill();
-    
-    // Draw center circle (white)
-    ctx.beginPath();
-    ctx.arc(centerX, centerY, radius * 0.6, 0, 2 * Math.PI);
-    ctx.fillStyle = 'white';
-    ctx.fill();
-    
-    // Draw percentages
-    ctx.fillStyle = '#333';
-    ctx.font = 'bold 20px Arial';
-    ctx.textAlign = 'center';
-    ctx.fillText(`${(profitPercent * 100).toFixed(1)}%`, centerX, centerY - 10);
-    ctx.font = '14px Arial';
-    ctx.fillText('Profit', centerX, centerY + 10);
 }
 
 // Render invoice button based on invoice status
