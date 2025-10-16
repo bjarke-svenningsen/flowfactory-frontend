@@ -12,6 +12,25 @@ let currentWorkspaceTab = 'overview';
 let extraWorkLines = [];
 let parentOrderId = null; // Track parent order for back navigation
 
+// Add global CSS for work description lists (load once on page load)
+if (!document.getElementById('workDescGlobalStyles')) {
+    const style = document.createElement('style');
+    style.id = 'workDescGlobalStyles';
+    style.textContent = `
+        #workDescEditor .ql-editor ul,
+        #workDescEditor .ql-editor ol {
+            padding-left: 50px !important;
+            margin-left: 10px !important;
+        }
+        #workDescContent ul,
+        #workDescContent ol {
+            padding-left: 50px !important;
+            margin: 10px 0 10px 10px !important;
+        }
+    `;
+    document.head.appendChild(style);
+}
+
 // Open order workspace
 async function openOrderWorkspace(orderId, fromParentId = null) {
     console.log('=== openOrderWorkspace called ===');
@@ -278,7 +297,7 @@ function renderWorkspaceOverview(container) {
                 `}
                 
                 <!-- Profit Chart (Compact) -->
-                <div style="background: white; padding: 20px; border-radius: 10px; border: 2px solid #e0e0e0;">
+                <div style="background: white; padding: 20px; border-radius: 10px; border: 2px solid #e0e0e0; margin: 0;">
                     <h3 style="margin: 0 0 15px 0;">🥧 Profit Oversigt</h3>
                     <canvas id="profitChart" width="300" height="300"></canvas>
                 </div>
@@ -313,7 +332,7 @@ function renderWorkspaceOverview(container) {
                 </div>
                 
                 <!-- Quick actions -->
-                <div style="background: white; padding: 30px; border-radius: 10px; border: 2px solid #e0e0e0;">
+                <div style="background: white; padding: 30px; border-radius: 10px; border: 2px solid #e0e0e0; margin: 0;">
                     <h3 style="margin: 0 0 20px 0;">⚡ Hurtige Handlinger</h3>
                     <div style="display: flex; flex-direction: column; gap: 10px;">
                         <button onclick="switchWorkspaceTab('expenses')" style="padding: 12px 20px; background: #667eea; color: white; border: none; border-radius: 5px; cursor: pointer; text-align: left;">
@@ -1422,22 +1441,6 @@ function toggleWorkDescriptionEdit() {
                 ]
             }
         });
-        
-        // Add custom CSS for proper list styling
-        const style = document.createElement('style');
-        style.textContent = `
-            #workDescEditor .ql-editor ul,
-            #workDescEditor .ql-editor ol {
-                padding-left: 50px !important;
-                margin-left: 10px !important;
-            }
-            #workDescContent ul,
-            #workDescContent ol {
-                padding-left: 50px !important;
-                margin: 10px 0 10px 10px !important;
-            }
-        `;
-        document.head.appendChild(style);
     }
     
     // Load current content (HTML)
