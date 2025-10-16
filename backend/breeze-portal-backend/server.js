@@ -3488,6 +3488,22 @@ app.post('/api/admin/approve-first', async (req, res) => {
   res.status(404).json({ error: 'User not found' });
 });
 
+// DEBUG ENDPOINT: Check order_documents table
+app.get('/api/debug/documents', async (req, res) => {
+  try {
+    const allDocs = await db.all('SELECT * FROM order_documents ORDER BY created_at DESC LIMIT 20');
+    const count = await db.get('SELECT COUNT(*) as cnt FROM order_documents');
+    
+    res.json({
+      total_documents: count.cnt,
+      latest_20_documents: allDocs,
+      message: 'This shows all documents in order_documents table'
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Initialize database and start server
 async function startServer() {
   try {
