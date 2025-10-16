@@ -129,23 +129,27 @@ function renderWorkspace(data) {
             </div>
             
             <!-- Workspace Header -->
-            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; border-radius: 10px; margin-bottom: 30px;">
-                <div style="display: flex; justify-content: space-between; align-items: start;">
-                    <div>
-                        <h1 style="margin: 0 0 10px 0; font-size: 32px;">📦 Ordre ${fullOrderNumber}</h1>
-                        <p style="margin: 5px 0; font-size: 18px; opacity: 0.9;">${data.order.title}</p>
-                        <p style="margin: 5px 0; opacity: 0.8;">Kunde: ${data.order.company_name}</p>
+            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 25px; border-radius: 10px; margin-bottom: 30px;">
+                <!-- Top row: Title and customer -->
+                <div style="margin-bottom: 20px;">
+                    <h1 style="margin: 0 0 8px 0; font-size: 28px;">📦 Ordre ${fullOrderNumber}</h1>
+                    <p style="margin: 0; font-size: 16px; opacity: 0.9;">${data.order.title} • ${data.order.company_name}</p>
+                </div>
+                
+                <!-- Bottom row: 3 horizontal boxes -->
+                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px;">
+                    <div style="background: rgba(255,255,255,0.2); padding: 15px; border-radius: 8px; text-align: center;">
+                        <div style="font-size: 13px; opacity: 0.9; margin-bottom: 5px;">💰 Omsætning</div>
+                        <div style="font-size: 24px; font-weight: 600;">${formatCurrency(data.financials.revenue)}</div>
                     </div>
-                    <div style="text-align: right;">
-                        <div style="background: rgba(255,255,255,0.2); padding: 15px; border-radius: 8px; margin-bottom: 10px;">
-                            <div style="font-size: 14px; opacity: 0.9; margin-bottom: 5px;">Omsætning</div>
-                            <div style="font-size: 28px; font-weight: 600;">${formatCurrency(data.financials.revenue)}</div>
-                        </div>
-                        <div style="background: rgba(255,255,255,0.2); padding: 15px; border-radius: 8px;">
-                            <div style="font-size: 14px; opacity: 0.9; margin-bottom: 5px;">Profit</div>
-                            <div style="font-size: 28px; font-weight: 600;">${formatCurrency(data.financials.profit)}</div>
-                            <div style="font-size: 12px; opacity: 0.8;">Margin: ${data.financials.profit_margin}%</div>
-                        </div>
+                    <div style="background: rgba(255,255,255,0.2); padding: 15px; border-radius: 8px; text-align: center;">
+                        <div style="font-size: 13px; opacity: 0.9; margin-bottom: 5px;">📊 Udgifter</div>
+                        <div style="font-size: 24px; font-weight: 600;">${formatCurrency(data.financials.expenses)}</div>
+                    </div>
+                    <div style="background: rgba(255,255,255,0.2); padding: 15px; border-radius: 8px; text-align: center;">
+                        <div style="font-size: 13px; opacity: 0.9; margin-bottom: 5px;">✅ Profit</div>
+                        <div style="font-size: 24px; font-weight: 600;">${formatCurrency(data.financials.profit)}</div>
+                        <div style="font-size: 12px; opacity: 0.8; margin-top: 3px;">Margin: ${data.financials.profit_margin}%</div>
                     </div>
                 </div>
             </div>
