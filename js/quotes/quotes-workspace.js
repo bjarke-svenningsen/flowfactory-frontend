@@ -311,19 +311,31 @@ function renderWorkspaceOverview(container) {
                     </div>
                 `}
                 
-                <!-- Profit Chart (Compact) -->
+                <!-- Ordre Detaljer (NEW - replaces Profit Chart) -->
                 <div style="background: white; padding: 20px; border-radius: 10px; border: 2px solid #e0e0e0; margin: 0; min-height: 250px;">
-                    <h3 style="margin: 0 0 15px 0;">🥧 Profit Oversigt</h3>
-                    <div style="display: flex; gap: 20px; align-items: center;">
-                        <canvas id="profitChart" width="180" height="180"></canvas>
-                        <div style="flex: 1;">
-                            <div style="margin-bottom: 15px;">
-                                <div style="font-size: 14px; color: #666; margin-bottom: 5px;">Profit</div>
-                                <div id="profitAmount" style="font-size: 24px; font-weight: 600; color: #4caf50;">0,00 kr.</div>
-                            </div>
-                            <div>
-                                <div style="font-size: 14px; color: #666; margin-bottom: 5px;">Profit Margin</div>
-                                <div id="profitPercentage" style="font-size: 24px; font-weight: 600; color: #4caf50;">0%</div>
+                    <h3 style="margin: 0 0 15px 0;">📋 Ordre Detaljer</h3>
+                    <div style="display: grid; gap: 15px;">
+                        <div style="padding-bottom: 15px; border-bottom: 1px solid #e0e0e0;">
+                            <div style="color: #666; font-size: 13px; margin-bottom: 5px;">Kontaktperson</div>
+                            <div style="font-weight: 600; font-size: 16px;">${currentWorkspaceOrder.contact_person_name || currentWorkspaceOrder.contact_person || 'Ikke angivet'}</div>
+                        </div>
+                        ${currentWorkspaceOrder.contact_person_phone || currentWorkspaceOrder.customer_phone ? `
+                        <div style="padding-bottom: 15px; border-bottom: 1px solid #e0e0e0;">
+                            <div style="color: #666; font-size: 13px; margin-bottom: 5px;">Telefon</div>
+                            <div style="font-weight: 600; font-size: 16px;">${currentWorkspaceOrder.contact_person_phone || currentWorkspaceOrder.customer_phone}</div>
+                        </div>
+                        ` : ''}
+                        ${currentWorkspaceOrder.contact_person_email || currentWorkspaceOrder.customer_email ? `
+                        <div style="padding-bottom: 15px; border-bottom: 1px solid #e0e0e0;">
+                            <div style="color: #666; font-size: 13px; margin-bottom: 5px;">Email</div>
+                            <div style="font-weight: 600; font-size: 16px;">${currentWorkspaceOrder.contact_person_email || currentWorkspaceOrder.customer_email}</div>
+                        </div>
+                        ` : ''}
+                        <div>
+                            <div style="color: #666; font-size: 13px; margin-bottom: 5px;">Ordre Adresse</div>
+                            <div style="font-weight: 600; font-size: 16px;">
+                                ${currentWorkspaceOrder.order_address || currentWorkspaceOrder.address || 'Ikke angivet'}<br>
+                                ${currentWorkspaceOrder.order_postal_code || currentWorkspaceOrder.postal_code || ''} ${currentWorkspaceOrder.order_city || currentWorkspaceOrder.city || ''}
                             </div>
                         </div>
                     </div>
@@ -333,16 +345,22 @@ function renderWorkspaceOverview(container) {
             <!-- Right column: Quick info -->
             <div style="margin: 0; padding: 0;">
                 <div style="background: white; padding: 25px; border-radius: 10px; border: 2px solid #e0e0e0; margin: 0 0 30px 0; min-height: 500px;">
-                    <h3 style="margin: 0 0 20px 0;">📋 Ordre Detaljer</h3>
+                    <h3 style="margin: 0 0 20px 0;">🏢 Kunde Information</h3>
                     <div style="display: grid; gap: 15px;">
                         <div style="padding-bottom: 15px; border-bottom: 1px solid #e0e0e0;">
                             <div style="color: #666; font-size: 13px; margin-bottom: 5px;">Ordre Nummer</div>
                             <div style="font-weight: 600; font-size: 16px;">${currentWorkspaceOrder.order_number}</div>
                         </div>
                         <div style="padding-bottom: 15px; border-bottom: 1px solid #e0e0e0;">
-                            <div style="color: #666; font-size: 13px; margin-bottom: 5px;">Kunde</div>
+                            <div style="color: #666; font-size: 13px; margin-bottom: 5px;">Firma</div>
                             <div style="font-weight: 600; font-size: 16px;">${currentWorkspaceOrder.company_name}</div>
                         </div>
+                        ${currentWorkspaceOrder.cvr_number || currentWorkspaceOrder.customer_cvr ? `
+                        <div style="padding-bottom: 15px; border-bottom: 1px solid #e0e0e0;">
+                            <div style="color: #666; font-size: 13px; margin-bottom: 5px;">CVR Nummer</div>
+                            <div style="font-weight: 600; font-size: 16px;">${currentWorkspaceOrder.cvr_number || currentWorkspaceOrder.customer_cvr}</div>
+                        </div>
+                        ` : ''}
                         <div style="padding-bottom: 15px; border-bottom: 1px solid #e0e0e0;">
                             <div style="color: #666; font-size: 13px; margin-bottom: 5px;">Status</div>
                             <div style="font-weight: 600; font-size: 16px; color: #4caf50;">✅ Accepteret</div>
@@ -437,69 +455,6 @@ function renderWorkspaceOverview(container) {
         ` : ''}
     `;
     
-    // Draw pie chart (simple Canvas implementation)
-    setTimeout(() => {
-        drawProfitChart(revenue, totalExpenses);
-    }, 100);
-}
-
-// Draw profit chart
-function drawProfitChart(revenue, expenses) {
-    const canvas = document.getElementById('profitChart');
-    if (!canvas) return;
-    
-    const ctx = canvas.getContext('2d');
-    const centerX = canvas.width / 2;
-    const centerY = canvas.height / 2;
-    const radius = 80; // Smaller radius for compact chart
-    
-    const profit = revenue - expenses;
-    const profitColor = profit >= 0 ? '#4caf50' : '#f44336';
-    
-    // Update stat displays
-    const profitAmountEl = document.getElementById('profitAmount');
-    const profitPercentageEl = document.getElementById('profitPercentage');
-    if (profitAmountEl) {
-        profitAmountEl.textContent = formatCurrency(profit);
-        profitAmountEl.style.color = profitColor;
-    }
-    if (profitPercentageEl) {
-        const margin = revenue > 0 ? ((profit / revenue) * 100).toFixed(1) : 0;
-        profitPercentageEl.textContent = `${margin}%`;
-        profitPercentageEl.style.color = profitColor;
-    }
-    
-    // Clear canvas
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    
-    if (revenue === 0) {
-        ctx.fillStyle = '#999';
-        ctx.font = '14px Arial';
-        ctx.textAlign = 'center';
-        ctx.fillText('Ingen data', centerX, centerY);
-        return;
-    }
-    
-    // Calculate percentages
-    const profitPercent = Math.max(0, (profit / revenue));
-    const expensePercent = (expenses / revenue);
-    
-    // Draw solid pie chart (no donut hole)
-    // Draw expense slice (red)
-    ctx.beginPath();
-    ctx.moveTo(centerX, centerY);
-    ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI * expensePercent);
-    ctx.closePath();
-    ctx.fillStyle = '#f44336';
-    ctx.fill();
-    
-    // Draw profit slice (green)
-    ctx.beginPath();
-    ctx.moveTo(centerX, centerY);
-    ctx.arc(centerX, centerY, radius, 2 * Math.PI * expensePercent, 2 * Math.PI);
-    ctx.closePath();
-    ctx.fillStyle = profitColor;
-    ctx.fill();
 }
 
 // Render invoice button based on invoice status
