@@ -1063,7 +1063,16 @@ async function moveRejectedBackToQuote(quoteId) {
 async function initQuotesPage() {
     await loadCustomers();
     await loadQuotes();
-    switchOrderTab('quotes'); // Start on quotes tab
+    
+    // Check if URL is a workspace URL (e.g., #/orders/123/workspace)
+    const hash = window.location.hash;
+    const isWorkspaceURL = hash.match(/^#\/orders\/\d+\/workspace$/);
+    
+    // Only switch to quotes tab if NOT restoring a workspace
+    if (!isWorkspaceURL) {
+        switchOrderTab('quotes'); // Start on quotes tab
+    }
+    // Otherwise, let quotes-workspace.js handle the restoration
 }
 
 // Export functions
