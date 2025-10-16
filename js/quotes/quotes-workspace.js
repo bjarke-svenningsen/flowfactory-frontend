@@ -1486,6 +1486,27 @@ async function saveWorkDescription() {
     }
 }
 
+// Restore workspace from URL hash on page load
+function restoreWorkspaceFromURL() {
+    const hash = window.location.hash;
+    // Check if URL is #/orders/{id}/workspace
+    const match = hash.match(/^#\/orders\/(\d+)\/workspace$/);
+    if (match) {
+        const orderId = parseInt(match[1]);
+        console.log('Restoring workspace for order:', orderId);
+        openOrderWorkspace(orderId);
+    }
+}
+
+// Call on page load (after DOM is ready)
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+        setTimeout(restoreWorkspaceFromURL, 100); // Small delay to ensure other scripts loaded
+    });
+} else {
+    setTimeout(restoreWorkspaceFromURL, 100);
+}
+
 // Export functions
 window.openOrderWorkspace = openOrderWorkspace;
 window.switchWorkspaceTab = switchWorkspaceTab;
