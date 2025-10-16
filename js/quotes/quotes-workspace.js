@@ -277,10 +277,10 @@ function renderWorkspaceOverview(container) {
                     </div>
                 `}
                 
-                <!-- Profit Chart -->
-                <div style="background: white; padding: 30px; border-radius: 10px; border: 2px solid #e0e0e0;">
-                    <h3 style="margin: 0 0 20px 0;">🥧 Profit Oversigt</h3>
-                    <canvas id="profitChart" width="400" height="480"></canvas>
+                <!-- Profit Chart (Compact) -->
+                <div style="background: white; padding: 20px; border-radius: 10px; border: 2px solid #e0e0e0;">
+                    <h3 style="margin: 0 0 15px 0;">🥧 Profit Oversigt</h3>
+                    <canvas id="profitChart" width="300" height="300"></canvas>
                 </div>
             </div>
             
@@ -331,35 +331,35 @@ function renderWorkspaceOverview(container) {
                         </button>
                     </div>
                 </div>
-                
-                <!-- Arbejdsbeskrivelse Section -->
-                <div style="background: white; padding: 30px; border-radius: 10px; border: 2px solid #e0e0e0; margin-top: 20px;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                        <h3 style="margin: 0;">📋 Arbejdsbeskrivelse</h3>
-                        <button id="workDescEditBtn" onclick="toggleWorkDescriptionEdit()" style="padding: 8px 16px; background: #667eea; color: white; border: none; border-radius: 5px; cursor: pointer;">
-                            ✏️ Rediger
-                        </button>
-                    </div>
-                    
-                    <!-- Read Mode (default) -->
-                    <div id="workDescReadMode" style="display: block;">
-                        <div id="workDescContent" style="min-height: 100px; padding: 15px; background: #f9f9f9; border-radius: 5px; border: 1px solid #e0e0e0;">
-                            ${currentWorkspaceOrder.work_description || '<em style="color: #999;">Ingen beskrivelse endnu...</em>'}
-                        </div>
-                    </div>
-                    
-                    <!-- Edit Mode (hidden) -->
-                    <div id="workDescEditMode" style="display: none;">
-                        <div id="workDescEditor" style="min-height: 200px; background: white;"></div>
-                        <div style="margin-top: 15px; display: flex; gap: 10px; justify-content: flex-end;">
-                            <button onclick="cancelWorkDescriptionEdit()" style="padding: 10px 20px; background: #999; color: white; border: none; border-radius: 5px; cursor: pointer;">
-                                Annuller
-                            </button>
-                            <button onclick="saveWorkDescription()" style="padding: 10px 20px; background: #4caf50; color: white; border: none; border-radius: 5px; cursor: pointer;">
-                                💾 Gem
-                            </button>
-                        </div>
-                    </div>
+            </div>
+        </div>
+        
+        <!-- Arbejdsbeskrivelse Section (Full Width) -->
+        <div style="background: white; padding: 30px; border-radius: 10px; border: 2px solid #e0e0e0; margin-top: 30px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h3 style="margin: 0;">📋 Arbejdsbeskrivelse</h3>
+                <button id="workDescEditBtn" onclick="toggleWorkDescriptionEdit()" style="padding: 8px 16px; background: #667eea; color: white; border: none; border-radius: 5px; cursor: pointer;">
+                    ✏️ Rediger
+                </button>
+            </div>
+            
+            <!-- Read Mode (default) -->
+            <div id="workDescReadMode" style="display: block;">
+                <div id="workDescContent" style="min-height: 100px; padding: 15px; background: #f9f9f9; border-radius: 5px; border: 1px solid #e0e0e0;">
+                    ${currentWorkspaceOrder.work_description || '<em style="color: #999;">Ingen beskrivelse endnu...</em>'}
+                </div>
+            </div>
+            
+            <!-- Edit Mode (hidden) -->
+            <div id="workDescEditMode" style="display: none;">
+                <div id="workDescEditor" style="min-height: 200px; background: white;"></div>
+                <div style="margin-top: 15px; display: flex; gap: 10px; justify-content: flex-end;">
+                    <button onclick="cancelWorkDescriptionEdit()" style="padding: 10px 20px; background: #999; color: white; border: none; border-radius: 5px; cursor: pointer;">
+                        Annuller
+                    </button>
+                    <button onclick="saveWorkDescription()" style="padding: 10px 20px; background: #4caf50; color: white; border: none; border-radius: 5px; cursor: pointer;">
+                        💾 Gem
+                    </button>
                 </div>
             </div>
         </div>
