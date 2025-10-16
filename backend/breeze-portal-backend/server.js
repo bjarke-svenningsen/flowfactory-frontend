@@ -2103,12 +2103,26 @@ app.post('/api/files/:fileId/transfer-to-order', auth, async (req, res) => {
     return res.status(404).json({ error: 'File not found' });
   }
   
-  // Find the order by order_number (could be main order or extra work)
-  const order = await db.get(`
-    SELECT id, order_number, title, customer_id 
-    FROM quotes 
-    WHERE order_number = ? OR quote_number = ?
-  `, [order_number.trim(), order_number.trim()]);
+  // Find the order by order_number
+  // IMPORTANT: Prioritize main orders (parent_order_id IS NULL) to avoid matching extra work
+  // If order_number has hyphen (0001-01), it's extra work - search by quote_number
+  // Otherwise, search for main order by order_number
+  let order;
+  if (order_number.includes('-')) {
+    // Extra work format: 0001-01
+    order = await db.get(`
+      SELECT id, order_number, title, customer_id 
+      FROM quotes 
+      WHERE quote_number = ?
+    `, [order_number.trim()]);
+  } else {
+    // Main order format: 0001
+    order = await db.get(`
+      SELECT id, order_number, title, customer_id 
+      FROM quotes 
+      WHERE order_number = ? AND parent_order_id IS NULL
+    `, [order_number.trim()]);
+  }
   
   if (!order) {
     return res.status(404).json({ error: `Ordre ${order_number} findes ikke` });
