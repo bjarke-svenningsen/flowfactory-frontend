@@ -2301,13 +2301,13 @@ app.put('/api/orders/:orderId/details', auth, async (req, res) => {
   const { contact_person_id, order_address, order_postal_code, order_city } = req.body;
   
   try {
-    // Verify order exists
-    const order = await db.get('SELECT id FROM quotes WHERE id = ?', [orderId]);
+    // Verify order exists and get current values
+    const order = await db.get('SELECT id, contact_person_id, order_address, order_postal_code, order_city FROM quotes WHERE id = ?', [orderId]);
     if (!order) {
       return res.status(404).json({ error: 'Order not found' });
     }
     
-    // Update order details
+    // Update order details (use current values as fallback)
     await db.run(`
       UPDATE quotes SET
         contact_person_id = ?,
