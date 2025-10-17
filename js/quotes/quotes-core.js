@@ -622,7 +622,7 @@ function renderQuotePreview() {
         return;
     }
     
-    // Modern PDF-style preview
+    // Professional PDF-style preview matching invoice design
     container.innerHTML = `
         <div style="max-width: 900px; margin: 0 auto;">
             <div style="display: flex; gap: 15px; margin-bottom: 20px;">
@@ -640,106 +640,128 @@ function renderQuotePreview() {
                 </button>
             </div>
             
-            <div style="background: white; padding: 40px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
-                <!-- Header -->
-                <div style="display: flex; justify-content: space-between; margin-bottom: 40px; padding-bottom: 20px; border-bottom: 3px solid #667eea;">
+            <div style="background: white; padding: 50px; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.08);">
+                <!-- Professional Header -->
+                <div style="display: flex; justify-content: space-between; align-items: start; padding-bottom: 25px; border-bottom: 3px solid #5B7FE6; margin-bottom: 35px;">
                     <div>
-                        <h1 style="margin: 0 0 10px 0; color: #667eea; font-size: 32px;">FlowFactory ApS</h1>
-                        <p style="margin: 0; color: #666;">Professionelle løsninger</p>
+                        <h1 style="margin: 0 0 8px 0; color: #5B7FE6; font-size: 36px; font-weight: 700; letter-spacing: -0.5px;">FlowFactory ApS</h1>
+                        <p style="margin: 0; color: #6B7280; font-size: 14px; font-weight: 500;">Professionelle løsninger til din virksomhed</p>
                     </div>
                     <div style="text-align: right;">
-                        <h2 style="margin: 0 0 10px 0; font-size: 24px;">TILBUD</h2>
-                        <p style="margin: 0; color: #666;">${currentQuote.quote_number}</p>
-                        <p style="margin: 5px 0 0 0; color: #666;">Dato: ${new Date(currentQuote.date).toLocaleDateString('da-DK')}</p>
-                        ${currentQuote.valid_until ? `<p style="margin: 5px 0 0 0; color: #666;">Gyldig til: ${new Date(currentQuote.valid_until).toLocaleDateString('da-DK')}</p>` : ''}
+                        <h2 style="margin: 0 0 15px 0; font-size: 28px; font-weight: 700; color: #1F2937;">TILBUD</h2>
+                        <div style="background: #F3F4F6; padding: 12px 16px; border-radius: 6px; border-left: 4px solid #5B7FE6;">
+                            <p style="margin: 0 0 6px 0; color: #374151; font-size: 13px;"><strong>Tilbud nr.:</strong> ${currentQuote.quote_number}</p>
+                            <p style="margin: 0 0 6px 0; color: #374151; font-size: 13px;"><strong>Dato:</strong> ${new Date(currentQuote.date).toLocaleDateString('da-DK')}</p>
+                            ${currentQuote.valid_until ? `<p style="margin: 0; color: #374151; font-size: 13px;"><strong>Gyldig til:</strong> ${new Date(currentQuote.valid_until).toLocaleDateString('da-DK')}</p>` : ''}
+                        </div>
                     </div>
                 </div>
                 
-                <!-- Customer Info -->
-                <div style="margin-bottom: 30px;">
-                    <h3 style="margin: 0 0 10px 0; color: #333;">TIL:</h3>
-                    <div style="background: #f9f9f9; padding: 15px; border-radius: 5px;">
-                        <p style="margin: 0 0 5px 0; font-weight: 600; font-size: 16px;">${currentQuote.company_name}</p>
-                        ${currentQuote.contact_person_name ? `<p style="margin: 0 0 5px 0;">Att: ${currentQuote.contact_person_name}${currentQuote.contact_person_title ? ` - ${currentQuote.contact_person_title}` : ''}</p>` : 
-                          currentQuote.contact_person ? `<p style="margin: 0 0 5px 0;">Att: ${currentQuote.contact_person}</p>` : ''}
-                        ${currentQuote.att_person && !currentQuote.contact_person_name ? `<p style="margin: 0 0 5px 0;">Att: ${currentQuote.att_person}</p>` : ''}
-                        ${currentQuote.address ? `<p style="margin: 0 0 5px 0;">${currentQuote.address}</p>` : ''}
-                        ${currentQuote.postal_code && currentQuote.city ? `<p style="margin: 0 0 5px 0;">${currentQuote.postal_code} ${currentQuote.city}</p>` : ''}
-                        ${currentQuote.contact_person_email ? `<p style="margin: 0 0 5px 0;">📧 ${currentQuote.contact_person_email}</p>` : 
-                          currentQuote.customer_email ? `<p style="margin: 0 0 5px 0;">📧 ${currentQuote.customer_email}</p>` : ''}
-                        ${currentQuote.contact_person_phone ? `<p style="margin: 0;">📞 ${currentQuote.contact_person_phone}</p>` : 
-                          currentQuote.customer_phone ? `<p style="margin: 0;">📞 ${currentQuote.customer_phone}</p>` : ''}
+                <!-- Customer & Company Info - Side by Side -->
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px; background: #F9FAFB; padding: 25px; border-radius: 8px; margin-bottom: 35px;">
+                    <div>
+                        <h3 style="margin: 0 0 12px 0; color: #5B7FE6; font-size: 14px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">TIL:</h3>
+                        <p style="margin: 0 0 6px 0; font-weight: 700; font-size: 16px; color: #1F2937;">${currentQuote.company_name}</p>
+                        ${currentQuote.contact_person_name ? `<p style="margin: 0 0 6px 0; font-size: 14px; color: #4B5563;">Att: ${currentQuote.contact_person_name}${currentQuote.contact_person_title ? ` - ${currentQuote.contact_person_title}` : ''}</p>` : 
+                          currentQuote.contact_person ? `<p style="margin: 0 0 6px 0; font-size: 14px; color: #4B5563;">Att: ${currentQuote.contact_person}</p>` : ''}
+                        ${currentQuote.att_person && !currentQuote.contact_person_name ? `<p style="margin: 0 0 6px 0; font-size: 14px; color: #4B5563;">Att: ${currentQuote.att_person}</p>` : ''}
+                        ${currentQuote.address ? `<p style="margin: 0 0 6px 0; font-size: 14px; color: #4B5563;">${currentQuote.address}</p>` : ''}
+                        ${currentQuote.postal_code && currentQuote.city ? `<p style="margin: 0 0 6px 0; font-size: 14px; color: #4B5563;">${currentQuote.postal_code} ${currentQuote.city}</p>` : ''}
+                        ${currentQuote.contact_person_email ? `<p style="margin: 0 0 6px 0; font-size: 14px; color: #4B5563;">📧 ${currentQuote.contact_person_email}</p>` : 
+                          currentQuote.customer_email ? `<p style="margin: 0 0 6px 0; font-size: 14px; color: #4B5563;">📧 ${currentQuote.customer_email}</p>` : ''}
+                        ${currentQuote.contact_person_phone ? `<p style="margin: 0; font-size: 14px; color: #4B5563;">📞 ${currentQuote.contact_person_phone}</p>` : 
+                          currentQuote.customer_phone ? `<p style="margin: 0; font-size: 14px; color: #4B5563;">📞 ${currentQuote.customer_phone}</p>` : ''}
+                    </div>
+                    <div>
+                        <h3 style="margin: 0 0 12px 0; color: #5B7FE6; font-size: 14px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">FRA:</h3>
+                        <p style="margin: 0 0 6px 0; font-weight: 700; font-size: 16px; color: #1F2937;">FlowFactory ApS</p>
+                        <p style="margin: 0 0 6px 0; font-size: 14px; color: #4B5563;">Erhvervsvej 123</p>
+                        <p style="margin: 0 0 6px 0; font-size: 14px; color: #4B5563;">8600 Silkeborg</p>
+                        <p style="margin: 0 0 6px 0; font-size: 14px; color: #4B5563;">CVR: 12345678</p>
+                        <p style="margin: 0 0 6px 0; font-size: 14px; color: #4B5563;">📧 kontakt@flowfactory.dk</p>
+                        <p style="margin: 0; font-size: 14px; color: #4B5563;">📞 +45 12 34 56 78</p>
                     </div>
                 </div>
                 
-                <!-- Title -->
+                <!-- Quote Title/Description -->
                 <div style="margin-bottom: 30px;">
-                    <h2 style="margin: 0; font-size: 22px; color: #667eea;">Tilbud på: ${currentQuote.title}</h2>
-                    ${currentQuote.requisition_number ? `<p style="margin: 5px 0 0 0; color: #666;">Rekv. nr.: ${currentQuote.requisition_number}</p>` : ''}
+                    <h2 style="margin: 0; font-size: 20px; color: #5B7FE6; font-weight: 600;">Tilbud på: ${currentQuote.title}</h2>
+                    ${currentQuote.requisition_number ? `<p style="margin: 8px 0 0 0; color: #6B7280; font-size: 14px;">Rekvisitionsnummer: ${currentQuote.requisition_number}</p>` : ''}
                 </div>
                 
-                <!-- Lines Table -->
-                <table style="width: 100%; border-collapse: collapse; margin-bottom: 30px;">
+                <!-- Lines Table with Zebra Stripes -->
+                <table style="width: 100%; border-collapse: collapse; margin-bottom: 35px; border: 1px solid #E5E7EB; border-radius: 8px; overflow: hidden;">
                     <thead>
-                        <tr style="background: #667eea; color: white;">
-                            <th style="padding: 12px; text-align: left; border: 1px solid #5568d3;">Beskrivelse</th>
-                            <th style="padding: 12px; text-align: center; border: 1px solid #5568d3; width: 80px;">Antal</th>
-                            <th style="padding: 12px; text-align: center; border: 1px solid #5568d3; width: 80px;">Enhed</th>
-                            <th style="padding: 12px; text-align: right; border: 1px solid #5568d3; width: 120px;">E.pris</th>
-                            <th style="padding: 12px; text-align: right; border: 1px solid #5568d3; width: 80px;">Rabat</th>
-                            <th style="padding: 12px; text-align: right; border: 1px solid #5568d3; width: 120px;">Total</th>
+                        <tr style="background: #5B7FE6; color: white;">
+                            <th style="padding: 14px 16px; text-align: left; font-weight: 600; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px;">Beskrivelse</th>
+                            <th style="padding: 14px 16px; text-align: center; font-weight: 600; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; width: 90px;">Antal</th>
+                            <th style="padding: 14px 16px; text-align: center; font-weight: 600; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; width: 90px;">Enhed</th>
+                            <th style="padding: 14px 16px; text-align: right; font-weight: 600; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; width: 130px;">E.pris</th>
+                            <th style="padding: 14px 16px; text-align: right; font-weight: 600; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; width: 90px;">Rabat</th>
+                            <th style="padding: 14px 16px; text-align: right; font-weight: 600; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; width: 140px;">Total</th>
                         </tr>
                     </thead>
                     <tbody>
-                        ${currentQuote.lines.map(line => {
+                        ${currentQuote.lines.map((line, index) => {
                             const lineTotal = calculateLineTotal(line);
                             return `
-                                <tr>
-                                    <td style="padding: 12px; border: 1px solid #e0e0e0; vertical-align: top;">${line.description}</td>
-                                    <td style="padding: 12px; border: 1px solid #e0e0e0; text-align: center;">${line.quantity}</td>
-                                    <td style="padding: 12px; border: 1px solid #e0e0e0; text-align: center;">${line.unit}</td>
-                                    <td style="padding: 12px; border: 1px solid #e0e0e0; text-align: right;">${formatCurrency(line.unit_price)}</td>
-                                    <td style="padding: 12px; border: 1px solid #e0e0e0; text-align: right;">${line.discount_percent}%</td>
-                                    <td style="padding: 12px; border: 1px solid #e0e0e0; text-align: right; font-weight: 600;">${formatCurrency(lineTotal)}</td>
+                                <tr style="background: ${index % 2 === 0 ? '#FFFFFF' : '#F9FAFB'}; border-bottom: 1px solid #E5E7EB;">
+                                    <td style="padding: 14px 16px; vertical-align: top; color: #1F2937; font-size: 14px;">${line.description}</td>
+                                    <td style="padding: 14px 16px; text-align: center; color: #4B5563; font-size: 14px;">${line.quantity}</td>
+                                    <td style="padding: 14px 16px; text-align: center; color: #4B5563; font-size: 14px;">${line.unit}</td>
+                                    <td style="padding: 14px 16px; text-align: right; color: #4B5563; font-size: 14px;">${formatCurrency(line.unit_price)}</td>
+                                    <td style="padding: 14px 16px; text-align: right; color: #4B5563; font-size: 14px;">${line.discount_percent}%</td>
+                                    <td style="padding: 14px 16px; text-align: right; font-weight: 600; color: #1F2937; font-size: 14px;">${formatCurrency(lineTotal)}</td>
                                 </tr>
                             `;
                         }).join('')}
                     </tbody>
                 </table>
                 
-                <!-- Totals -->
-                <div style="display: flex; justify-content: flex-end; margin-bottom: 30px;">
-                    <div style="min-width: 300px;">
-                        <div style="display: flex; justify-content: space-between; padding: 10px; border-bottom: 1px solid #e0e0e0;">
-                            <span>Subtotal:</span>
-                            <strong>${formatCurrency(currentQuote.subtotal)}</strong>
+                <!-- Summary/Totals -->
+                <div style="display: flex; justify-content: flex-end; margin-bottom: 35px;">
+                    <div style="min-width: 350px;">
+                        <div style="display: flex; justify-content: space-between; padding: 12px 16px; border-bottom: 1px solid #E5E7EB;">
+                            <span style="color: #6B7280; font-size: 15px;">Subtotal:</span>
+                            <strong style="color: #1F2937; font-size: 15px;">${formatCurrency(currentQuote.subtotal)}</strong>
                         </div>
-                        <div style="display: flex; justify-content: space-between; padding: 10px; border-bottom: 1px solid #e0e0e0;">
-                            <span>Moms (25%):</span>
-                            <strong>${formatCurrency(currentQuote.vat_amount)}</strong>
+                        <div style="display: flex; justify-content: space-between; padding: 12px 16px; border-bottom: 2px solid #E5E7EB;">
+                            <span style="color: #6B7280; font-size: 15px;">Moms (25%):</span>
+                            <strong style="color: #1F2937; font-size: 15px;">${formatCurrency(currentQuote.vat_amount)}</strong>
                         </div>
-                        <div style="display: flex; justify-content: space-between; padding: 15px; background: #667eea; color: white; font-size: 18px; border-radius: 5px; margin-top: 10px;">
-                            <span>TOTAL:</span>
-                            <strong>${formatCurrency(currentQuote.total)}</strong>
+                        <div style="display: flex; justify-content: space-between; padding: 18px 20px; background: linear-gradient(135deg, #5B7FE6 0%, #4C63D2 100%); color: white; border-radius: 8px; margin-top: 12px; box-shadow: 0 4px 12px rgba(91, 127, 230, 0.3);">
+                            <span style="font-size: 18px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">TOTAL:</span>
+                            <strong style="font-size: 22px; font-weight: 700;">${formatCurrency(currentQuote.total)}</strong>
                         </div>
                     </div>
                 </div>
                 
+                <!-- Payment Terms -->
                 ${currentQuote.terms ? `
-                    <div style="margin-bottom: 20px;">
-                        <h3 style="margin: 0 0 10px 0; color: #333;">Betalingsbetingelser:</h3>
-                        <p style="margin: 0; white-space: pre-wrap;">${currentQuote.terms}</p>
+                    <div style="background: #F9FAFB; padding: 20px; border-radius: 8px; border-left: 4px solid #5B7FE6; margin-bottom: 25px;">
+                        <h3 style="margin: 0 0 10px 0; color: #1F2937; font-size: 15px; font-weight: 700;">Betalingsbetingelser:</h3>
+                        <p style="margin: 0; color: #4B5563; font-size: 14px; line-height: 1.6; white-space: pre-wrap;">${currentQuote.terms}</p>
                     </div>
                 ` : ''}
                 
                 ${currentQuote.attachments && currentQuote.attachments.length > 0 ? `
-                    <div style="margin-top: 30px; padding-top: 20px; border-top: 2px solid #e0e0e0;">
-                        <h3 style="margin: 0 0 10px 0; color: #333;">Vedhæftede Dokumenter:</h3>
+                    <div style="background: #F0F9FF; padding: 20px; border-radius: 8px; border-left: 4px solid #0EA5E9; margin-bottom: 25px;">
+                        <h3 style="margin: 0 0 10px 0; color: #075985; font-size: 15px; font-weight: 700;">Vedhæftede Dokumenter:</h3>
                         ${currentQuote.attachments.map(att => `
-                            <div style="margin: 5px 0;">📎 ${att.original_name}</div>
+                            <div style="margin: 5px 0; color: #0C4A6E; font-size: 14px;">📎 ${att.original_name}</div>
                         `).join('')}
                     </div>
                 ` : ''}
+                
+                <!-- Footer Contact Info -->
+                <div style="border-top: 2px solid #E5E7EB; padding-top: 25px; margin-top: 35px; text-align: center;">
+                    <p style="margin: 0 0 8px 0; color: #6B7280; font-size: 13px;">
+                        FlowFactory ApS • Erhvervsvej 123 • 8600 Silkeborg • CVR: 12345678
+                    </p>
+                    <p style="margin: 0; color: #6B7280; font-size: 13px;">
+                        📧 kontakt@flowfactory.dk • 📞 +45 12 34 56 78 • 🌐 www.flowfactory.dk
+                    </p>
+                </div>
             </div>
         </div>
     `;
