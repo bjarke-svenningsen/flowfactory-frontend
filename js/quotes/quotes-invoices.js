@@ -200,116 +200,116 @@ function renderInvoicePreview(invoice) {
                 </button>
             </div>
             
-            <div style="background: white; padding: 50px; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.08);">
-                <!-- Professional Header -->
-                <div style="display: flex; justify-content: space-between; align-items: start; padding-bottom: 25px; border-bottom: 3px solid #5B7FE6; margin-bottom: 35px;">
+            <div style="background: white; padding: 60px; border: 1px solid #000;">
+                <!-- Minimal Header -->
+                <div style="display: flex; justify-content: space-between; align-items: start; padding-bottom: 30px; border-bottom: 1px solid #000; margin-bottom: 40px;">
                     <div>
-                        <h1 style="margin: 0 0 8px 0; color: #5B7FE6; font-size: 36px; font-weight: 700; letter-spacing: -0.5px;">FlowFactory ApS</h1>
-                        <p style="margin: 0; color: #6B7280; font-size: 14px; font-weight: 500;">Professionelle løsninger til din virksomhed</p>
+                        <h1 style="margin: 0 0 5px 0; color: #000; font-size: 24px; font-weight: 700;">FlowFactory ApS</h1>
+                        <p style="margin: 0; color: #666; font-size: 12px;">Erhvervsvej 123, 8600 Silkeborg</p>
+                        <p style="margin: 0; color: #666; font-size: 12px;">CVR: 12345678</p>
                     </div>
                     <div style="text-align: right;">
-                        <h2 style="margin: 0 0 15px 0; font-size: 28px; font-weight: 700; color: #1F2937;">FAKTURA</h2>
-                        <div style="background: #F3F4F6; padding: 12px 16px; border-radius: 6px; border-left: 4px solid #5B7FE6;">
-                            <p style="margin: 0 0 6px 0; color: #374151; font-size: 13px;"><strong>Faktura nr.:</strong> ${invoice.invoice_number}</p>
-                            <p style="margin: 0 0 6px 0; color: #374151; font-size: 13px;"><strong>Ordre nr.:</strong> ${invoice.full_order_number}</p>
-                            <p style="margin: 0 0 6px 0; color: #374151; font-size: 13px;"><strong>Dato:</strong> ${new Date(invoice.invoice_date).toLocaleDateString('da-DK')}</p>
-                            <p style="margin: 0; color: #374151; font-size: 13px;"><strong>Forfaldsdato:</strong> ${new Date(invoice.due_date).toLocaleDateString('da-DK')}</p>
-                        </div>
+                        <h2 style="margin: 0 0 15px 0; font-size: 24px; font-weight: 700; color: #000;">FAKTURA</h2>
+                        <table style="border-collapse: collapse; margin-left: auto;">
+                            <tr>
+                                <td style="padding: 3px 10px 3px 0; font-size: 12px; color: #666;">Faktura nr.:</td>
+                                <td style="padding: 3px 0; font-size: 12px; color: #000; font-weight: 600;">${invoice.invoice_number}</td>
+                            </tr>
+                            <tr>
+                                <td style="padding: 3px 10px 3px 0; font-size: 12px; color: #666;">Ordre nr.:</td>
+                                <td style="padding: 3px 0; font-size: 12px; color: #000; font-weight: 600;">${invoice.full_order_number}</td>
+                            </tr>
+                            <tr>
+                                <td style="padding: 3px 10px 3px 0; font-size: 12px; color: #666;">Dato:</td>
+                                <td style="padding: 3px 0; font-size: 12px; color: #000;">${new Date(invoice.invoice_date).toLocaleDateString('da-DK')}</td>
+                            </tr>
+                            <tr>
+                                <td style="padding: 3px 10px 3px 0; font-size: 12px; color: #666;">Forfaldsdato:</td>
+                                <td style="padding: 3px 0; font-size: 12px; color: #000;">${new Date(invoice.due_date).toLocaleDateString('da-DK')}</td>
+                            </tr>
+                        </table>
                     </div>
                 </div>
                 
-                <!-- Customer & Company Info - Side by Side -->
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px; background: #F9FAFB; padding: 25px; border-radius: 8px; margin-bottom: 35px;">
-                    <div>
-                        <h3 style="margin: 0 0 12px 0; color: #5B7FE6; font-size: 14px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">TIL:</h3>
-                        <p style="margin: 0 0 6px 0; font-weight: 700; font-size: 16px; color: #1F2937;">${invoice.company_name}</p>
-                        ${invoice.contact_person ? `<p style="margin: 0 0 6px 0; font-size: 14px; color: #4B5563;">Att: ${invoice.contact_person}</p>` : ''}
-                        ${invoice.address ? `<p style="margin: 0 0 6px 0; font-size: 14px; color: #4B5563;">${invoice.address}</p>` : ''}
-                        ${invoice.postal_code && invoice.city ? `<p style="margin: 0 0 6px 0; font-size: 14px; color: #4B5563;">${invoice.postal_code} ${invoice.city}</p>` : ''}
-                        ${invoice.customer_email ? `<p style="margin: 0 0 6px 0; font-size: 14px; color: #4B5563;">📧 ${invoice.customer_email}</p>` : ''}
-                        ${invoice.customer_phone ? `<p style="margin: 0; font-size: 14px; color: #4B5563;">📞 ${invoice.customer_phone}</p>` : ''}
-                    </div>
-                    <div>
-                        <h3 style="margin: 0 0 12px 0; color: #5B7FE6; font-size: 14px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">FRA:</h3>
-                        <p style="margin: 0 0 6px 0; font-weight: 700; font-size: 16px; color: #1F2937;">FlowFactory ApS</p>
-                        <p style="margin: 0 0 6px 0; font-size: 14px; color: #4B5563;">Erhvervsvej 123</p>
-                        <p style="margin: 0 0 6px 0; font-size: 14px; color: #4B5563;">8600 Silkeborg</p>
-                        <p style="margin: 0 0 6px 0; font-size: 14px; color: #4B5563;">CVR: 12345678</p>
-                        <p style="margin: 0 0 6px 0; font-size: 14px; color: #4B5563;">📧 kontakt@flowfactory.dk</p>
-                        <p style="margin: 0; font-size: 14px; color: #4B5563;">📞 +45 12 34 56 78</p>
-                    </div>
+                <!-- Customer Info -->
+                <div style="margin-bottom: 40px;">
+                    <h3 style="margin: 0 0 10px 0; color: #000; font-size: 13px; font-weight: 700;">KUNDE:</h3>
+                    <p style="margin: 0 0 3px 0; font-weight: 600; font-size: 13px; color: #000;">${invoice.company_name}</p>
+                    ${invoice.contact_person ? `<p style="margin: 0 0 3px 0; font-size: 12px; color: #666;">Att: ${invoice.contact_person}</p>` : ''}
+                    ${invoice.address ? `<p style="margin: 0 0 3px 0; font-size: 12px; color: #666;">${invoice.address}</p>` : ''}
+                    ${invoice.postal_code && invoice.city ? `<p style="margin: 0 0 3px 0; font-size: 12px; color: #666;">${invoice.postal_code} ${invoice.city}</p>` : ''}
+                    ${invoice.customer_email ? `<p style="margin: 0 0 3px 0; font-size: 12px; color: #666;">${invoice.customer_email}</p>` : ''}
+                    ${invoice.customer_phone ? `<p style="margin: 0; font-size: 12px; color: #666;">${invoice.customer_phone}</p>` : ''}
                 </div>
                 
-                <!-- Invoice Title/Description -->
-                <div style="margin-bottom: 30px;">
-                    <h2 style="margin: 0; font-size: 20px; color: #5B7FE6; font-weight: 600;">Faktura vedr.: Ordre ${invoice.full_order_number}</h2>
-                    ${invoice.requisition_number ? `<p style="margin: 8px 0 0 0; color: #6B7280; font-size: 14px;">Rekvisitionsnummer: ${invoice.requisition_number}</p>` : ''}
-                </div>
+                ${invoice.requisition_number ? `
+                    <div style="margin-bottom: 30px;">
+                        <p style="margin: 0; font-size: 12px; color: #666;"><strong>Rekvisitionsnummer:</strong> ${invoice.requisition_number}</p>
+                    </div>
+                ` : ''}
                 
-                <!-- Lines Table with Zebra Stripes -->
-                <table style="width: 100%; border-collapse: collapse; margin-bottom: 35px; border: 1px solid #E5E7EB; border-radius: 8px; overflow: hidden;">
+                <!-- Lines Table -->
+                <table style="width: 100%; border-collapse: collapse; margin-bottom: 40px; border: 1px solid #000;">
                     <thead>
-                        <tr style="background: #5B7FE6; color: white;">
-                            <th style="padding: 14px 16px; text-align: left; font-weight: 600; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px;">Beskrivelse</th>
-                            <th style="padding: 14px 16px; text-align: center; font-weight: 600; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; width: 90px;">Antal</th>
-                            <th style="padding: 14px 16px; text-align: center; font-weight: 600; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; width: 90px;">Enhed</th>
-                            <th style="padding: 14px 16px; text-align: right; font-weight: 600; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; width: 130px;">E.pris</th>
-                            <th style="padding: 14px 16px; text-align: right; font-weight: 600; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; width: 90px;">Rabat</th>
-                            <th style="padding: 14px 16px; text-align: right; font-weight: 600; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; width: 140px;">Total</th>
+                        <tr style="border-bottom: 1px solid #000;">
+                            <th style="padding: 10px; text-align: left; font-weight: 700; font-size: 12px; color: #000; border-right: 1px solid #000;">Beskrivelse</th>
+                            <th style="padding: 10px; text-align: center; font-weight: 700; font-size: 12px; color: #000; width: 80px; border-right: 1px solid #000;">Antal</th>
+                            <th style="padding: 10px; text-align: center; font-weight: 700; font-size: 12px; color: #000; width: 80px; border-right: 1px solid #000;">Enhed</th>
+                            <th style="padding: 10px; text-align: right; font-weight: 700; font-size: 12px; color: #000; width: 110px; border-right: 1px solid #000;">E.pris</th>
+                            <th style="padding: 10px; text-align: right; font-weight: 700; font-size: 12px; color: #000; width: 70px; border-right: 1px solid #000;">Rabat</th>
+                            <th style="padding: 10px; text-align: right; font-weight: 700; font-size: 12px; color: #000; width: 120px;">Total</th>
                         </tr>
                     </thead>
                     <tbody>
-                        ${invoice.lines.map((line, index) => `
-                            <tr style="background: ${index % 2 === 0 ? '#FFFFFF' : '#F9FAFB'}; border-bottom: 1px solid #E5E7EB;">
-                                <td style="padding: 14px 16px; vertical-align: top; color: #1F2937; font-size: 14px;">${line.description}</td>
-                                <td style="padding: 14px 16px; text-align: center; color: #4B5563; font-size: 14px;">${line.quantity}</td>
-                                <td style="padding: 14px 16px; text-align: center; color: #4B5563; font-size: 14px;">${line.unit}</td>
-                                <td style="padding: 14px 16px; text-align: right; color: #4B5563; font-size: 14px;">${formatCurrency(line.unit_price)}</td>
-                                <td style="padding: 14px 16px; text-align: right; color: #4B5563; font-size: 14px;">${line.discount_percent}%</td>
-                                <td style="padding: 14px 16px; text-align: right; font-weight: 600; color: #1F2937; font-size: 14px;">${formatCurrency(line.line_total)}</td>
+                        ${invoice.lines.map(line => `
+                            <tr style="border-bottom: 1px solid #000;">
+                                <td style="padding: 10px; vertical-align: top; color: #000; font-size: 12px; border-right: 1px solid #000;">${line.description}</td>
+                                <td style="padding: 10px; text-align: center; color: #000; font-size: 12px; border-right: 1px solid #000;">${line.quantity}</td>
+                                <td style="padding: 10px; text-align: center; color: #000; font-size: 12px; border-right: 1px solid #000;">${line.unit}</td>
+                                <td style="padding: 10px; text-align: right; color: #000; font-size: 12px; border-right: 1px solid #000;">${formatCurrency(line.unit_price)}</td>
+                                <td style="padding: 10px; text-align: right; color: #000; font-size: 12px; border-right: 1px solid #000;">${line.discount_percent}%</td>
+                                <td style="padding: 10px; text-align: right; font-weight: 600; color: #000; font-size: 12px;">${formatCurrency(line.line_total)}</td>
                             </tr>
                         `).join('')}
                     </tbody>
                 </table>
                 
-                <!-- Summary/Totals -->
-                <div style="display: flex; justify-content: flex-end; margin-bottom: 35px;">
-                    <div style="min-width: 350px;">
-                        <div style="display: flex; justify-content: space-between; padding: 12px 16px; border-bottom: 1px solid #E5E7EB;">
-                            <span style="color: #6B7280; font-size: 15px;">Subtotal:</span>
-                            <strong style="color: #1F2937; font-size: 15px;">${formatCurrency(invoice.subtotal)}</strong>
-                        </div>
-                        <div style="display: flex; justify-content: space-between; padding: 12px 16px; border-bottom: 2px solid #E5E7EB;">
-                            <span style="color: #6B7280; font-size: 15px;">Moms (25%):</span>
-                            <strong style="color: #1F2937; font-size: 15px;">${formatCurrency(invoice.vat_amount)}</strong>
-                        </div>
-                        <div style="display: flex; justify-content: space-between; padding: 18px 20px; background: linear-gradient(135deg, #5B7FE6 0%, #4C63D2 100%); color: white; border-radius: 8px; margin-top: 12px; box-shadow: 0 4px 12px rgba(91, 127, 230, 0.3);">
-                            <span style="font-size: 18px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">AT BETALE:</span>
-                            <strong style="font-size: 22px; font-weight: 700;">${formatCurrency(invoice.total)}</strong>
-                        </div>
-                    </div>
+                <!-- Totals -->
+                <div style="display: flex; justify-content: flex-end; margin-bottom: 40px;">
+                    <table style="border-collapse: collapse; border: 1px solid #000; min-width: 320px;">
+                        <tr style="border-bottom: 1px solid #000;">
+                            <td style="padding: 8px 12px; font-size: 12px; color: #000;">Subtotal:</td>
+                            <td style="padding: 8px 12px; text-align: right; font-weight: 600; font-size: 12px; color: #000;">${formatCurrency(invoice.subtotal)}</td>
+                        </tr>
+                        <tr style="border-bottom: 1px solid #000;">
+                            <td style="padding: 8px 12px; font-size: 12px; color: #000;">Moms (25%):</td>
+                            <td style="padding: 8px 12px; text-align: right; font-weight: 600; font-size: 12px; color: #000;">${formatCurrency(invoice.vat_amount)}</td>
+                        </tr>
+                        <tr style="background: #f5f5f5;">
+                            <td style="padding: 12px; font-size: 14px; font-weight: 700; color: #000;">AT BETALE:</td>
+                            <td style="padding: 12px; text-align: right; font-weight: 700; font-size: 16px; color: #000;">${formatCurrency(invoice.total)}</td>
+                        </tr>
+                    </table>
                 </div>
                 
                 <!-- Payment Terms -->
-                <div style="background: #F9FAFB; padding: 20px; border-radius: 8px; border-left: 4px solid #5B7FE6; margin-bottom: 25px;">
-                    <h3 style="margin: 0 0 10px 0; color: #1F2937; font-size: 15px; font-weight: 700;">Betalingsbetingelser:</h3>
-                    <p style="margin: 0; color: #4B5563; font-size: 14px; line-height: 1.6;">${invoice.payment_terms}</p>
+                <div style="margin-bottom: 25px; padding: 15px; border: 1px solid #000;">
+                    <h3 style="margin: 0 0 8px 0; color: #000; font-size: 12px; font-weight: 700;">BETALINGSBETINGELSER:</h3>
+                    <p style="margin: 0; color: #000; font-size: 11px; line-height: 1.5;">${invoice.payment_terms}</p>
                 </div>
                 
                 ${invoice.notes ? `
-                    <div style="background: #FEF3C7; padding: 20px; border-radius: 8px; border-left: 4px solid #F59E0B; margin-bottom: 25px;">
-                        <h3 style="margin: 0 0 10px 0; color: #92400E; font-size: 15px; font-weight: 700;">Noter:</h3>
-                        <p style="margin: 0; color: #78350F; font-size: 14px; line-height: 1.6; white-space: pre-wrap;">${invoice.notes}</p>
+                    <div style="margin-bottom: 25px; padding: 15px; border: 1px solid #000;">
+                        <h3 style="margin: 0 0 8px 0; color: #000; font-size: 12px; font-weight: 700;">NOTER:</h3>
+                        <p style="margin: 0; color: #000; font-size: 11px; line-height: 1.5; white-space: pre-wrap;">${invoice.notes}</p>
                     </div>
                 ` : ''}
                 
-                <!-- Footer Contact Info -->
-                <div style="border-top: 2px solid #E5E7EB; padding-top: 25px; margin-top: 35px; text-align: center;">
-                    <p style="margin: 0 0 8px 0; color: #6B7280; font-size: 13px;">
-                        FlowFactory ApS • Erhvervsvej 123 • 8600 Silkeborg • CVR: 12345678
-                    </p>
-                    <p style="margin: 0; color: #6B7280; font-size: 13px;">
-                        📧 kontakt@flowfactory.dk • 📞 +45 12 34 56 78 • 🌐 www.flowfactory.dk
+                <!-- Footer -->
+                <div style="border-top: 1px solid #000; padding-top: 20px; margin-top: 40px; text-align: center;">
+                    <p style="margin: 0; color: #666; font-size: 11px;">
+                        FlowFactory ApS • Erhvervsvej 123 • 8600 Silkeborg • CVR: 12345678<br>
+                        Email: kontakt@flowfactory.dk • Telefon: +45 12 34 56 78 • www.flowfactory.dk
                     </p>
                 </div>
             </div>
