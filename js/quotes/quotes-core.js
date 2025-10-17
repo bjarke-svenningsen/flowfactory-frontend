@@ -644,7 +644,7 @@ function renderQuotePreview() {
                 <!-- Minimal Header -->
                 <div style="display: flex; justify-content: space-between; align-items: start; padding-bottom: 30px; border-bottom: 1px solid #000; margin-bottom: 40px;">
                     <div>
-                        <img src="/flowfactory-logo.png" alt="FlowFactory ApS" style="height: 60px; width: auto; display: block;">
+                        <img src="flowfactory-logo.png" alt="FlowFactory ApS" style="height: 60px; width: auto; display: block;">
                     </div>
                     <div style="text-align: right;">
                         <h2 style="margin: 0 0 15px 0; font-size: 24px; font-weight: 700; color: #000;">TILBUD</h2>
