@@ -640,11 +640,11 @@ function renderQuotePreview() {
                 </button>
             </div>
             
-            <div style="background: white; padding: 60px;">
+            <div style="background: white; padding: 60px; padding-top: 30px;">
                 <!-- Minimal Header -->
                 <div style="display: flex; justify-content: space-between; align-items: start; padding-bottom: 30px; border-bottom: 1px solid #000; margin-bottom: 40px;">
-                    <div>
-                        <img src="flowfactory-logo.png" alt="FlowFactory ApS" style="height: 200px; width: auto; display: block;">
+                    <div style="background: transparent !important; margin-top: 0; padding: 0;">
+                        <img src="flowfactory-logo.png" alt="FlowFactory ApS" style="height: 200px; width: auto; display: block; background: transparent !important; background-color: transparent !important; margin: 0; padding: 0;">
                     </div>
                     <div style="text-align: right;">
                         <h2 style="margin: 0 0 15px 0; font-size: 24px; font-weight: 700; color: #000;">TILBUD</h2>
