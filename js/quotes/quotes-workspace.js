@@ -510,18 +510,34 @@ function renderInvoiceButton() {
     if (currentWorkspaceInvoice) {
         // Invoice exists - show "See Invoice" button
         return `
-            <button onclick="viewInvoice(${currentWorkspaceInvoice.id})" style="padding: 12px 20px; background: #2196f3; color: white; border: none; border-radius: 5px; cursor: pointer; text-align: left;">
+            <button onclick=\"viewInvoiceFromWorkspace(${currentWorkspaceInvoice.id})\" style=\"padding: 12px 20px; background: #2196f3; color: white; border: none; border-radius: 5px; cursor: pointer; text-align: left;\">
                 👁️ Se Faktura ${currentWorkspaceInvoice.invoice_number}
             </button>
         `;
     } else {
         // No invoice - show "Create Invoice" button
         return `
-            <button onclick="createInvoiceFromOrder(${currentWorkspaceOrder.id})" style="padding: 12px 20px; background: #4caf50; color: white; border: none; border-radius: 5px; cursor: pointer; text-align: left;">
+            <button onclick=\"createInvoiceFromOrder(${currentWorkspaceOrder.id})\" style=\"padding: 12px 20px; background: #4caf50; color: white; border: none; border-radius: 5px; cursor: pointer; text-align: left;\">
                 💰 Opret Faktura
             </button>
         `;
     }
+}
+
+// View invoice from workspace (closes workspace first)
+async function viewInvoiceFromWorkspace(invoiceId) {
+    // Close workspace
+    currentWorkspaceOrder = null;
+    parentOrderId = null;
+    
+    // Switch to invoiced tab
+    switchOrderTab('invoiced');
+    
+    // Small delay to ensure tab is loaded
+    await new Promise(resolve => setTimeout(resolve, 100));
+    
+    // Now view the invoice
+    viewInvoice(invoiceId);
 }
 
 // Render expenses tab
@@ -1645,6 +1661,7 @@ if (document.readyState === 'loading') {
 window.openOrderWorkspace = openOrderWorkspace;
 window.switchWorkspaceTab = switchWorkspaceTab;
 window.closeWorkspace = closeWorkspace;
+window.viewInvoiceFromWorkspace = viewInvoiceFromWorkspace;
 window.showAddExpense = showAddExpense;
 window.closeExpenseModal = closeExpenseModal;
 window.saveExpense = saveExpense;
