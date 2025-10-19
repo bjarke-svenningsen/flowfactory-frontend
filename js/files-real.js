@@ -5,6 +5,7 @@ let selectedFileId = null;
 let currentFilter = 'all'; // 'all', 'documents', 'images', 'shared', 'folder'
 let currentFolderId = null; // null = root level
 let currentFolderName = '';
+let currentView = 'my'; // 'my' or 'shared'
 
 async function loadRealFiles() {
     try {
@@ -13,8 +14,8 @@ async function loadRealFiles() {
         // Load folders first
         await loadFolders();
         
-        // Then load files
-        const response = await fetch('https://flowfactory-frontend.onrender.com/api/files', {
+        // Then load files based on current view
+        const response = await fetch(`https://flowfactory-frontend.onrender.com/api/files?view=${currentView}`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         
@@ -32,6 +33,14 @@ async function loadRealFiles() {
 // Track expanded folders
 let expandedFolders = new Set();
 
+// Switch between My Files and Shared Files
+async function switchFileView(view) {
+    currentView = view;
+    currentFilter = 'all';
+    currentFolderId = null;
+    await loadRealFiles();
+}
+
 // Render folder tree with hierarchy
 function renderFolderTree() {
     const tree = document.getElementById('folderTree');
@@ -39,20 +48,29 @@ function renderFolderTree() {
     
     const documentCount = allFiles.filter(f => isDocument(f.original_name)).length;
     const imageCount = allFiles.filter(f => isImage(f.original_name)).length;
-    const sharedCount = 0;
     
+    // VIEW TABS
     let html = `
+        <div style="display: flex; margin-bottom: 10px; border-bottom: 2px solid #e0e0e0;">
+            <div style="flex: 1; padding: 10px; text-align: center; cursor: pointer; font-weight: ${currentView === 'my' ? 'bold' : 'normal'}; background: ${currentView === 'my' ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' : '#f5f5f5'}; color: ${currentView === 'my' ? 'white' : '#333'}; border-radius: 5px 5px 0 0;" onclick="switchFileView('my')">
+                📁 Mine Filer
+            </div>
+            <div style="flex: 1; padding: 10px; text-align: center; cursor: pointer; font-weight: ${currentView === 'shared' ? 'bold' : 'normal'}; background: ${currentView === 'shared' ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' : '#f5f5f5'}; color: ${currentView === 'shared' ? 'white' : '#333'}; border-radius: 5px 5px 0 0; margin-left: 5px;" onclick="switchFileView('shared')">
+                🤝 Delte med mig
+            </div>
+        </div>
+    `;
+    
+    // FILTERS
+    html += `
         <div class="tree-item ${currentFilter === 'all' && !currentFolderId ? 'selected' : ''}" onclick="filterFiles('all')">
-            <span class="tree-expand">📁</span> Alle Filer (${allFiles.length})
+            <span class="tree-expand">�</span> Alle Filer (${allFiles.length})
         </div>
         <div class="tree-item ${currentFilter === 'documents' ? 'selected' : ''}" onclick="filterFiles('documents')">
-            <span class="tree-expand">📄</span> Dokumenter (${documentCount})
+            <span class="tree-expand">�</span> Dokumenter (${documentCount})
         </div>
         <div class="tree-item ${currentFilter === 'images' ? 'selected' : ''}" onclick="filterFiles('images')">
-            <span class="tree-expand">🖼️</span> Billeder (${imageCount})
-        </div>
-        <div class="tree-item ${currentFilter === 'shared' ? 'selected' : ''}" onclick="filterFiles('shared')">
-            <span class="tree-expand">🔗</span> Delte Filer (${sharedCount})
+            <span class="tree-expand">�️</span> Billeder (${imageCount})
         </div>
     `;
     
@@ -821,12 +839,12 @@ async function shareFile() {
             return;
         }
         
-        let userList = 'Vælg bruger at dele med:\n\n';
+        let userList = 'Vælg bruger at dele med:\\n\\n';
         otherUsers.forEach((u, i) => {
-            userList += `${i + 1}. ${u.name} (${u.email})\n`;
+            userList += `${i + 1}. ${u.name} (${u.email})\\n`;
         });
         
-        const selection = prompt(userList + '\nIndtast nummer:');
+        const selection = prompt(userList + '\\nIndtast nummer:');
         if (!selection) return;
         
         const index = parseInt(selection) - 1;
@@ -836,7 +854,26 @@ async function shareFile() {
         }
         
         const selectedUser = otherUsers[index];
-        alert(`✅ Fil "${file.original_name}" delt med ${selectedUser.name}!\n\n(I en komplet version ville brugeren få en notifikation)`);
+        
+        // Share file via backend API
+        const shareResponse = await fetch(`https://flowfactory-frontend.onrender.com/api/files/${selectedFileId}/share`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({
+                user_id: selectedUser.id,
+                permission: 'view'
+            })
+        });
+        
+        if (!shareResponse.ok) {
+            const error = await shareResponse.json();
+            throw new Error(error.error || 'Kunne ikke dele fil');
+        }
+        
+        alert(`✅ Fil "${file.original_name}" delt med ${selectedUser.name}!`);
         
     } catch (error) {
         console.error('Share error:', error);
