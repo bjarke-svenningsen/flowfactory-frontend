@@ -835,6 +835,9 @@ async function rejectQuote(quoteId) {
 function switchOrderTab(tab) {
     currentOrderTab = tab;
     
+    // BUG FIX: Update URL hash to preserve tab on refresh
+    window.location.hash = `quotes/${tab}`;
+    
     // ALWAYS hide all sub-views when switching tabs
     document.getElementById('quotesListView').style.display = 'none';
     document.getElementById('quotesFormView').style.display = 'none';
@@ -1096,9 +1099,19 @@ async function initQuotesPage() {
     const hash = window.location.hash;
     const isWorkspaceURL = hash.match(/^#\/orders\/\d+\/workspace$/);
     
-    // Only switch to quotes tab if NOT restoring a workspace
+    // Only switch tabs if NOT restoring a workspace
     if (!isWorkspaceURL) {
-        switchOrderTab('quotes'); // Start on quotes tab
+        // BUG FIX: Check if hash indicates a specific tab (e.g., #quotes/orders)
+        let tabToLoad = 'quotes'; // default
+        
+        if (hash.startsWith('#quotes/')) {
+            const tabName = hash.substring(8); // Remove "#quotes/"
+            if (['quotes', 'orders', 'invoiced', 'rejected', 'customers'].includes(tabName)) {
+                tabToLoad = tabName;
+            }
+        }
+        
+        switchOrderTab(tabToLoad);
     }
     // Otherwise, let quotes-workspace.js handle the restoration
 }
