@@ -1,23 +1,60 @@
 // Chat variabler
-let users = [
-    { id: 1, name: 'Anders Berg', status: 'online', initials: 'AB' },
-    { id: 2, name: 'Mette Hansen', status: 'online', initials: 'MH' },
-    { id: 3, name: 'Peter Nielsen', status: 'busy', initials: 'PN' },
-    { id: 4, name: 'Sofia Larsen', status: 'online', initials: 'SL' },
-    { id: 5, name: 'Administrator', status: 'online', initials: 'AD' },
-    { id: 6, name: 'Thomas Jensen', status: 'offline', initials: 'TJ' },
-];
+let users = []; // Will be loaded from backend
 
 let currentChatUser = null;
 let chatMessages = {};
 let socket = null;
+let socketInitialized = false; // BUG FIX: Track if socket is already initialized
 
 // Initialiser chat
-function initChat() {
+async function initChat() {
+    // BUG FIX: Load real users from backend instead of dummy data
+    await loadUsers();
     renderUserList();
-    loadDemoMessages();
     
-    // Prøv at connecte til Socket.IO backend
+    // BUG FIX: Only initialize socket once to avoid duplicate event listeners
+    if (!socketInitialized) {
+        initializeSocket();
+    }
+}
+
+// Load users from backend
+async function loadUsers() {
+    try {
+        const token = sessionStorage.getItem('token');
+        const response = await fetch('https://flowfactory-frontend.onrender.com/api/users', {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        
+        if (response.ok) {
+            const backendUsers = await response.json();
+            // Convert to chat format and filter out current user
+            users = backendUsers
+                .filter(u => u.id !== window.currentUser?.id)
+                .map(u => ({
+                    id: u.id,
+                    name: u.name,
+                    status: 'offline', // Will be updated by presence:update
+                    initials: getInitials(u.name)
+                }));
+        }
+    } catch (error) {
+        console.log('Could not load users from backend:', error);
+    }
+}
+
+// Get initials from name
+function getInitials(name) {
+    if (!name) return '?';
+    const parts = name.split(' ');
+    if (parts.length >= 2) {
+        return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+    }
+    return name.substring(0, 2).toUpperCase();
+}
+
+// Initialize socket connection
+function initializeSocket() {
     try {
         const token = sessionStorage.getItem('token');
         if (token && typeof io !== 'undefined') {
@@ -35,6 +72,8 @@ function initChat() {
             socket.on('presence:update', (onlineUserIds) => {
                 updateUserPresence(onlineUserIds);
             });
+            
+            socketInitialized = true;
         }
     } catch (error) {
         console.log('Socket.IO ikke tilgængelig, bruger lokal chat');
@@ -276,17 +315,4 @@ function filterUsers() {
         const name = item.textContent.toLowerCase();
         item.style.display = name.includes(query) ? 'flex' : 'none';
     });
-}
-
-// Indlæs demo beskeder
-function loadDemoMessages() {
-    chatMessages[1] = [
-        { from: 1, text: 'Hej! Har du set den nye rapport?', time: '09:15' },
-        { from: 'me', text: 'Ja, jeg læste den i går. Ser rigtig godt ud!', time: '09:17' },
-        { from: 1, text: 'Fedt! Skal vi have et møde om det?', time: '09:18' },
-    ];
-    
-    chatMessages[2] = [
-        { from: 2, text: 'Kan du hjælpe med Excel filen?', time: '10:30' },
-    ];
 }
