@@ -23,9 +23,69 @@ async function loadRealFiles() {
         allFiles = await response.json();
         renderFolderTree();
         renderRealFiles();
+        
+        // Show admin-only buttons
+        showAdminButtons();
     } catch (error) {
         console.error('Error loading files:', error);
         alert('Kunne ikke indlæse filer: ' + error.message);
+    }
+}
+
+// Show admin buttons if user is admin
+function showAdminButtons() {
+    const user = JSON.parse(sessionStorage.getItem('user'));
+    if (user && user.is_admin) {
+        document.querySelectorAll('.admin-only').forEach(btn => {
+            btn.style.display = 'inline-block';
+        });
+    }
+}
+
+// Create FlowFactory company folder (admin only)
+async function createFlowFactoryFolder() {
+    const user = JSON.parse(sessionStorage.getItem('user'));
+    if (!user || !user.is_admin) {
+        alert('Kun admins kan oprette FlowFactory mapper');
+        return;
+    }
+    
+    // Check if FlowFactory folder already exists
+    const existingFlowFactory = allFolders.find(f => f.is_company_folder && f.name === 'FlowFactory');
+    if (existingFlowFactory) {
+        alert('❌ FlowFactory mappen findes allerede!');
+        return;
+    }
+    
+    if (!confirm('Opret FlowFactory mappe?\n\nDenne mappe vil være synlig for alle brugere i firmaet.')) {
+        return;
+    }
+    
+    try {
+        const token = sessionStorage.getItem('token');
+        const response = await fetch('https://flowfactory-frontend.onrender.com/api/folders', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({
+                name: 'FlowFactory',
+                is_company_folder: true
+            })
+        });
+        
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error || 'Failed to create FlowFactory folder');
+        }
+        
+        alert('✅ FlowFactory mappe oprettet!\n\nAlle brugere kan nu se og bruge denne mappe.');
+        await loadFolders();
+        renderFolderTree();
+    } catch (error) {
+        console.error('Create FlowFactory folder error:', error);
+        alert('Kunne ikke oprette FlowFactory mappe: ' + error.message);
     }
 }
 
