@@ -150,7 +150,7 @@ function renderFolderBranch(folders, level, isCompany = false) {
         
         const indent = level * 15;
         const expandIcon = hasChildren ? (isExpanded ? '▼' : '▶') : '　';
-        const folderIcon = folder.is_company_folder ? '🏢' : '📁';
+        const folderIcon = '📁'; // All folders use same icon
         
         html += `
             <div class=\"tree-item ${isSelected ? 'selected' : ''}\" style=\"padding-left: ${indent + 10}px;\" data-folder-id=\"${folder.id}\" ondrop=\"handleFolderDrop(event, ${folder.id})\" ondragover=\"handleFolderDragOver(event)\" ondragleave=\"handleFolderDragLeave(event)\">
@@ -306,7 +306,7 @@ function renderRealFiles() {
     // Render subfolders first (like Windows Explorer)
     subfolders.forEach(folder => {
         const fileCount = allFiles.filter(f => f.folder_id === folder.id).length;
-        const folderIcon = folder.is_company_folder ? '🏢' : '📁';
+        const folderIcon = '📁'; // All folders use same icon
         const date = new Date(folder.created_at).toLocaleDateString('da-DK');
         
         html += `
