@@ -422,14 +422,15 @@ app.post('/api/folders', auth, async (req, res) => {
   res.json(folder);
 });
 
-// Get all folders
+// Get all folders (user-specific)
 app.get('/api/folders', auth, async (req, res) => {
   const folders = await db.all(`
     SELECT f.*, u.name as creator_name
     FROM folders f
     JOIN users u ON f.created_by = u.id
+    WHERE f.created_by = ?
     ORDER BY f.name ASC
-  `);
+  `, [req.user.id]);
   
   res.json(folders);
 });
