@@ -5,7 +5,6 @@ let selectedFileId = null;
 let currentFilter = 'all'; // 'all', 'documents', 'images', 'shared', 'folder'
 let currentFolderId = null; // null = root level
 let currentFolderName = '';
-let currentView = 'my'; // 'my' or 'shared'
 
 async function loadRealFiles() {
     try {
@@ -14,8 +13,8 @@ async function loadRealFiles() {
         // Load folders first
         await loadFolders();
         
-        // Then load files based on current view
-        const response = await fetch(`https://flowfactory-frontend.onrender.com/api/files?view=${currentView}`, {
+        // Load all files (mine + shared will be filtered in UI)
+        const response = await fetch('https://flowfactory-frontend.onrender.com/api/files?view=my', {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         
@@ -33,14 +32,6 @@ async function loadRealFiles() {
 // Track expanded folders
 let expandedFolders = new Set();
 
-// Switch between My Files and Shared Files
-async function switchFileView(view) {
-    currentView = view;
-    currentFilter = 'all';
-    currentFolderId = null;
-    await loadRealFiles();
-}
-
 // Render folder tree with hierarchy
 function renderFolderTree() {
     const tree = document.getElementById('folderTree');
@@ -49,28 +40,18 @@ function renderFolderTree() {
     const documentCount = allFiles.filter(f => isDocument(f.original_name)).length;
     const imageCount = allFiles.filter(f => isImage(f.original_name)).length;
     
-    // VIEW TABS
     let html = `
-        <div style="display: flex; margin-bottom: 10px; border-bottom: 2px solid #e0e0e0;">
-            <div style="flex: 1; padding: 10px; text-align: center; cursor: pointer; font-weight: ${currentView === 'my' ? 'bold' : 'normal'}; background: ${currentView === 'my' ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' : '#f5f5f5'}; color: ${currentView === 'my' ? 'white' : '#333'}; border-radius: 5px 5px 0 0;" onclick="switchFileView('my')">
-                📁 Mine Filer
-            </div>
-            <div style="flex: 1; padding: 10px; text-align: center; cursor: pointer; font-weight: ${currentView === 'shared' ? 'bold' : 'normal'}; background: ${currentView === 'shared' ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' : '#f5f5f5'}; color: ${currentView === 'shared' ? 'white' : '#333'}; border-radius: 5px 5px 0 0; margin-left: 5px;" onclick="switchFileView('shared')">
-                🤝 Delte med mig
-            </div>
-        </div>
-    `;
-    
-    // FILTERS
-    html += `
         <div class="tree-item ${currentFilter === 'all' && !currentFolderId ? 'selected' : ''}" onclick="filterFiles('all')">
-            <span class="tree-expand">�</span> Alle Filer (${allFiles.length})
+            <span class="tree-expand">📁</span> Alle Filer (${allFiles.length})
         </div>
         <div class="tree-item ${currentFilter === 'documents' ? 'selected' : ''}" onclick="filterFiles('documents')">
-            <span class="tree-expand">�</span> Dokumenter (${documentCount})
+            <span class="tree-expand">📄</span> Dokumenter (${documentCount})
         </div>
         <div class="tree-item ${currentFilter === 'images' ? 'selected' : ''}" onclick="filterFiles('images')">
-            <span class="tree-expand">�️</span> Billeder (${imageCount})
+            <span class="tree-expand">🖼️</span> Billeder (${imageCount})
+        </div>
+        <div class="tree-item ${currentFilter === 'shared' ? 'selected' : ''}" onclick="filterFiles('shared')">
+            <span class="tree-expand">🔗</span> Delte Filer
         </div>
     `;
     
@@ -132,10 +113,48 @@ function toggleFolder(event, folderId) {
 }
 
 // Filter files by category
-function filterFiles(category) {
+async function filterFiles(category) {
     currentFilter = category;
     currentFolderId = null;
     currentFolderName = '';
+    
+    // Load shared files if selecting "Delte Filer"
+    if (category === 'shared') {
+        const tbody = document.getElementById('fileListBody');
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; padding: 20px;">⏳ Henter delte filer...</td></tr>';
+        
+        const sharedFiles = await loadSharedFiles();
+        
+        renderFolderTree();
+        
+        if (sharedFiles.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; padding: 40px; color: #999;">Ingen delte filer endnu.</td></tr>';
+            document.getElementById('fileCount').textContent = '0 filer';
+            document.getElementById('addressBar').textContent = 'Delte Filer';
+            return;
+        }
+        
+        tbody.innerHTML = sharedFiles.map(file => {
+            const icon = getFileIcon(file.original_name);
+            const size = formatFileSize(file.file_size);
+            const type = getFileType(file.original_name);
+            const date = new Date(file.created_at).toLocaleDateString('da-DK');
+            
+            return `
+                <tr class="file-row" onclick="selectRealFile(${file.id}, event)" ondblclick="openRealFile(${file.id})" oncontextmenu="showContextMenu(event, ${file.id})">
+                    <td><span class="file-icon-small">${icon}</span>${file.original_name}</td>
+                    <td>${size}</td>
+                    <td>${type}</td>
+                    <td>${date} - ${file.owner_name || file.uploader_name}</td>
+                </tr>
+            `;
+        }).join('');
+        
+        document.getElementById('fileCount').textContent = `${sharedFiles.length} fil${sharedFiles.length !== 1 ? 'er' : ''}`;
+        document.getElementById('addressBar').textContent = 'Delte Filer';
+        return;
+    }
+    
     renderFolderTree();
     renderRealFiles();
 }
@@ -150,6 +169,22 @@ function isImage(filename) {
     return ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp'].includes(ext);
 }
 
+async function loadSharedFiles() {
+    try {
+        const token = sessionStorage.getItem('token');
+        const response = await fetch('https://flowfactory-frontend.onrender.com/api/files?view=shared', {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        
+        if (!response.ok) throw new Error('Failed to load shared files');
+        
+        return await response.json();
+    } catch (error) {
+        console.error('Error loading shared files:', error);
+        return [];
+    }
+}
+
 function getFilteredFiles() {
     if (currentFilter === 'folder' && currentFolderId) {
         return allFiles.filter(f => f.folder_id === currentFolderId);
@@ -160,7 +195,7 @@ function getFilteredFiles() {
     } else if (currentFilter === 'images') {
         return allFiles.filter(f => isImage(f.original_name));
     } else if (currentFilter === 'shared') {
-        return [];
+        return []; // Will be loaded async
     }
     return allFiles;
 }
