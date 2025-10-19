@@ -7,15 +7,62 @@ window.onload = function() {
     // Load user data
     loadUserData();
     
-    // Remember last page or default to feed
-    const lastPage = sessionStorage.getItem('currentPage') || 'feed';
-    showPage(lastPage);
+    // Check URL hash first, then fallback to sessionStorage or default
+    const hash = window.location.hash;
+    let initialPage = 'feed';
+    
+    if (hash) {
+        // Hash exists - determine which page to load
+        if (hash.startsWith('#/orders/')) {
+            // Workspace or orders-related hash - load quotes page
+            initialPage = 'quotes';
+        } else {
+            // Simple hash like #feed or #quotes
+            const pageName = hash.substring(1);
+            if (pageName) {
+                initialPage = pageName;
+            }
+        }
+    } else {
+        // No hash - use sessionStorage or default
+        initialPage = sessionStorage.getItem('currentPage') || 'feed';
+        // Set initial hash
+        window.location.hash = initialPage;
+    }
+    
+    showPage(initialPage);
     
     // Load admin data if admin
     if (window.currentUser && window.currentUser.is_admin) {
         loadAdminData();
     }
+    
+    // Handle browser back/forward buttons
+    window.addEventListener('hashchange', handleHashChange);
 };
+
+function handleHashChange() {
+    const hash = window.location.hash;
+    
+    if (!hash || hash === '#') {
+        showPage('feed');
+        return;
+    }
+    
+    // Check if it's a workspace URL
+    if (hash.startsWith('#/orders/')) {
+        // Let the workspace restoration handle it
+        // (already set up in quotes-workspace.js)
+        showPage('quotes');
+        return;
+    }
+    
+    // Simple page hash
+    const pageName = hash.substring(1);
+    if (pageName) {
+        showPage(pageName, false); // Don't update hash again (avoid loop)
+    }
+}
 
 function loadUserData() {
     const userData = sessionStorage.getItem('currentUser');
@@ -45,9 +92,15 @@ function logout() {
     window.location.href = 'index.html';
 }
 
-async function showPage(pageName) {
+async function showPage(pageName, updateHash = true) {
     // Save current page to remember after refresh
     sessionStorage.setItem('currentPage', pageName);
+    
+    // Update URL hash (unless coming from hashchange event)
+    if (updateHash && !window.location.hash.startsWith('#/orders/')) {
+        // Don't overwrite workspace URLs
+        window.location.hash = pageName;
+    }
     
     // Toggle email-mode class for wider layout on email page
     const mainContent = document.querySelector('.main-content');
