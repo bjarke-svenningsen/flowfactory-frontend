@@ -121,6 +121,11 @@ function renderWorkspace(data) {
     });
     
     const container = document.getElementById('ordersContainer');
+    // BUG FIX: Guard clause - only render if container exists
+    if (!container) {
+        console.warn('ordersContainer not found, cannot render workspace');
+        return;
+    }
     
     const fullOrderNumber = data.order.is_extra_work && data.order.parent_order_id 
         ? `${data.order.order_number}-${String(data.order.sub_number).padStart(2, '0')}`

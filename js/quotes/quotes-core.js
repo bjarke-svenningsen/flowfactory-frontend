@@ -29,7 +29,12 @@ async function loadQuotes() {
 // Render quotes list
 function renderQuotesList() {
     const container = document.getElementById('quotesListContainer');
-    
+    // BUG FIX: Guard clause - only render if container exists
+    if (!container) {
+        console.warn('quotesListContainer not found, cannot render quotes list');
+        return;
+    }
+
     // Filter quotes by status
     let filteredQuotes = allQuotes;
     if (currentQuoteFilter !== 'all') {
