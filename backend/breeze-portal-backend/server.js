@@ -555,7 +555,8 @@ app.get('/api/files/download/:id', auth, async (req, res) => {
     return res.status(404).json({ error: 'File not found' });
   }
   
-  const filePath = path.join(__dirname, 'uploads', file.filename);
+  // BUG FIX: Use UPLOADS_DIR instead of hardcoded path
+  const filePath = path.join(UPLOADS_DIR, file.filename);
   
   if (!fs.existsSync(filePath)) {
     return res.status(404).json({ error: 'File not found on disk' });

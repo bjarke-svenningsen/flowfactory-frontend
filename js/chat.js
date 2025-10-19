@@ -73,6 +73,9 @@ function updateUserPresence(onlineUserIds) {
 // Render bruger liste
 function renderUserList() {
     const userList = document.getElementById('userList');
+    // BUG FIX: Guard clause - only render if chat page is loaded
+    if (!userList) return;
+    
     userList.innerHTML = users.map(user => {
         const statusClass = user.status;
         const isActive = currentChatUser && currentChatUser.id === user.id ? 'active' : '';

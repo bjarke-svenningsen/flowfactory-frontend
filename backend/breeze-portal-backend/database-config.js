@@ -101,6 +101,15 @@ export const db = {
       let pgSql = sql;
       let paramIndex = 1;
       pgSql = pgSql.replace(/\?/g, () => `$${paramIndex++}`);
+      
+      // For INSERT statements, add RETURNING id to get the inserted row's ID
+      if (pgSql.trim().toLowerCase().startsWith('insert')) {
+        // Check if RETURNING clause already exists
+        if (!pgSql.toLowerCase().includes('returning')) {
+          pgSql += ' RETURNING id';
+        }
+      }
+      
       const result = await pool.query(pgSql, params);
       return { 
         changes: result.rowCount, 

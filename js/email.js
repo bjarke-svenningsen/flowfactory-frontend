@@ -2036,7 +2036,8 @@ const emailClient = {
     
     if (includeSignature.checked && signature) {
       // Remove old signature if exists
-      let currentBody = body.value;
+      // BUG FIX: Use textContent for contenteditable div instead of .value
+      let currentBody = body.textContent || body.innerText || '';
       const signatureMarker = '\n\n-- \n';
       const markerIndex = currentBody.indexOf(signatureMarker);
       
@@ -2045,7 +2046,7 @@ const emailClient = {
       }
       
       // Add signature
-      body.value = currentBody + signatureMarker + signature;
+      body.textContent = currentBody + signatureMarker + signature;
     }
     
     this.updateCharCount();
@@ -2067,7 +2068,9 @@ const emailClient = {
   saveDraft() {
     const to = document.getElementById('compose-to').value.trim();
     const subject = document.getElementById('compose-subject').value.trim();
-    const body = document.getElementById('compose-body').value.trim();
+    // BUG FIX: Use innerHTML for contenteditable div instead of .value
+    const bodyEl = document.getElementById('compose-body');
+    const body = (bodyEl.innerHTML || '').trim();
     
     if (!to && !subject && !body) {
       this.showNotification('Kladden er tom', 'warning');
@@ -2082,7 +2085,7 @@ const emailClient = {
       cc: document.getElementById('compose-cc').value,
       bcc: document.getElementById('compose-bcc').value,
       subject: document.getElementById('compose-subject').value || '(Intet emne)',
-      body: document.getElementById('compose-body').value,
+      body: bodyEl.innerHTML, // Store HTML for rich text
       timestamp: new Date().toISOString()
     };
     
