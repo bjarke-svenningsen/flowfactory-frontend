@@ -367,12 +367,13 @@ app.post('/api/files/upload', auth, upload.single('file'), async (req, res) => {
       file_size: req.file.size,
       mime_type: req.file.mimetype,
       folder_id: folder_id,
-      uploaded_by: req.user.id
+      uploaded_by: req.user.id,
+      owner_id: req.user.id
     };
 
     const info = await db.run(`
-      INSERT INTO files (filename, original_name, file_path, file_size, mime_type, folder_id, uploaded_by)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO files (filename, original_name, file_path, file_size, mime_type, folder_id, uploaded_by, owner_id)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     `, [
       fileInfo.filename,
       fileInfo.original_name,
@@ -380,13 +381,15 @@ app.post('/api/files/upload', auth, upload.single('file'), async (req, res) => {
       fileInfo.file_size,
       fileInfo.mime_type,
       fileInfo.folder_id,
-      fileInfo.uploaded_by
+      fileInfo.uploaded_by,
+      fileInfo.owner_id
     ]);
 
     const file = await db.get(`
-      SELECT f.*, u.name as uploader_name
+      SELECT f.*, u.name as uploader_name, o.name as owner_name
       FROM files f
       JOIN users u ON f.uploaded_by = u.id
+      LEFT JOIN users o ON f.owner_id = o.id
       WHERE f.id = ?
     `, [info.lastInsertRowid]);
 
@@ -495,30 +498,58 @@ app.delete('/api/folders/:id', auth, async (req, res) => {
   res.json({ success: true });
 });
 
-// Get all files (backwards compatible)
+// Get all files (user-specific + shared)
 app.get('/api/files', auth, async (req, res) => {
-  const { folder_id } = req.query;
+  const { folder_id, view = 'my' } = req.query; // view: 'my' or 'shared'
   
+  if (view === 'shared') {
+    // Get files shared WITH this user
+    let query = `
+      SELECT f.*, u.name as uploader_name, o.name as owner_name, fs.permission, fs.shared_by, sharer.name as shared_by_name
+      FROM file_shares fs
+      JOIN files f ON fs.file_id = f.id
+      JOIN users u ON f.uploaded_by = u.id
+      LEFT JOIN users o ON f.owner_id = o.id
+      LEFT JOIN users sharer ON fs.shared_by = sharer.id
+      WHERE fs.shared_with_user_id = ?
+    `;
+    
+    const params = [req.user.id];
+    
+    if (folder_id && folder_id !== 'all' && folder_id !== 'root') {
+      query += ` AND f.folder_id = ?`;
+      params.push(Number(folder_id));
+    } else if (folder_id === 'root') {
+      query += ` AND f.folder_id IS NULL`;
+    }
+    
+    query += ` ORDER BY f.created_at DESC LIMIT 1000`;
+    
+    const files = await db.all(query, params);
+    return res.json(files);
+  }
+  
+  // Default: Get files owned by this user
   let query = `
-    SELECT f.*, u.name as uploader_name
+    SELECT f.*, u.name as uploader_name, o.name as owner_name
     FROM files f
     JOIN users u ON f.uploaded_by = u.id
+    LEFT JOIN users o ON f.owner_id = o.id
+    WHERE f.owner_id = ?
   `;
   
-  // If folder_id is explicitly provided (including "root" or "all")
+  const params = [req.user.id];
+  
   if (folder_id && folder_id !== 'all' && folder_id !== 'root') {
-    query += ` WHERE f.folder_id = ?`;
+    query += ` AND f.folder_id = ?`;
+    params.push(Number(folder_id));
   } else if (folder_id === 'root') {
-    query += ` WHERE f.folder_id IS NULL`;
+    query += ` AND f.folder_id IS NULL`;
   }
-  // Otherwise return all files (backwards compatible)
   
   query += ` ORDER BY f.created_at DESC LIMIT 1000`;
   
-  const files = (folder_id && folder_id !== 'all' && folder_id !== 'root')
-    ? await db.all(query, [Number(folder_id)])
-    : await db.all(query);
-  
+  const files = await db.all(query, params);
   res.json(files);
 });
 
@@ -600,6 +631,101 @@ app.get('/api/files/download/:id', auth, async (req, res) => {
   }
   
   res.download(filePath, file.original_name);
+});
+
+// --- FILE SHARING ENDPOINTS ---
+
+// Share file with user
+app.post('/api/files/:id/share', auth, async (req, res) => {
+  const fileId = Number(req.params.id);
+  const { user_id, permission = 'view' } = req.body;
+  
+  if (!user_id) {
+    return res.status(400).json({ error: 'User ID required' });
+  }
+  
+  // Verify file exists and user owns it
+  const file = await db.get('SELECT * FROM files WHERE id = ?', [fileId]);
+  if (!file) {
+    return res.status(404).json({ error: 'File not found' });
+  }
+  
+  if (file.owner_id !== req.user.id) {
+    return res.status(403).json({ error: 'Only file owner can share' });
+  }
+  
+  // Verify target user exists
+  const targetUser = await db.get('SELECT id, name, email FROM users WHERE id = ?', [user_id]);
+  if (!targetUser) {
+    return res.status(404).json({ error: 'User not found' });
+  }
+  
+  // Check if already shared
+  const existing = await db.get('SELECT id FROM file_shares WHERE file_id = ? AND shared_with_user_id = ?', [fileId, user_id]);
+  if (existing) {
+    return res.status(400).json({ error: 'File already shared with this user' });
+  }
+  
+  // Create share
+  const info = await db.run(`
+    INSERT INTO file_shares (file_id, shared_with_user_id, permission, shared_by)
+    VALUES (?, ?, ?, ?)
+  `, [fileId, user_id, permission, req.user.id]);
+  
+  const share = await db.get(`
+    SELECT fs.*, u.name as shared_with_name, u.email as shared_with_email
+    FROM file_shares fs
+    JOIN users u ON fs.shared_with_user_id = u.id
+    WHERE fs.id = ?
+  `, [info.lastInsertRowid]);
+  
+  res.json(share);
+});
+
+// Get users file is shared with
+app.get('/api/files/:id/shares', auth, async (req, res) => {
+  const fileId = Number(req.params.id);
+  
+  // Verify file exists and user owns it
+  const file = await db.get('SELECT * FROM files WHERE id = ?', [fileId]);
+  if (!file) {
+    return res.status(404).json({ error: 'File not found' });
+  }
+  
+  if (file.owner_id !== req.user.id) {
+    return res.status(403).json({ error: 'Only file owner can view shares' });
+  }
+  
+  const shares = await db.all(`
+    SELECT fs.*, u.name as shared_with_name, u.email as shared_with_email,
+           sharer.name as shared_by_name
+    FROM file_shares fs
+    JOIN users u ON fs.shared_with_user_id = u.id
+    LEFT JOIN users sharer ON fs.shared_by = sharer.id
+    WHERE fs.file_id = ?
+    ORDER BY fs.created_at DESC
+  `, [fileId]);
+  
+  res.json(shares);
+});
+
+// Unshare file (remove share)
+app.delete('/api/files/:id/share/:userId', auth, async (req, res) => {
+  const fileId = Number(req.params.id);
+  const userId = Number(req.params.userId);
+  
+  // Verify file exists and user owns it
+  const file = await db.get('SELECT * FROM files WHERE id = ?', [fileId]);
+  if (!file) {
+    return res.status(404).json({ error: 'File not found' });
+  }
+  
+  if (file.owner_id !== req.user.id) {
+    return res.status(403).json({ error: 'Only file owner can unshare' });
+  }
+  
+  await db.run('DELETE FROM file_shares WHERE file_id = ? AND shared_with_user_id = ?', [fileId, userId]);
+  res.json({ success: true });
 });
 
 // --- Email Setup ---

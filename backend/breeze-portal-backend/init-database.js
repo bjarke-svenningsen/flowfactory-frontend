@@ -88,7 +88,19 @@ export async function initializeDatabase() {
       mime_type TEXT,
       folder_id INTEGER DEFAULT NULL,
       uploaded_by INTEGER NOT NULL,
-      created_at ${db._isProduction ? 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP' : "TEXT DEFAULT (datetime('now'))"}${db._isProduction ? '' : ',\n  FOREIGN KEY(folder_id) REFERENCES folders(id),\n  FOREIGN KEY(uploaded_by) REFERENCES users(id)'}
+      owner_id INTEGER,
+      created_at ${db._isProduction ? 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP' : "TEXT DEFAULT (datetime('now'))"}${db._isProduction ? '' : ',\n  FOREIGN KEY(folder_id) REFERENCES folders(id),\n  FOREIGN KEY(uploaded_by) REFERENCES users(id),\n  FOREIGN KEY(owner_id) REFERENCES users(id)'}
+    )`);
+    
+    // File shares (for sharing files between users)
+    await db.run(`CREATE TABLE IF NOT EXISTS file_shares (
+      id ${db._isProduction ? 'SERIAL' : 'INTEGER'} PRIMARY KEY ${db._isProduction ? '' : 'AUTOINCREMENT'},
+      file_id INTEGER NOT NULL,
+      shared_with_user_id INTEGER NOT NULL,
+      permission TEXT DEFAULT 'view',
+      shared_by INTEGER NOT NULL,
+      created_at ${db._isProduction ? 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP' : "TEXT DEFAULT (datetime('now'))"},
+      UNIQUE(file_id, shared_with_user_id)${db._isProduction ? '' : ',\n  FOREIGN KEY(file_id) REFERENCES files(id) ON DELETE CASCADE,\n  FOREIGN KEY(shared_with_user_id) REFERENCES users(id) ON DELETE CASCADE,\n  FOREIGN KEY(shared_by) REFERENCES users(id)'}
     )`);
 
     // User activity
@@ -408,6 +420,32 @@ export async function initializeDatabase() {
     } catch (error) {
       console.error('Migration warning:', error.message);
       // Don't fail - migration is optional
+    }
+    
+    // Migrate existing files to have owner_id
+    try {
+      console.log('🔄 Migrating existing files to set owner_id...');
+      
+      // Set owner_id = uploaded_by for all files where owner_id is NULL
+      const result = await db.run('UPDATE files SET owner_id = uploaded_by WHERE owner_id IS NULL');
+      console.log(`✅ Set owner_id for ${result.changes || 0} files`);
+    } catch (error) {
+      console.error('File migration warning:', error.message);
+      // Don't fail - migration is optional
+    }
+    
+    // Try to add owner_id column to files table if it doesn't exist
+    try {
+      await db.run(`ALTER TABLE files ADD COLUMN owner_id INTEGER`);
+      console.log('✅ Added owner_id column to files table');
+      
+      // Set owner_id = uploaded_by for all existing files
+      await db.run('UPDATE files SET owner_id = uploaded_by WHERE owner_id IS NULL');
+    } catch (error) {
+      if (error.message.includes('duplicate column') || error.message.includes('already exists')) {
+        console.log('ℹ️  owner_id column already exists in files table');
+      }
+      // Ignore other errors - column might already exist
     }
 
     // Email attachments
