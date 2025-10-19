@@ -826,10 +826,21 @@ function switchOrderTab(tab) {
     window.location.hash = `quotes/${tab}`;
     
     // ALWAYS hide all sub-views when switching tabs
-    document.getElementById('quotesListView').style.display = 'none';
-    document.getElementById('quotesFormView').style.display = 'none';
-    document.getElementById('quotesPreviewView').style.display = 'none';
-    document.getElementById('quotesCustomersView').style.display = 'none';
+    // Guard: Check if elements exist (might not be loaded yet)
+    const listView = document.getElementById('quotesListView');
+    const formView = document.getElementById('quotesFormView');
+    const previewView = document.getElementById('quotesPreviewView');
+    const customersView = document.getElementById('quotesCustomersView');
+    
+    if (!listView || !formView || !previewView || !customersView) {
+        console.warn('Quote page elements not loaded yet, skipping tab switch');
+        return;
+    }
+    
+    listView.style.display = 'none';
+    formView.style.display = 'none';
+    previewView.style.display = 'none';
+    customersView.style.display = 'none';
     
     // Update button styles
     const tabs = ['quotes', 'orders', 'invoiced', 'rejected', 'customers'];
