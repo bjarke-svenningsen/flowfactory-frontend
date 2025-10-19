@@ -16,7 +16,7 @@ form.addEventListener('submit', async (e) => {
   try {
     const { user, token } = await Auth.login(emailEl.value.trim(), passEl.value);
     sessionStorage.setItem('token', token);
-    sessionStorage.setItem('currentUser', JSON.stringify(user));
+    sessionStorage.setItem('user', JSON.stringify(user)); // Changed from 'currentUser' to 'user'
     
     msgEl.textContent = 'Login succesfuldt! Omdirigerer...';
     msgEl.className = 'message success';
