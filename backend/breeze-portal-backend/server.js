@@ -92,6 +92,19 @@ function auth(req, res, next) {
   }
 }
 
+// Event logging helper function
+async function logOrderEvent(orderId, activityType, description, userId) {
+  try {
+    await db.run(`
+      INSERT INTO order_timeline (order_id, activity_type, description, user_id)
+      VALUES (?, ?, ?, ?)
+    `, [orderId, activityType, description, userId]);
+  } catch (error) {
+    console.error('Failed to log event:', error);
+    // Don't throw - logging should not break the main operation
+  }
+}
+
 // --- Routes ---
 app.get('/', (req, res) => res.json({ ok: true, message: 'Breeze API kører!' }));
 
@@ -1346,6 +1359,9 @@ app.post('/api/quotes', auth, async (req, res) => {
     `, [quoteId, line.description, line.quantity, line.unit, line.unit_price, line.discount_percent || 0, discount_amount, line_total, index]);
   }
   
+  // Log quote creation event
+  await logOrderEvent(quoteId, 'quote_created', `Tilbud ${order_number} oprettet: ${title}`, req.user.id);
+  
   const quote = await db.get(`
     SELECT q.*, c.company_name as customer_name, u.name as created_by_name
     FROM quotes q
@@ -1540,6 +1556,9 @@ app.post('/api/quotes/:id/send', auth, async (req, res) => {
     
     await emailTransporter.sendMail(mailOptions);
     
+    // Log quote sent event
+    await logOrderEvent(quoteId, 'quote_sent', `Tilbud ${quote.order_number} sendt til ${quote.customer_email}`, req.user.id);
+    
     res.json({ success: true, message: 'Quote sent successfully' });
   } catch (error) {
     console.error('Email send error:', error);
@@ -1571,6 +1590,9 @@ app.post('/api/quotes/:id/accept', auth, async (req, res) => {
   
   quote.full_order_number = await getFullOrderNumber(quote);
   
+  // Log quote accepted event
+  await logOrderEvent(quoteId, 'quote_accepted', `Ordre ${quote.full_order_number} accepteret`, req.user.id);
+  
   res.json(quote);
 });
 
@@ -1592,6 +1614,9 @@ app.post('/api/quotes/:id/reject', auth, async (req, res) => {
     JOIN users u ON q.created_by = u.id
     WHERE q.id = ?
   `, [quoteId]);
+  
+  // Log quote rejected event
+  await logOrderEvent(quoteId, 'quote_rejected', `Tilbud ${updated.quote_number} afvist`, req.user.id);
   
   res.json(updated);
 });
@@ -1628,6 +1653,10 @@ app.post('/api/quotes/:id/revert', auth, async (req, res) => {
     JOIN users u ON q.created_by = u.id
     WHERE q.id = ?
   `, [quoteId]);
+  
+  // Log quote reverted event
+  const eventDesc = updated.status === 'draft' ? `Ordre/tilbud ${updated.order_number} flyttet tilbage til udkast` : `Status ændret`;
+  await logOrderEvent(quoteId, 'quote_reverted', eventDesc, req.user.id);
   
   res.json(updated);
 });

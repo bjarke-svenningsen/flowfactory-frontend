@@ -139,25 +139,12 @@ function showCreateQuote() {
     renderQuoteForm();
 }
 
-// View quote - Opens workspace if order, otherwise preview
+// View quote - ALWAYS opens workspace for all statuses (draft, sent, accepted, rejected)
 async function viewQuote(quoteId) {
     try {
-        const token = sessionStorage.getItem('token');
-        const response = await fetch(`https://flowfactory-frontend.onrender.com/api/quotes/${quoteId}`, {
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
-        
-        if (!response.ok) throw new Error('Failed to load quote');
-        
-        currentQuote = await response.json();
-        
-        // If it's an accepted order, open workspace instead
-        if (currentQuote.status === 'accepted') {
-            await openOrderWorkspace(quoteId);
-        } else {
-            currentView = 'preview';
-            renderQuotePreview();
-        }
+        // ALWAYS open workspace regardless of status
+        // This allows viewing/editing quotes in all states
+        await openOrderWorkspace(quoteId);
     } catch (error) {
         console.error('Error loading quote:', error);
         alert('Kunne ikke indlæse tilbud: ' + error.message);

@@ -416,12 +416,14 @@ function renderWorkspaceOverview(container) {
                         ` : ''}
                         <div style="padding-bottom: 15px; border-bottom: 1px solid #e0e0e0;">
                             <div style="color: #666; font-size: 13px; margin-bottom: 5px;">Status</div>
-                            <div style="font-weight: 600; font-size: 16px; color: #4caf50;">✅ Accepteret</div>
+                            ${getStatusBadge(currentWorkspaceOrder.status)}
                         </div>
+                        ${currentWorkspaceOrder.accepted_at ? `
                         <div style="padding-bottom: 15px; border-bottom: 1px solid #e0e0e0;">
                             <div style="color: #666; font-size: 13px; margin-bottom: 5px;">Accepteret</div>
                             <div style="font-weight: 600; font-size: 16px;">${new Date(currentWorkspaceOrder.accepted_at).toLocaleDateString('da-DK')}</div>
                         </div>
+                        ` : ''}
                         <div>
                             <div style="color: #666; font-size: 13px; margin-bottom: 5px;">Oprettet af</div>
                             <div style="font-weight: 600; font-size: 16px;">${currentWorkspaceOrder.created_by_name}</div>
@@ -1662,6 +1664,19 @@ if (document.readyState === 'loading') {
     setTimeout(restoreWorkspaceFromURL, 100);
 }
 
+// Helper function to get status badge HTML
+function getStatusBadge(status) {
+    const statusConfig = {
+        'draft': { icon: '📝', text: 'Udkast', color: '#999' },
+        'sent': { icon: '📧', text: 'Sendt', color: '#2196f3' },
+        'accepted': { icon: '✅', text: 'Accepteret', color: '#4caf50' },
+        'rejected': { icon: '❌', text: 'Afvist', color: '#f44336' }
+    };
+    
+    const config = statusConfig[status] || statusConfig['draft'];
+    return `<div style="font-weight: 600; font-size: 16px; color: ${config.color};">${config.icon} ${config.text}</div>`;
+}
+
 // Export functions
 window.openOrderWorkspace = openOrderWorkspace;
 window.switchWorkspaceTab = switchWorkspaceTab;
@@ -1691,3 +1706,4 @@ window.saveWorkDescription = saveWorkDescription;
 window.toggleOrderDetailsEdit = toggleOrderDetailsEdit;
 window.cancelOrderDetailsEdit = cancelOrderDetailsEdit;
 window.saveOrderDetails = saveOrderDetails;
+window.getStatusBadge = getStatusBadge;
