@@ -75,8 +75,19 @@ export async function initializeDatabase() {
       name TEXT NOT NULL,
       parent_id INTEGER DEFAULT NULL,
       created_by INTEGER NOT NULL,
+      is_company_folder INTEGER DEFAULT 0,
       created_at ${db._isProduction ? 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP' : "TEXT DEFAULT (datetime('now'))"}${db._isProduction ? '' : ',\n  FOREIGN KEY(parent_id) REFERENCES folders(id),\n  FOREIGN KEY(created_by) REFERENCES users(id)'}
     )`);
+    
+    // Add is_company_folder column if it doesn't exist
+    try {
+      await db.run(`ALTER TABLE folders ADD COLUMN is_company_folder INTEGER DEFAULT 0`);
+      console.log('✅ Added is_company_folder column to folders table');
+    } catch (error) {
+      if (error.message.includes('duplicate column') || error.message.includes('already exists')) {
+        console.log('ℹ️  is_company_folder column already exists in folders table');
+      }
+    }
 
     // Files
     await db.run(`CREATE TABLE IF NOT EXISTS files (

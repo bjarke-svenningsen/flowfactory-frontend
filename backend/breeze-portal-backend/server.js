@@ -404,13 +404,21 @@ app.post('/api/files/upload', auth, upload.single('file'), async (req, res) => {
 
 // Create folder
 app.post('/api/folders', auth, async (req, res) => {
-  const { name, parent_id } = req.body;
+  const { name, parent_id, is_company_folder } = req.body;
   if (!name) return res.status(400).json({ error: 'Folder name required' });
   
+  // Only admins can create company folders
+  if (is_company_folder) {
+    const user = await db.get('SELECT is_admin FROM users WHERE id = ?', [req.user.id]);
+    if (!user || !user.is_admin) {
+      return res.status(403).json({ error: 'Only admins can create company folders' });
+    }
+  }
+  
   const info = await db.run(`
-    INSERT INTO folders (name, parent_id, created_by)
-    VALUES (?, ?, ?)
-  `, [name, parent_id || null, req.user.id]);
+    INSERT INTO folders (name, parent_id, created_by, is_company_folder)
+    VALUES (?, ?, ?, ?)
+  `, [name, parent_id || null, req.user.id, is_company_folder ? 1 : 0]);
   
   const folder = await db.get(`
     SELECT f.*, u.name as creator_name
@@ -422,14 +430,15 @@ app.post('/api/folders', auth, async (req, res) => {
   res.json(folder);
 });
 
-// Get all folders (user-specific)
+// Get all folders (user-specific + company folders)
 app.get('/api/folders', auth, async (req, res) => {
+  // Get user's personal folders + company folders
   const folders = await db.all(`
     SELECT f.*, u.name as creator_name
     FROM folders f
     JOIN users u ON f.created_by = u.id
-    WHERE f.created_by = ?
-    ORDER BY f.name ASC
+    WHERE f.created_by = ? OR f.is_company_folder = 1
+    ORDER BY f.is_company_folder DESC, f.name ASC
   `, [req.user.id]);
   
   res.json(folders);
