@@ -196,6 +196,30 @@ app.get('/api/users/me', auth, async (req, res) => {
   res.json({ user });
 });
 
+// Upload profile picture
+app.post('/api/users/me/profile-picture', auth, upload.single('profile_picture'), async (req, res) => {
+  if (!req.file) {
+    return res.status(400).json({ error: 'No file uploaded' });
+  }
+  
+  // Delete old profile picture if exists
+  const user = await db.get('SELECT profile_image FROM users WHERE id = ?', [req.user.id]);
+  if (user.profile_image && user.profile_image.startsWith('/uploads/')) {
+    const oldFilename = user.profile_image.replace('/uploads/', '');
+    const oldPath = path.join(UPLOADS_DIR, oldFilename);
+    if (fs.existsSync(oldPath)) {
+      fs.unlinkSync(oldPath);
+    }
+  }
+  
+  // Save new profile picture path
+  const profileImagePath = `/uploads/${req.file.filename}`;
+  await db.run('UPDATE users SET profile_image = ? WHERE id = ?', [profileImagePath, req.user.id]);
+  
+  const updatedUser = await db.get('SELECT id, name, email, position, department, phone, profile_image, is_admin FROM users WHERE id = ?', [req.user.id]);
+  res.json({ user: updatedUser });
+});
+
 // Get user activity stats
 app.get('/api/users/activity', auth, async (req, res) => {
   const user = await db.get('SELECT created_at FROM users WHERE id = ?', [req.user.id]);

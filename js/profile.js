@@ -86,28 +86,89 @@ async function saveProfile() {
     }
 }
 
-function changeProfilePhoto(event) {
+async function changeProfilePhoto(event) {
     const file = event.target.files[0];
     if (!file) return;
     
-    const reader = new FileReader();
-    reader.onload = function(e) {
-        window.currentUser.profilePhoto = e.target.result;
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+        alert('Filen er for stor. Max 5MB tilladt.');
+        return;
+    }
+    
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+        alert('Kun billedfiler er tilladt.');
+        return;
+    }
+    
+    try {
+        // Show loading state
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            // Show preview immediately
+            const previewUrl = e.target.result;
+            updateProfileImages(previewUrl);
+        };
+        reader.readAsDataURL(file);
+        
+        // Upload to server
+        const formData = new FormData();
+        formData.append('profile_picture', file);
+        
+        const token = sessionStorage.getItem('token');
+        const response = await fetch('https://flowfactory-frontend.onrender.com/api/users/me/profile-picture', {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token}`
+            },
+            body: formData
+        });
+        
+        if (!response.ok) {
+            throw new Error('Upload fejlede');
+        }
+        
+        const { user } = await response.json();
+        
+        // Update user data with server URL
+        window.currentUser.profile_image = user.profile_image;
         sessionStorage.setItem('currentUser', JSON.stringify(window.currentUser));
         
-        document.getElementById('navAvatar').style.backgroundImage = `url(${e.target.result})`;
-        document.getElementById('navAvatar').style.backgroundSize = 'cover';
-        document.getElementById('navAvatar').textContent = '';
+        // Update images with server URL
+        const serverUrl = 'https://flowfactory-frontend.onrender.com' + user.profile_image;
+        updateProfileImages(serverUrl);
         
-        document.getElementById('profileAvatar').style.backgroundImage = `url(${e.target.result})`;
-        document.getElementById('profileAvatar').style.backgroundSize = 'cover';
-        document.getElementById('profileAvatar').textContent = '';
-        
-        document.getElementById('feedAvatar').style.backgroundImage = `url(${e.target.result})`;
-        document.getElementById('feedAvatar').style.backgroundSize = 'cover';
-        document.getElementById('feedAvatar').textContent = '';
-    };
-    reader.readAsDataURL(file);
+        alert('✅ Profilbillede uploadet!');
+    } catch (error) {
+        console.error('Upload error:', error);
+        alert('❌ Kunne ikke uploade profilbillede: ' + error.message);
+    }
+}
+
+function updateProfileImages(imageUrl) {
+    // Update all profile image instances
+    const navAvatar = document.getElementById('navAvatar');
+    const profileAvatar = document.getElementById('profileAvatar');
+    const feedAvatar = document.getElementById('feedAvatar');
+    
+    if (navAvatar) {
+        navAvatar.style.backgroundImage = `url(${imageUrl})`;
+        navAvatar.style.backgroundSize = 'cover';
+        navAvatar.textContent = '';
+    }
+    
+    if (profileAvatar) {
+        profileAvatar.style.backgroundImage = `url(${imageUrl})`;
+        profileAvatar.style.backgroundSize = 'cover';
+        profileAvatar.textContent = '';
+    }
+    
+    if (feedAvatar) {
+        feedAvatar.style.backgroundImage = `url(${imageUrl})`;
+        feedAvatar.style.backgroundSize = 'cover';
+        feedAvatar.textContent = '';
+    }
 }
 
 async function loadUserActivity() {

@@ -90,7 +90,14 @@ function loadUserData() {
     const currentUser = JSON.parse(userData);
     const initials = currentUser.name.split(' ').map(n => n[0]).join('');
 
-    if (currentUser.profilePhoto) {
+    // Check for profile_image from server (persistent) or profilePhoto (old base64 - deprecated)
+    if (currentUser.profile_image) {
+        const imageUrl = 'https://flowfactory-frontend.onrender.com' + currentUser.profile_image;
+        document.getElementById('navAvatar').style.backgroundImage = `url(${imageUrl})`;
+        document.getElementById('navAvatar').style.backgroundSize = 'cover';
+        document.getElementById('navAvatar').textContent = '';
+    } else if (currentUser.profilePhoto) {
+        // Old base64 format - still support for backwards compatibility
         document.getElementById('navAvatar').style.backgroundImage = `url(${currentUser.profilePhoto})`;
         document.getElementById('navAvatar').style.backgroundSize = 'cover';
         document.getElementById('navAvatar').textContent = '';
