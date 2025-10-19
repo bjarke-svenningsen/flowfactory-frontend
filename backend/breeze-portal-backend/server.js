@@ -424,8 +424,19 @@ app.post('/api/folders', auth, async (req, res) => {
   const { name, parent_id, is_company_folder } = req.body;
   if (!name) return res.status(400).json({ error: 'Folder name required' });
   
-  // Only admins can create company folders
-  if (is_company_folder) {
+  // Check if parent folder is a company folder - inherit that status
+  let finalIsCompanyFolder = is_company_folder ? 1 : 0;
+  
+  if (parent_id) {
+    const parentFolder = await db.get('SELECT is_company_folder FROM folders WHERE id = ?', [parent_id]);
+    if (parentFolder && parentFolder.is_company_folder) {
+      // Inherit company folder status from parent
+      finalIsCompanyFolder = 1;
+    }
+  }
+  
+  // Only admins can create top-level company folders
+  if (is_company_folder && !parent_id) {
     const user = await db.get('SELECT is_admin FROM users WHERE id = ?', [req.user.id]);
     if (!user || !user.is_admin) {
       return res.status(403).json({ error: 'Only admins can create company folders' });
@@ -435,7 +446,7 @@ app.post('/api/folders', auth, async (req, res) => {
   const info = await db.run(`
     INSERT INTO folders (name, parent_id, created_by, is_company_folder)
     VALUES (?, ?, ?, ?)
-  `, [name, parent_id || null, req.user.id, is_company_folder ? 1 : 0]);
+  `, [name, parent_id || null, req.user.id, finalIsCompanyFolder]);
   
   const folder = await db.get(`
     SELECT f.*, u.name as creator_name
