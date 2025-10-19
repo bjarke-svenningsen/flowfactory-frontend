@@ -16,6 +16,9 @@ window.onload = function() {
         if (hash.startsWith('#/orders/')) {
             // Workspace or orders-related hash - load quotes page
             initialPage = 'quotes';
+        } else if (hash.startsWith('#quotes/')) {
+            // Quotes tab hash (e.g., #quotes/orders) - load quotes page
+            initialPage = 'quotes';
         } else {
             // Simple hash like #feed or #quotes
             const pageName = hash.substring(1);
@@ -54,6 +57,13 @@ function handleHashChange() {
         // Let the workspace restoration handle it
         // (already set up in quotes-workspace.js)
         showPage('quotes');
+        return;
+    }
+    
+    // Check if it's a quotes tab hash (e.g., #quotes/orders)
+    if (hash.startsWith('#quotes/')) {
+        // Load quotes page, let quotes-core.js handle the tab
+        showPage('quotes', false);
         return;
     }
     
