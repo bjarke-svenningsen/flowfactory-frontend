@@ -90,7 +90,12 @@ function renderQuotesList() {
                     <tr style="border-bottom: 1px solid #e0e0e0; transition: background 0.2s;" onmouseover="this.style.background='#f9f9f9'" onmouseout="this.style.background='white'">
                         <td style="padding: 15px; font-weight: 600;">${displayNumber}</td>
                         <td style="padding: 15px;">${quote.customer_name}</td>
-                        <td style="padding: 15px;">${quote.title}</td>
+                        <td style="padding: 15px;">
+                            ${quote.title}
+                            <div style="font-size: 0.85em; color: #888; font-style: italic; margin-top: 3px;">
+                                Oprettet af ${quote.created_by_name || 'Ukendt'}
+                            </div>
+                        </td>
                         <td style="padding: 15px;">${new Date(quote.date).toLocaleDateString('da-DK')}</td>
                         <td style="padding: 15px; text-align: right; font-weight: 600;">${formatCurrency(quote.total)}</td>
                         <td style="padding: 15px; text-align: center;">
@@ -951,6 +956,7 @@ function renderOrdersContent(orders) {
                         <h4 style="margin: 0 0 10px 0;">Ordre ${fullOrderNumber}</h4>
                         <p style="margin: 5px 0;"><strong>Kunde:</strong> ${order.customer_name}</p>
                         <p style="margin: 5px 0;"><strong>Titel:</strong> ${order.title}</p>
+                        <p style="margin: 3px 0 5px 0; font-size: 0.85em; color: #888; font-style: italic;">Oprettet af ${order.created_by_name || 'Ukendt'}</p>
                         <p style="margin: 5px 0;"><strong>Total:</strong> ${formatCurrency(order.total)}</p>
                         <p style="margin: 5px 0; color: #4caf50; font-weight: 600;">✅ Accepteret: ${new Date(order.accepted_at).toLocaleDateString('da-DK')}</p>
                     </div>
@@ -1014,6 +1020,7 @@ function renderRejectedContent(quotes) {
                         <h4 style="margin: 0 0 10px 0;">Tilbud ${quote.quote_number}</h4>
                         <p style="margin: 5px 0;"><strong>Kunde:</strong> ${quote.customer_name}</p>
                         <p style="margin: 5px 0;"><strong>Titel:</strong> ${quote.title}</p>
+                        <p style="margin: 3px 0 5px 0; font-size: 0.85em; color: #888; font-style: italic;">Oprettet af ${quote.created_by_name || 'Ukendt'}</p>
                         <p style="margin: 5px 0;"><strong>Total:</strong> ${formatCurrency(quote.total)}</p>
                         <p style="margin: 5px 0; color: #f44336; font-weight: 600;">❌ Afvist: ${new Date(quote.date).toLocaleDateString('da-DK')}</p>
                     </div>
