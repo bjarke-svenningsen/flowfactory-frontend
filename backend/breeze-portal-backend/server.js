@@ -508,7 +508,7 @@ app.delete('/api/folders/:id', auth, async (req, res) => {
   res.json({ success: true });
 });
 
-// Get all files (user-specific + shared)
+// Get all files (user-specific + shared + company folders)
 app.get('/api/files', auth, async (req, res) => {
   const { folder_id, view = 'my' } = req.query; // view: 'my' or 'shared'
   
@@ -539,13 +539,14 @@ app.get('/api/files', auth, async (req, res) => {
     return res.json(files);
   }
   
-  // Default: Get files owned by this user
+  // Default: Get files owned by this user OR in company folders
   let query = `
     SELECT f.*, u.name as uploader_name, o.name as owner_name
     FROM files f
     JOIN users u ON f.uploaded_by = u.id
     LEFT JOIN users o ON f.owner_id = o.id
-    WHERE f.owner_id = ?
+    LEFT JOIN folders folder ON f.folder_id = folder.id
+    WHERE (f.owner_id = ? OR folder.is_company_folder = 1)
   `;
   
   const params = [req.user.id];

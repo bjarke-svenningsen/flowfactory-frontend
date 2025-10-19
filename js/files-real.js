@@ -153,9 +153,9 @@ function renderFolderBranch(folders, level, isCompany = false) {
         const folderIcon = folder.is_company_folder ? '🏢' : '📁';
         
         html += `
-            <div class=\"tree-item ${isSelected ? 'selected' : ''}\" style=\"padding-left: ${indent + 10}px;\" data-folder-id=\"${folder.id}\">
+            <div class=\"tree-item ${isSelected ? 'selected' : ''}\" style=\"padding-left: ${indent + 10}px;\" data-folder-id=\"${folder.id}\" ondrop=\"handleFolderDrop(event, ${folder.id})\" ondragover=\"handleFolderDragOver(event)\" ondragleave=\"handleFolderDragLeave(event)\">
                 <span class=\"tree-expand-icon\" onclick=\"toggleFolder(event, ${folder.id})\" style=\"cursor: ${hasChildren ? 'pointer' : 'default'}; display: inline-block; width: 15px;\">${expandIcon}</span>
-                <span onclick=\"openFolder(${folder.id}, '${folder.name.replace(/'/g, "\\\\'")}'");\" oncontextmenu=\"showFolderContextMenu(event, ${folder.id}, '${folder.name.replace(/'/g, "\\\\'")}'"); return false;\" style=\"cursor: pointer;\">
+                <span onclick=\"openFolder(${folder.id}, '${folder.name.replace(/'/g, "\\\\'")}')\";\" oncontextmenu=\"showFolderContextMenu(event, ${folder.id}, '${folder.name.replace(/'/g, "\\\\'")}')\"; return false;\" style=\"cursor: pointer;\">
                     ${folderIcon} ${folder.name} ${fileCount > 0 ? `(${fileCount})` : ''}
                 </span>
             </div>
@@ -302,7 +302,7 @@ function renderRealFiles() {
         const date = new Date(file.created_at).toLocaleDateString('da-DK');
         
         return `
-            <tr class="file-row" onclick="selectRealFile(${file.id}, event)" ondblclick="openRealFile(${file.id})" oncontextmenu="showContextMenu(event, ${file.id})">
+            <tr class="file-row" draggable="true" data-file-id="${file.id}" onclick="selectRealFile(${file.id}, event)" ondblclick="openRealFile(${file.id})" oncontextmenu="showContextMenu(event, ${file.id})" ondragstart="handleFileDragStart(event, ${file.id})">
                 <td><span class="file-icon-small">${icon}</span>${file.original_name}</td>
                 <td>${size}</td>
                 <td>${type}</td>
@@ -1007,6 +1007,78 @@ function showProperties() {
 function closeImageModal() {
     const modal = document.getElementById('imageModal');
     modal.style.display = 'none';
+}
+
+// Drag and drop functionality
+let draggedFileId = null;
+
+function handleFileDragStart(event, fileId) {
+    draggedFileId = fileId;
+    event.dataTransfer.effectAllowed = 'move';
+    event.dataTransfer.setData('text/plain', fileId);
+    event.target.style.opacity = '0.5';
+}
+
+async function handleFolderDrop(event, folderId) {
+    event.preventDefault();
+    event.stopPropagation();
+    event.currentTarget.classList.remove('drag-over');
+    
+    if (!draggedFileId) return;
+    
+    const file = allFiles.find(f => f.id === draggedFileId);
+    if (!file) return;
+    
+    const folder = allFolders.find(f => f.id === folderId);
+    if (!folder) return;
+    
+    // Don't move if already in this folder
+    if (file.folder_id === folderId) {
+        draggedFileId = null;
+        return;
+    }
+    
+    try {
+        const token = sessionStorage.getItem('token');
+        const response = await fetch(`https://flowfactory-frontend.onrender.com/api/files/${draggedFileId}/move`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ folder_id: folderId })
+        });
+        
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error || 'Move failed');
+        }
+        
+        await loadRealFiles();
+        
+        // If viewing this folder, refresh view
+        if (currentFolderId === folderId) {
+            openFolder(folderId, folder.name);
+        }
+        
+    } catch (error) {
+        console.error('Move file error:', error);
+        alert('Kunne ikke flytte fil: ' + error.message);
+    }
+    
+    draggedFileId = null;
+}
+
+function handleFolderDragOver(event) {
+    event.preventDefault();
+    event.stopPropagation();
+    event.dataTransfer.dropEffect = 'move';
+    event.currentTarget.classList.add('drag-over');
+}
+
+function handleFolderDragLeave(event) {
+    event.stopPropagation();
+    event.currentTarget.classList.remove('drag-over');
 }
 
 window.loadRealFiles = loadRealFiles;
