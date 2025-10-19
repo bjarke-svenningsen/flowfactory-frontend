@@ -198,14 +198,23 @@ function sendMessage() {
         chatMessages[currentChatUser.id] = [];
     }
     
-    chatMessages[currentChatUser.id].push({
-        from: 'me',
-        text: text,
-        time: time
-    });
+    // BUG FIX: Only add message locally if socket is NOT connected
+    // If socket is connected, wait for backend to send it back via handleIncomingMessage
+    const shouldAddLocally = !socket || !socket.connected;
+    
+    if (shouldAddLocally) {
+        chatMessages[currentChatUser.id].push({
+            from: 'me',
+            text: text,
+            time: time
+        });
+    }
     
     input.value = '';
-    renderMessages();
+    
+    if (shouldAddLocally) {
+        renderMessages();
+    }
     
     // Send via Socket.IO hvis tilgængelig
     if (socket && socket.connected) {
@@ -213,6 +222,7 @@ function sendMessage() {
             toUserId: currentChatUser.id,
             text: text
         });
+        // Backend vil sende beskeden tilbage via chat:message event
     } else {
         // Fallback: Simuler svar efter 2 sekunder
         setTimeout(() => {
