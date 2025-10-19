@@ -62,7 +62,13 @@ function handleHashChange() {
     
     // Check if it's a quotes tab hash (e.g., #quotes/orders)
     if (hash.startsWith('#quotes/')) {
-        // Load quotes page, let quotes-core.js handle the tab
+        // If we're already on quotes page, don't reload - just let quotes-core.js handle tab switch
+        const currentPage = sessionStorage.getItem('currentPage');
+        if (currentPage === 'quotes') {
+            // Already on quotes page - no need to reload, tab switch already happened
+            return;
+        }
+        // Not on quotes page yet - load it
         showPage('quotes', false);
         return;
     }
