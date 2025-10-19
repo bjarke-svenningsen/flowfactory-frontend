@@ -63,16 +63,6 @@
         </div>
 
         <div class="form-group">
-          <label for="regPosition">Stilling (valgfri):</label>
-          <input type="text" id="regPosition" placeholder="F.eks. Udvikler" />
-        </div>
-
-        <div class="form-group">
-          <label for="regDepartment">Afdeling (valgfri):</label>
-          <input type="text" id="regDepartment" placeholder="F.eks. IT" />
-        </div>
-
-        <div class="form-group">
           <label for="regInviteCode">Invite kode (valgfri):</label>
           <input type="text" id="regInviteCode" placeholder="Hvis du har en invite kode" />
           <small style="display: block; margin-top: 5px; color: #666;">Med invite kode får du direkte adgang. Uden kode skal en admin godkende dig.</small>
@@ -116,8 +106,6 @@
         name: document.getElementById('regName').value.trim(),
         email: document.getElementById('regEmail').value.trim(),
         password: document.getElementById('regPassword').value,
-        position: document.getElementById('regPosition').value.trim(),
-        department: document.getElementById('regDepartment').value.trim(),
         inviteCode: document.getElementById('regInviteCode').value.trim()
       };
       
