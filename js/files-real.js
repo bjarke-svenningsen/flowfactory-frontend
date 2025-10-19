@@ -55,20 +55,27 @@ function renderFolderTree() {
         </div>
     `;
     
-    if (allFolders.length > 0) {
-        html += '<div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid #e0e0e0;"></div>';
-        html += '<div style="padding: 5px 10px; font-size: 12px; color: #999; font-weight: 600;">DINE MAPPER</div>';
-        
-        // Build hierarchical tree
-        const rootFolders = allFolders.filter(f => !f.parent_id);
-        html += renderFolderBranch(rootFolders, 0);
+    // Show company folders first (FlowFactory)
+    const companyFolders = allFolders.filter(f => f.is_company_folder && !f.parent_id);
+    if (companyFolders.length > 0) {
+        html += '<div style=\"margin-top: 10px; padding-top: 10px; border-top: 1px solid #e0e0e0;\"></div>';
+        html += '<div style=\"padding: 5px 10px; font-size: 12px; color: #999; font-weight: 600;\">🏢 FLOWFACTORY</div>';
+        html += renderFolderBranch(companyFolders, 0, true);
+    }
+    
+    // Show user's personal folders
+    const personalFolders = allFolders.filter(f => !f.is_company_folder && !f.parent_id);
+    if (personalFolders.length > 0) {
+        html += '<div style=\"margin-top: 10px; padding-top: 10px; border-top: 1px solid #e0e0e0;\"></div>';
+        html += '<div style=\"padding: 5px 10px; font-size: 12px; color: #999; font-weight: 600;\">DINE MAPPER</div>';
+        html += renderFolderBranch(personalFolders, 0, false);
     }
     
     tree.innerHTML = html;
 }
 
 // Render folder branch recursively
-function renderFolderBranch(folders, level) {
+function renderFolderBranch(folders, level, isCompany = false) {
     let html = '';
     
     folders.forEach(folder => {
@@ -80,19 +87,20 @@ function renderFolderBranch(folders, level) {
         
         const indent = level * 15;
         const expandIcon = hasChildren ? (isExpanded ? '▼' : '▶') : '　';
+        const folderIcon = folder.is_company_folder ? '🏢' : '📁';
         
         html += `
-            <div class="tree-item ${isSelected ? 'selected' : ''}" style="padding-left: ${indent + 10}px;" data-folder-id="${folder.id}">
-                <span class="tree-expand-icon" onclick="toggleFolder(event, ${folder.id})" style="cursor: ${hasChildren ? 'pointer' : 'default'}; display: inline-block; width: 15px;">${expandIcon}</span>
-                <span onclick="openFolder(${folder.id}, '${folder.name.replace(/'/g, "\\'")}');" oncontextmenu="showFolderContextMenu(event, ${folder.id}, '${folder.name.replace(/'/g, "\\'")}'); return false;" style="cursor: pointer;">
-                    📁 ${folder.name} ${fileCount > 0 ? `(${fileCount})` : ''}
+            <div class=\"tree-item ${isSelected ? 'selected' : ''}\" style=\"padding-left: ${indent + 10}px;\" data-folder-id=\"${folder.id}\">
+                <span class=\"tree-expand-icon\" onclick=\"toggleFolder(event, ${folder.id})\" style=\"cursor: ${hasChildren ? 'pointer' : 'default'}; display: inline-block; width: 15px;\">${expandIcon}</span>
+                <span onclick=\"openFolder(${folder.id}, '${folder.name.replace(/'/g, "\\\\'")}'");\" oncontextmenu=\"showFolderContextMenu(event, ${folder.id}, '${folder.name.replace(/'/g, "\\\\'")}'"); return false;\" style=\"cursor: pointer;\">
+                    ${folderIcon} ${folder.name} ${fileCount > 0 ? `(${fileCount})` : ''}
                 </span>
             </div>
         `;
         
         // Render children if expanded
         if (hasChildren && isExpanded) {
-            html += renderFolderBranch(childFolders, level + 1);
+            html += renderFolderBranch(childFolders, level + 1, isCompany);
         }
     });
     
@@ -857,38 +865,27 @@ async function shareFile() {
     const file = allFiles.find(f => f.id === selectedFileId);
     if (!file) return;
     
+    // Simpelt prompt for email
+    const email = prompt(`Del "${file.original_name}" med:\n\nIndtast brugerens email:`);
+    if (!email || !email.trim()) return;
+    
     try {
         const token = sessionStorage.getItem('token');
-        const response = await fetch('https://flowfactory-frontend.onrender.com/api/users', {
+        
+        // Find bruger ved email
+        const usersResponse = await fetch('https://flowfactory-frontend.onrender.com/api/users', {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         
-        if (!response.ok) throw new Error('Kunne ikke hente brugere');
+        if (!usersResponse.ok) throw new Error('Kunne ikke hente brugere');
         
-        const users = await response.json();
-        const currentUser = JSON.parse(sessionStorage.getItem('currentUser'));
-        const otherUsers = users.filter(u => u.id !== currentUser.id);
+        const users = await usersResponse.json();
+        const targetUser = users.find(u => u.email.toLowerCase() === email.trim().toLowerCase());
         
-        if (otherUsers.length === 0) {
-            alert('Ingen andre brugere at dele med endnu');
+        if (!targetUser) {
+            alert('❌ Bruger ikke fundet. Tjek emailen og prøv igen.');
             return;
         }
-        
-        let userList = 'Vælg bruger at dele med:\\n\\n';
-        otherUsers.forEach((u, i) => {
-            userList += `${i + 1}. ${u.name} (${u.email})\\n`;
-        });
-        
-        const selection = prompt(userList + '\\nIndtast nummer:');
-        if (!selection) return;
-        
-        const index = parseInt(selection) - 1;
-        if (index < 0 || index >= otherUsers.length) {
-            alert('Ugyldigt valg');
-            return;
-        }
-        
-        const selectedUser = otherUsers[index];
         
         // Share file via backend API
         const shareResponse = await fetch(`https://flowfactory-frontend.onrender.com/api/files/${selectedFileId}/share`, {
@@ -898,7 +895,7 @@ async function shareFile() {
                 'Authorization': `Bearer ${token}`
             },
             body: JSON.stringify({
-                user_id: selectedUser.id,
+                user_id: targetUser.id,
                 permission: 'view'
             })
         });
@@ -908,7 +905,7 @@ async function shareFile() {
             throw new Error(error.error || 'Kunne ikke dele fil');
         }
         
-        alert(`✅ Fil "${file.original_name}" delt med ${selectedUser.name}!`);
+        alert(`✅ Fil "${file.original_name}" delt med ${targetUser.name}!`);
         
     } catch (error) {
         console.error('Share error:', error);
