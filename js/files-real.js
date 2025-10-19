@@ -45,8 +45,11 @@ function showAdminButtons() {
 // Create FlowFactory company folder (admin only)
 async function createFlowFactoryFolder() {
     const user = JSON.parse(sessionStorage.getItem('user'));
-    if (!user || !user.is_admin) {
-        alert('Kun admins kan oprette FlowFactory mapper');
+    console.log('FlowFactory: User data:', user); // DEBUG
+    console.log('FlowFactory: is_admin value:', user?.is_admin, 'type:', typeof user?.is_admin); // DEBUG
+    
+    if (!user || (user.is_admin !== 1 && user.is_admin !== true)) {
+        alert('Kun admins kan oprette FlowFactory mapper\n\nDEBUG: is_admin = ' + user?.is_admin);
         return;
     }
     
