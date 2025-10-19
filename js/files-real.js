@@ -284,7 +284,13 @@ function renderRealFiles() {
     };
     document.getElementById('addressBar').textContent = filterNames[currentFilter];
     
-    if (filteredFiles.length === 0) {
+    // Get subfolders if we're viewing a specific folder
+    let subfolders = [];
+    if (currentFilter === 'folder' && currentFolderId) {
+        subfolders = allFolders.filter(f => f.parent_id === currentFolderId);
+    }
+    
+    if (filteredFiles.length === 0 && subfolders.length === 0) {
         const emptyMessage = currentFilter === 'folder' 
             ? 'Mappen er tom. Upload filer til denne mappe.'
             : currentFilter === 'all' 
@@ -295,7 +301,26 @@ function renderRealFiles() {
         return;
     }
     
-    tbody.innerHTML = filteredFiles.map(file => {
+    let html = '';
+    
+    // Render subfolders first (like Windows Explorer)
+    subfolders.forEach(folder => {
+        const fileCount = allFiles.filter(f => f.folder_id === folder.id).length;
+        const folderIcon = folder.is_company_folder ? '🏢' : '📁';
+        const date = new Date(folder.created_at).toLocaleDateString('da-DK');
+        
+        html += `
+            <tr class="file-row folder-row" onclick="selectFolder(${folder.id}, event)" ondblclick="openFolder(${folder.id}, '${folder.name.replace(/'/g, "\\\\'")}')" oncontextmenu="showFolderContextMenu(event, ${folder.id}, '${folder.name.replace(/'/g, "\\\\'")}'); return false;">
+                <td><span class="file-icon-small">${folderIcon}</span>${folder.name}</td>
+                <td>${fileCount} ${fileCount === 1 ? 'fil' : 'filer'}</td>
+                <td>Mappe</td>
+                <td>${date} - ${folder.creator_name || ''}</td>
+            </tr>
+        `;
+    });
+    
+    // Render files
+    html += filteredFiles.map(file => {
         const icon = getFileIcon(file.original_name);
         const size = formatFileSize(file.file_size);
         const type = getFileType(file.original_name);
@@ -311,7 +336,30 @@ function renderRealFiles() {
         `;
     }).join('');
     
-    document.getElementById('fileCount').textContent = `${filteredFiles.length} fil${filteredFiles.length !== 1 ? 'er' : ''}`;
+    tbody.innerHTML = html;
+    
+    const totalItems = filteredFiles.length + subfolders.length;
+    document.getElementById('fileCount').textContent = `${totalItems} ${totalItems === 1 ? 'element' : 'elementer'}`;
+}
+
+// Select folder (for highlighting)
+function selectFolder(folderId, event) {
+    selectedFileId = null;
+    document.querySelectorAll('.file-row').forEach(row => row.classList.remove('selected'));
+    
+    if (event && event.currentTarget) {
+        event.currentTarget.classList.add('selected');
+    }
+    
+    const folder = allFolders.find(f => f.id === folderId);
+    if (folder) {
+        const fileCount = allFiles.filter(f => f.folder_id === folder.id).length;
+        document.getElementById('selectedInfo').textContent = `Valgt: ${folder.name} (${fileCount} filer)`;
+    }
+    
+    if (event) {
+        event.stopPropagation();
+    }
 }
 
 function selectRealFile(fileId, event) {
