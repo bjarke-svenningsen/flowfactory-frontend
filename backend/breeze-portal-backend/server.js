@@ -625,6 +625,49 @@ app.put('/api/files/:id/rename', auth, async (req, res) => {
   res.json(updatedFile);
 });
 
+// Move file to folder
+app.put('/api/files/:id/move', auth, async (req, res) => {
+  const fileId = Number(req.params.id);
+  const { folder_id } = req.body;
+  
+  const file = await db.get('SELECT * FROM files WHERE id = ?', [fileId]);
+  
+  if (!file) {
+    return res.status(404).json({ error: 'File not found' });
+  }
+  
+  // Check if user owns file or is admin
+  const user = await db.get('SELECT is_admin FROM users WHERE id = ?', [req.user.id]);
+  if (file.uploaded_by !== req.user.id && !user.is_admin) {
+    return res.status(403).json({ error: 'Permission denied' });
+  }
+  
+  // If folder_id provided, verify it exists and user has access
+  if (folder_id) {
+    const folder = await db.get('SELECT * FROM folders WHERE id = ?', [folder_id]);
+    if (!folder) {
+      return res.status(404).json({ error: 'Folder not found' });
+    }
+    
+    // Check if user has access to folder (owner or company folder)
+    if (folder.created_by !== req.user.id && !folder.is_company_folder && !user.is_admin) {
+      return res.status(403).json({ error: 'Permission denied - folder access' });
+    }
+  }
+  
+  // Move file
+  await db.run('UPDATE files SET folder_id = ? WHERE id = ?', [folder_id || null, fileId]);
+  
+  const updatedFile = await db.get(`
+    SELECT f.*, u.name as uploader_name
+    FROM files f
+    JOIN users u ON f.uploaded_by = u.id
+    WHERE f.id = ?
+  `, [fileId]);
+  
+  res.json(updatedFile);
+});
+
 // Download file (Server Storage)
 app.get('/api/files/download/:id', auth, async (req, res) => {
   const fileId = Number(req.params.id);
