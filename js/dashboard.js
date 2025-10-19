@@ -164,17 +164,8 @@ async function showPage(pageName, updateHash = true) {
     } else if (pageName === 'colleagues') {
         loadColleagues();
     } else if (pageName === 'quotes') {
-        // Hide all quote sub-views when switching to quotes page
-        const listView = document.getElementById('quotesListView');
-        const formView = document.getElementById('quotesFormView');
-        const previewView = document.getElementById('quotesPreviewView');
-        const customersView = document.getElementById('quotesCustomersView');
-        
-        if (listView) listView.style.display = 'block';
-        if (formView) formView.style.display = 'none';
-        if (previewView) previewView.style.display = 'none';
-        if (customersView) customersView.style.display = 'none';
-        
+        // Don't force any specific view - let initQuotesPage() handle it based on hash
+        // This prevents the "jump" when loading with a specific tab hash like #quotes/orders
         initQuotesPage();
     } else if (pageName === 'chat') {
         initChat();
