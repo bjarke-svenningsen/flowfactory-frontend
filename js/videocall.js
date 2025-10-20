@@ -80,13 +80,97 @@ function initVideoCallSocket() {
         const accepted = confirm(`📞 Indgående opkald fra ${callerName}\n\nVil du acceptere opkaldet?`);
         
         if (accepted) {
-            // Accept call - join the room
-            startVideoCall(callerId, callerName);
+            // Accept call - join the room WITHOUT sending notification back!
+            acceptIncomingCall(callerId, callerName, roomId);
         } else {
             console.log('Call rejected by user');
             // TODO: Send rejection notification back to caller
         }
     });
+}
+
+// Accept incoming call - joins room without sending notification
+async function acceptIncomingCall(callerId, callerName, roomId) {
+    try {
+        // Get user media (same fallback as startVideoCall)
+        let videoEnabled = false;
+        let audioEnabled = false;
+        
+        try {
+            localStream = await navigator.mediaDevices.getUserMedia({
+                video: true,
+                audio: true
+            });
+            videoEnabled = true;
+            audioEnabled = true;
+        } catch (e1) {
+            console.warn('Video+Audio failed, trying audio only:', e1);
+            try {
+                localStream = await navigator.mediaDevices.getUserMedia({
+                    video: false,
+                    audio: true
+                });
+                audioEnabled = true;
+                alert('⚠️ Kunne ikke få adgang til kamera.\n\nFortsætter med kun mikrofon.');
+            } catch (e2) {
+                console.warn('Audio failed, trying video only:', e2);
+                try {
+                    localStream = await navigator.mediaDevices.getUserMedia({
+                        video: true,
+                        audio: false
+                    });
+                    videoEnabled = true;
+                    alert('⚠️ Kunne ikke få adgang til mikrofon.\n\nFortsætter med kun kamera.');
+                } catch (e3) {
+                    console.error('No media devices available:', e3);
+                    alert('❌ Ingen kamera eller mikrofon fundet.\n\nKan ikke acceptere opkald.');
+                    return;
+                }
+            }
+        }
+        
+        // Setup room
+        currentRoomId = roomId;
+        currentCall = { id: callerId, name: callerName };
+        
+        // Join room (WITHOUT sending call-user notification!)
+        console.log(`Accepting call from ${callerName} - joining room ${roomId}`);
+        videoSocket.emit('video:join-room', currentRoomId);
+        
+        // Update UI (same as startVideoCall)
+        const callPlaceholder = document.getElementById('callPlaceholder');
+        if (callPlaceholder) {
+            callPlaceholder.style.display = 'none';
+        }
+        
+        const callControls = document.getElementById('callControls');
+        if (callControls) {
+            callControls.style.display = 'flex';
+        }
+        
+        const mainVideo = document.getElementById('mainVideo');
+        const initials = callerName.split(' ').map(n => n[0]).join('');
+        mainVideo.innerHTML = `
+            <div style="width: 100%; height: 100%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; flex-direction: column; color: white;">
+                <div style="font-size: 120px; font-weight: bold; margin-bottom: 20px;">${initials}</div>
+                <h3>Forbinder til ${callerName}...</h3>
+                <p style="opacity: 0.8; margin-top: 10px;">Venter på forbindelse...</p>
+            </div>
+            <div id="localVideo" style="position: absolute; bottom: 20px; right: 20px; width: 200px; height: 150px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 10px; display: flex; align-items: center; justify-content: center; color: white; font-size: 40px; border: 3px solid white;">
+                <video autoplay muted playsinline style="width:100%;height:100%;object-fit:cover; border-radius: 10px;"></video>
+            </div>
+        `;
+        
+        // Set local video stream
+        const newLocalVideo = document.getElementById('localVideo');
+        if (newLocalVideo) {
+            newLocalVideo.querySelector('video').srcObject = localStream;
+        }
+        
+    } catch (error) {
+        console.error('Error accepting call:', error);
+        alert('Kunne ikke acceptere opkald: ' + error.message);
+    }
 }
 
 async function createPeerConnection(socketId, isInitiator) {
