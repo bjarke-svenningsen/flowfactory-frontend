@@ -1134,7 +1134,7 @@ function handleFolderDragLeave(event) {
 
 window.loadRealFiles = loadRealFiles;
 
-// Resizable columns functionality
+// Resizable columns functionality with localStorage persistence
 function initResizableColumns() {
     const table = document.getElementById('fileTable');
     if (!table) return;
@@ -1142,10 +1142,19 @@ function initResizableColumns() {
     const headers = table.querySelectorAll('th');
     let currentResizer = null;
     let currentHeader = null;
+    let currentColumnIndex = null;
     let startX = 0;
     let startWidth = 0;
     
-    headers.forEach(header => {
+    // Load saved column widths from localStorage
+    const savedWidths = JSON.parse(localStorage.getItem('fileTableColumnWidths') || '{}');
+    
+    headers.forEach((header, index) => {
+        // Apply saved width if exists
+        if (savedWidths[index]) {
+            header.style.width = savedWidths[index] + 'px';
+        }
+        
         const resizer = header.querySelector('.resize-handle');
         if (!resizer) return;
         
@@ -1153,6 +1162,7 @@ function initResizableColumns() {
             e.stopPropagation(); // Prevent sorting
             currentResizer = resizer;
             currentHeader = header;
+            currentColumnIndex = index;
             startX = e.pageX;
             startWidth = header.offsetWidth;
             
@@ -1175,8 +1185,16 @@ function initResizableColumns() {
     }
     
     function handleMouseUp() {
+        if (currentHeader && currentColumnIndex !== null) {
+            // Save new width to localStorage
+            const savedWidths = JSON.parse(localStorage.getItem('fileTableColumnWidths') || '{}');
+            savedWidths[currentColumnIndex] = currentHeader.offsetWidth;
+            localStorage.setItem('fileTableColumnWidths', JSON.stringify(savedWidths));
+        }
+        
         currentResizer = null;
         currentHeader = null;
+        currentColumnIndex = null;
         
         document.removeEventListener('mousemove', handleMouseMove);
         document.removeEventListener('mouseup', handleMouseUp);
