@@ -489,13 +489,18 @@ async function shareScreen() {
         
         const screenTrack = screenStream.getVideoTracks()[0];
         
-        // Replace video track in all peer connections
+        // Replace video track in all peer connections (MUST BE AWAITED!)
+        const replacePromises = [];
         peerConnections.forEach(pc => {
             const sender = pc.getSenders().find(s => s.track && s.track.kind === 'video');
             if (sender) {
-                sender.replaceTrack(screenTrack);
+                replacePromises.push(sender.replaceTrack(screenTrack));
             }
         });
+        
+        // Wait for all track replacements to complete
+        await Promise.all(replacePromises);
+        console.log('✅ Screen track replaced in all peer connections');
         
         // Update local video to show screen share preview
         const localVideoElement = document.querySelector('#localVideo video');
@@ -504,17 +509,21 @@ async function shareScreen() {
         }
         
         // Revert when screen share ends
-        screenTrack.onended = () => {
+        screenTrack.onended = async () => {
             if (localStream) {
                 const videoTrack = localStream.getVideoTracks()[0];
                 
-                // Replace track back to camera in peer connections
+                // Replace track back to camera in peer connections (AWAIT!)
+                const replacePromises = [];
                 peerConnections.forEach(pc => {
                     const sender = pc.getSenders().find(s => s.track && s.track.kind === 'video');
                     if (sender) {
-                        sender.replaceTrack(videoTrack);
+                        replacePromises.push(sender.replaceTrack(videoTrack));
                     }
                 });
+                
+                await Promise.all(replacePromises);
+                console.log('✅ Reverted to camera in all peer connections');
                 
                 // Revert local video to show camera again
                 const localVideoElement = document.querySelector('#localVideo video');
@@ -528,7 +537,7 @@ async function shareScreen() {
             screenStream = null;
         };
         
-        console.log('✅ Screen sharing started');
+        console.log('✅ Screen sharing started - track sent to remote peer');
         
     } catch (error) {
         console.error('Screen share error:', error);
