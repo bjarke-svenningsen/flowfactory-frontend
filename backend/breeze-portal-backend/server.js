@@ -153,7 +153,7 @@ app.post('/api/auth/register', async (req, res) => {
   if (inviteCode) {
     const invite = await db.get(`
       SELECT * FROM invite_codes 
-      WHERE code = ? AND used_by IS NULL AND expires_at > NOW()
+      WHERE code = ? AND used_by IS NULL AND expires_at::timestamp > NOW()
     `, [inviteCode]);
     
     if (!invite) {
