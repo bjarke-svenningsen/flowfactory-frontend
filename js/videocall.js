@@ -588,8 +588,15 @@ async function stopScreenShare() {
 async function shareScreen() {
     try {
         screenStream = await navigator.mediaDevices.getDisplayMedia({
-            video: { cursor: 'always' },
-            audio: false
+            video: { 
+                cursor: 'always',
+                displaySurface: 'monitor' // Prefer full monitor/screen
+            },
+            audio: {
+                echoCancellation: false,
+                noiseSuppression: false,
+                autoGainControl: false
+            }
         });
         
         const screenTrack = screenStream.getVideoTracks()[0];
@@ -609,6 +616,13 @@ async function shareScreen() {
                     // No video track exists (audio-only call) - add screen track
                     pc.addTrack(screenTrack, screenStream);
                     console.log(`✅ Screen track added to peer ${socketId} (was audio-only)`);
+                }
+                
+                // Add screen audio if available
+                const screenAudioTrack = screenStream.getAudioTracks()[0];
+                if (screenAudioTrack) {
+                    pc.addTrack(screenAudioTrack, screenStream);
+                    console.log(`🔊 Screen audio track added for peer ${socketId}`);
                 }
                 
                 // Create new offer to trigger renegotiation
