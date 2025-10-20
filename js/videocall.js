@@ -261,21 +261,31 @@ async function createPeerConnection(socketId, isInitiator) {
         });
     }
     
-    // Handle incoming tracks
+    // Handle incoming tracks with debounce to prevent play() interruption
+    let playTimeout;
     pc.ontrack = (event) => {
         console.log('🎥 RECEIVED TRACK:', event.track.kind, event.track.id);
         console.log('Track label:', event.track.label);
         console.log('Stream tracks:', event.streams[0].getTracks().map(t => `${t.kind}: ${t.label}`));
         
         const remoteVideo = document.getElementById('remoteVideo-' + socketId) || createVideoElement(socketId);
-        remoteVideo.srcObject = event.streams[0];
         
-        // Force video to play (critical for renegotiation/track replacement)
-        remoteVideo.play().then(() => {
-            console.log('✅ Remote video playing');
-        }).catch(err => {
-            console.error('❌ Play error:', err);
-        });
+        // Only update srcObject if different stream
+        if (remoteVideo.srcObject !== event.streams[0]) {
+            remoteVideo.srcObject = event.streams[0];
+        }
+        
+        // Clear previous play timeout to prevent interruption
+        if (playTimeout) clearTimeout(playTimeout);
+        
+        // Debounce play() call to wait for all tracks to arrive
+        playTimeout = setTimeout(() => {
+            remoteVideo.play().then(() => {
+                console.log('✅ Remote video playing');
+            }).catch(err => {
+                console.error('❌ Play error:', err);
+            });
+        }, 300); // Wait 300ms for all tracks
     };
     
     // ICE candidates
