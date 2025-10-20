@@ -497,18 +497,38 @@ async function shareScreen() {
             }
         });
         
+        // Update local video to show screen share preview
+        const localVideoElement = document.querySelector('#localVideo video');
+        if (localVideoElement) {
+            localVideoElement.srcObject = screenStream;
+        }
+        
         // Revert when screen share ends
         screenTrack.onended = () => {
             if (localStream) {
                 const videoTrack = localStream.getVideoTracks()[0];
+                
+                // Replace track back to camera in peer connections
                 peerConnections.forEach(pc => {
                     const sender = pc.getSenders().find(s => s.track && s.track.kind === 'video');
                     if (sender) {
                         sender.replaceTrack(videoTrack);
                     }
                 });
+                
+                // Revert local video to show camera again
+                const localVideoElement = document.querySelector('#localVideo video');
+                if (localVideoElement) {
+                    localVideoElement.srcObject = localStream;
+                }
             }
+            
+            // Clean up screen stream
+            screenStream.getTracks().forEach(track => track.stop());
+            screenStream = null;
         };
+        
+        console.log('✅ Screen sharing started');
         
     } catch (error) {
         console.error('Screen share error:', error);
