@@ -261,18 +261,28 @@ async function createPeerConnection(socketId, isInitiator) {
         });
     }
     
-    // Handle incoming tracks with debounce to prevent play() interruption
+    // Handle incoming tracks - accumulate all tracks into one MediaStream
+    let accumulatedStream = null;
     let playTimeout;
+    
     pc.ontrack = (event) => {
         console.log('🎥 RECEIVED TRACK:', event.track.kind, event.track.id);
         console.log('Track label:', event.track.label);
-        console.log('Stream tracks:', event.streams[0].getTracks().map(t => `${t.kind}: ${t.label}`));
+        console.log('Event stream tracks:', event.streams[0].getTracks().map(t => `${t.kind}: ${t.label}`));
         
         const remoteVideo = document.getElementById('remoteVideo-' + socketId) || createVideoElement(socketId);
         
-        // Only update srcObject if different stream
-        if (remoteVideo.srcObject !== event.streams[0]) {
-            remoteVideo.srcObject = event.streams[0];
+        // Initialize accumulated stream if needed
+        if (!accumulatedStream) {
+            accumulatedStream = new MediaStream();
+            remoteVideo.srcObject = accumulatedStream;
+        }
+        
+        // Add track to accumulated stream if not already there
+        const existingTrack = accumulatedStream.getTracks().find(t => t.id === event.track.id);
+        if (!existingTrack) {
+            accumulatedStream.addTrack(event.track);
+            console.log(`✅ Added ${event.track.kind} track to accumulated stream. Total tracks: ${accumulatedStream.getTracks().length}`);
         }
         
         // Clear previous play timeout to prevent interruption
@@ -280,6 +290,7 @@ async function createPeerConnection(socketId, isInitiator) {
         
         // Debounce play() call to wait for all tracks to arrive
         playTimeout = setTimeout(() => {
+            console.log(`📺 Playing stream with ${accumulatedStream.getTracks().length} tracks:`, accumulatedStream.getTracks().map(t => t.kind));
             remoteVideo.play().then(() => {
                 console.log('✅ Remote video playing');
             }).catch(err => {
