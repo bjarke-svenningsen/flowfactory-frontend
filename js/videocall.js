@@ -514,30 +514,35 @@ async function shareScreen() {
         
         const screenTrack = screenStream.getVideoTracks()[0];
         
-        // Replace video track in all peer connections and renegotiate
+        // Replace or add video track in all peer connections and renegotiate
         const renegotiationPromises = [];
         peerConnections.forEach((pc, socketId) => {
-            const sender = pc.getSenders().find(s => s.track && s.track.kind === 'video');
-            if (sender) {
-                // Replace track and trigger renegotiation
-                const renegotiate = async () => {
+            const renegotiate = async () => {
+                const sender = pc.getSenders().find(s => s.track && s.track.kind === 'video');
+                
+                if (sender) {
+                    // Replace existing video track (camera → screen)
                     await sender.replaceTrack(screenTrack);
                     console.log(`✅ Screen track replaced for peer ${socketId}`);
-                    
-                    // Create new offer to trigger renegotiation
-                    const offer = await pc.createOffer();
-                    await pc.setLocalDescription(offer);
-                    
-                    // Send new offer to remote peer
-                    videoSocket.emit('video:offer', {
-                        roomId: currentRoomId,
-                        offer,
-                        targetSocketId: socketId
-                    });
-                    console.log(`📡 Sent renegotiation offer to peer ${socketId}`);
-                };
-                renegotiationPromises.push(renegotiate());
-            }
+                } else {
+                    // No video track exists (audio-only call) - add screen track
+                    pc.addTrack(screenTrack, screenStream);
+                    console.log(`✅ Screen track added to peer ${socketId} (was audio-only)`);
+                }
+                
+                // Create new offer to trigger renegotiation
+                const offer = await pc.createOffer();
+                await pc.setLocalDescription(offer);
+                
+                // Send new offer to remote peer
+                videoSocket.emit('video:offer', {
+                    roomId: currentRoomId,
+                    offer,
+                    targetSocketId: socketId
+                });
+                console.log(`📡 Sent renegotiation offer to peer ${socketId}`);
+            };
+            renegotiationPromises.push(renegotiate());
         });
         
         // Wait for all renegotiations to complete
@@ -555,29 +560,35 @@ async function shareScreen() {
             if (localStream) {
                 const videoTrack = localStream.getVideoTracks()[0];
                 
-                // Replace track back to camera and renegotiate
+                // Replace or remove video track when screen share ends
                 const renegotiationPromises = [];
                 peerConnections.forEach((pc, socketId) => {
-                    const sender = pc.getSenders().find(s => s.track && s.track.kind === 'video');
-                    if (sender) {
-                        const renegotiate = async () => {
+                    const renegotiate = async () => {
+                        const sender = pc.getSenders().find(s => s.track && s.track.kind === 'video');
+                        
+                        if (sender && videoTrack) {
+                            // Replace screen track with camera track
                             await sender.replaceTrack(videoTrack);
                             console.log(`✅ Camera track restored for peer ${socketId}`);
-                            
-                            // Create new offer to trigger renegotiation
-                            const offer = await pc.createOffer();
-                            await pc.setLocalDescription(offer);
-                            
-                            // Send new offer to remote peer
-                            videoSocket.emit('video:offer', {
-                                roomId: currentRoomId,
-                                offer,
-                                targetSocketId: socketId
-                            });
-                            console.log(`📡 Sent camera restore offer to peer ${socketId}`);
-                        };
-                        renegotiationPromises.push(renegotiate());
-                    }
+                        } else if (sender && !videoTrack) {
+                            // Was audio-only before screen share - remove video track
+                            pc.removeTrack(sender);
+                            console.log(`✅ Screen track removed from peer ${socketId} (reverting to audio-only)`);
+                        }
+                        
+                        // Create new offer to trigger renegotiation
+                        const offer = await pc.createOffer();
+                        await pc.setLocalDescription(offer);
+                        
+                        // Send new offer to remote peer
+                        videoSocket.emit('video:offer', {
+                            roomId: currentRoomId,
+                            offer,
+                            targetSocketId: socketId
+                        });
+                        console.log(`📡 Sent camera restore offer to peer ${socketId}`);
+                    };
+                    renegotiationPromises.push(renegotiate());
                 });
                 
                 await Promise.all(renegotiationPromises);
