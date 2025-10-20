@@ -15,6 +15,60 @@ let currentRoomId = null;
 let currentCall = null;
 let microphoneEnabled = true;
 let cameraEnabled = true;
+let ringtone = null; // Audio for ringtone
+
+// Create ringtone using Web Audio API
+function createRingtone() {
+    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    const oscillator = audioContext.createOscillator();
+    const gainNode = audioContext.createGain();
+    
+    oscillator.connect(gainNode);
+    gainNode.connect(audioContext.destination);
+    
+    oscillator.frequency.value = 440; // A4 note
+    oscillator.type = 'sine';
+    
+    gainNode.gain.value = 0.3; // 30% volume
+    
+    return { oscillator, gainNode, audioContext };
+}
+
+// Play ringtone (looping)
+function playRingtone() {
+    if (!ringtone) {
+        ringtone = createRingtone();
+        ringtone.oscillator.start();
+        
+        // Pulsing effect (ring ring ring)
+        const startTime = ringtone.audioContext.currentTime;
+        ringtone.gainNode.gain.setValueAtTime(0.3, startTime);
+        ringtone.gainNode.gain.setValueAtTime(0, startTime + 0.5);
+        ringtone.gainNode.gain.setValueAtTime(0.3, startTime + 1);
+        ringtone.gainNode.gain.setValueAtTime(0, startTime + 1.5);
+        ringtone.gainNode.gain.setValueAtTime(0.3, startTime + 2);
+        
+        // Loop every 2 seconds
+        setInterval(() => {
+            if (ringtone) {
+                const time = ringtone.audioContext.currentTime;
+                ringtone.gainNode.gain.setValueAtTime(0.3, time);
+                ringtone.gainNode.gain.setValueAtTime(0, time + 0.5);
+                ringtone.gainNode.gain.setValueAtTime(0.3, time + 1);
+                ringtone.gainNode.gain.setValueAtTime(0, time + 1.5);
+            }
+        }, 2000);
+    }
+}
+
+// Stop ringtone
+function stopRingtone() {
+    if (ringtone) {
+        ringtone.oscillator.stop();
+        ringtone.audioContext.close();
+        ringtone = null;
+    }
+}
 
 // Initialize Socket.IO connection for video calls
 function initVideoCallSocket() {
@@ -76,8 +130,14 @@ function initVideoCallSocket() {
     videoSocket.on('video:incoming-call', ({ callerId, callerName, roomId }) => {
         console.log(`📞 Incoming call from ${callerName} (ID: ${callerId})`);
         
+        // Play incoming ringtone
+        playRingtone();
+        
         // Show incoming call notification
         const accepted = confirm(`📞 Indgående opkald fra ${callerName}\n\nVil du acceptere opkaldet?`);
+        
+        // Stop ringtone
+        stopRingtone();
         
         if (accepted) {
             // Accept call - join the room WITHOUT sending notification back!
@@ -206,6 +266,9 @@ async function createPeerConnection(socketId, isInitiator) {
         console.log('Connection state:', pc.connectionState);
         
         if (pc.connectionState === 'connected') {
+            // Stop ringtone when connected
+            stopRingtone();
+            
             // Remove "waiting" overlay when connected
             const waitingOverlay = document.querySelector('#mainVideo > div:not(#localVideo)');
             if (waitingOverlay && waitingOverlay.textContent.includes('Venter på forbindelse')) {
@@ -332,6 +395,9 @@ async function startVideoCall(colleagueId, colleagueName) {
         currentRoomId = `call-${colleagueId}`;
         currentCall = { id: colleagueId, name: colleagueName };
         
+        // Play outgoing ringtone
+        playRingtone();
+        
         // IMPORTANT: Notify target user FIRST (before joining room)
         console.log(`Calling user ${colleagueId} (${colleagueName})...`);
         videoSocket.emit('video:call-user', { 
@@ -452,6 +518,9 @@ async function shareScreen() {
 
 // End call
 function endCall() {
+    // Stop ringtone if playing
+    stopRingtone();
+    
     // Stop all streams
     if (localStream) {
         localStream.getTracks().forEach(track => track.stop());
@@ -521,14 +590,21 @@ function loadVideoCallColleagues() {
         
         colleaguesList.innerHTML = others.map(colleague => {
             const initials = colleague.name.split(' ').map(n => n[0]).join('');
+            const isOnline = window.onlineUsers && window.onlineUsers.has(colleague.id);
+            const statusColor = isOnline ? '#4caf50' : '#999';
+            const statusText = isOnline ? 'Online' : 'Offline';
+            
             return `
                 <div class="colleague-item" onclick="startVideoCall(${colleague.id}, '${colleague.name.replace(/'/g, "\\'")}')">
-                    <div class="colleague-avatar">${initials}</div>
+                    <div class="colleague-avatar" style="position: relative;">
+                        ${initials}
+                        <div style="position: absolute; bottom: 0; right: 0; width: 12px; height: 12px; background: ${statusColor}; border: 2px solid white; border-radius: 50%;"></div>
+                    </div>
                     <div class="colleague-info">
                         <div class="colleague-name">${colleague.name}</div>
-                        <div class="colleague-position">${colleague.position || 'Medarbejder'}</div>
+                        <div class="colleague-position" style="color: ${statusColor};">${statusText}</div>
                     </div>
-                    <button class="call-btn">📞 Ring</button>
+                    <button class="call-btn" ${!isOnline ? 'disabled style="opacity: 0.5; cursor: not-allowed;"' : ''}>📞 Ring</button>
                 </div>
             `;
         }).join('');
@@ -548,6 +624,15 @@ if (typeof window !== 'undefined') {
         if (document.getElementById('videocallPage')) {
             console.log('Initializing video call socket...');
             initVideoCallSocket();
+        }
+    });
+    
+    // Refresh warning - prevent accidental disconnection during call
+    window.addEventListener('beforeunload', (e) => {
+        if (currentRoomId && peerConnections.size > 0) {
+            e.preventDefault();
+            e.returnValue = 'Du er i et aktivt opkald. Er du sikker på at du vil forlade?';
+            return e.returnValue;
         }
     });
 }
