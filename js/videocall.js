@@ -504,18 +504,35 @@ async function shareScreen() {
         
         const screenTrack = screenStream.getVideoTracks()[0];
         
-        // Replace video track in all peer connections (MUST BE AWAITED!)
-        const replacePromises = [];
-        peerConnections.forEach(pc => {
+        // Replace video track in all peer connections and renegotiate
+        const renegotiationPromises = [];
+        peerConnections.forEach((pc, socketId) => {
             const sender = pc.getSenders().find(s => s.track && s.track.kind === 'video');
             if (sender) {
-                replacePromises.push(sender.replaceTrack(screenTrack));
+                // Replace track and trigger renegotiation
+                const renegotiate = async () => {
+                    await sender.replaceTrack(screenTrack);
+                    console.log(`✅ Screen track replaced for peer ${socketId}`);
+                    
+                    // Create new offer to trigger renegotiation
+                    const offer = await pc.createOffer();
+                    await pc.setLocalDescription(offer);
+                    
+                    // Send new offer to remote peer
+                    videoSocket.emit('video:offer', {
+                        roomId: currentRoomId,
+                        offer,
+                        targetSocketId: socketId
+                    });
+                    console.log(`📡 Sent renegotiation offer to peer ${socketId}`);
+                };
+                renegotiationPromises.push(renegotiate());
             }
         });
         
-        // Wait for all track replacements to complete
-        await Promise.all(replacePromises);
-        console.log('✅ Screen track replaced in all peer connections');
+        // Wait for all renegotiations to complete
+        await Promise.all(renegotiationPromises);
+        console.log('✅ Screen sharing activated for all peers');
         
         // Update local video to show screen share preview
         const localVideoElement = document.querySelector('#localVideo video');
@@ -528,17 +545,33 @@ async function shareScreen() {
             if (localStream) {
                 const videoTrack = localStream.getVideoTracks()[0];
                 
-                // Replace track back to camera in peer connections (AWAIT!)
-                const replacePromises = [];
-                peerConnections.forEach(pc => {
+                // Replace track back to camera and renegotiate
+                const renegotiationPromises = [];
+                peerConnections.forEach((pc, socketId) => {
                     const sender = pc.getSenders().find(s => s.track && s.track.kind === 'video');
                     if (sender) {
-                        replacePromises.push(sender.replaceTrack(videoTrack));
+                        const renegotiate = async () => {
+                            await sender.replaceTrack(videoTrack);
+                            console.log(`✅ Camera track restored for peer ${socketId}`);
+                            
+                            // Create new offer to trigger renegotiation
+                            const offer = await pc.createOffer();
+                            await pc.setLocalDescription(offer);
+                            
+                            // Send new offer to remote peer
+                            videoSocket.emit('video:offer', {
+                                roomId: currentRoomId,
+                                offer,
+                                targetSocketId: socketId
+                            });
+                            console.log(`📡 Sent camera restore offer to peer ${socketId}`);
+                        };
+                        renegotiationPromises.push(renegotiate());
                     }
                 });
                 
-                await Promise.all(replacePromises);
-                console.log('✅ Reverted to camera in all peer connections');
+                await Promise.all(renegotiationPromises);
+                console.log('✅ Reverted to camera for all peers');
                 
                 // Revert local video to show camera again
                 const localVideoElement = document.querySelector('#localVideo video');
@@ -552,7 +585,7 @@ async function shareScreen() {
             screenStream = null;
         };
         
-        console.log('✅ Screen sharing started - track sent to remote peer');
+        console.log('✅ Screen sharing setup complete');
         
     } catch (error) {
         console.error('Screen share error:', error);
