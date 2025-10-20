@@ -31,10 +31,10 @@
             <table class="file-list-view" id="fileTable">
                 <thead>
                     <tr>
-                        <th onclick="sortFiles('name')">Navn<span class="resize-handle"></span></th>
-                        <th onclick="sortFiles('size')" style="width: 100px;">Størrelse<span class="resize-handle"></span></th>
-                        <th onclick="sortFiles('type')" style="width: 120px;">Type<span class="resize-handle"></span></th>
-                        <th onclick="sortFiles('date')" style="width: 140px;">Ændret<span class="resize-handle"></span></th>
+                        <th onclick="sortFiles('name')" data-default-width="auto">Navn<span class="resize-handle"></span></th>
+                        <th onclick="sortFiles('size')" data-default-width="100">Størrelse<span class="resize-handle"></span></th>
+                        <th onclick="sortFiles('type')" data-default-width="120">Type<span class="resize-handle"></span></th>
+                        <th onclick="sortFiles('date')" data-default-width="140">Ændret<span class="resize-handle"></span></th>
                     </tr>
                 </thead>
                 <tbody id="fileListBody"></tbody>

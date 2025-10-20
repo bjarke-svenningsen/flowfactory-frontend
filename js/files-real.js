@@ -1150,9 +1150,13 @@ function initResizableColumns() {
     const savedWidths = JSON.parse(localStorage.getItem('fileTableColumnWidths') || '{}');
     
     headers.forEach((header, index) => {
-        // Apply saved width if exists
+        const defaultWidth = header.getAttribute('data-default-width');
+        
+        // Apply saved width if exists, otherwise use default
         if (savedWidths[index]) {
             header.style.width = savedWidths[index] + 'px';
+        } else if (defaultWidth && defaultWidth !== 'auto') {
+            header.style.width = defaultWidth + 'px';
         }
         
         const resizer = header.querySelector('.resize-handle');
@@ -1190,6 +1194,7 @@ function initResizableColumns() {
             const savedWidths = JSON.parse(localStorage.getItem('fileTableColumnWidths') || '{}');
             savedWidths[currentColumnIndex] = currentHeader.offsetWidth;
             localStorage.setItem('fileTableColumnWidths', JSON.stringify(savedWidths));
+            console.log('Saved column widths:', savedWidths); // DEBUG
         }
         
         currentResizer = null;
