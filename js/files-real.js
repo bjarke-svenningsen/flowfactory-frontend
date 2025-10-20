@@ -26,6 +26,9 @@ async function loadRealFiles() {
         
         // Show admin-only buttons
         showAdminButtons();
+        
+        // Initialize resizable columns
+        initResizableColumns();
     } catch (error) {
         console.error('Error loading files:', error);
         alert('Kunne ikke indlæse filer: ' + error.message);
@@ -1130,3 +1133,55 @@ function handleFolderDragLeave(event) {
 }
 
 window.loadRealFiles = loadRealFiles;
+
+// Resizable columns functionality
+function initResizableColumns() {
+    const table = document.getElementById('fileTable');
+    if (!table) return;
+    
+    const headers = table.querySelectorAll('th');
+    let currentResizer = null;
+    let currentHeader = null;
+    let startX = 0;
+    let startWidth = 0;
+    
+    headers.forEach(header => {
+        const resizer = header.querySelector('.resize-handle');
+        if (!resizer) return;
+        
+        resizer.addEventListener('mousedown', function(e) {
+            e.stopPropagation(); // Prevent sorting
+            currentResizer = resizer;
+            currentHeader = header;
+            startX = e.pageX;
+            startWidth = header.offsetWidth;
+            
+            document.addEventListener('mousemove', handleMouseMove);
+            document.addEventListener('mouseup', handleMouseUp);
+            
+            // Prevent text selection during resize
+            document.body.style.userSelect = 'none';
+            document.body.style.cursor = 'col-resize';
+        });
+    });
+    
+    function handleMouseMove(e) {
+        if (!currentResizer) return;
+        
+        const diff = e.pageX - startX;
+        const newWidth = Math.max(50, startWidth + diff); // Min width 50px
+        
+        currentHeader.style.width = newWidth + 'px';
+    }
+    
+    function handleMouseUp() {
+        currentResizer = null;
+        currentHeader = null;
+        
+        document.removeEventListener('mousemove', handleMouseMove);
+        document.removeEventListener('mouseup', handleMouseUp);
+        
+        document.body.style.userSelect = '';
+        document.body.style.cursor = '';
+    }
+}

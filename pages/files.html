@@ -28,13 +28,13 @@
         <div class="explorer-tree" id="folderTree"></div>
 
         <div class="explorer-content">
-            <table class="file-list-view">
+            <table class="file-list-view" id="fileTable">
                 <thead>
                     <tr>
-                        <th onclick="sortFiles('name')">Navn</th>
-                        <th onclick="sortFiles('size')" style="width: 100px;">Størrelse</th>
-                        <th onclick="sortFiles('type')" style="width: 120px;">Type</th>
-                        <th onclick="sortFiles('date')" style="width: 140px;">Ændret</th>
+                        <th onclick="sortFiles('name')">Navn<span class="resize-handle"></span></th>
+                        <th onclick="sortFiles('size')" style="width: 100px;">Størrelse<span class="resize-handle"></span></th>
+                        <th onclick="sortFiles('type')" style="width: 120px;">Type<span class="resize-handle"></span></th>
+                        <th onclick="sortFiles('date')" style="width: 140px;">Ændret<span class="resize-handle"></span></th>
                     </tr>
                 </thead>
                 <tbody id="fileListBody"></tbody>

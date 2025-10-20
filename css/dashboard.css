@@ -711,6 +711,22 @@ body {
     border-right: 1px solid #ccc;
     cursor: pointer;
     font-weight: normal;
+    position: relative;
+    user-select: none;
+}
+
+.file-list-view th .resize-handle {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 5px;
+    cursor: col-resize;
+    z-index: 10;
+}
+
+.file-list-view th .resize-handle:hover {
+    background: rgba(0, 84, 166, 0.3);
 }
 
 .file-list-view th:hover {
