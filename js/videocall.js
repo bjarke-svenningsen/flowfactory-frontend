@@ -204,6 +204,15 @@ async function createPeerConnection(socketId, isInitiator) {
     // Connection state changes
     pc.onconnectionstatechange = () => {
         console.log('Connection state:', pc.connectionState);
+        
+        if (pc.connectionState === 'connected') {
+            // Remove "waiting" overlay when connected
+            const waitingOverlay = document.querySelector('#mainVideo > div:not(#localVideo)');
+            if (waitingOverlay && waitingOverlay.textContent.includes('Venter på forbindelse')) {
+                waitingOverlay.remove();
+            }
+        }
+        
         if (pc.connectionState === 'failed' || pc.connectionState === 'disconnected') {
             removeVideoElement(socketId);
         }
