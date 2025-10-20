@@ -696,6 +696,7 @@ body {
 
 .file-list-view {
     width: 100%;
+    table-layout: fixed; /* Preserve column widths set via JavaScript */
     border-collapse: collapse;
     font-size: 12px;
 }

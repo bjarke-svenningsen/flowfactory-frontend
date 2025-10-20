@@ -1134,6 +1134,24 @@ function handleFolderDragLeave(event) {
 
 window.loadRealFiles = loadRealFiles;
 
+// Sort files functionality
+let currentSortColumn = 'name';
+let currentSortDirection = 'asc';
+
+function sortFiles(column) {
+    if (currentSortColumn === column) {
+        // Toggle direction
+        currentSortDirection = currentSortDirection === 'asc' ? 'desc' : 'asc';
+    } else {
+        currentSortColumn = column;
+        currentSortDirection = 'asc';
+    }
+    
+    renderRealFiles();
+}
+
+window.sortFiles = sortFiles;
+
 // Resizable columns functionality with localStorage persistence
 function initResizableColumns() {
     const table = document.getElementById('fileTable');
