@@ -16,6 +16,8 @@ let currentCall = null;
 let microphoneEnabled = true;
 let cameraEnabled = true;
 let ringtone = null; // Audio for ringtone
+let remoteAudioMuted = false;
+let isScreenSharing = false;
 
 // Create ringtone using Web Audio API
 function createRingtone() {
@@ -504,6 +506,84 @@ function toggleMicrophone() {
     }
 }
 
+// Toggle remote audio (mute/unmute)
+function toggleRemoteAudio() {
+    const remoteVideos = document.querySelectorAll('[id^="remoteVideo-"]');
+    remoteAudioMuted = !remoteAudioMuted;
+    
+    remoteVideos.forEach(video => {
+        video.muted = remoteAudioMuted;
+    });
+    
+    const btn = document.getElementById('remoteMuteBtn');
+    if (btn) {
+        btn.style.background = remoteAudioMuted ? '#f44336' : '#ff9800';
+        btn.textContent = remoteAudioMuted ? '🔇 Lyd fra' : '🔊 Lyd fra';
+    }
+    
+    console.log(remoteAudioMuted ? '🔇 Remote audio muted' : '🔊 Remote audio unmuted');
+}
+
+// Stop screen share manually
+async function stopScreenShare() {
+    if (!screenStream) return;
+    
+    const videoTrack = localStream?.getVideoTracks()[0];
+    
+    // Replace or remove video track when screen share ends
+    const renegotiationPromises = [];
+    peerConnections.forEach((pc, socketId) => {
+        const renegotiate = async () => {
+            const sender = pc.getSenders().find(s => s.track && s.track.kind === 'video');
+            
+            if (sender && videoTrack) {
+                // Replace screen track with camera track
+                await sender.replaceTrack(videoTrack);
+                console.log(`✅ Camera track restored for peer ${socketId}`);
+            } else if (sender && !videoTrack) {
+                // Was audio-only before screen share - remove video track
+                pc.removeTrack(sender);
+                console.log(`✅ Screen track removed from peer ${socketId} (reverting to audio-only)`);
+            }
+            
+            // Create new offer to trigger renegotiation
+            const offer = await pc.createOffer();
+            await pc.setLocalDescription(offer);
+            
+            // Send new offer to remote peer
+            videoSocket.emit('video:offer', {
+                roomId: currentRoomId,
+                offer,
+                targetSocketId: socketId
+            });
+            console.log(`📡 Sent camera restore offer to peer ${socketId}`);
+        };
+        renegotiationPromises.push(renegotiate());
+    });
+    
+    await Promise.all(renegotiationPromises);
+    console.log('✅ Reverted to camera for all peers');
+    
+    // Revert local video to show camera again
+    const localVideoElement = document.querySelector('#localVideo video');
+    if (localVideoElement && localStream) {
+        localVideoElement.srcObject = localStream;
+    }
+    
+    // Clean up screen stream
+    screenStream.getTracks().forEach(track => track.stop());
+    screenStream = null;
+    isScreenSharing = false;
+    
+    // Toggle buttons
+    const shareBtn = document.getElementById('shareBtn');
+    const stopShareBtn = document.getElementById('stopShareBtn');
+    if (shareBtn) shareBtn.style.display = 'inline-block';
+    if (stopShareBtn) stopShareBtn.style.display = 'none';
+    
+    console.log('⏹️ Screen sharing stopped');
+}
+
 // Screen share
 async function shareScreen() {
     try {
@@ -513,6 +593,7 @@ async function shareScreen() {
         });
         
         const screenTrack = screenStream.getVideoTracks()[0];
+        isScreenSharing = true;
         
         // Replace or add video track in all peer connections and renegotiate
         const renegotiationPromises = [];
@@ -555,8 +636,15 @@ async function shareScreen() {
             localVideoElement.srcObject = screenStream;
         }
         
-        // Revert when screen share ends
+        // Toggle buttons
+        const shareBtn = document.getElementById('shareBtn');
+        const stopShareBtn = document.getElementById('stopShareBtn');
+        if (shareBtn) shareBtn.style.display = 'none';
+        if (stopShareBtn) stopShareBtn.style.display = 'inline-block';
+        
+        // Revert when screen share ends (user stops via system UI)
         screenTrack.onended = async () => {
+            if (!isScreenSharing) return; // Already stopped via stopScreenShare()
             if (localStream) {
                 const videoTrack = localStream.getVideoTracks()[0];
                 
@@ -604,6 +692,13 @@ async function shareScreen() {
             // Clean up screen stream
             screenStream.getTracks().forEach(track => track.stop());
             screenStream = null;
+            isScreenSharing = false;
+            
+            // Toggle buttons
+            const shareBtn = document.getElementById('shareBtn');
+            const stopShareBtn = document.getElementById('stopShareBtn');
+            if (shareBtn) shareBtn.style.display = 'inline-block';
+            if (stopShareBtn) stopShareBtn.style.display = 'none';
         };
         
         console.log('✅ Screen sharing setup complete');
