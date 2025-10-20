@@ -171,11 +171,45 @@ function removeVideoElement(socketId) {
 // Start video call (replaces placeholder function in dashboard.html)
 async function startVideoCall(colleagueId, colleagueName) {
     try {
-        // Get user media
-        localStream = await navigator.mediaDevices.getUserMedia({
-            video: true,
-            audio: true
-        });
+        // Try to get user media with fallbacks
+        let videoEnabled = false;
+        let audioEnabled = false;
+        
+        try {
+            // Try video + audio
+            localStream = await navigator.mediaDevices.getUserMedia({
+                video: true,
+                audio: true
+            });
+            videoEnabled = true;
+            audioEnabled = true;
+        } catch (e1) {
+            console.warn('Video+Audio failed, trying audio only:', e1);
+            try {
+                // Try audio only
+                localStream = await navigator.mediaDevices.getUserMedia({
+                    video: false,
+                    audio: true
+                });
+                audioEnabled = true;
+                alert('⚠️ Kunne ikke få adgang til kamera.\n\nFortsætter med kun mikrofon.');
+            } catch (e2) {
+                console.warn('Audio failed, trying video only:', e2);
+                try {
+                    // Try video only
+                    localStream = await navigator.mediaDevices.getUserMedia({
+                        video: true,
+                        audio: false
+                    });
+                    videoEnabled = true;
+                    alert('⚠️ Kunne ikke få adgang til mikrofon.\n\nFortsætter med kun kamera.');
+                } catch (e3) {
+                    console.error('No media devices available:', e3);
+                    alert('❌ Ingen kamera eller mikrofon fundet.\n\nInstaller venligst et kamera/mikrofon for at bruge videochat.\n\nDu kan dog stadig bruge chat-funktionen! 💬');
+                    return;
+                }
+            }
+        }
         
         // Display local video
         const localVideo = document.getElementById('localVideo');
