@@ -86,6 +86,21 @@ function initVideoCallSocket() {
         }
     }
     
+    // Initialize online users tracking
+    if (typeof window.onlineUsers === 'undefined') {
+        window.onlineUsers = new Map();
+    }
+    
+    // Listen for online users updates
+    videoSocket.on('online-users', (users) => {
+        console.log('Online users update:', users);
+        window.onlineUsers.clear();
+        users.forEach(userId => window.onlineUsers.set(userId, true));
+        
+        // Refresh colleague list to update online status
+        loadVideoCallColleagues();
+    });
+    
     // WebRTC signaling event handlers
     videoSocket.on('video:user-joined', async ({ socketId, userId, userName }) => {
         console.log('User joined video room:', userName);
