@@ -1112,6 +1112,22 @@ io.on('connection', (socket) => {
   });
 
   // --- WebRTC Video Call Signaling ---
+  
+  // Initiate call (notify target user)
+  socket.on('video:call-user', ({ targetUserId, roomId }) => {
+    console.log(`User ${socket.user?.name} calling user ${targetUserId}`);
+    const targetSocketId = onlineUsers.get(targetUserId);
+    
+    if (targetSocketId) {
+      // Send incoming call notification to target user
+      io.to(targetSocketId).emit('video:incoming-call', {
+        callerId: socket.user?.id,
+        callerName: socket.user?.name,
+        roomId: roomId
+      });
+    }
+  });
+  
   socket.on('video:join-room', (roomId) => {
     console.log(`User ${socket.user?.name} joining video room: ${roomId}`);
     socket.join(roomId);

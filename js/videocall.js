@@ -71,6 +71,22 @@ function initVideoCallSocket() {
             removeVideoElement(socketId);
         }
     });
+    
+    // Listen for incoming call notifications
+    videoSocket.on('video:incoming-call', ({ callerId, callerName, roomId }) => {
+        console.log(`📞 Incoming call from ${callerName} (ID: ${callerId})`);
+        
+        // Show incoming call notification
+        const accepted = confirm(`📞 Indgående opkald fra ${callerName}\n\nVil du acceptere opkaldet?`);
+        
+        if (accepted) {
+            // Accept call - join the room
+            startVideoCall(callerId, callerName);
+        } else {
+            console.log('Call rejected by user');
+            // TODO: Send rejection notification back to caller
+        }
+    });
 }
 
 async function createPeerConnection(socketId, isInitiator) {
@@ -219,10 +235,18 @@ async function startVideoCall(colleagueId, colleagueName) {
             localVideo.style.display = 'flex';
         }
         
-        // Join room
+        // Setup room and notify target user
         currentRoomId = `call-${colleagueId}`;
         currentCall = { id: colleagueId, name: colleagueName };
         
+        // IMPORTANT: Notify target user FIRST (before joining room)
+        console.log(`Calling user ${colleagueId} (${colleagueName})...`);
+        videoSocket.emit('video:call-user', { 
+            targetUserId: colleagueId, 
+            roomId: currentRoomId 
+        });
+        
+        // Then join room
         videoSocket.emit('video:join-room', currentRoomId);
         
         // Update UI
