@@ -1099,7 +1099,8 @@ async function moveRejectedBackToQuote(quoteId) {
 // Initialize quotes page
 async function initQuotesPage() {
     await loadCustomers();
-    await loadQuotes();
+    // Don't call loadQuotes() here - let switchOrderTab() handle all data loading
+    // This prevents visual "hop" from showing Tilbud tab before switching to correct tab
     
     // Check if URL is a workspace URL (e.g., #/orders/123/workspace)
     const hash = window.location.hash;
@@ -1107,7 +1108,7 @@ async function initQuotesPage() {
     
     // Only switch tabs if NOT restoring a workspace
     if (!isWorkspaceURL) {
-        // BUG FIX: Check if hash indicates a specific tab (e.g., #quotes/orders)
+        // Check if hash indicates a specific tab (e.g., #quotes/orders)
         let tabToLoad = 'quotes'; // default
         
         if (hash.startsWith('#quotes/')) {
@@ -1117,6 +1118,7 @@ async function initQuotesPage() {
             }
         }
         
+        // Switch to correct tab - this will load data for that specific tab
         switchOrderTab(tabToLoad);
     }
     // Otherwise, let quotes-workspace.js handle the restoration
