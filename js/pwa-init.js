@@ -4,9 +4,24 @@
 let deferredPrompt;
 let installButton;
 
-// Register service worker
+// Register service worker - UNREGISTER OLD ONES FIRST
 if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
+  window.addEventListener('load', async () => {
+    // Unregister all existing service workers first (clear old cache)
+    const registrations = await navigator.serviceWorker.getRegistrations();
+    for (let registration of registrations) {
+      console.log('🗑️ Unregistering old Service Worker...');
+      await registration.unregister();
+    }
+    
+    // Clear all caches
+    const cacheNames = await caches.keys();
+    for (let cacheName of cacheNames) {
+      console.log('🗑️ Deleting old cache:', cacheName);
+      await caches.delete(cacheName);
+    }
+    
+    // Now register fresh service worker
     navigator.serviceWorker.register('/flowfactory-frontend/service-worker.js')
       .then(registration => {
         console.log('✅ Service Worker registered:', registration);
