@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Videoopkald</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #1c1e21;
+            overflow: hidden;
+        }
+        
+        .video-container {
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+            background: #000;
+        }
+        
+        #mainVideo {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        #localVideo {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            width: 200px;
+            height: 150px;
+            background: #1c1e21;
+            border-radius: 10px;
+            border: 3px solid white;
+            z-index: 100;
+            overflow: hidden;
+        }
+        
+        #localVideo video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        
+        .call-controls {
+            position: absolute;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 15px;
+            z-index: 200;
+        }
+        
+        .control-btn {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            border: none;
+            cursor: pointer;
+            font-size: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+        
+        .control-btn:hover {
+            transform: scale(1.1);
+        }
+        
+        #micBtn {
+            background: #4caf50;
+            color: white;
+        }
+        
+        #camBtn {
+            background: #2196f3;
+            color: white;
+        }
+        
+        #shareBtn {
+            background: #ff9800;
+            color: white;
+        }
+        
+        #endBtn {
+            background: #f44336;
+            color: white;
+        }
+        
+        .call-header {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: white;
+            text-align: center;
+            z-index: 100;
+            background: rgba(0,0,0,0.5);
+            padding: 10px 20px;
+            border-radius: 20px;
+        }
+        
+        .call-header h3 {
+            font-size: 18px;
+            font-weight: 500;
+        }
+    </style>
+</head>
+<body>
+    <div class="video-container">
+        <div class="call-header">
+            <h3 id="callStatus">Forbinder...</h3>
+        </div>
+        
+        <div id="mainVideo">
+            <div id="callPlaceholder" style="text-align: center; color: white;">
+                <div style="font-size: 80px; margin-bottom: 20px;">📹</div>
+                <h3>Venter på forbindelse...</h3>
+            </div>
+        </div>
+        
+        <div id="localVideo" style="display: none;">
+            <video autoplay muted playsinline></video>
+        </div>
+        
+        <div class="call-controls">
+            <button id="micBtn" class="control-btn" onclick="toggleMicrophone()" title="Mikrofon">🎤</button>
+            <button id="camBtn" class="control-btn" onclick="toggleCamera()" title="Kamera">📹</button>
+            <button id="shareBtn" class="control-btn" onclick="shareScreen()" title="Del skærm">🖥️</button>
+            <button id="stopShareBtn" class="control-btn" onclick="stopScreenShare()" title="Stop deling" style="display: none; background: #ff9800;">⏹️</button>
+            <button id="endBtn" class="control-btn" onclick="endCall()" title="Læg på">📞</button>
+        </div>
+    </div>
+    
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <script>
+        // WebRTC Configuration
+        const iceServers = {
+            iceServers: [
+                { urls: 'stun:stun.l.google.com:19302' },
+                { urls: 'stun:stun1.l.google.com:19302' }
+            ]
+        };
+        
+        let videoSocket = null;
+        let localStream = null;
+        let screenStream = null;
+        let peerConnections = new Map();
+        let currentRoomId = null;
+        let currentCall = null;
+        let microphoneEnabled = true;
+        let cameraEnabled = true;
+        let isScreenSharing = false;
+        
+        // Get call info from URL parameters
+        const urlParams = new URLSearchParams(window.location.search);
+        const colleagueId = parseInt(urlParams.get('id'));
+        const colleagueName = urlParams.get('name');
+        const token = urlParams.get('token');
+        
+        // Update header
+        document.getElementById('callStatus').textContent = `Opkald med ${colleagueName}`;
+        
+        // Initialize on load
+        window.addEventListener('load', async () => {
+            await initVideoCall();
+        });
+        
+        async function initVideoCall() {
+            // Initialize socket
+            videoSocket = io('https://flowfactory-frontend.onrender.com');
+            
+            videoSocket.on('connect', () => {
+                console.log('Connected to video server');
+                videoSocket.emit('auth', token);
+            });
+            
+            // Setup WebRTC event listeners
+            setupSocketListeners();
+            
+            // Get user media
+            try {
+                localStream = await navigator.mediaDevices.getUserMedia({
+                    video: true,
+                    audio: true
+                });
+                
+                // Show local video
+                const localVideo = document.getElementById('localVideo');
+                localVideo.style.display = 'block';
+                localVideo.querySelector('video').srcObject = localStream;
+                
+                // Start call
+                currentRoomId = `call-${colleagueId}`;
+                currentCall = { id: colleagueId, name: colleagueName };
+                
+                videoSocket.emit('video:call-user', { 
+                    targetUserId: colleagueId, 
+                    roomId: currentRoomId 
+                });
+                
+                videoSocket.emit('video:join-room', currentRoomId);
+                
+            } catch (error) {
+                console.error('Failed to get media:', error);
+                alert('Kunne ikke få adgang til kamera/mikrofon');
+                window.close();
+            }
+        }
+        
+        function setupSocketListeners() {
+            videoSocket.on('video:user-joined', async ({ socketId, userId, userName }) => {
+                console.log('User joined:', userName);
+                await createPeerConnection(socketId, true);
+            });
+            
+            videoSocket.on('video:offer', async ({ offer, senderSocketId }) => {
+                console.log('Received offer');
+                const pc = await createPeerConnection(senderSocketId, false);
+                await pc.setRemoteDescription(new RTCSessionDescription(offer));
+                const answer = await pc.createAnswer();
+                await pc.setLocalDescription(answer);
+                videoSocket.emit('video:answer', { answer, targetSocketId: senderSocketId });
+            });
+            
+            videoSocket.on('video:answer', async ({ answer, senderSocketId }) => {
+                const pc = peerConnections.get(senderSocketId);
+                if (pc) {
+                    await pc.setRemoteDescription(new RTCSessionDescription(answer));
+                }
+            });
+            
+            videoSocket.on('video:ice-candidate', async ({ candidate, senderSocketId }) => {
+                const pc = peerConnections.get(senderSocketId);
+                if (pc && candidate) {
+                    await pc.addIceCandidate(new RTCIceCandidate(candidate));
+                }
+            });
+            
+            videoSocket.on('video:user-left', (socketId) => {
+                console.log('User left');
+                if (peerConnections.has(socketId)) {
+                    peerConnections.get(socketId).close();
+                    peerConnections.delete(socketId);
+                }
+                // End call if other person left
+                setTimeout(() => {
+                    alert(`${colleagueName} har forladt opkaldet`);
+                    window.close();
+                }, 500);
+            });
+        }
+        
+        async function createPeerConnection(socketId, isInitiator) {
+            const pc = new RTCPeerConnection(iceServers);
+            peerConnections.set(socketId, pc);
+            
+            // Add local tracks
+            if (localStream) {
+                localStream.getTracks().forEach(track => {
+                    pc.addTrack(track, localStream);
+                });
+            }
+            
+            // Handle incoming tracks
+            let accumulatedStream = null;
+            let playTimeout;
+            
+            pc.ontrack = (event) => {
+                console.log('Received track:', event.track.kind);
+                
+                const mainVideo = document.getElementById('mainVideo');
+                let remoteVideo = document.getElementById('remoteVideo-' + socketId);
+                
+                if (!remoteVideo) {
+                    remoteVideo = document.createElement('video');
+                    remoteVideo.id = 'remoteVideo-' + socketId;
+                    remoteVideo.autoplay = true;
+                    remoteVideo.playsInline = true;
+                    remoteVideo.style.width = '100%';
+                    remoteVideo.style.height = '100%';
+                    remoteVideo.style.objectFit = 'cover';
+                    mainVideo.innerHTML = '';
+                    mainVideo.appendChild(remoteVideo);
+                }
+                
+                if (!accumulatedStream) {
+                    accumulatedStream = new MediaStream();
+                    remoteVideo.srcObject = accumulatedStream;
+                }
+                
+                const existingTrack = accumulatedStream.getTracks().find(t => t.id === event.track.id);
+                if (!existingTrack) {
+                    accumulatedStream.addTrack(event.track);
+                }
+                
+                if (playTimeout) clearTimeout(playTimeout);
+                playTimeout = setTimeout(() => {
+                    remoteVideo.play();
+                    document.getElementById('callStatus').textContent = `I opkald med ${colleagueName}`;
+                }, 300);
+            };
+            
+            pc.onicecandidate = (event) => {
+                if (event.candidate) {
+                    videoSocket.emit('video:ice-candidate', { 
+                        candidate: event.candidate, 
+                        targetSocketId: socketId 
+                    });
+                }
+            };
+            
+            pc.onconnectionstatechange = () => {
+                console.log('Connection state:', pc.connectionState);
+                if (pc.connectionState === 'failed' || pc.connectionState === 'disconnected') {
+                    alert('Forbindelsen blev afbrudt');
+                    window.close();
+                }
+            };
+            
+            if (isInitiator) {
+                const offer = await pc.createOffer();
+                await pc.setLocalDescription(offer);
+                videoSocket.emit('video:offer', { 
+                    roomId: currentRoomId, 
+                    offer, 
+                    targetSocketId: socketId 
+                });
+            }
+            
+            return pc;
+        }
+        
+        function toggleMicrophone() {
+            if (localStream) {
+                const audioTrack = localStream.getAudioTracks()[0];
+                if (audioTrack) {
+                    audioTrack.enabled = !audioTrack.enabled;
+                    microphoneEnabled = audioTrack.enabled;
+                    
+                    const btn = document.getElementById('micBtn');
+                    btn.style.background = microphoneEnabled ? '#4caf50' : '#f44336';
+                }
+            }
+        }
+        
+        function toggleCamera() {
+            if (localStream) {
+                const videoTrack = localStream.getVideoTracks()[0];
+                if (videoTrack) {
+                    videoTrack.enabled = !videoTrack.enabled;
+                    cameraEnabled = videoTrack.enabled;
+                    
+                    const btn = document.getElementById('camBtn');
+                    btn.style.background = cameraEnabled ? '#2196f3' : '#f44336';
+                }
+            }
+        }
+        
+        async function shareScreen() {
+            try {
+                screenStream = await navigator.mediaDevices.getDisplayMedia({
+                    video: { cursor: 'always' },
+                    audio: false
+                });
+                
+                const screenTrack = screenStream.getVideoTracks()[0];
+                isScreenSharing = true;
+                
+                peerConnections.forEach((pc, socketId) => {
+                    const sender = pc.getSenders().find(s => s.track && s.track.kind === 'video');
+                    if (sender) {
+                        sender.replaceTrack(screenTrack);
+                    }
+                });
+                
+                const localVideoElement = document.querySelector('#localVideo video');
+                if (localVideoElement) {
+                    localVideoElement.srcObject = screenStream;
+                }
+                
+                document.getElementById('shareBtn').style.display = 'none';
+                document.getElementById('stopShareBtn').style.display = 'block';
+                
+                screenTrack.onended = () => {
+                    stopScreenShare();
+                };
+                
+            } catch (error) {
+                console.error('Screen share error:', error);
+            }
+        }
+        
+        async function stopScreenShare() {
+            if (!screenStream) return;
+            
+            const videoTrack = localStream?.getVideoTracks()[0];
+            
+            peerConnections.forEach((pc, socketId) => {
+                const sender = pc.getSenders().find(s => s.track && s.track.kind === 'video');
+                if (sender && videoTrack) {
+                    sender.replaceTrack(videoTrack);
+                }
+            });
+            
+            const localVideoElement = document.querySelector('#localVideo video');
+            if (localVideoElement && localStream) {
+                localVideoElement.srcObject = localStream;
+            }
+            
+            screenStream.getTracks().forEach(track => track.stop());
+            screenStream = null;
+            isScreenSharing = false;
+            
+            document.getElementById('shareBtn').style.display = 'block';
+            document.getElementById('stopShareBtn').style.display = 'none';
+        }
+        
+        function endCall() {
+            // Stop all streams
+            if (localStream) {
+                localStream.getTracks().forEach(track => track.stop());
+            }
+            if (screenStream) {
+                screenStream.getTracks().forEach(track => track.stop());
+            }
+            
+            // Close peer connections
+            peerConnections.forEach(pc => pc.close());
+            peerConnections.clear();
+            
+            // Leave room
+            if (videoSocket && currentRoomId) {
+                videoSocket.emit('video:leave-room', currentRoomId);
+            }
+            
+            // Close window
+            window.close();
+        }
+        
+        // Close on window unload
+        window.addEventListener('beforeunload', () => {
+            endCall();
+        });
+    </script>
+</body>
+</html>

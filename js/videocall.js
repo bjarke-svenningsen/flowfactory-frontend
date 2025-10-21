@@ -390,108 +390,45 @@ function removeVideoElement(socketId) {
     }
 }
 
-// Start video call (replaces placeholder function in dashboard.html)
+// Start video call - Opens popup window (Facebook style)
 async function startVideoCall(colleagueId, colleagueName) {
     try {
-        // Try to get user media with fallbacks
-        let videoEnabled = false;
-        let audioEnabled = false;
-        
-        try {
-            // Try video + audio
-            localStream = await navigator.mediaDevices.getUserMedia({
-                video: true,
-                audio: true
-            });
-            videoEnabled = true;
-            audioEnabled = true;
-        } catch (e1) {
-            console.warn('Video+Audio failed, trying audio only:', e1);
-            try {
-                // Try audio only
-                localStream = await navigator.mediaDevices.getUserMedia({
-                    video: false,
-                    audio: true
-                });
-                audioEnabled = true;
-                alert('⚠️ Kunne ikke få adgang til kamera.\n\nFortsætter med kun mikrofon.');
-            } catch (e2) {
-                console.warn('Audio failed, trying video only:', e2);
-                try {
-                    // Try video only
-                    localStream = await navigator.mediaDevices.getUserMedia({
-                        video: true,
-                        audio: false
-                    });
-                    videoEnabled = true;
-                    alert('⚠️ Kunne ikke få adgang til mikrofon.\n\nFortsætter med kun kamera.');
-                } catch (e3) {
-                    console.error('No media devices available:', e3);
-                    alert('❌ Ingen kamera eller mikrofon fundet.\n\nInstaller venligst et kamera/mikrofon for at bruge videochat.\n\nDu kan dog stadig bruge chat-funktionen! 💬');
-                    return;
-                }
-            }
+        // Get token for popup window
+        const token = sessionStorage.getItem('token');
+        if (!token) {
+            alert('Du skal være logget ind for at starte et opkald');
+            return;
         }
         
-        // Display local video
-        const localVideo = document.getElementById('localVideo');
-        if (localVideo) {
-            localVideo.innerHTML = '<video autoplay muted playsinline style="width:100%;height:100%;object-fit:cover;"></video>';
-            localVideo.querySelector('video').srcObject = localStream;
-            localVideo.style.display = 'flex';
+        // Build popup URL with parameters
+        const popupUrl = `videocall-popup.html?id=${colleagueId}&name=${encodeURIComponent(colleagueName)}&token=${encodeURIComponent(token)}`;
+        
+        // Calculate screen position (top-right corner)
+        const width = 600;
+        const height = 700;
+        const left = window.screen.width - width - 50;
+        const top = 50;
+        
+        // Open popup window
+        const popup = window.open(
+            popupUrl,
+            `videocall_${colleagueId}`,
+            `width=${width},height=${height},left=${left},top=${top},resizable=yes,scrollbars=no,status=no,location=no,toolbar=no,menubar=no`
+        );
+        
+        if (!popup) {
+            alert('⚠️ Popup blev blokeret af din browser.\n\nTillad popups for denne side og prøv igen.');
+            return;
         }
         
-        // Setup room and notify target user
-        currentRoomId = `call-${colleagueId}`;
-        currentCall = { id: colleagueId, name: colleagueName };
+        // Focus the popup
+        popup.focus();
         
-        // Play outgoing ringtone
-        playRingtone();
-        
-        // IMPORTANT: Notify target user FIRST (before joining room)
-        console.log(`Calling user ${colleagueId} (${colleagueName})...`);
-        videoSocket.emit('video:call-user', { 
-            targetUserId: colleagueId, 
-            roomId: currentRoomId 
-        });
-        
-        // Then join room
-        videoSocket.emit('video:join-room', currentRoomId);
-        
-        // Update UI
-        const callPlaceholder = document.getElementById('callPlaceholder');
-        if (callPlaceholder) {
-            callPlaceholder.style.display = 'none';
-        }
-        
-        const callControls = document.getElementById('callControls');
-        if (callControls) {
-            callControls.style.display = 'flex';
-        }
-        
-        // Update main video to show "waiting"
-        const mainVideo = document.getElementById('mainVideo');
-        const initials = colleagueName.split(' ').map(n => n[0]).join('');
-        mainVideo.innerHTML = `
-            <div style="width: 100%; height: 100%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; flex-direction: column; color: white;">
-                <div style="font-size: 120px; font-weight: bold; margin-bottom: 20px;">${initials}</div>
-                <h3>Ringer til ${colleagueName}...</h3>
-                <p style="opacity: 0.8; margin-top: 10px;">Venter på forbindelse...</p>
-            </div>
-            <div id="localVideo" style="position: absolute; bottom: 20px; right: 20px; width: 200px; height: 150px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 10px; display: flex; align-items: center; justify-content: center; color: white; font-size: 40px; border: 3px solid white;">
-                <video autoplay muted playsinline style="width:100%;height:100%;object-fit:cover; border-radius: 10px;"></video>
-            </div>
-        `;
-        
-        // Set local video stream
-        const newLocalVideo = document.getElementById('localVideo');
-        if (newLocalVideo) {
-            newLocalVideo.querySelector('video').srcObject = localStream;
-        }
+        console.log(`Opened video call popup for ${colleagueName}`);
         
     } catch (error) {
-        console.error('Error starting call:', error);
-        alert('Kunne ikke få adgang til kamera/mikrofon: ' + error.message);
+        console.error('Error opening video call:', error);
+        alert('Kunne ikke åbne video opkald: ' + error.message);
     }
 }
 

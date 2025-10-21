@@ -116,18 +116,6 @@ function logout() {
 }
 
 async function showPage(pageName, updateHash = true) {
-    // IMPORTANT: Check if user is in active video call before navigating away
-    if (window.currentRoomId && window.peerConnections && window.peerConnections.size > 0) {
-        const confirmed = confirm('⚠️ Du er i et aktivt videoopkald!\n\nHvis du skifter side, vil opkaldet blive afbrudt.\n\nVil du fortsætte?');
-        if (!confirmed) {
-            return; // Cancel navigation
-        }
-        // User confirmed - end the call
-        if (typeof endCall === 'function') {
-            endCall();
-        }
-    }
-    
     // Save current page to remember after refresh
     sessionStorage.setItem('currentPage', pageName);
     
