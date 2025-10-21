@@ -542,19 +542,10 @@ async function renderPosts() {
     });
 }
 
-// Like et post - NU MED TOGGLE!
+// Like et post - OPTIMISTIC UI UPDATE (instant!)
 async function likePost(postId) {
     const post = posts.find(p => p.id === postId);
     if (!post) return;
-
-    // Gem hvilke comment sections der er åbne
-    const openCommentSections = [];
-    posts.forEach(p => {
-        const section = document.getElementById(`comments-${p.id}`);
-        if (section && section.style.display === 'block') {
-            openCommentSections.push(p.id);
-        }
-    });
 
     // Toggle like status
     if (!post.likedByUser) {
@@ -565,26 +556,31 @@ async function likePost(postId) {
         post.likes = Math.max(0, post.likes - 1);
     }
     
-    // Gem til backend (men fortsæt selv hvis det fejler)
+    // Update UI instantly (optimistic update!)
+    const likeBtn = document.querySelector(`#post-${postId} .post-action-btn`);
+    if (likeBtn) {
+        likeBtn.textContent = `👍 Synes godt om (${post.likes})`;
+    }
+    
+    // Gem til backend i baggrunden (non-blocking!)
     try {
         const token = sessionStorage.getItem('token');
-        await fetch(`https://flowfactory-frontend.onrender.com/api/posts/${postId}/like`, {
+        fetch(`https://flowfactory-frontend.onrender.com/api/posts/${postId}/like`, {
             method: 'POST',
             headers: { 'Authorization': `Bearer ${token}` }
+        }).catch(error => {
+            console.log('Could not sync like to backend');
         });
     } catch (error) {
         console.log('Could not sync like to backend');
     }
     
-    await renderPosts();
-    
-    // Genåbn comment sections der var åbne
-    setTimeout(() => {
-        openCommentSections.forEach(id => {
-            const section = document.getElementById(`comments-${id}`);
-            if (section) section.style.display = 'block';
-        });
-    }, 0);
+    // Update cache
+    try {
+        localStorage.setItem('feedPosts', JSON.stringify(posts));
+    } catch (e) {
+        // Ignore cache errors
+    }
 }
 
 // Del et post
