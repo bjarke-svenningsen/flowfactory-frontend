@@ -250,8 +250,8 @@ async function renderPosts() {
         return;
     }
 
-    // Render posts with async link previews
-    const postHTMLPromises = posts.map(async post => {
+    // Render posts immediately (lazy load link previews after)
+    feedContainer.innerHTML = posts.map(post => {
         const timeAgo = getTimeAgo(post.timestamp);
         const postInitials = post.author.split(' ').map(n => n[0]).join('');
         const isOwnPost = post.author === window.currentUser.name;
@@ -396,8 +396,13 @@ async function renderPosts() {
                     ${optionsHTML}
                 </div>
                 <div class="post-content" id="content-${post.id}">${linkifyContent(post.content)}</div>
-                ${await detectAndRenderLinks(post.content, post.id)}
+                <div id="link-preview-${post.id}" class="link-preview-container"></div>
                 ${attachmentsHTML}
++++++++ REPLACE\n\n------- SEARCH
+    // Render posts immediately (lazy load link previews after)
+    feedContainer.innerHTML = posts.map(post => {
+    // Render posts immediately (lazy load link previews after)
+    feedContainer.innerHTML = posts.map(post => {
                 <div class="post-actions">
                     <button class="post-action-btn" onclick="likePost(${post.id})">👍 Synes godt om (${post.likes})</button>
                     <button class="post-action-btn" onclick="commentOnPost(${post.id})">💬 Kommenter${post.comments && post.comments.length > 0 ? ` (${post.comments.length})` : ''}</button>
@@ -511,10 +516,12 @@ async function renderPosts() {
                 </div>
             </div>
         `;
-    });
+    }).join('');
     
-    const postHTMLArray = await Promise.all(postHTMLPromises);
-    feedContainer.innerHTML = postHTMLArray.join('');
+    // Lazy load link previews in background (non-blocking)
+    posts.forEach(post => {
+        lazyLoadLinkPreview(post.content, post.id);
+    });
 }
 
 // Like et post - NU MED TOGGLE!
@@ -1007,6 +1014,17 @@ async function detectAndRenderLinks(content, postId) {
     } catch (error) {
         console.error('detectAndRenderLinks error:', error);
         return ''; // Return empty string if anything fails
+    }
+}
+
+// Lazy load link preview (non-blocking background fetch)
+async function lazyLoadLinkPreview(content, postId) {
+    const container = document.getElementById(`link-preview-${postId}`);
+    if (!container) return;
+    
+    const previewHTML = await detectAndRenderLinks(content, postId);
+    if (previewHTML) {
+        container.innerHTML = previewHTML;
     }
 }
 
