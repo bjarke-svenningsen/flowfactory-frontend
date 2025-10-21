@@ -499,7 +499,14 @@ async function startVideoCall(colleagueId, colleagueName) {
 // Toggle floating minimize
 function toggleFloatingMinimize() {
     const floatingCall = document.getElementById('floatingVideoCall');
-    floatingCall.classList.toggle('minimized');
+    const isMinimized = floatingCall.classList.toggle('minimized');
+    
+    // Update button text/icon based on state
+    const minimizeBtn = document.querySelector('.floating-video-header-buttons button:first-child');
+    if (minimizeBtn) {
+        minimizeBtn.textContent = isMinimized ? '□' : '−';
+        minimizeBtn.title = isMinimized ? 'Maksimer' : 'Minimer';
+    }
 }
 
 // Toggle floating mic

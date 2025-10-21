@@ -1310,12 +1310,17 @@ body {
 
 .floating-video-call.minimized {
     width: 300px;
-    height: 60px;
+    height: auto;
 }
 
 .floating-video-call.minimized .floating-video-body,
-.floating-video-call.minimized .floating-video-controls {
-    display: none;
+.floating-video-call.minimized .floating-video-controls,
+.floating-video-call.minimized .floating-local-video {
+    display: none !important;
+}
+
+.floating-video-call.minimized .floating-video-header {
+    border-bottom: none;
 }
 
 .floating-video-header {
