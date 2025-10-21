@@ -150,7 +150,14 @@ async function loadPosts() {
     // Opdater post composer avatar
     const feedAvatar = document.getElementById('feedAvatar');
     if (feedAvatar && window.currentUser) {
-        if (window.currentUser.profilePhoto) {
+        // Check for profile_image first (server URL), then profilePhoto (old base64)
+        if (window.currentUser.profile_image) {
+            const imageUrl = 'https://flowfactory-frontend.onrender.com' + window.currentUser.profile_image;
+            feedAvatar.style.backgroundImage = `url(${imageUrl})`;
+            feedAvatar.style.backgroundSize = 'cover';
+            feedAvatar.style.backgroundPosition = 'center';
+            feedAvatar.textContent = '';
+        } else if (window.currentUser.profilePhoto) {
             feedAvatar.style.backgroundImage = `url(${window.currentUser.profilePhoto})`;
             feedAvatar.style.backgroundSize = 'cover';
             feedAvatar.style.backgroundPosition = 'center';
@@ -211,8 +218,12 @@ function renderPosts() {
         
         // Tjek om vi har et profilbillede - FORBEDRET LOGIK
         let avatarHTML;
-        if (isOwnPost && window.currentUser.profilePhoto) {
-            // 1. FØRST: Brug brugerens NUVÆRENDE uploadede billede
+        if (isOwnPost && window.currentUser.profile_image) {
+            // 1. FØRST: Brug brugerens NUVÆRENDE uploadede billede (server URL)
+            const imageUrl = 'https://flowfactory-frontend.onrender.com' + window.currentUser.profile_image;
+            avatarHTML = `<div class="user-avatar" style="background-image: url(${imageUrl}); background-size: cover; background-position: center;"></div>`;
+        } else if (isOwnPost && window.currentUser.profilePhoto) {
+            // 2. DEREFTER: Brug brugerens NUVÆRENDE uploadede billede (old base64)
             avatarHTML = `<div class="user-avatar" style="background-image: url(${window.currentUser.profilePhoto}); background-size: cover; background-position: center;"></div>`;
         } else if (post.localPhoto) {
             // 2. DEREFTER: Brug lokalt gemt billede fra da opslaget blev lavet

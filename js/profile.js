@@ -217,7 +217,13 @@ window.pageLoader.registerPageInit('profile', function() {
     if (window.currentUser) {
         const initials = window.currentUser.name.split(' ').map(n => n[0]).join('');
         
-        if (window.currentUser.profilePhoto) {
+        // Check for profile_image first (server URL), then profilePhoto (old base64)
+        if (window.currentUser.profile_image) {
+            const imageUrl = 'https://flowfactory-frontend.onrender.com' + window.currentUser.profile_image;
+            document.getElementById('profileAvatar').style.backgroundImage = `url(${imageUrl})`;
+            document.getElementById('profileAvatar').style.backgroundSize = 'cover';
+            document.getElementById('profileAvatar').textContent = '';
+        } else if (window.currentUser.profilePhoto) {
             document.getElementById('profileAvatar').style.backgroundImage = `url(${window.currentUser.profilePhoto})`;
             document.getElementById('profileAvatar').style.backgroundSize = 'cover';
             document.getElementById('profileAvatar').textContent = '';
