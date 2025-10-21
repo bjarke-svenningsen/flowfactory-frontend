@@ -994,7 +994,9 @@ body {
 
 .chat-messages {
     flex: 1;
+    max-height: calc(100vh - 300px);
     overflow-y: auto;
+    overflow-x: hidden;
     padding: 20px;
     background: #f5f5f5;
 }
