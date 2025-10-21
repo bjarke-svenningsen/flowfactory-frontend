@@ -209,7 +209,7 @@ async function loadPosts() {
     }
     
     // Fallback: Hvis backend ikke virker, load demo posts
-    loadDemoPosts();
+    await loadDemoPosts();
 }
 
 // Load comments for a specific post from backend
