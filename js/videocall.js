@@ -169,79 +169,72 @@ function initVideoCallSocket() {
 // Accept incoming call - joins room without sending notification
 async function acceptIncomingCall(callerId, callerName, roomId) {
     try {
+        // Show floating overlay for receiver too
+        const floatingCall = document.getElementById('floatingVideoCall');
+        floatingCall.style.display = 'flex';
+        
+        // Update title
+        document.getElementById('floatingCallTitle').textContent = `Opkald med ${callerName}`;
+        
         // Get user media (same fallback as startVideoCall)
-        let videoEnabled = false;
-        let audioEnabled = false;
+        let mediaObtained = false;
         
         try {
             localStream = await navigator.mediaDevices.getUserMedia({
                 video: true,
                 audio: true
             });
-            videoEnabled = true;
-            audioEnabled = true;
+            mediaObtained = true;
+            console.log('✅ Got video + audio');
         } catch (e1) {
-            console.warn('Video+Audio failed, trying audio only:', e1);
+            console.warn('Video+Audio failed:', e1);
             try {
                 localStream = await navigator.mediaDevices.getUserMedia({
                     video: false,
                     audio: true
                 });
-                audioEnabled = true;
-                alert('⚠️ Kunne ikke få adgang til kamera.\n\nFortsætter med kun mikrofon.');
+                mediaObtained = true;
+                console.log('✅ Got audio only');
+                alert('⚠️ Kunne ikke få adgang til kamera.\n\nFortsætter med kun lyd.');
             } catch (e2) {
-                console.warn('Audio failed, trying video only:', e2);
+                console.warn('Audio failed:', e2);
                 try {
                     localStream = await navigator.mediaDevices.getUserMedia({
                         video: true,
                         audio: false
                     });
-                    videoEnabled = true;
-                    alert('⚠️ Kunne ikke få adgang til mikrofon.\n\nFortsætter med kun kamera.');
+                    mediaObtained = true;
+                    console.log('✅ Got video only');
+                    alert('⚠️ Kunne ikke få adgang til mikrofon.\n\nFortsætter med kun video.');
                 } catch (e3) {
                     console.error('No media devices available:', e3);
-                    alert('❌ Ingen kamera eller mikrofon fundet.\n\nKan ikke acceptere opkald.');
+                    alert('❌ Kunne ikke få adgang til kamera eller mikrofon.\n\nKan ikke acceptere opkald.');
+                    floatingCall.style.display = 'none';
                     return;
                 }
             }
         }
         
-        // Setup room
-        currentRoomId = roomId;
-        currentCall = { id: callerId, name: callerName };
-        
-        // Join room (WITHOUT sending call-user notification!)
-        console.log(`Accepting call from ${callerName} - joining room ${roomId}`);
-        videoSocket.emit('video:join-room', currentRoomId);
-        
-        // Update UI (same as startVideoCall)
-        const callPlaceholder = document.getElementById('callPlaceholder');
-        if (callPlaceholder) {
-            callPlaceholder.style.display = 'none';
-        }
-        
-        const callControls = document.getElementById('callControls');
-        if (callControls) {
-            callControls.style.display = 'flex';
-        }
-        
-        const mainVideo = document.getElementById('mainVideo');
-        const initials = callerName.split(' ').map(n => n[0]).join('');
-        mainVideo.innerHTML = `
-            <div style="width: 100%; height: 100%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; flex-direction: column; color: white;">
-                <div style="font-size: 120px; font-weight: bold; margin-bottom: 20px;">${initials}</div>
-                <h3>Forbinder til ${callerName}...</h3>
-                <p style="opacity: 0.8; margin-top: 10px;">Venter på forbindelse...</p>
-            </div>
-            <div id="localVideo" style="position: absolute; bottom: 20px; right: 20px; width: 200px; height: 150px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 10px; display: flex; align-items: center; justify-content: center; color: white; font-size: 40px; border: 3px solid white;">
-                <video autoplay muted playsinline style="width:100%;height:100%;object-fit:cover; border-radius: 10px;"></video>
-            </div>
-        `;
-        
-        // Set local video stream
-        const newLocalVideo = document.getElementById('localVideo');
-        if (newLocalVideo) {
-            newLocalVideo.querySelector('video').srcObject = localStream;
+        if (mediaObtained && localStream) {
+            // Show local video
+            const localVideo = document.getElementById('floatingLocalVideo');
+            localVideo.style.display = 'block';
+            localVideo.querySelector('video').srcObject = localStream;
+            
+            // Update placeholder
+            const placeholder = document.getElementById('floatingPlaceholder');
+            const initials = callerName.split(' ').map(n => n[0]).join('');
+            placeholder.innerHTML = `<div class="initials">${initials}</div><p>Forbinder til ${callerName}...</p>`;
+            
+            // Setup room
+            currentRoomId = roomId;
+            currentCall = { id: callerId, name: callerName };
+            
+            // Join room (WITHOUT sending call-user notification!)
+            console.log(`Accepting call from ${callerName} - joining room ${roomId}`);
+            videoSocket.emit('video:join-room', currentRoomId);
+            
+            console.log(`✅ Floating overlay shown for incoming call from ${callerName}`);
         }
         
     } catch (error) {
