@@ -118,17 +118,24 @@ function renderUserList() {
     userList.innerHTML = users.map(user => {
         const statusClass = user.status;
         const isActive = currentChatUser && currentChatUser.id === user.id ? 'active' : '';
+        const isOnline = user.status === 'online';
         
         return `
-            <div class="user-item ${isActive}" onclick="openChatWith(${user.id})">
-                <div class="user-avatar-small">
+            <div class="user-item ${isActive}">
+                <div class="user-avatar-small" onclick="openChatWith(${user.id})" style="cursor: pointer;">
                     ${user.initials}
                     <div class="status-dot ${statusClass}"></div>
                 </div>
-                <div>
+                <div onclick="openChatWith(${user.id})" style="flex: 1; cursor: pointer;">
                     <div style="font-weight: 500;">${user.name}</div>
                     <div style="font-size: 12px; color: #999;">${getStatusText(user.status)}</div>
                 </div>
+                <button onclick="event.stopPropagation(); if(typeof startVideoCall !== 'undefined') startVideoCall(${user.id}, '${user.name.replace(/'/g, "\\'")}');" 
+                        style="padding: 6px 10px; background: ${isOnline ? '#4caf50' : '#ccc'}; color: white; border: none; border-radius: 15px; cursor: ${isOnline ? 'pointer' : 'not-allowed'}; font-size: 12px;"
+                        ${!isOnline ? 'disabled' : ''}
+                        title="${isOnline ? 'Start videoopkald' : 'Bruger er offline'}">
+                    📞
+                </button>
             </div>
         `;
     }).join('');
@@ -222,6 +229,15 @@ function renderMessages() {
     container.scrollTop = container.scrollHeight;
 }
 
+// Auto-grow textarea
+function autoGrowTextarea() {
+    const textarea = document.getElementById('chatInput');
+    if (!textarea) return;
+    
+    textarea.style.height = 'auto';
+    textarea.style.height = Math.min(textarea.scrollHeight, 120) + 'px';
+}
+
 // Send besked
 function sendMessage() {
     if (!currentChatUser) return;
@@ -250,6 +266,9 @@ function sendMessage() {
     }
     
     input.value = '';
+    
+    // Reset textarea height
+    input.style.height = 'auto';
     
     if (shouldAddLocally) {
         renderMessages();
