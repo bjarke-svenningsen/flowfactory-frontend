@@ -11,6 +11,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import fs from 'fs';
 import nodemailer from 'nodemailer';
+import ogs from 'open-graph-scraper';
 import { db } from './database-config.js';
 import { initializeDatabase } from './init-database.js';
 
@@ -133,6 +134,37 @@ async function logOrderEvent(orderId, activityType, description, userId) {
 
 // --- Routes ---
 app.get('/', (req, res) => res.json({ ok: true, message: 'Breeze API kører!' }));
+
+// Link Preview - Fetch Open Graph metadata for URLs
+app.post('/api/link-preview', auth, async (req, res) => {
+  const { url } = req.body;
+  
+  if (!url || !url.trim()) {
+    return res.status(400).json({ error: 'URL required' });
+  }
+  
+  try {
+    const { result } = await ogs({ url: url.trim() });
+    
+    // Extract relevant metadata
+    const preview = {
+      title: result.ogTitle || result.twitterTitle || result.dcTitle || '',
+      description: result.ogDescription || result.twitterDescription || result.dcDescription || '',
+      image: result.ogImage?.[0]?.url || result.twitterImage?.[0]?.url || '',
+      siteName: result.ogSiteName || '',
+      url: result.ogUrl || url,
+      favicon: result.favicon || ''
+    };
+    
+    res.json(preview);
+  } catch (error) {
+    console.error('Link preview error:', error);
+    res.status(500).json({ 
+      error: 'Failed to fetch link preview',
+      details: error.message 
+    });
+  }
+});
 
 // Auth - Registration with invite code OR pending approval
 app.post('/api/auth/register', async (req, res) => {

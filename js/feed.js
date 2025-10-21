@@ -242,7 +242,7 @@ async function loadCommentsForPost(postId) {
 }
 
 // Vis posts på feed
-function renderPosts() {
+async function renderPosts() {
     const feedContainer = document.getElementById('feedPosts');
     
     if (posts.length === 0) {
@@ -250,7 +250,8 @@ function renderPosts() {
         return;
     }
 
-    feedContainer.innerHTML = posts.map(post => {
+    // Render posts with async link previews
+    const postHTMLPromises = posts.map(async post => {
         const timeAgo = getTimeAgo(post.timestamp);
         const postInitials = post.author.split(' ').map(n => n[0]).join('');
         const isOwnPost = post.author === window.currentUser.name;
@@ -395,7 +396,7 @@ function renderPosts() {
                     ${optionsHTML}
                 </div>
                 <div class="post-content" id="content-${post.id}">${linkifyContent(post.content)}</div>
-                ${detectAndRenderLinks(post.content)}
+                ${await detectAndRenderLinks(post.content, post.id)}
                 ${attachmentsHTML}
                 <div class="post-actions">
                     <button class="post-action-btn" onclick="likePost(${post.id})">👍 Synes godt om (${post.likes})</button>
@@ -510,7 +511,10 @@ function renderPosts() {
                 </div>
             </div>
         `;
-    }).join('');
+    });
+    
+    const postHTMLArray = await Promise.all(postHTMLPromises);
+    feedContainer.innerHTML = postHTMLArray.join('');
 }
 
 // Like et post - NU MED TOGGLE!
@@ -924,33 +928,71 @@ async function deleteComment(postId, commentIndex) {
     }
 }
 
-// Detect URLs and create link previews
-function detectAndRenderLinks(content) {
+// Cache for link previews to avoid refetching
+const linkPreviewCache = new Map();
+
+// Detect URLs and fetch link previews from backend
+async function detectAndRenderLinks(content, postId) {
     const urlRegex = /(https?:\/\/[^\s]+)/g;
     const urls = content.match(urlRegex);
     
     if (!urls || urls.length === 0) return '';
     
-    // Create preview cards for detected URLs
-    return urls.map(url => {
-        // Extract domain for preview
-        let domain = '';
-        try {
-            domain = new URL(url).hostname.replace('www.', '');
-        } catch (e) {
-            domain = url;
+    // Fetch previews for each URL
+    const previewPromises = urls.map(async (url) => {
+        // Check cache first
+        if (linkPreviewCache.has(url)) {
+            return linkPreviewCache.get(url);
         }
         
+        try {
+            const token = sessionStorage.getItem('token');
+            const response = await fetch('https://flowfactory-frontend.onrender.com/api/link-preview', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ url })
+            });
+            
+            if (response.ok) {
+                const preview = await response.json();
+                linkPreviewCache.set(url, preview);
+                return preview;
+            }
+        } catch (error) {
+            console.error('Link preview error:', error);
+        }
+        
+        // Fallback: basic preview
+        return { url, title: url, description: '', image: '', siteName: '' };
+    });
+    
+    const previews = await Promise.all(previewPromises);
+    
+    // Render preview cards
+    return previews.map(preview => {
+        const domain = preview.siteName || (preview.url ? new URL(preview.url).hostname.replace('www.', '') : '');
+        const title = preview.title || preview.url;
+        const description = preview.description || '';
+        const image = preview.image || '';
+        
         return `
-            <div class="link-preview-card" style="border: 1px solid #e4e6eb; border-radius: 8px; overflow: hidden; margin-top: 10px; max-width: 500px;">
-                <div style="padding: 12px; background: #f7f8fa;">
-                    <div style="font-size: 12px; color: #65676b; text-transform: uppercase; margin-bottom: 4px;">${domain}</div>
-                    <a href="${url}" target="_blank" rel="noopener noreferrer" style="color: #1877f2; text-decoration: none; font-weight: 600; display: block; margin-bottom: 4px;">
-                        ${url.length > 60 ? url.substring(0, 60) + '...' : url}
-                    </a>
-                    <div style="font-size: 12px; color: #65676b;">Klik for at åbne link</div>
+            <a href="${preview.url}" target="_blank" rel="noopener noreferrer" style="text-decoration: none; color: inherit; display: block;">
+                <div class="link-preview-card" style="border: 1px solid #e4e6eb; border-radius: 8px; overflow: hidden; margin-top: 10px; max-width: 500px; cursor: pointer; transition: box-shadow 0.2s;">
+                    ${image ? `
+                        <div style="width: 100%; height: 260px; overflow: hidden; background: #f0f2f5;">
+                            <img src="${image}" alt="${title}" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.parentElement.style.display='none'">
+                        </div>
+                    ` : ''}
+                    <div style="padding: 12px; background: #f7f8fa;">
+                        <div style="font-size: 12px; color: #65676b; text-transform: uppercase; margin-bottom: 4px;">${domain}</div>
+                        <div style="font-weight: 600; font-size: 16px; color: #050505; margin-bottom: 4px; line-height: 20px;">${title.length > 80 ? title.substring(0, 80) + '...' : title}</div>
+                        ${description ? `<div style="font-size: 14px; color: #65676b; line-height: 20px;">${description.length > 120 ? description.substring(0, 120) + '...' : description}</div>` : ''}
+                    </div>
                 </div>
-            </div>
+            </a>
         `;
     }).join('');
 }
