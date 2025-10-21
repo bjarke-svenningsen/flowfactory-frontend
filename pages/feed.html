@@ -15,24 +15,93 @@
             </div>
             
             <!-- Emoji picker for post composer -->
-            <div id="feedEmojiPicker" class="emoji-picker" style="display: none; position: absolute; bottom: 60px; right: 0; background: white; border: 1px solid #ccc; border-radius: 8px; padding: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.15); z-index: 1000;">
+            <div id="feedEmojiPicker" class="emoji-picker" style="display: none; position: absolute; bottom: 60px; right: 0; background: white; border: 1px solid #ccc; border-radius: 8px; padding: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.15); z-index: 1000; max-height: 300px; overflow-y: auto;">
                 <div class="emoji-grid" style="display: grid; grid-template-columns: repeat(8, 1fr); gap: 5px;">
+                    <!-- Ansigter og følelser -->
                     <span class="emoji-item" onclick="insertFeedEmoji('😊')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">😊</span>
                     <span class="emoji-item" onclick="insertFeedEmoji('😂')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">😂</span>
-                    <span class="emoji-item" onclick="insertFeedEmoji('❤️')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">❤️</span>
+                    <span class="emoji-item" onclick="insertFeedEmoji('🤣')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">🤣</span>
+                    <span class="emoji-item" onclick="insertFeedEmoji('😍')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">😍</span>
+                    <span class="emoji-item" onclick="insertFeedEmoji('😘')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">😘</span>
+                    <span class="emoji-item" onclick="insertFeedEmoji('😎')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">😎</span>
+                    <span class="emoji-item" onclick="insertFeedEmoji('🥳')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">🥳</span>
+                    <span class="emoji-item" onclick="insertFeedEmoji('🤗')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">🤗</span>
+                    <span class="emoji-item" onclick="insertFeedEmoji('🥰')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">🥰</span>
+                    <span class="emoji-item" onclick="insertFeedEmoji('😇')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">😇</span>
+                    <span class="emoji-item" onclick="insertFeedEmoji('🙃')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">🙃</span>
+                    <span class="emoji-item" onclick="insertFeedEmoji('�')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">�</span>
+                    <span class="emoji-item" onclick="insertFeedEmoji('�')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">�</span>
+                    <span class="emoji-item" onclick="insertFeedEmoji('�')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">�</span>
+                    <span class="emoji-item" onclick="insertFeedEmoji('😜')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">😜</span>
+                    <span class="emoji-item" onclick="insertFeedEmoji('�')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">�</span>
+                    <span class="emoji-item" onclick="insertFeedEmoji('�')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">�</span>
+                    <span class="emoji-item" onclick="insertFeedEmoji('😁')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">😁</span>
+                    <span class="emoji-item" onclick="insertFeedEmoji('😏')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">😏</span>
+                    <span class="emoji-item" onclick="insertFeedEmoji('😌')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">😌</span>
+                    <span class="emoji-item" onclick="insertFeedEmoji('😔')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">😔</span>
+                    <span class="emoji-item" onclick="insertFeedEmoji('😢')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">😢</span>
+                    <span class="emoji-item" onclick="insertFeedEmoji('😭')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">😭</span>
+                    <span class="emoji-item" onclick="insertFeedEmoji('😤')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">😤</span>
+                    <span class="emoji-item" onclick="insertFeedEmoji('😡')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">😡</span>
+                    <span class="emoji-item" onclick="insertFeedEmoji('🤬')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">🤬</span>
+                    <span class="emoji-item" onclick="insertFeedEmoji('😱')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">😱</span>
+                    <span class="emoji-item" onclick="insertFeedEmoji('😨')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">😨</span>
+                    <span class="emoji-item" onclick="insertFeedEmoji('🥺')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">🥺</span>
+                    <span class="emoji-item" onclick="insertFeedEmoji('🤔')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">🤔</span>
+                    <span class="emoji-item" onclick="insertFeedEmoji('🤨')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">🤨</span>
+                    <span class="emoji-item" onclick="insertFeedEmoji('😐')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">😐</span>
+                    <span class="emoji-item" onclick="insertFeedEmoji('😑')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">😑</span>
+                    <span class="emoji-item" onclick="insertFeedEmoji('🙄')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">🙄</span>
+                    <span class="emoji-item" onclick="insertFeedEmoji('😴')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">😴</span>
+                    <span class="emoji-item" onclick="insertFeedEmoji('🤤')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">🤤</span>
+                    <span class="emoji-item" onclick="insertFeedEmoji('🥱')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">🥱</span>
+                    <!-- Hænder og gestus -->
                     <span class="emoji-item" onclick="insertFeedEmoji('👍')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">👍</span>
                     <span class="emoji-item" onclick="insertFeedEmoji('👎')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">👎</span>
-                    <span class="emoji-item" onclick="insertFeedEmoji('🔥')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">🔥</span>
-                    <span class="emoji-item" onclick="insertFeedEmoji('🎉')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">🎉</span>
-                    <span class="emoji-item" onclick="insertFeedEmoji('😎')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">😎</span>
-                    <span class="emoji-item" onclick="insertFeedEmoji('🤔')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">🤔</span>
-                    <span class="emoji-item" onclick="insertFeedEmoji('😢')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">😢</span>
-                    <span class="emoji-item" onclick="insertFeedEmoji('😡')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">😡</span>
+                    <span class="emoji-item" onclick="insertFeedEmoji('👏')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">👏</span>
+                    <span class="emoji-item" onclick="insertFeedEmoji('🙌')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">🙌</span>
+                    <span class="emoji-item" onclick="insertFeedEmoji('🤝')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">🤝</span>
+                    <span class="emoji-item" onclick="insertFeedEmoji('✋')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">✋</span>
+                    <span class="emoji-item" onclick="insertFeedEmoji('🤚')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">🤚</span>
                     <span class="emoji-item" onclick="insertFeedEmoji('👋')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">👋</span>
+                    <span class="emoji-item" onclick="insertFeedEmoji('🤟')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">🤟</span>
+                    <span class="emoji-item" onclick="insertFeedEmoji('✌️')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">✌️</span>
+                    <span class="emoji-item" onclick="insertFeedEmoji('🤞')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">🤞</span>
+                    <span class="emoji-item" onclick="insertFeedEmoji('🫰')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">🫰</span>
+                    <span class="emoji-item" onclick="insertFeedEmoji('💪')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">💪</span>
+                    <span class="emoji-item" onclick="insertFeedEmoji('🙏')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">🙏</span>
+                    <!-- Hjerter -->
+                    <span class="emoji-item" onclick="insertFeedEmoji('❤️')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">❤️</span>
+                    <span class="emoji-item" onclick="insertFeedEmoji('🧡')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">🧡</span>
+                    <span class="emoji-item" onclick="insertFeedEmoji('💛')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">💛</span>
+                    <span class="emoji-item" onclick="insertFeedEmoji('💚')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">💚</span>
+                    <span class="emoji-item" onclick="insertFeedEmoji('💙')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">💙</span>
+                    <span class="emoji-item" onclick="insertFeedEmoji('💜')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">💜</span>
+                    <span class="emoji-item" onclick="insertFeedEmoji('🖤')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">🖤</span>
+                    <span class="emoji-item" onclick="insertFeedEmoji('🤍')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">🤍</span>
+                    <span class="emoji-item" onclick="insertFeedEmoji('🤎')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">🤎</span>
+                    <span class="emoji-item" onclick="insertFeedEmoji('💕')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">💕</span>
+                    <span class="emoji-item" onclick="insertFeedEmoji('💖')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">💖</span>
+                    <span class="emoji-item" onclick="insertFeedEmoji('💗')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">💗</span>
+                    <span class="emoji-item" onclick="insertFeedEmoji('💓')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">💓</span>
+                    <span class="emoji-item" onclick="insertFeedEmoji('�')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">💞</span>
+                    <!-- Andre populære -->
+                    <span class="emoji-item" onclick="insertFeedEmoji('🔥')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">🔥</span>
+                    <span class="emoji-item" onclick="insertFeedEmoji('✨')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">✨</span>
+                    <span class="emoji-item" onclick="insertFeedEmoji('💯')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">💯</span>
+                    <span class="emoji-item" onclick="insertFeedEmoji('⭐')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">⭐</span>
+                    <span class="emoji-item" onclick="insertFeedEmoji('🎉')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">🎉</span>
+                    <span class="emoji-item" onclick="insertFeedEmoji('🎊')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">🎊</span>
+                    <span class="emoji-item" onclick="insertFeedEmoji('🎈')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">🎈</span>
+                    <span class="emoji-item" onclick="insertFeedEmoji('👀')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">�</span>
+                    <span class="emoji-item" onclick="insertFeedEmoji('💀')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">💀</span>
+                    <span class="emoji-item" onclick="insertFeedEmoji('💩')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">💩</span>
+                    <span class="emoji-item" onclick="insertFeedEmoji('👻')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">👻</span>
+                    <span class="emoji-item" onclick="insertFeedEmoji('🤡')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">🤡</span>
+                    <span class="emoji-item" onclick="insertFeedEmoji('🦄')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">🦄</span>
                     <span class="emoji-item" onclick="insertFeedEmoji('✅')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">✅</span>
                     <span class="emoji-item" onclick="insertFeedEmoji('❌')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">❌</span>
                     <span class="emoji-item" onclick="insertFeedEmoji('⚠️')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">⚠️</span>
-                    <span class="emoji-item" onclick="insertFeedEmoji('💪')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">💪</span>
                 </div>
             </div>
             
