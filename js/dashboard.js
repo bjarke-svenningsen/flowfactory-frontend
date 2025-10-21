@@ -144,12 +144,11 @@ async function showPage(pageName, updateHash = true) {
         'profile': 1,
         'files': 2,
         'chat': 3,
-        'videocall': 4,
-        'colleagues': 5,
-        'quotes': 6,
-        'email': 7,
-        'settings': 8,
-        'admin': 9
+        'colleagues': 4,
+        'quotes': 5,
+        'email': 6,
+        'settings': 7,
+        'admin': 8
     };
     
     const menuIndex = pageMapping[pageName];
@@ -176,8 +175,6 @@ async function showPage(pageName, updateHash = true) {
         initQuotesPage();
     } else if (pageName === 'chat') {
         initChat();
-    } else if (pageName === 'videocall') {
-        loadVideoCallColleagues();
     } else if (pageName === 'email') {
         // Email page initializes itself via js/email.js
         if (window.emailClient) {
