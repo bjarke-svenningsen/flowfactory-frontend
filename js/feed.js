@@ -201,7 +201,7 @@ async function loadPosts() {
                 await loadCommentsForPost(post.id);
             }
             
-            renderPosts();
+            await renderPosts();
             return;
         }
     } catch (error) {
@@ -752,7 +752,7 @@ function getTimeAgo(date) {
 }
 
 // Indlæs demo posts
-function loadDemoPosts() {
+async function loadDemoPosts() {
     posts = [
         {
             id: 3,
@@ -782,7 +782,7 @@ function loadDemoPosts() {
             localPhoto: null
         }
     ];
-    renderPosts();
+    await renderPosts();
 }
 
 // Åbn billede i fuld størrelse
