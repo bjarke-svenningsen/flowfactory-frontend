@@ -404,6 +404,13 @@ function removeVideoElement(socketId) {
 // Start video call - Shows floating overlay (Discord/Teams style)
 async function startVideoCall(colleagueId, colleagueName) {
     try {
+        // Initialize socket if not already done
+        if (!videoSocket) {
+            initVideoCallSocket();
+            // Wait a bit for socket to connect
+            await new Promise(resolve => setTimeout(resolve, 500));
+        }
+        
         // Show floating overlay
         const floatingCall = document.getElementById('floatingVideoCall');
         floatingCall.style.display = 'flex';
