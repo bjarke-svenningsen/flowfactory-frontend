@@ -288,6 +288,49 @@ function renderPosts() {
             </div>
         ` : '';
         
+        // Render comments (Facebook-style)
+        let commentsHTML = '';
+        if (post.comments && post.comments.length > 0) {
+            commentsHTML = post.comments.map(comment => {
+                const commentInitials = comment.author.split(' ').map(n => n[0]).join('');
+                const commentTimeAgo = getTimeAgo(comment.timestamp);
+                
+                // Comment avatar
+                let commentAvatarHTML;
+                if (comment.avatar_url) {
+                    const commentImageUrl = 'https://flowfactory-frontend.onrender.com' + comment.avatar_url;
+                    commentAvatarHTML = `<div class="comment-avatar" style="background-image: url(${commentImageUrl}); background-size: cover; background-position: center;"></div>`;
+                } else if (comment.localPhoto) {
+                    commentAvatarHTML = `<div class="comment-avatar" style="background-image: url(${comment.localPhoto}); background-size: cover; background-position: center;"></div>`;
+                } else {
+                    commentAvatarHTML = `<div class="comment-avatar">${commentInitials}</div>`;
+                }
+                
+                return `
+                    <div class="comment-item" style="display: flex; gap: 10px; margin-bottom: 10px;">
+                        ${commentAvatarHTML}
+                        <div style="flex: 1; background: #f0f2f5; padding: 8px 12px; border-radius: 18px;">
+                            <div style="font-weight: 600; font-size: 13px; margin-bottom: 2px;">${comment.author}</div>
+                            <div style="font-size: 14px; color: #050505;">${comment.content}</div>
+                        </div>
+                    </div>
+                    <div style="margin-left: 50px; margin-bottom: 8px; font-size: 12px; color: #65676b;">${commentTimeAgo}</div>
+                `;
+            }).join('');
+        }
+        
+        // Current user avatar for comment input
+        let currentUserAvatarHTML;
+        if (window.currentUser.profile_image) {
+            const imageUrl = 'https://flowfactory-frontend.onrender.com' + window.currentUser.profile_image;
+            currentUserAvatarHTML = `<div class="comment-avatar" style="background-image: url(${imageUrl}); background-size: cover; background-position: center;"></div>`;
+        } else if (window.currentUser.profilePhoto) {
+            currentUserAvatarHTML = `<div class="comment-avatar" style="background-image: url(${window.currentUser.profilePhoto}); background-size: cover; background-position: center;"></div>`;
+        } else {
+            const initials = window.currentUser.name.split(' ').map(n => n[0]).join('');
+            currentUserAvatarHTML = `<div class="comment-avatar">${initials}</div>`;
+        }
+        
         return `
             <div class="feed-post" id="post-${post.id}">
                 <div class="post-header">
@@ -304,8 +347,24 @@ function renderPosts() {
                 ${attachmentsHTML}
                 <div class="post-actions">
                     <button class="post-action-btn" onclick="likePost(${post.id})">👍 Synes godt om (${post.likes})</button>
-                    <button class="post-action-btn" onclick="commentOnPost(${post.id})">💬 Kommenter</button>
+                    <button class="post-action-btn" onclick="commentOnPost(${post.id})">💬 Kommenter${post.comments && post.comments.length > 0 ? ` (${post.comments.length})` : ''}</button>
                     <button class="post-action-btn" onclick="sharePost(${post.id})">↗️ Del</button>
+                </div>
+                
+                <!-- Facebook-style comment section -->
+                <div id="comments-${post.id}" class="comments-section" style="display: none; padding: 15px; border-top: 1px solid #e4e6eb; background: #f7f8fa;">
+                    ${commentsHTML}
+                    <div style="display: flex; gap: 10px; align-items: center;">
+                        ${currentUserAvatarHTML}
+                        <input 
+                            type="text" 
+                            id="comment-input-${post.id}" 
+                            placeholder="Skriv en kommentar..." 
+                            onkeypress="handleCommentKeyPress(event, ${post.id})"
+                            style="flex: 1; padding: 8px 12px; border: 1px solid #ccc; border-radius: 18px; font-size: 14px; outline: none;"
+                        >
+                        <button onclick="addComment(${post.id})" style="padding: 8px 16px; background: #667eea; color: white; border: none; border-radius: 18px; cursor: pointer; font-weight: 600;">Post</button>
+                    </div>
                 </div>
             </div>
         `;
@@ -356,10 +415,29 @@ function sharePost(postId) {
     });
 }
 
-// Kommenter på et post
+// Kommenter på et post - Facebook style
 function commentOnPost(postId) {
-    const comment = prompt('💬 Skriv din kommentar:');
-    if (!comment || !comment.trim()) return;
+    const commentSection = document.getElementById(`comments-${postId}`);
+    if (!commentSection) return;
+    
+    // Toggle kommentar sektion synlighed
+    if (commentSection.style.display === 'none' || !commentSection.style.display) {
+        commentSection.style.display = 'block';
+        // Focus på input felt
+        const inputField = document.getElementById(`comment-input-${postId}`);
+        if (inputField) inputField.focus();
+    } else {
+        commentSection.style.display = 'none';
+    }
+}
+
+// Tilføj kommentar til post
+function addComment(postId) {
+    const inputField = document.getElementById(`comment-input-${postId}`);
+    if (!inputField) return;
+    
+    const comment = inputField.value.trim();
+    if (!comment) return;
     
     const post = posts.find(p => p.id === postId);
     if (!post) return;
@@ -372,12 +450,27 @@ function commentOnPost(postId) {
     // Tilføj kommentar
     post.comments.push({
         author: window.currentUser.name,
-        content: comment.trim(),
-        timestamp: new Date()
+        content: comment,
+        timestamp: new Date(),
+        avatar_url: window.currentUser.profile_image || null,
+        localPhoto: window.currentUser.profilePhoto || null
     });
     
-    alert('✅ Kommentar tilføjet!');
+    // Clear input og re-render
+    inputField.value = '';
     renderPosts();
+    
+    // Hold kommentar sektion åben
+    const commentSection = document.getElementById(`comments-${postId}`);
+    if (commentSection) commentSection.style.display = 'block';
+}
+
+// Handle Enter key i kommentar felt
+function handleCommentKeyPress(event, postId) {
+    if (event.key === 'Enter' && !event.shiftKey) {
+        event.preventDefault();
+        addComment(postId);
+    }
 }
 
 // Rediger opslag
