@@ -62,7 +62,7 @@ async function addPost() {
     document.getElementById('postContent').value = '';
     currentAttachments = [];
     document.getElementById('filePreview').innerHTML = '';
-    renderPosts();
+    await renderPosts();
 }
 
 // Håndter billede upload
@@ -551,7 +551,7 @@ async function likePost(postId) {
         console.log('Could not sync like to backend');
     }
     
-    renderPosts();
+    await renderPosts();
     
     // Genåbn comment sections der var åbne
     setTimeout(() => {
@@ -649,7 +649,7 @@ async function addComment(postId) {
     
     // Clear input og re-render
     inputField.value = '';
-    renderPosts();
+    await renderPosts();
     
     // Hold kommentar sektion åben
     const commentSection = document.getElementById(`comments-${postId}`);
@@ -686,7 +686,7 @@ function editPost(postId) {
 }
 
 // Gem redigeret opslag
-function savePost(postId) {
+async function savePost(postId) {
     const post = posts.find(p => p.id === postId);
     if (!post) return;
 
@@ -698,7 +698,7 @@ function savePost(postId) {
     }
 
     post.content = newContent;
-    renderPosts();
+    await renderPosts();
 }
 
 // Annuller redigering
@@ -723,7 +723,7 @@ async function deletePost(postId) {
             if (response.ok) {
                 // Backend sletning lykkedes - fjern fra lokal liste
                 posts = posts.filter(p => p.id !== postId);
-                renderPosts();
+                await renderPosts();
             } else {
                 alert('❌ Kunne ikke slette opslag - prøv igen');
             }
@@ -884,7 +884,7 @@ async function editComment(postId, commentIndex) {
             comment.content = newContent.trim();
         }
         
-        renderPosts();
+        await renderPosts();
         
         // Keep comment section open
         const commentSection = document.getElementById(`comments-${postId}`);
@@ -920,7 +920,7 @@ async function deleteComment(postId, commentIndex) {
             post.comments.splice(commentIndex, 1);
         }
         
-        renderPosts();
+        await renderPosts();
         
         // Keep comment section open
         const commentSection = document.getElementById(`comments-${postId}`);
