@@ -125,8 +125,7 @@ async function showPage(pageName, updateHash = true) {
     sessionStorage.setItem('currentPage', pageName);
     
     // Update URL hash (unless coming from hashchange event)
-    if (updateHash && !window.location.hash.startsWith('#/orders/')) {
-        // Don't overwrite workspace URLs
+    if (updateHash) {
         window.location.hash = pageName;
     }
     
