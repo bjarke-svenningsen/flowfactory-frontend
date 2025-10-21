@@ -191,13 +191,49 @@
             // Setup WebRTC event listeners
             setupSocketListeners();
             
-            // Get user media
+            // Get user media with fallbacks
+            let mediaObtained = false;
+            
             try {
+                // Try video + audio
                 localStream = await navigator.mediaDevices.getUserMedia({
                     video: true,
                     audio: true
                 });
-                
+                mediaObtained = true;
+                console.log('✅ Got video + audio');
+            } catch (e1) {
+                console.warn('Video+Audio failed:', e1);
+                try {
+                    // Try audio only
+                    localStream = await navigator.mediaDevices.getUserMedia({
+                        video: false,
+                        audio: true
+                    });
+                    mediaObtained = true;
+                    console.log('✅ Got audio only');
+                    alert('⚠️ Kunne ikke få adgang til kamera.\n\nFortsætter med kun lyd.');
+                } catch (e2) {
+                    console.warn('Audio failed:', e2);
+                    try {
+                        // Try video only
+                        localStream = await navigator.mediaDevices.getUserMedia({
+                            video: true,
+                            audio: false
+                        });
+                        mediaObtained = true;
+                        console.log('✅ Got video only');
+                        alert('⚠️ Kunne ikke få adgang til mikrofon.\n\nFortsætter med kun video.');
+                    } catch (e3) {
+                        console.error('No media devices available:', e3);
+                        alert('❌ Kunne ikke få adgang til kamera eller mikrofon.\n\nTjek at du har givet tilladelse i browser indstillinger.\n\nFor at løse dette:\n1. Tillad kamera/mikrofon på hovedsiden først\n2. Prøv derefter at starte opkaldet igen');
+                        window.close();
+                        return;
+                    }
+                }
+            }
+            
+            if (mediaObtained && localStream) {
                 // Show local video
                 const localVideo = document.getElementById('localVideo');
                 localVideo.style.display = 'block';
@@ -213,11 +249,6 @@
                 });
                 
                 videoSocket.emit('video:join-room', currentRoomId);
-                
-            } catch (error) {
-                console.error('Failed to get media:', error);
-                alert('Kunne ikke få adgang til kamera/mikrofon');
-                window.close();
             }
         }
         
