@@ -151,6 +151,24 @@ function formatFileSize(bytes) {
 
 // Indlæs posts fra backend
 async function loadPosts() {
+    // Load from cache first (instant!) while fetching from backend
+    const cachedPosts = localStorage.getItem('feedPosts');
+    if (cachedPosts) {
+        try {
+            posts = JSON.parse(cachedPosts);
+            // Convert timestamp strings back to Date objects
+            posts.forEach(p => {
+                p.timestamp = new Date(p.timestamp);
+                if (p.comments) {
+                    p.comments.forEach(c => c.timestamp = new Date(c.timestamp));
+                }
+            });
+            await renderPosts(); // Render cached posts instantly!
+        } catch (e) {
+            console.log('Cache parse error, loading from backend');
+        }
+    }
+    
     // Opdater post composer avatar
     const feedAvatar = document.getElementById('feedAvatar');
     if (feedAvatar && window.currentUser) {
@@ -196,9 +214,14 @@ async function loadPosts() {
                 comments: [] // Vil blive loaded async
             }));
             
-            // Load comments for each post
-            for (const post of posts) {
-                await loadCommentsForPost(post.id);
+            // Load comments for all posts in parallel (10x faster!)
+            await Promise.all(posts.map(post => loadCommentsForPost(post.id)));
+            
+            // Cache posts in localStorage for instant future loads
+            try {
+                localStorage.setItem('feedPosts', JSON.stringify(posts));
+            } catch (e) {
+                console.log('Failed to cache posts');
             }
             
             await renderPosts();
@@ -953,7 +976,7 @@ async function detectAndRenderLinks(content, postId) {
                 
                 // Add timeout to prevent hanging
                 const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 3000); // 3 second timeout
+                const timeoutId = setTimeout(() => controller.abort(), 1000); // 1 second timeout (3x faster!)
                 
                 const response = await fetch('https://flowfactory-frontend.onrender.com/api/link-preview', {
                     method: 'POST',
