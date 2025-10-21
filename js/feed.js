@@ -453,6 +453,15 @@ async function likePost(postId) {
     const post = posts.find(p => p.id === postId);
     if (!post) return;
 
+    // Gem hvilke comment sections der er åbne
+    const openCommentSections = [];
+    posts.forEach(p => {
+        const section = document.getElementById(`comments-${p.id}`);
+        if (section && section.style.display === 'block') {
+            openCommentSections.push(p.id);
+        }
+    });
+
     // Toggle like status
     if (!post.likedByUser) {
         post.likedByUser = true;
@@ -474,6 +483,14 @@ async function likePost(postId) {
     }
     
     renderPosts();
+    
+    // Genåbn comment sections der var åbne
+    setTimeout(() => {
+        openCommentSections.forEach(id => {
+            const section = document.getElementById(`comments-${id}`);
+            if (section) section.style.display = 'block';
+        });
+    }, 0);
 }
 
 // Del et post
