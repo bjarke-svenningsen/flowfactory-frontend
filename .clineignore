@@ -1,0 +1,16 @@
+node_modules/
+.git/
+dist/
+build/
+*.log
+temp-backend/
+uploads/
+netlify.toml
+_redirects
+.netlify/
+railway.json
+backend/breeze-portal-backend/uploads/
+backend/breeze-portal-backend/database-backups/
+*.db
+*.db-shm
+*.db-wal
