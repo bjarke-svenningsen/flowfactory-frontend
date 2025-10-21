@@ -2,6 +2,10 @@
 let posts = [];
 let currentAttachments = [];
 
+// Emoji picker state
+let feedEmojiPickerOpen = false;
+let currentCommentEmojiPicker = null;
+
 // Tilføj nyt post
 async function addPost() {
     const content = document.getElementById('postContent').value.trim();
@@ -171,8 +175,7 @@ async function loadPosts() {
     try {
         const token = sessionStorage.getItem('token');
         const response = await fetch('https://flowfactory-frontend.onrender.com/api/posts', {
-            headers:
-{
+            headers: {
                 'Authorization': `Bearer ${token}`
             }
         });
@@ -189,8 +192,15 @@ async function loadPosts() {
                 likedByUser: false, // Initialiser til false for alle posts
                 attachments: [],
                 avatar_url: p.avatar_url,
-                localPhoto: null
+                localPhoto: null,
+                comments: [] // Vil blive loaded async
             }));
+            
+            // Load comments for each post
+            for (const post of posts) {
+                await loadCommentsForPost(post.id);
+            }
+            
             renderPosts();
             return;
         }
@@ -200,6 +210,35 @@ async function loadPosts() {
     
     // Fallback: Hvis backend ikke virker, load demo posts
     loadDemoPosts();
+}
+
+// Load comments for a specific post from backend
+async function loadCommentsForPost(postId) {
+    try {
+        const token = sessionStorage.getItem('token');
+        const response = await fetch(`https://flowfactory-frontend.onrender.com/api/posts/${postId}/comments`, {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        
+        if (response.ok) {
+            const comments = await response.json();
+            const post = posts.find(p => p.id === postId);
+            if (post) {
+                post.comments = comments.map(c => ({
+                    id: c.id,
+                    author: c.author,
+                    content: c.content,
+                    timestamp: new Date(c.created_at + (c.created_at.includes('Z') ? '' : 'Z')),
+                    avatar_url: c.avatar_url,
+                    user_id: c.user_id
+                }));
+            }
+        }
+    } catch (error) {
+        console.log('Could not load comments for post', postId);
+    }
 }
 
 // Vis posts på feed
@@ -288,12 +327,13 @@ function renderPosts() {
             </div>
         ` : '';
         
-        // Render comments (Facebook-style)
+        // Render comments (Facebook-style) with edit/delete
         let commentsHTML = '';
         if (post.comments && post.comments.length > 0) {
-            commentsHTML = post.comments.map(comment => {
+            commentsHTML = post.comments.map((comment, commentIndex) => {
                 const commentInitials = comment.author.split(' ').map(n => n[0]).join('');
                 const commentTimeAgo = getTimeAgo(comment.timestamp);
+                const isOwnComment = comment.author === window.currentUser.name;
                 
                 // Comment avatar
                 let commentAvatarHTML;
@@ -306,15 +346,26 @@ function renderPosts() {
                     commentAvatarHTML = `<div class="comment-avatar">${commentInitials}</div>`;
                 }
                 
+                // Edit/delete buttons for own comments
+                const commentActionsHTML = isOwnComment ? `
+                    <div style="margin-left: 50px; margin-top: 4px; margin-bottom: 8px; display: flex; gap: 10px;">
+                        <button onclick="editComment(${post.id}, ${commentIndex})" style="background: none; border: none; color: #65676b; cursor: pointer; font-size: 12px; font-weight: 600;">✏️ Rediger</button>
+                        <button onclick="deleteComment(${post.id}, ${commentIndex})" style="background: none; border: none; color: #65676b; cursor: pointer; font-size: 12px; font-weight: 600;">🗑️ Slet</button>
+                        <span style="color: #65676b; font-size: 12px;">${commentTimeAgo}</span>
+                    </div>
+                ` : `
+                    <div style="margin-left: 50px; margin-bottom: 8px; font-size: 12px; color: #65676b;">${commentTimeAgo}</div>
+                `;
+                
                 return `
-                    <div class="comment-item" style="display: flex; gap: 10px; margin-bottom: 10px;">
+                    <div class="comment-item" style="display: flex; gap: 10px; margin-bottom: 4px;">
                         ${commentAvatarHTML}
                         <div style="flex: 1; background: #f0f2f5; padding: 8px 12px; border-radius: 18px;">
                             <div style="font-weight: 600; font-size: 13px; margin-bottom: 2px;">${comment.author}</div>
                             <div style="font-size: 14px; color: #050505;">${comment.content}</div>
                         </div>
                     </div>
-                    <div style="margin-left: 50px; margin-bottom: 8px; font-size: 12px; color: #65676b;">${commentTimeAgo}</div>
+                    ${commentActionsHTML}
                 `;
             }).join('');
         }
@@ -343,7 +394,8 @@ function renderPosts() {
                     </div>
                     ${optionsHTML}
                 </div>
-                <div class="post-content" id="content-${post.id}">${post.content}</div>
+                <div class="post-content" id="content-${post.id}">${linkifyContent(post.content)}</div>
+                ${detectAndRenderLinks(post.content)}
                 ${attachmentsHTML}
                 <div class="post-actions">
                     <button class="post-action-btn" onclick="likePost(${post.id})">👍 Synes godt om (${post.likes})</button>
@@ -352,17 +404,42 @@ function renderPosts() {
                 </div>
                 
                 <!-- Facebook-style comment section -->
-                <div id="comments-${post.id}" class="comments-section" style="display: none; padding: 15px; border-top: 1px solid #e4e6eb; background: #f7f8fa;">
+                <div id="comments-${post.id}" class="comments-section" style="display: none; padding: 15px; border-top: 1px solid #e4e6eb; background: #f7f8fa; position: relative;">
                     ${commentsHTML}
-                    <div style="display: flex; gap: 10px; align-items: center;">
+                    <div style="display: flex; gap: 10px; align-items: center; position: relative;">
                         ${currentUserAvatarHTML}
-                        <input 
-                            type="text" 
-                            id="comment-input-${post.id}" 
-                            placeholder="Skriv en kommentar..." 
-                            onkeypress="handleCommentKeyPress(event, ${post.id})"
-                            style="flex: 1; padding: 8px 12px; border: 1px solid #ccc; border-radius: 18px; font-size: 14px; outline: none;"
-                        >
+                        <div style="flex: 1; position: relative;">
+                            <input 
+                                type="text" 
+                                id="comment-input-${post.id}" 
+                                placeholder="Skriv en kommentar..." 
+                                onkeypress="handleCommentKeyPress(event, ${post.id})"
+                                style="width: 100%; padding: 8px 40px 8px 12px; border: 1px solid #ccc; border-radius: 18px; font-size: 14px; outline: none;"
+                            >
+                            <button onclick="toggleCommentEmojiPicker(${post.id})" style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; font-size: 18px; padding: 4px;">😊</button>
+                            
+                            <!-- Emoji picker for comment -->
+                            <div id="comment-emoji-picker-${post.id}" class="emoji-picker" style="display: none; position: absolute; bottom: 45px; right: 0; background: white; border: 1px solid #ccc; border-radius: 8px; padding: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.15); z-index: 1000;">
+                                <div class="emoji-grid" style="display: grid; grid-template-columns: repeat(8, 1fr); gap: 5px;">
+                                    <span class="emoji-item" onclick="insertCommentEmoji(${post.id}, '😊')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">😊</span>
+                                    <span class="emoji-item" onclick="insertCommentEmoji(${post.id}, '😂')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">😂</span>
+                                    <span class="emoji-item" onclick="insertCommentEmoji(${post.id}, '❤️')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">❤️</span>
+                                    <span class="emoji-item" onclick="insertCommentEmoji(${post.id}, '👍')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">👍</span>
+                                    <span class="emoji-item" onclick="insertCommentEmoji(${post.id}, '👎')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">👎</span>
+                                    <span class="emoji-item" onclick="insertCommentEmoji(${post.id}, '🔥')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">🔥</span>
+                                    <span class="emoji-item" onclick="insertCommentEmoji(${post.id}, '🎉')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">🎉</span>
+                                    <span class="emoji-item" onclick="insertCommentEmoji(${post.id}, '😎')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">😎</span>
+                                    <span class="emoji-item" onclick="insertCommentEmoji(${post.id}, '🤔')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">🤔</span>
+                                    <span class="emoji-item" onclick="insertCommentEmoji(${post.id}, '😢')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">😢</span>
+                                    <span class="emoji-item" onclick="insertCommentEmoji(${post.id}, '😡')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">😡</span>
+                                    <span class="emoji-item" onclick="insertCommentEmoji(${post.id}, '👋')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">👋</span>
+                                    <span class="emoji-item" onclick="insertCommentEmoji(${post.id}, '✅')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">✅</span>
+                                    <span class="emoji-item" onclick="insertCommentEmoji(${post.id}, '❌')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">❌</span>
+                                    <span class="emoji-item" onclick="insertCommentEmoji(${post.id}, '⚠️')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">⚠️</span>
+                                    <span class="emoji-item" onclick="insertCommentEmoji(${post.id}, '💪')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">💪</span>
+                                </div>
+                            </div>
+                        </div>
                         <button onclick="addComment(${post.id})" style="padding: 8px 16px; background: #667eea; color: white; border: none; border-radius: 18px; cursor: pointer; font-weight: 600;">Post</button>
                     </div>
                 </div>
@@ -432,7 +509,7 @@ function commentOnPost(postId) {
 }
 
 // Tilføj kommentar til post
-function addComment(postId) {
+async function addComment(postId) {
     const inputField = document.getElementById(`comment-input-${postId}`);
     if (!inputField) return;
     
@@ -442,19 +519,47 @@ function addComment(postId) {
     const post = posts.find(p => p.id === postId);
     if (!post) return;
     
-    // Initialiser comments array hvis den ikke findes
-    if (!post.comments) {
-        post.comments = [];
+    // Gem til backend
+    try {
+        const token = sessionStorage.getItem('token');
+        const response = await fetch(`https://flowfactory-frontend.onrender.com/api/posts/${postId}/comments`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ content: comment })
+        });
+        
+        if (response.ok) {
+            const newComment = await response.json();
+            // Initialiser comments array hvis den ikke findes
+            if (!post.comments) {
+                post.comments = [];
+            }
+            
+            // Tilføj kommentar fra backend response
+            post.comments.push({
+                id: newComment.id,
+                author: newComment.author,
+                content: newComment.content,
+                timestamp: new Date(newComment.created_at + (newComment.created_at.includes('Z') ? '' : 'Z')),
+                avatar_url: newComment.avatar_url,
+                user_id: newComment.user_id
+            });
+        }
+    } catch (error) {
+        console.error('Failed to add comment to backend:', error);
+        // Fallback: add locally
+        if (!post.comments) post.comments = [];
+        post.comments.push({
+            author: window.currentUser.name,
+            content: comment,
+            timestamp: new Date(),
+            avatar_url: window.currentUser.profile_image || null,
+            localPhoto: window.currentUser.profilePhoto || null
+        });
     }
-    
-    // Tilføj kommentar
-    post.comments.push({
-        author: window.currentUser.name,
-        content: comment,
-        timestamp: new Date(),
-        avatar_url: window.currentUser.profile_image || null,
-        localPhoto: window.currentUser.profilePhoto || null
-    });
     
     // Clear input og re-render
     inputField.value = '';
@@ -605,6 +710,173 @@ function openImageModal(imageSrc) {
 // Luk billede modal
 function closeImageModal() {
     document.getElementById('imageModal').style.display = 'none';
+}
+
+// Toggle emoji picker for post composer
+function toggleFeedEmojiPicker() {
+    const picker = document.getElementById('feedEmojiPicker');
+    if (!picker) return;
+    
+    feedEmojiPickerOpen = !feedEmojiPickerOpen;
+    picker.style.display = feedEmojiPickerOpen ? 'block' : 'none';
+}
+
+// Insert emoji into post composer
+function insertFeedEmoji(emoji) {
+    const input = document.getElementById('postContent');
+    if (!input) return;
+    
+    input.value += emoji;
+    input.focus();
+    
+    // Close picker
+    const picker = document.getElementById('feedEmojiPicker');
+    if (picker) picker.style.display = 'none';
+    feedEmojiPickerOpen = false;
+}
+
+// Toggle emoji picker for comment
+function toggleCommentEmojiPicker(postId) {
+    const picker = document.getElementById(`comment-emoji-picker-${postId}`);
+    if (!picker) return;
+    
+    // Close other pickers
+    if (currentCommentEmojiPicker && currentCommentEmojiPicker !== postId) {
+        const oldPicker = document.getElementById(`comment-emoji-picker-${currentCommentEmojiPicker}`);
+        if (oldPicker) oldPicker.style.display = 'none';
+    }
+    
+    // Toggle current picker
+    const isOpen = picker.style.display === 'block';
+    picker.style.display = isOpen ? 'none' : 'block';
+    currentCommentEmojiPicker = isOpen ? null : postId;
+}
+
+// Insert emoji into comment
+function insertCommentEmoji(postId, emoji) {
+    const input = document.getElementById(`comment-input-${postId}`);
+    if (!input) return;
+    
+    input.value += emoji;
+    input.focus();
+    
+    // Close picker
+    const picker = document.getElementById(`comment-emoji-picker-${postId}`);
+    if (picker) picker.style.display = 'none';
+    currentCommentEmojiPicker = null;
+}
+
+// Edit comment
+async function editComment(postId, commentIndex) {
+    const post = posts.find(p => p.id === postId);
+    if (!post || !post.comments || !post.comments[commentIndex]) return;
+    
+    const comment = post.comments[commentIndex];
+    if (comment.author !== window.currentUser.name) return;
+    
+    const newContent = prompt('Rediger kommentar:', comment.content);
+    if (newContent && newContent.trim()) {
+        // Update in backend
+        try {
+            const token = sessionStorage.getItem('token');
+            const response = await fetch(`https://flowfactory-frontend.onrender.com/api/posts/${postId}/comments/${comment.id}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ content: newContent.trim() })
+            });
+            
+            if (response.ok) {
+                const updated = await response.json();
+                comment.content = updated.content;
+            }
+        } catch (error) {
+            console.error('Failed to update comment:', error);
+            // Fallback: update locally
+            comment.content = newContent.trim();
+        }
+        
+        renderPosts();
+        
+        // Keep comment section open
+        const commentSection = document.getElementById(`comments-${postId}`);
+        if (commentSection) commentSection.style.display = 'block';
+    }
+}
+
+// Delete comment
+async function deleteComment(postId, commentIndex) {
+    const post = posts.find(p => p.id === postId);
+    if (!post || !post.comments || !post.comments[commentIndex]) return;
+    
+    const comment = post.comments[commentIndex];
+    if (comment.author !== window.currentUser.name) return;
+    
+    if (confirm('Er du sikker på at du vil slette denne kommentar?')) {
+        // Delete from backend
+        try {
+            const token = sessionStorage.getItem('token');
+            const response = await fetch(`https://flowfactory-frontend.onrender.com/api/posts/${postId}/comments/${comment.id}`, {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+            
+            if (response.ok) {
+                post.comments.splice(commentIndex, 1);
+            }
+        } catch (error) {
+            console.error('Failed to delete comment:', error);
+            // Fallback: delete locally
+            post.comments.splice(commentIndex, 1);
+        }
+        
+        renderPosts();
+        
+        // Keep comment section open
+        const commentSection = document.getElementById(`comments-${postId}`);
+        if (commentSection) commentSection.style.display = 'block';
+    }
+}
+
+// Detect URLs and create link previews
+function detectAndRenderLinks(content) {
+    const urlRegex = /(https?:\/\/[^\s]+)/g;
+    const urls = content.match(urlRegex);
+    
+    if (!urls || urls.length === 0) return '';
+    
+    // Create preview cards for detected URLs
+    return urls.map(url => {
+        // Extract domain for preview
+        let domain = '';
+        try {
+            domain = new URL(url).hostname.replace('www.', '');
+        } catch (e) {
+            domain = url;
+        }
+        
+        return `
+            <div class="link-preview-card" style="border: 1px solid #e4e6eb; border-radius: 8px; overflow: hidden; margin-top: 10px; max-width: 500px;">
+                <div style="padding: 12px; background: #f7f8fa;">
+                    <div style="font-size: 12px; color: #65676b; text-transform: uppercase; margin-bottom: 4px;">${domain}</div>
+                    <a href="${url}" target="_blank" rel="noopener noreferrer" style="color: #1877f2; text-decoration: none; font-weight: 600; display: block; margin-bottom: 4px;">
+                        ${url.length > 60 ? url.substring(0, 60) + '...' : url}
+                    </a>
+                    <div style="font-size: 12px; color: #65676b;">Klik for at åbne link</div>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+// Make URLs clickable in text content
+function linkifyContent(content) {
+    const urlRegex = /(https?:\/\/[^\s]+)/g;
+    return content.replace(urlRegex, '<a href="$1" target="_blank" rel="noopener noreferrer" style="color: #1877f2;">$1</a>');
 }
 
 // Start loading af posts når siden loader

@@ -1552,3 +1552,21 @@ body {
 .comment-post-btn:hover {
     opacity: 0.9;
 }
+
+/* Enhanced emoji picker styling for feed */
+.emoji-item {
+    transition: background 0.2s, transform 0.1s;
+}
+
+.emoji-item:active {
+    transform: scale(1.1);
+}
+
+/* Link preview cards */
+.link-preview-card {
+    transition: box-shadow 0.2s;
+}
+
+.link-preview-card:hover {
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
