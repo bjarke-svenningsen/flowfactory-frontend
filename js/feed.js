@@ -933,46 +933,55 @@ const linkPreviewCache = new Map();
 
 // Detect URLs and fetch link previews from backend
 async function detectAndRenderLinks(content, postId) {
-    const urlRegex = /(https?:\/\/[^\s]+)/g;
-    const urls = content.match(urlRegex);
-    
-    if (!urls || urls.length === 0) return '';
-    
-    // Fetch previews for each URL
-    const previewPromises = urls.map(async (url) => {
-        // Check cache first
-        if (linkPreviewCache.has(url)) {
-            return linkPreviewCache.get(url);
-        }
+    try {
+        const urlRegex = /(https?:\/\/[^\s]+)/g;
+        const urls = content.match(urlRegex);
         
-        try {
-            const token = sessionStorage.getItem('token');
-            const response = await fetch('https://flowfactory-frontend.onrender.com/api/link-preview', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
-                body: JSON.stringify({ url })
-            });
-            
-            if (response.ok) {
-                const preview = await response.json();
-                linkPreviewCache.set(url, preview);
-                return preview;
+        if (!urls || urls.length === 0) return '';
+        
+        // Fetch previews for each URL with timeout
+        const previewPromises = urls.map(async (url) => {
+            // Check cache first
+            if (linkPreviewCache.has(url)) {
+                return linkPreviewCache.get(url);
             }
-        } catch (error) {
-            console.error('Link preview error:', error);
-        }
+            
+            try {
+                const token = sessionStorage.getItem('token');
+                
+                // Add timeout to prevent hanging
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 3000); // 3 second timeout
+                
+                const response = await fetch('https://flowfactory-frontend.onrender.com/api/link-preview', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ url }),
+                    signal: controller.signal
+                });
+                
+                clearTimeout(timeoutId);
+                
+                if (response.ok) {
+                    const preview = await response.json();
+                    linkPreviewCache.set(url, preview);
+                    return preview;
+                }
+            } catch (error) {
+                console.log('Link preview skipped for:', url);
+            }
+            
+            // Fallback: basic preview
+            return { url, title: url, description: '', image: '', siteName: '' };
+        });
         
-        // Fallback: basic preview
-        return { url, title: url, description: '', image: '', siteName: '' };
-    });
-    
-    const previews = await Promise.all(previewPromises);
-    
-    // Render preview cards
-    return previews.map(preview => {
+        const previews = await Promise.all(previewPromises);
+        
+        // Render preview cards
+        return previews.map(preview => {
         const domain = preview.siteName || (preview.url ? new URL(preview.url).hostname.replace('www.', '') : '');
         const title = preview.title || preview.url;
         const description = preview.description || '';
@@ -994,7 +1003,11 @@ async function detectAndRenderLinks(content, postId) {
                 </div>
             </a>
         `;
-    }).join('');
+        }).join('');
+    } catch (error) {
+        console.error('detectAndRenderLinks error:', error);
+        return ''; // Return empty string if anything fails
+    }
 }
 
 // Make URLs clickable in text content
