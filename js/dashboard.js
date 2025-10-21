@@ -116,6 +116,11 @@ function logout() {
 }
 
 async function showPage(pageName, updateHash = true) {
+    // Redirect videocall to chat (after removing videocall page)
+    if (pageName === 'videocall') {
+        pageName = 'chat';
+    }
+    
     // Save current page to remember after refresh
     sessionStorage.setItem('currentPage', pageName);
     
