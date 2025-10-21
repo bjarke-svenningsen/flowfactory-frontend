@@ -1,7 +1,7 @@
 // Breeze Portal Service Worker
 // Provides offline caching and PWA functionality
 
-const CACHE_NAME = 'breeze-portal-v1';
+const CACHE_NAME = 'breeze-portal-v2';
 const urlsToCache = [
   '/flowfactory-frontend/',
   '/flowfactory-frontend/dashboard.html',
