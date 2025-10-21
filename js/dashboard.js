@@ -125,8 +125,9 @@ async function showPage(pageName, updateHash = true) {
     sessionStorage.setItem('currentPage', pageName);
     
     // Update URL hash (unless coming from hashchange event)
+    // Use replaceState to avoid triggering hashchange event (which would cause double-load)
     if (updateHash) {
-        window.location.hash = pageName;
+        history.replaceState(null, '', '#' + pageName);
     }
     
     // Toggle email-mode class for wider layout on email page
