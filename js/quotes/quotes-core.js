@@ -827,8 +827,9 @@ async function rejectQuote(quoteId) {
 function switchOrderTab(tab) {
     currentOrderTab = tab;
     
-    // BUG FIX: Update URL hash to preserve tab on refresh
-    window.location.hash = `quotes/${tab}`;
+    // Update URL hash to preserve tab on refresh
+    // Use replaceState to avoid triggering hashchange event (which would cause double-load)
+    history.replaceState(null, '', `#quotes/${tab}`);
     
     // ALWAYS hide all sub-views when switching tabs
     // Guard: Check if elements exist (might not be loaded yet)
