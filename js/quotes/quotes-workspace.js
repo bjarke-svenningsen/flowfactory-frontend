@@ -1646,22 +1646,37 @@ async function saveOrderDetails() {
 // Restore workspace from URL hash on page load
 function restoreWorkspaceFromURL() {
     const hash = window.location.hash;
-    // Check if URL is #/orders/{id}/workspace
+    
+    // ONLY restore workspace if hash matches workspace pattern
+    // Don't interfere with normal page navigation (e.g., #files, #chat, etc.)
     const match = hash.match(/^#\/orders\/(\d+)\/workspace$/);
     if (match) {
         const orderId = parseInt(match[1]);
         console.log('Restoring workspace for order:', orderId);
         openOrderWorkspace(orderId);
     }
+    // If hash doesn't match workspace pattern, do nothing (let dashboard.js handle it)
 }
 
-// Call on page load (after DOM is ready)
+// Call on page load ONLY if we have a workspace URL
+// This prevents interfering with other pages
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => {
-        setTimeout(restoreWorkspaceFromURL, 100); // Small delay to ensure other scripts loaded
+        const hash = window.location.hash;
+        
+        // ONLY restore if hash is EXPLICITLY a workspace URL
+        // Don't restore based on currentPage to avoid interfering with other pages
+        if (hash.startsWith('#/orders/') && hash.includes('/workspace')) {
+            setTimeout(restoreWorkspaceFromURL, 100);
+        }
     });
 } else {
-    setTimeout(restoreWorkspaceFromURL, 100);
+    const hash = window.location.hash;
+    
+    // ONLY restore if hash is EXPLICITLY a workspace URL
+    if (hash.startsWith('#/orders/') && hash.includes('/workspace')) {
+        setTimeout(restoreWorkspaceFromURL, 100);
+    }
 }
 
 // Helper function to get status badge HTML
