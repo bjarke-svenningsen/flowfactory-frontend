@@ -16,7 +16,7 @@ form.addEventListener('submit', async (e) => {
   try {
     const { user, token } = await Auth.login(emailEl.value.trim(), passEl.value);
     sessionStorage.setItem('token', token);
-    sessionStorage.setItem('user', JSON.stringify(user)); // Changed from 'currentUser' to 'user'
+    sessionStorage.setItem('currentUser', JSON.stringify(user)); // Must be 'currentUser' for dashboard.js
     
     msgEl.textContent = 'Login succesfuldt! Omdirigerer...';
     msgEl.className = 'message success';
