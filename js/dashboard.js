@@ -16,24 +16,26 @@ window.onload = function() {
         if (hash.startsWith('#/orders/')) {
             // Workspace or orders-related hash - load quotes page
             initialPage = 'quotes';
+            showPage(initialPage, false); // Don't update hash - preserve workspace URL
         } else if (hash.startsWith('#quotes/')) {
             // Quotes tab hash (e.g., #quotes/orders) - load quotes page
             initialPage = 'quotes';
+            showPage(initialPage, false); // Don't update hash - preserve tab hash
         } else {
             // Simple hash like #feed or #quotes
             const pageName = hash.substring(1);
             if (pageName) {
                 initialPage = pageName;
             }
+            showPage(initialPage); // Update hash normally
         }
     } else {
         // No hash - use sessionStorage or default
         initialPage = sessionStorage.getItem('currentPage') || 'feed';
         // Set initial hash
         window.location.hash = initialPage;
+        showPage(initialPage);
     }
-    
-    showPage(initialPage);
     
     // Load admin data if admin
     if (window.currentUser && window.currentUser.is_admin) {
