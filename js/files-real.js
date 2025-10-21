@@ -841,7 +841,10 @@ async function transferToOrder() {
     if (!file) return;
     
     const orderNumber = prompt(`Overfør "${file.original_name}" til ordre:\n\nIndtast ordrenummer:`);
-    if (!orderNumber || !orderNumber.trim()) return;
+    if (!orderNumber || !orderNumber.trim()) {
+        alert('❌ Ordre nummer er påkrævet!\n\nDu skal indtaste et ordre nummer for at overføre filen.');
+        return;
+    }
     
     try {
         const token = sessionStorage.getItem('token');

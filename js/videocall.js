@@ -372,6 +372,8 @@ function removeVideoElement(socketId) {
     
     // Show placeholder if no more remote videos
     const mainVideo = document.getElementById('mainVideo');
+    if (!mainVideo) return; // Prevent null reference if not on videocall page
+    
     if (mainVideo.querySelectorAll('video').length === 0) {
         const placeholder = document.getElementById('callPlaceholder');
         if (placeholder) {
