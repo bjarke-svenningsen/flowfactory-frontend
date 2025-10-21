@@ -39,7 +39,16 @@ app.use(cors({
     // Allow requests with no origin (like mobile apps, Postman, etc.)
     if (!origin) return callback(null, true);
     
-    if (allowedOrigins.includes(origin)) {
+    // Check if origin matches any allowed origin (including GitHub Pages)
+    const isAllowed = allowedOrigins.some(allowed => {
+      // Exact match
+      if (origin === allowed) return true;
+      // Check if origin starts with GitHub Pages domain
+      if (origin.startsWith('https://bjarke-svenningsen.github.io')) return true;
+      return false;
+    });
+    
+    if (isAllowed) {
       callback(null, true);
     } else {
       console.warn('CORS blocked origin:', origin);
