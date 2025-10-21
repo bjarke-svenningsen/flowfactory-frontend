@@ -60,6 +60,15 @@ export async function initializeDatabase() {
       UNIQUE(post_id, user_id)${db._isProduction ? '' : ',\n  FOREIGN KEY(post_id) REFERENCES posts(id),\n  FOREIGN KEY(user_id) REFERENCES users(id)'}
     )`);
 
+    // Comments (for posts)
+    await db.run(`CREATE TABLE IF NOT EXISTS comments (
+      id ${db._isProduction ? 'SERIAL' : 'INTEGER'} PRIMARY KEY ${db._isProduction ? '' : 'AUTOINCREMENT'},
+      post_id INTEGER NOT NULL,
+      user_id INTEGER NOT NULL,
+      content TEXT NOT NULL,
+      created_at ${db._isProduction ? 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP' : "TEXT DEFAULT (datetime('now'))"}${db._isProduction ? '' : ',\n  FOREIGN KEY(post_id) REFERENCES posts(id) ON DELETE CASCADE,\n  FOREIGN KEY(user_id) REFERENCES users(id)'}
+    )`);
+
     // Messages
     await db.run(`CREATE TABLE IF NOT EXISTS messages (
       id ${db._isProduction ? 'SERIAL' : 'INTEGER'} PRIMARY KEY ${db._isProduction ? '' : 'AUTOINCREMENT'},

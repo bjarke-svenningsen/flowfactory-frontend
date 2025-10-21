@@ -354,10 +354,102 @@ app.delete('/api/posts/:id', auth, async (req, res) => {
     return res.status(403).json({ error: 'Permission denied' });
   }
   
-  // Delete post (reactions will be cascade deleted if foreign key constraints are set)
+  // Delete post (reactions and comments will be cascade deleted if foreign key constraints are set)
   await db.run('DELETE FROM reactions WHERE post_id = ?', [postId]);
+  await db.run('DELETE FROM comments WHERE post_id = ?', [postId]);
   await db.run('DELETE FROM posts WHERE id = ?', [postId]);
   
+  res.json({ success: true });
+});
+
+// --- COMMENTS ENDPOINTS ---
+
+// Get comments for a post
+app.get('/api/posts/:id/comments', auth, async (req, res) => {
+  const postId = Number(req.params.id);
+  
+  const comments = await db.all(`
+    SELECT c.id, c.content, c.created_at, c.user_id,
+           u.name as author, u.profile_image as avatar_url
+    FROM comments c
+    JOIN users u ON c.user_id = u.id
+    WHERE c.post_id = ?
+    ORDER BY c.created_at ASC
+  `, [postId]);
+  
+  res.json(comments);
+});
+
+// Add comment to post
+app.post('/api/posts/:id/comments', auth, async (req, res) => {
+  const postId = Number(req.params.id);
+  const { content } = req.body;
+  
+  if (!content || !content.trim()) {
+    return res.status(400).json({ error: 'Comment content required' });
+  }
+  
+  const info = await db.run(`
+    INSERT INTO comments (post_id, user_id, content)
+    VALUES (?, ?, ?)
+  `, [postId, req.user.id, content.trim()]);
+  
+  const comment = await db.get(`
+    SELECT c.id, c.content, c.created_at, c.user_id,
+           u.name as author, u.profile_image as avatar_url
+    FROM comments c
+    JOIN users u ON c.user_id = u.id
+    WHERE c.id = ?
+  `, [info.lastInsertRowid]);
+  
+  res.json(comment);
+});
+
+// Edit comment
+app.put('/api/posts/:postId/comments/:commentId', auth, async (req, res) => {
+  const commentId = Number(req.params.commentId);
+  const { content } = req.body;
+  
+  if (!content || !content.trim()) {
+    return res.status(400).json({ error: 'Comment content required' });
+  }
+  
+  const comment = await db.get('SELECT * FROM comments WHERE id = ?', [commentId]);
+  if (!comment) {
+    return res.status(404).json({ error: 'Comment not found' });
+  }
+  
+  if (comment.user_id !== req.user.id) {
+    return res.status(403).json({ error: 'Permission denied' });
+  }
+  
+  await db.run('UPDATE comments SET content = ? WHERE id = ?', [content.trim(), commentId]);
+  
+  const updated = await db.get(`
+    SELECT c.id, c.content, c.created_at, c.user_id,
+           u.name as author, u.profile_image as avatar_url
+    FROM comments c
+    JOIN users u ON c.user_id = u.id
+    WHERE c.id = ?
+  `, [commentId]);
+  
+  res.json(updated);
+});
+
+// Delete comment
+app.delete('/api/posts/:postId/comments/:commentId', auth, async (req, res) => {
+  const commentId = Number(req.params.commentId);
+  
+  const comment = await db.get('SELECT * FROM comments WHERE id = ?', [commentId]);
+  if (!comment) {
+    return res.status(404).json({ error: 'Comment not found' });
+  }
+  
+  if (comment.user_id !== req.user.id) {
+    return res.status(403).json({ error: 'Permission denied' });
+  }
+  
+  await db.run('DELETE FROM comments WHERE id = ?', [commentId]);
   res.json({ success: true });
 });
 
