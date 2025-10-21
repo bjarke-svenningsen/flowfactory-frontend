@@ -58,6 +58,35 @@
         <img id="modalImage" src="" alt="">
     </div>
 
+    <!-- Floating Video Call Overlay (Discord/Teams style) -->
+    <div class="floating-video-call" id="floatingVideoCall">
+        <div class="floating-video-header" id="floatingVideoHeader">
+            <h4 id="floatingCallTitle">Videoopkald</h4>
+            <div class="floating-video-header-buttons">
+                <button onclick="toggleFloatingMinimize()" title="Minimer">−</button>
+                <button onclick="endFloatingCall()" title="Luk">×</button>
+            </div>
+        </div>
+        
+        <div class="floating-video-body" id="floatingVideoBody">
+            <div class="floating-video-placeholder" id="floatingPlaceholder">
+                <div class="initials">📹</div>
+                <p>Forbinder...</p>
+            </div>
+        </div>
+        
+        <div class="floating-local-video" id="floatingLocalVideo" style="display: none;">
+            <video autoplay muted playsinline></video>
+        </div>
+        
+        <div class="floating-video-controls">
+            <button class="floating-control-btn floating-mic-btn" id="floatingMicBtn" onclick="toggleFloatingMic()" title="Mikrofon">🎤</button>
+            <button class="floating-control-btn floating-cam-btn" id="floatingCamBtn" onclick="toggleFloatingCam()" title="Kamera">📹</button>
+            <button class="floating-control-btn floating-share-btn" id="floatingShareBtn" onclick="floatingShareScreen()" title="Del skærm">🖥️</button>
+            <button class="floating-control-btn floating-end-btn" onclick="endFloatingCall()" title="Læg på">📞</button>
+        </div>
+    </div>
+
     <!-- Windows Style Dialog -->
     <div class="windows-dialog-overlay" id="windowsDialogOverlay"></div>
     <div class="windows-dialog" id="windowsDialog">

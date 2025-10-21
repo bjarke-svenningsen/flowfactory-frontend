@@ -267,10 +267,29 @@ async function createPeerConnection(socketId, isInitiator) {
     
     pc.ontrack = (event) => {
         console.log('🎥 RECEIVED TRACK:', event.track.kind, event.track.id);
-        console.log('Track label:', event.track.label);
-        console.log('Event stream tracks:', event.streams[0].getTracks().map(t => `${t.kind}: ${t.label}`));
         
-        const remoteVideo = document.getElementById('remoteVideo-' + socketId) || createVideoElement(socketId);
+        // Stop ringtone when first track arrives
+        stopRingtone();
+        
+        // Create or get remote video element in floating overlay
+        const floatingBody = document.getElementById('floatingVideoBody');
+        let remoteVideo = document.getElementById('floatingRemoteVideo');
+        
+        if (!remoteVideo) {
+            // Remove placeholder
+            const placeholder = document.getElementById('floatingPlaceholder');
+            if (placeholder) placeholder.style.display = 'none';
+            
+            // Create remote video element
+            remoteVideo = document.createElement('video');
+            remoteVideo.id = 'floatingRemoteVideo';
+            remoteVideo.autoplay = true;
+            remoteVideo.playsInline = true;
+            remoteVideo.style.width = '100%';
+            remoteVideo.style.height = '100%';
+            remoteVideo.style.objectFit = 'cover';
+            floatingBody.appendChild(remoteVideo);
+        }
         
         // Initialize accumulated stream if needed
         if (!accumulatedStream) {
@@ -282,21 +301,20 @@ async function createPeerConnection(socketId, isInitiator) {
         const existingTrack = accumulatedStream.getTracks().find(t => t.id === event.track.id);
         if (!existingTrack) {
             accumulatedStream.addTrack(event.track);
-            console.log(`✅ Added ${event.track.kind} track to accumulated stream. Total tracks: ${accumulatedStream.getTracks().length}`);
+            console.log(`✅ Added ${event.track.kind} track. Total: ${accumulatedStream.getTracks().length}`);
         }
         
-        // Clear previous play timeout to prevent interruption
+        // Clear previous play timeout
         if (playTimeout) clearTimeout(playTimeout);
         
-        // Debounce play() call to wait for all tracks to arrive
+        // Debounce play() call
         playTimeout = setTimeout(() => {
-            console.log(`📺 Playing stream with ${accumulatedStream.getTracks().length} tracks:`, accumulatedStream.getTracks().map(t => t.kind));
             remoteVideo.play().then(() => {
-                console.log('✅ Remote video playing');
+                console.log('✅ Remote video playing in floating overlay');
             }).catch(err => {
                 console.error('❌ Play error:', err);
             });
-        }, 300); // Wait 300ms for all tracks
+        }, 300);
     };
     
     // ICE candidates
@@ -390,46 +408,137 @@ function removeVideoElement(socketId) {
     }
 }
 
-// Start video call - Opens popup window (Facebook style)
+// Start video call - Shows floating overlay (Discord/Teams style)
 async function startVideoCall(colleagueId, colleagueName) {
     try {
-        // Get token for popup window
-        const token = sessionStorage.getItem('token');
-        if (!token) {
-            alert('Du skal være logget ind for at starte et opkald');
-            return;
+        // Show floating overlay
+        const floatingCall = document.getElementById('floatingVideoCall');
+        floatingCall.style.display = 'flex';
+        
+        // Update title
+        document.getElementById('floatingCallTitle').textContent = `Opkald med ${colleagueName}`;
+        
+        // Get user media with fallbacks
+        let mediaObtained = false;
+        
+        try {
+            // Try video + audio
+            localStream = await navigator.mediaDevices.getUserMedia({
+                video: true,
+                audio: true
+            });
+            mediaObtained = true;
+            console.log('✅ Got video + audio');
+        } catch (e1) {
+            console.warn('Video+Audio failed:', e1);
+            try {
+                // Try audio only
+                localStream = await navigator.mediaDevices.getUserMedia({
+                    video: false,
+                    audio: true
+                });
+                mediaObtained = true;
+                console.log('✅ Got audio only');
+                alert('⚠️ Kunne ikke få adgang til kamera.\n\nFortsætter med kun lyd.');
+            } catch (e2) {
+                console.warn('Audio failed:', e2);
+                try {
+                    // Try video only
+                    localStream = await navigator.mediaDevices.getUserMedia({
+                        video: true,
+                        audio: false
+                    });
+                    mediaObtained = true;
+                    console.log('✅ Got video only');
+                    alert('⚠️ Kunne ikke få adgang til mikrofon.\n\nFortsætter med kun video.');
+                } catch (e3) {
+                    console.error('No media devices available:', e3);
+                    alert('❌ Kunne ikke få adgang til kamera eller mikrofon.\n\nTjek at du har givet tilladelse i browser indstillinger.');
+                    floatingCall.style.display = 'none';
+                    return;
+                }
+            }
         }
         
-        // Build popup URL with parameters
-        const popupUrl = `videocall-popup.html?id=${colleagueId}&name=${encodeURIComponent(colleagueName)}&token=${encodeURIComponent(token)}`;
-        
-        // Calculate screen position (top-right corner)
-        const width = 600;
-        const height = 700;
-        const left = window.screen.width - width - 50;
-        const top = 50;
-        
-        // Open popup window
-        const popup = window.open(
-            popupUrl,
-            `videocall_${colleagueId}`,
-            `width=${width},height=${height},left=${left},top=${top},resizable=yes,scrollbars=no,status=no,location=no,toolbar=no,menubar=no`
-        );
-        
-        if (!popup) {
-            alert('⚠️ Popup blev blokeret af din browser.\n\nTillad popups for denne side og prøv igen.');
-            return;
+        if (mediaObtained && localStream) {
+            // Show local video
+            const localVideo = document.getElementById('floatingLocalVideo');
+            localVideo.style.display = 'block';
+            localVideo.querySelector('video').srcObject = localStream;
+            
+            // Update placeholder
+            const placeholder = document.getElementById('floatingPlaceholder');
+            const initials = colleagueName.split(' ').map(n => n[0]).join('');
+            placeholder.innerHTML = `<div class="initials">${initials}</div><p>Ringer til ${colleagueName}...</p>`;
+            
+            // Setup call
+            currentRoomId = `call-${colleagueId}`;
+            currentCall = { id: colleagueId, name: colleagueName };
+            
+            // Play ringtone
+            playRingtone();
+            
+            // Start call via Socket.IO
+            videoSocket.emit('video:call-user', { 
+                targetUserId: colleagueId, 
+                roomId: currentRoomId 
+            });
+            
+            videoSocket.emit('video:join-room', currentRoomId);
+            
+            console.log(`Started floating video call with ${colleagueName}`);
         }
-        
-        // Focus the popup
-        popup.focus();
-        
-        console.log(`Opened video call popup for ${colleagueName}`);
         
     } catch (error) {
-        console.error('Error opening video call:', error);
-        alert('Kunne ikke åbne video opkald: ' + error.message);
+        console.error('Error starting call:', error);
+        alert('Kunne ikke starte opkald: ' + error.message);
+        document.getElementById('floatingVideoCall').style.display = 'none';
     }
+}
+
+// Toggle floating minimize
+function toggleFloatingMinimize() {
+    const floatingCall = document.getElementById('floatingVideoCall');
+    floatingCall.classList.toggle('minimized');
+}
+
+// Toggle floating mic
+function toggleFloatingMic() {
+    toggleMicrophone();
+    const btn = document.getElementById('floatingMicBtn');
+    if (microphoneEnabled) {
+        btn.classList.remove('muted');
+    } else {
+        btn.classList.add('muted');
+    }
+}
+
+// Toggle floating camera
+function toggleFloatingCam() {
+    toggleCamera();
+    const btn = document.getElementById('floatingCamBtn');
+    if (cameraEnabled) {
+        btn.classList.remove('off');
+    } else {
+        btn.classList.add('off');
+    }
+}
+
+// Floating screen share
+async function floatingShareScreen() {
+    await shareScreen();
+}
+
+// End floating call
+function endFloatingCall() {
+    endCall();
+    document.getElementById('floatingVideoCall').style.display = 'none';
+    
+    // Reset placeholder
+    document.getElementById('floatingPlaceholder').innerHTML = '<div class="initials">📹</div><p>Forbinder...</p>';
+    
+    // Hide local video
+    document.getElementById('floatingLocalVideo').style.display = 'none';
 }
 
 // Toggle camera

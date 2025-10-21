@@ -1291,3 +1291,165 @@ body {
 .colleague-item .call-btn:hover {
     opacity: 0.9;
 }
+
+/* FLOATING VIDEO CALL OVERLAY (Discord/Teams style) */
+.floating-video-call {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    width: 400px;
+    background: #1c1e21;
+    border-radius: 12px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+    z-index: 9999;
+    display: none;
+    flex-direction: column;
+    overflow: hidden;
+    transition: all 0.3s ease;
+}
+
+.floating-video-call.minimized {
+    width: 300px;
+    height: 60px;
+}
+
+.floating-video-call.minimized .floating-video-body,
+.floating-video-call.minimized .floating-video-controls {
+    display: none;
+}
+
+.floating-video-header {
+    background: #2c2f33;
+    padding: 10px 15px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: move;
+    user-select: none;
+}
+
+.floating-video-header h4 {
+    color: white;
+    font-size: 14px;
+    margin: 0;
+    font-weight: 500;
+}
+
+.floating-video-header-buttons {
+    display: flex;
+    gap: 8px;
+}
+
+.floating-video-header-buttons button {
+    background: none;
+    border: none;
+    color: #b9bbbe;
+    cursor: pointer;
+    font-size: 16px;
+    padding: 4px;
+    transition: color 0.2s;
+}
+
+.floating-video-header-buttons button:hover {
+    color: white;
+}
+
+.floating-video-body {
+    position: relative;
+    width: 100%;
+    height: 300px;
+    background: #000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.floating-video-body video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.floating-local-video {
+    position: absolute;
+    bottom: 10px;
+    right: 10px;
+    width: 120px;
+    height: 90px;
+    background: #1c1e21;
+    border-radius: 8px;
+    border: 2px solid white;
+    overflow: hidden;
+}
+
+.floating-local-video video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.floating-video-controls {
+    background: #2c2f33;
+    padding: 12px;
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+}
+
+.floating-control-btn {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: none;
+    cursor: pointer;
+    font-size: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+}
+
+.floating-control-btn:hover {
+    transform: scale(1.1);
+}
+
+.floating-mic-btn {
+    background: #4caf50;
+    color: white;
+}
+
+.floating-cam-btn {
+    background: #2196f3;
+    color: white;
+}
+
+.floating-share-btn {
+    background: #ff9800;
+    color: white;
+}
+
+.floating-end-btn {
+    background: #f44336;
+    color: white;
+}
+
+.floating-mic-btn.muted,
+.floating-cam-btn.off {
+    background: #f44336;
+}
+
+.floating-video-placeholder {
+    text-align: center;
+    color: white;
+}
+
+.floating-video-placeholder .initials {
+    font-size: 60px;
+    font-weight: bold;
+    margin-bottom: 10px;
+}
+
+.floating-video-placeholder p {
+    font-size: 12px;
+    opacity: 0.8;
+}
