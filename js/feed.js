@@ -398,11 +398,6 @@ async function renderPosts() {
                 <div class="post-content" id="content-${post.id}">${linkifyContent(post.content)}</div>
                 <div id="link-preview-${post.id}" class="link-preview-container"></div>
                 ${attachmentsHTML}
-+++++++ REPLACE\n\n------- SEARCH
-    // Render posts immediately (lazy load link previews after)
-    feedContainer.innerHTML = posts.map(post => {
-    // Render posts immediately (lazy load link previews after)
-    feedContainer.innerHTML = posts.map(post => {
                 <div class="post-actions">
                     <button class="post-action-btn" onclick="likePost(${post.id})">👍 Synes godt om (${post.likes})</button>
                     <button class="post-action-btn" onclick="commentOnPost(${post.id})">💬 Kommenter${post.comments && post.comments.length > 0 ? ` (${post.comments.length})` : ''}</button>
