@@ -995,7 +995,16 @@ function closeDocumentModal() {
 // Upload document
 async function uploadDocument() {
     const fileInput = document.getElementById('documentFile');
-    const documentType = document.getElementById('documentType').value;
+    const documentTypeEl = document.getElementById('documentType');
+    
+    // Null check - make sure elements exist
+    if (!fileInput || !documentTypeEl) {
+        console.error('Upload form elements not found');
+        alert('Fejl: Upload formularen blev ikke fundet');
+        return;
+    }
+    
+    const documentType = documentTypeEl.value;
     
     if (!fileInput.files || !fileInput.files[0]) {
         alert('Vælg en fil');
