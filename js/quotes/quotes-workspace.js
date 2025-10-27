@@ -435,6 +435,9 @@ function renderWorkspaceOverview(container) {
                 <div style="background: white; padding: 20px; border-radius: 10px; border: 2px solid #e0e0e0; flex: 1;">
                     <h3 style="margin: 0 0 15px 0;">⚡ Hurtige Handlinger</h3>
                     <div style="display: flex; flex-direction: column; gap: 10px;">
+                        <button onclick="viewOriginalQuote(${currentWorkspaceOrder.id})" style="padding: 12px 20px; background: #2196f3; color: white; border: none; border-radius: 5px; cursor: pointer; text-align: left;">
+                            📄 Se Tilbud (PDF)
+                        </button>
                         <button onclick="switchWorkspaceTab('expenses')" style="padding: 12px 20px; background: #667eea; color: white; border: none; border-radius: 5px; cursor: pointer; text-align: left;">
                             ➕ Tilføj Udgift
                         </button>
@@ -1701,11 +1704,42 @@ function getStatusBadge(status) {
     return `<div style="font-weight: 600; font-size: 16px; color: ${config.color};">${config.icon} ${config.text}</div>`;
 }
 
+// View original quote from workspace
+async function viewOriginalQuote(orderId) {
+    try {
+        // Load the quote data
+        const token = sessionStorage.getItem('token');
+        const response = await fetch(`https://flowfactory-frontend.onrender.com/api/quotes/${orderId}`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        
+        if (!response.ok) throw new Error('Failed to load quote');
+        
+        const quote = await response.json();
+        
+        // Store current quote and render preview
+        // We need to temporarily use the quote preview from quotes-core.js
+        currentQuote = quote;
+        
+        // Call the renderQuotePreview function from quotes-core.js
+        if (typeof renderQuotePreview === 'function') {
+            renderQuotePreview();
+        } else {
+            alert('Kunne ikke vise tilbud. Prøv at gå til Tilbud siden i stedet.');
+        }
+        
+    } catch (error) {
+        console.error('Error viewing original quote:', error);
+        alert('Kunne ikke vise tilbud: ' + error.message);
+    }
+}
+
 // Export functions
 window.openOrderWorkspace = openOrderWorkspace;
 window.switchWorkspaceTab = switchWorkspaceTab;
 window.closeWorkspace = closeWorkspace;
 window.viewInvoiceFromWorkspace = viewInvoiceFromWorkspace;
+window.viewOriginalQuote = viewOriginalQuote;
 window.showAddExpense = showAddExpense;
 window.closeExpenseModal = closeExpenseModal;
 window.saveExpense = saveExpense;
