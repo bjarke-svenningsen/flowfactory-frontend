@@ -117,6 +117,12 @@ function populateFilters() {
     const deptFilter = document.getElementById('departmentFilter');
     const posFilter = document.getElementById('positionFilter');
     
+    // Check if elements exist (they won't if we're not on the colleagues page)
+    if (!deptFilter || !posFilter) {
+        console.log('Filter elements not found - not on colleagues page');
+        return;
+    }
+    
     deptFilter.innerHTML = '<option value="">Alle afdelinger</option>';
     departments.sort().forEach(dept => {
         deptFilter.innerHTML += `<option value="${dept}">${dept}</option>`;
@@ -151,6 +157,12 @@ function filterColleagues() {
 // Render kolleger som kontaktkort
 function renderColleagues() {
     const grid = document.getElementById('colleaguesGrid');
+    
+    // Check if element exists (it won't if we're not on the colleagues page)
+    if (!grid) {
+        console.log('Colleagues grid not found - not on colleagues page');
+        return;
+    }
     
     if (filteredColleagues.length === 0) {
         grid.innerHTML = '<p style="text-align: center; color: #999; padding: 40px;">Ingen kolleger fundet</p>';

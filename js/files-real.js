@@ -101,7 +101,10 @@ let expandedFolders = new Set();
 // Render folder tree with hierarchy
 function renderFolderTree() {
     const tree = document.getElementById('folderTree');
-    if (!tree) return;
+    if (!tree) {
+        console.log('Folder tree element not found - not on files page');
+        return;
+    }
     
     const documentCount = allFiles.filter(f => isDocument(f.original_name)).length;
     const imageCount = allFiles.filter(f => isImage(f.original_name)).length;
@@ -276,6 +279,15 @@ function getFilteredFiles() {
 
 function renderRealFiles() {
     const tbody = document.getElementById('fileListBody');
+    const addressBar = document.getElementById('addressBar');
+    const fileCount = document.getElementById('fileCount');
+    
+    // Check if elements exist (they won't if we're not on the files page)
+    if (!tbody || !addressBar || !fileCount) {
+        console.log('Files page elements not found - not on files page');
+        return;
+    }
+    
     const filteredFiles = getFilteredFiles();
     
     const filterNames = {
@@ -285,7 +297,7 @@ function renderRealFiles() {
         'shared': 'Delte Filer',
         'folder': currentFolderName
     };
-    document.getElementById('addressBar').textContent = filterNames[currentFilter];
+    addressBar.textContent = filterNames[currentFilter];
     
     // Get subfolders if we're viewing a specific folder
     let subfolders = [];
@@ -300,7 +312,7 @@ function renderRealFiles() {
             ? 'Ingen filer uploadet endnu. Klik "📤 Upload" for at tilføje filer.'
             : `Ingen ${filterNames[currentFilter].toLowerCase()} endnu.`;
         tbody.innerHTML = `<tr><td colspan="4" style="text-align: center; padding: 40px; color: #999;">${emptyMessage}</td></tr>`;
-        document.getElementById('fileCount').textContent = '0 filer';
+        fileCount.textContent = '0 filer';
         return;
     }
     
@@ -342,7 +354,7 @@ function renderRealFiles() {
     tbody.innerHTML = html;
     
     const totalItems = filteredFiles.length + subfolders.length;
-    document.getElementById('fileCount').textContent = `${totalItems} ${totalItems === 1 ? 'element' : 'elementer'}`;
+    fileCount.textContent = `${totalItems} ${totalItems === 1 ? 'element' : 'elementer'}`;
 }
 
 // Select folder (for highlighting)
