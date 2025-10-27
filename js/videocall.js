@@ -19,54 +19,86 @@ let ringtone = null; // Audio for ringtone
 let remoteAudioMuted = false;
 let isScreenSharing = false;
 
-// Create ringtone using Web Audio API
+// Create ringtone using Web Audio API - Soft two-tone ringtone (like modern phones)
 function createRingtone() {
     const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-    const oscillator = audioContext.createOscillator();
+    
+    // Create two oscillators for a pleasant two-tone sound
+    const oscillator1 = audioContext.createOscillator();
+    const oscillator2 = audioContext.createOscillator();
     const gainNode = audioContext.createGain();
     
-    oscillator.connect(gainNode);
+    // Connect oscillators through gain node
+    oscillator1.connect(gainNode);
+    oscillator2.connect(gainNode);
     gainNode.connect(audioContext.destination);
     
-    oscillator.frequency.value = 440; // A4 note
-    oscillator.type = 'sine';
+    // Two harmonious tones: E4 (329.63 Hz) and C5 (523.25 Hz) - pleasant interval
+    oscillator1.frequency.value = 329.63; // E4 note
+    oscillator2.frequency.value = 523.25; // C5 note
     
-    gainNode.gain.value = 0.3; // 30% volume
+    // Use sine wave for smooth sound
+    oscillator1.type = 'sine';
+    oscillator2.type = 'sine';
     
-    return { oscillator, gainNode, audioContext };
+    // Lower volume for less annoying sound
+    gainNode.gain.value = 0; // Start at 0
+    
+    return { oscillator1, oscillator2, gainNode, audioContext };
 }
 
-// Play ringtone (looping)
+// Play ringtone (looping) - Smooth fade in/out pattern
 function playRingtone() {
     if (!ringtone) {
         ringtone = createRingtone();
-        ringtone.oscillator.start();
+        ringtone.oscillator1.start();
+        ringtone.oscillator2.start();
         
-        // Pulsing effect (ring ring ring)
-        const startTime = ringtone.audioContext.currentTime;
-        ringtone.gainNode.gain.setValueAtTime(0.3, startTime);
-        ringtone.gainNode.gain.setValueAtTime(0, startTime + 0.5);
-        ringtone.gainNode.gain.setValueAtTime(0.3, startTime + 1);
-        ringtone.gainNode.gain.setValueAtTime(0, startTime + 1.5);
-        ringtone.gainNode.gain.setValueAtTime(0.3, startTime + 2);
+        // Gentle pulsing pattern with smooth fades
+        const playRingPattern = () => {
+            if (!ringtone) return;
+            
+            const time = ringtone.audioContext.currentTime;
+            const volume = 0.15; // Reduced volume (15% instead of 30%)
+            
+            // First ring: smooth fade in and out
+            ringtone.gainNode.gain.setValueAtTime(0, time);
+            ringtone.gainNode.gain.linearRampToValueAtTime(volume, time + 0.2);
+            ringtone.gainNode.gain.setValueAtTime(volume, time + 0.5);
+            ringtone.gainNode.gain.linearRampToValueAtTime(0, time + 0.8);
+            
+            // Pause
+            ringtone.gainNode.gain.setValueAtTime(0, time + 0.8);
+            
+            // Second ring: smooth fade in and out
+            ringtone.gainNode.gain.setValueAtTime(0, time + 1.1);
+            ringtone.gainNode.gain.linearRampToValueAtTime(volume, time + 1.3);
+            ringtone.gainNode.gain.setValueAtTime(volume, time + 1.6);
+            ringtone.gainNode.gain.linearRampToValueAtTime(0, time + 1.9);
+            
+            // Longer pause before repeating
+            ringtone.gainNode.gain.setValueAtTime(0, time + 1.9);
+        };
         
-        // Loop every 2 seconds
-        setInterval(() => {
-            if (ringtone) {
-                const time = ringtone.audioContext.currentTime;
-                ringtone.gainNode.gain.setValueAtTime(0.3, time);
-                ringtone.gainNode.gain.setValueAtTime(0, time + 0.5);
-                ringtone.gainNode.gain.setValueAtTime(0.3, time + 1);
-                ringtone.gainNode.gain.setValueAtTime(0, time + 1.5);
-            }
-        }, 2000);
+        // Play initial pattern
+        playRingPattern();
+        
+        // Loop every 3 seconds (longer pause between rings)
+        ringtone.interval = setInterval(playRingPattern, 3000);
     }
 }
 
 // Stop ringtone
 function stopRingtone() {
     if (ringtone) {
-        ringtone.oscillator.stop();
+        // Clear interval if it exists
+        if (ringtone.interval) {
+            clearInterval(ringtone.interval);
+        }
+        
+        // Stop oscillators
+        ringtone.oscillator1.stop();
+        ringtone.oscillator2.stop();
         ringtone.audioContext.close();
         ringtone = null;
     }
