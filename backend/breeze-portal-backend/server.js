@@ -2857,11 +2857,12 @@ app.get('/api/time-entries', auth, async (req, res) => {
       SELECT te.*, 
         u.name as user_name,
         m.name as material_name, m.material_number,
-        q.quote_number, q.customer_name
+        q.quote_number, q.order_number, c.company_name as customer_name
       FROM time_entries te
       LEFT JOIN users u ON te.user_id = u.id
       LEFT JOIN materials m ON te.material_id = m.id
       LEFT JOIN quotes q ON te.order_id = q.id
+      LEFT JOIN customers c ON q.customer_id = c.id
       WHERE 1=1
     `;
     const params = [];
