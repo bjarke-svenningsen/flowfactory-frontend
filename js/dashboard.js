@@ -109,6 +109,11 @@ function loadUserData() {
 
     document.getElementById('navUserName').textContent = currentUser.name;
     window.currentUser = currentUser;
+    
+    // Show Materialer menu item only for admins
+    if (currentUser.is_admin) {
+        document.getElementById('materialsMenuItem').style.display = 'block';
+    }
 }
 
 function logout() {
@@ -154,8 +159,10 @@ async function showPage(pageName, updateHash = true) {
         'colleagues': 4,
         'quotes': 5,
         'email': 6,
-        'settings': 7,
-        'admin': 8
+        'time': 7,
+        'materials': 8,
+        'settings': 9,
+        'admin': 10
     };
     
     const menuIndex = pageMapping[pageName];
@@ -187,6 +194,10 @@ async function showPage(pageName, updateHash = true) {
         if (window.emailClient) {
             window.emailClient.init();
         }
+    } else if (pageName === 'time') {
+        // Time page will initialize itself via js/time.js
+    } else if (pageName === 'materials') {
+        // Materials page will initialize itself via js/materials.js
     }
 }
 

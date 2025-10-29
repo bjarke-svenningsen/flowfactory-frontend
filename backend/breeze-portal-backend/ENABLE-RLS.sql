@@ -66,8 +66,16 @@ ALTER TABLE email_folders ENABLE ROW LEVEL SECURITY;
 ALTER TABLE email_ordre_links ENABLE ROW LEVEL SECURITY;
 
 -- ============================================
+-- TIME TRACKING & MATERIALS
+-- ============================================
+
+ALTER TABLE materials ENABLE ROW LEVEL SECURITY;
+ALTER TABLE time_entries ENABLE ROW LEVEL SECURITY;
+ALTER TABLE order_materials ENABLE ROW LEVEL SECURITY;
+
+-- ============================================
 -- DONE! 
 -- ============================================
--- All 29 tables now have RLS enabled
+-- All 32 tables now have RLS enabled
 -- Your backend (service role) bypasses RLS automatically
 -- Security warnings in Supabase should disappear! 🎉

@@ -67,3 +67,30 @@ export const Files = {
     return data.url;
   },
 };
+
+// ==================== MATERIALS API ====================
+export const Materials = {
+  getAll: () => api('/api/materials'),
+  create: (materialData) => api('/api/materials', { method: 'POST', body: JSON.stringify(materialData) }),
+  update: (materialId, materialData) => api(`/api/materials/${materialId}`, { method: 'PUT', body: JSON.stringify(materialData) }),
+  delete: (materialId) => api(`/api/materials/${materialId}`, { method: 'DELETE' }),
+};
+
+// ==================== TIME ENTRIES API ====================
+export const TimeEntries = {
+  getAll: (filters = {}) => {
+    const params = new URLSearchParams(filters).toString();
+    return api(`/api/time-entries?${params}`);
+  },
+  create: (timeEntryData) => api('/api/time-entries', { method: 'POST', body: JSON.stringify(timeEntryData) }),
+  update: (timeEntryId, timeEntryData) => api(`/api/time-entries/${timeEntryId}`, { method: 'PUT', body: JSON.stringify(timeEntryData) }),
+  delete: (timeEntryId) => api(`/api/time-entries/${timeEntryId}`, { method: 'DELETE' }),
+  lock: (timeEntryId, isLocked) => api(`/api/time-entries/${timeEntryId}/lock`, { method: 'POST', body: JSON.stringify({ is_locked: isLocked }) }),
+};
+
+// ==================== ORDER MATERIALS API ====================
+export const OrderMaterials = {
+  getForOrder: (orderId) => api(`/api/orders/${orderId}/materials`),
+  addToOrder: (orderId, materialData) => api(`/api/orders/${orderId}/materials`, { method: 'POST', body: JSON.stringify(materialData) }),
+  removeFromOrder: (orderId, materialId) => api(`/api/orders/${orderId}/materials/${materialId}`, { method: 'DELETE' }),
+};

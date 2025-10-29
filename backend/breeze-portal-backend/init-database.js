@@ -498,6 +498,65 @@ export async function initializeDatabase() {
       created_at ${db._isProduction ? 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP' : "TEXT DEFAULT (datetime('now'))"}${db._isProduction ? '' : ',\n  FOREIGN KEY(email_id) REFERENCES emails(id) ON DELETE CASCADE,\n  FOREIGN KEY(order_id) REFERENCES quotes(id) ON DELETE CASCADE,\n  FOREIGN KEY(pdf_document_id) REFERENCES order_documents(id) ON DELETE SET NULL,\n  FOREIGN KEY(linked_by) REFERENCES users(id)'}
     )`);
 
+    // Materials (for time entries and order materials)
+    await db.run(`CREATE TABLE IF NOT EXISTS materials (
+      id ${db._isProduction ? 'SERIAL' : 'INTEGER'} PRIMARY KEY ${db._isProduction ? '' : 'AUTOINCREMENT'},
+      material_number TEXT UNIQUE NOT NULL,
+      name TEXT NOT NULL,
+      description TEXT,
+      category TEXT,
+      unit TEXT DEFAULT 'stk',
+      cost_price ${db._isProduction ? 'DECIMAL(10,2)' : 'REAL'} NOT NULL,
+      sales_price ${db._isProduction ? 'DECIMAL(10,2)' : 'REAL'} NOT NULL,
+      is_active INTEGER DEFAULT 1,
+      created_by INTEGER NOT NULL,
+      created_at ${db._isProduction ? 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP' : "TEXT DEFAULT (datetime('now'))"},
+      updated_at ${db._isProduction ? 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP' : "TEXT DEFAULT (datetime('now'))"}${db._isProduction ? '' : ',\n  FOREIGN KEY(created_by) REFERENCES users(id)'}
+    )`);
+
+    // Time entries (employee time tracking)
+    await db.run(`CREATE TABLE IF NOT EXISTS time_entries (
+      id ${db._isProduction ? 'SERIAL' : 'INTEGER'} PRIMARY KEY ${db._isProduction ? '' : 'AUTOINCREMENT'},
+      user_id INTEGER NOT NULL,
+      order_id INTEGER,
+      material_id INTEGER NOT NULL,
+      date ${db._isProduction ? 'DATE' : 'TEXT'} NOT NULL,
+      start_time ${db._isProduction ? 'TIME' : 'TEXT'} NOT NULL,
+      end_time ${db._isProduction ? 'TIME' : 'TEXT'} NOT NULL,
+      duration_hours ${db._isProduction ? 'DECIMAL(5,2)' : 'REAL'} NOT NULL,
+      is_locked INTEGER DEFAULT 0,
+      notes TEXT,
+      created_at ${db._isProduction ? 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP' : "TEXT DEFAULT (datetime('now'))"},
+      updated_at ${db._isProduction ? 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP' : "TEXT DEFAULT (datetime('now'))"}${db._isProduction ? '' : ',\n  FOREIGN KEY(user_id) REFERENCES users(id),\n  FOREIGN KEY(order_id) REFERENCES quotes(id),\n  FOREIGN KEY(material_id) REFERENCES materials(id)'}
+    )`);
+
+    // Order materials (both time entries and manual materials)
+    await db.run(`CREATE TABLE IF NOT EXISTS order_materials (
+      id ${db._isProduction ? 'SERIAL' : 'INTEGER'} PRIMARY KEY ${db._isProduction ? '' : 'AUTOINCREMENT'},
+      order_id INTEGER NOT NULL,
+      material_id INTEGER NOT NULL,
+      quantity ${db._isProduction ? 'DECIMAL(10,2)' : 'REAL'} NOT NULL,
+      unit_cost ${db._isProduction ? 'DECIMAL(10,2)' : 'REAL'} NOT NULL,
+      unit_sale ${db._isProduction ? 'DECIMAL(10,2)' : 'REAL'} NOT NULL,
+      total_cost ${db._isProduction ? 'DECIMAL(10,2)' : 'REAL'} NOT NULL,
+      total_sale ${db._isProduction ? 'DECIMAL(10,2)' : 'REAL'} NOT NULL,
+      added_by INTEGER NOT NULL,
+      added_at ${db._isProduction ? 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP' : "TEXT DEFAULT (datetime('now'))"},
+      source TEXT DEFAULT 'manual',
+      time_entry_id INTEGER,
+      notes TEXT${db._isProduction ? '' : ',\n  FOREIGN KEY(order_id) REFERENCES quotes(id) ON DELETE CASCADE,\n  FOREIGN KEY(material_id) REFERENCES materials(id),\n  FOREIGN KEY(added_by) REFERENCES users(id),\n  FOREIGN KEY(time_entry_id) REFERENCES time_entries(id) ON DELETE CASCADE'}
+    )`);
+    
+    // Add order_type column to quotes table (for calculation vs consumption)
+    try {
+      await db.run(`ALTER TABLE quotes ADD COLUMN order_type TEXT DEFAULT 'calculation'`);
+      console.log('✅ Added order_type column to quotes table');
+    } catch (error) {
+      if (error.message.includes('duplicate column') || error.message.includes('already exists')) {
+        console.log('ℹ️  order_type column already exists in quotes table');
+      }
+    }
+
     console.log('✅ All database tables initialized successfully!');
   } catch (error) {
     console.error('❌ Database initialization failed:', error);

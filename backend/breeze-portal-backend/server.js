@@ -2759,6 +2759,432 @@ app.put('/api/orders/:orderId/details', auth, async (req, res) => {
   }
 });
 
+// ==================== MATERIALS SYSTEM ====================
+
+// Get all materials
+app.get('/api/materials', auth, async (req, res) => {
+  try {
+    const materials = await db.all(`
+      SELECT m.*, u.name as created_by_name
+      FROM materials m
+      LEFT JOIN users u ON m.created_by = u.id
+      WHERE m.is_active = 1
+      ORDER BY m.category, m.material_number
+    `);
+    res.json(materials);
+  } catch (error) {
+    console.error('Error fetching materials:', error);
+    res.status(500).json({ error: 'Failed to fetch materials' });
+  }
+});
+
+// Create new material (admin only)
+app.post('/api/materials', auth, adminAuth, async (req, res) => {
+  try {
+    const { material_number, name, description, category, unit, cost_price, sales_price } = req.body;
+    
+    if (!material_number || !name || cost_price == null || sales_price == null) {
+      return res.status(400).json({ error: 'Missing required fields' });
+    }
+
+    const result = await db.run(`
+      INSERT INTO materials (material_number, name, description, category, unit, cost_price, sales_price, created_by)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `, [material_number, name, description || null, category || null, unit || 'stk', cost_price, sales_price, req.user.id]);
+
+    const material = await db.get('SELECT * FROM materials WHERE id = ?', [result.lastID]);
+    res.json(material);
+  } catch (error) {
+    console.error('Error creating material:', error);
+    if (error.message.includes('UNIQUE')) {
+      res.status(400).json({ error: 'Material number already exists' });
+    } else {
+      res.status(500).json({ error: 'Failed to create material' });
+    }
+  }
+});
+
+// Update material (admin only)
+app.put('/api/materials/:id', auth, adminAuth, async (req, res) => {
+  try {
+    const materialId = Number(req.params.id);
+    const { material_number, name, description, category, unit, cost_price, sales_price, is_active } = req.body;
+
+    await db.run(`
+      UPDATE materials 
+      SET material_number = ?, name = ?, description = ?, category = ?, unit = ?, 
+          cost_price = ?, sales_price = ?, is_active = ?, updated_at = CURRENT_TIMESTAMP
+      WHERE id = ?
+    `, [material_number, name, description, category, unit, cost_price, sales_price, is_active ?? 1, materialId]);
+
+    const material = await db.get('SELECT * FROM materials WHERE id = ?', [materialId]);
+    res.json(material);
+  } catch (error) {
+    console.error('Error updating material:', error);
+    res.status(500).json({ error: 'Failed to update material' });
+  }
+});
+
+// Delete material (admin only) - only if not used
+app.delete('/api/materials/:id', auth, adminAuth, async (req, res) => {
+  try {
+    const materialId = Number(req.params.id);
+
+    // Check if material is used in time_entries or order_materials
+    const timeEntryCount = await db.get('SELECT COUNT(*) as count FROM time_entries WHERE material_id = ?', [materialId]);
+    const orderMaterialCount = await db.get('SELECT COUNT(*) as count FROM order_materials WHERE material_id = ?', [materialId]);
+
+    if (timeEntryCount.count > 0 || orderMaterialCount.count > 0) {
+      return res.status(400).json({ error: 'Cannot delete material that has been used in time entries or orders' });
+    }
+
+    await db.run('DELETE FROM materials WHERE id = ?', [materialId]);
+    res.json({ message: 'Material deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting material:', error);
+    res.status(500).json({ error: 'Failed to delete material' });
+  }
+});
+
+// ==================== TIME ENTRIES ====================
+
+// Get time entries (own for employees, all for admins)
+app.get('/api/time-entries', auth, async (req, res) => {
+  try {
+    const { start_date, end_date, user_id, order_id } = req.query;
+    
+    let query = `
+      SELECT te.*, 
+        u.name as user_name,
+        m.name as material_name, m.material_number,
+        q.quote_number, q.customer_name
+      FROM time_entries te
+      LEFT JOIN users u ON te.user_id = u.id
+      LEFT JOIN materials m ON te.material_id = m.id
+      LEFT JOIN quotes q ON te.order_id = q.id
+      WHERE 1=1
+    `;
+    const params = [];
+
+    // Non-admins can only see their own time entries
+    if (!req.user.is_admin) {
+      query += ` AND te.user_id = ?`;
+      params.push(req.user.id);
+    } else if (user_id) {
+      query += ` AND te.user_id = ?`;
+      params.push(user_id);
+    }
+
+    if (order_id) {
+      query += ` AND te.order_id = ?`;
+      params.push(order_id);
+    }
+
+    if (start_date) {
+      query += ` AND te.date >= ?`;
+      params.push(start_date);
+    }
+
+    if (end_date) {
+      query += ` AND te.date <= ?`;
+      params.push(end_date);
+    }
+
+    query += ` ORDER BY te.date DESC, te.start_time DESC`;
+
+    const timeEntries = await db.all(query, params);
+    res.json(timeEntries);
+  } catch (error) {
+    console.error('Error fetching time entries:', error);
+    res.status(500).json({ error: 'Failed to fetch time entries' });
+  }
+});
+
+// Create time entry
+app.post('/api/time-entries', auth, async (req, res) => {
+  try {
+    const { order_id, material_id, date, start_time, end_time, notes } = req.body;
+
+    if (!material_id || !date || !start_time || !end_time) {
+      return res.status(400).json({ error: 'Missing required fields' });
+    }
+
+    // Calculate duration in hours (minus 30 min lunch break)
+    const startHours = parseInt(start_time.split(':')[0]);
+    const startMinutes = parseInt(start_time.split(':')[1]);
+    const endHours = parseInt(end_time.split(':')[0]);
+    const endMinutes = parseInt(end_time.split(':')[1]);
+    
+    const totalMinutes = (endHours * 60 + endMinutes) - (startHours * 60 + startMinutes);
+    const durationMinutes = totalMinutes - 30; // Subtract 30 min lunch
+    const durationHours = (durationMinutes / 60).toFixed(2);
+
+    if (durationHours <= 0) {
+      return res.status(400).json({ error: 'Invalid time range' });
+    }
+
+    // Get material info
+    const material = await db.get('SELECT * FROM materials WHERE id = ?', [material_id]);
+    if (!material) {
+      return res.status(400).json({ error: 'Material not found' });
+    }
+
+    // Create time entry
+    const result = await db.run(`
+      INSERT INTO time_entries (user_id, order_id, material_id, date, start_time, end_time, duration_hours, notes)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `, [req.user.id, order_id || null, material_id, date, start_time, end_time, durationHours, notes || null]);
+
+    const timeEntryId = result.lastID;
+
+    // If linked to an order, create order_materials entry
+    if (order_id) {
+      const order = await db.get('SELECT * FROM quotes WHERE id = ?', [order_id]);
+      if (!order) {
+        return res.status(400).json({ error: 'Order not found' });
+      }
+
+      const totalCost = parseFloat(durationHours) * parseFloat(material.cost_price);
+      const totalSale = parseFloat(durationHours) * parseFloat(material.sales_price);
+
+      await db.run(`
+        INSERT INTO order_materials (order_id, material_id, quantity, unit_cost, unit_sale, total_cost, total_sale, added_by, source, time_entry_id)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'time_entry', ?)
+      `, [order_id, material_id, durationHours, material.cost_price, material.sales_price, totalCost, totalSale, req.user.id, timeEntryId]);
+
+      // Add to order timeline
+      const user = await db.get('SELECT name FROM users WHERE id = ?', [req.user.id]);
+      await db.run(`
+        INSERT INTO order_timeline (order_id, event_type, description, created_by)
+        VALUES (?, 'time_registered', ?, ?)
+      `, [order_id, `${user.name} registrerede ${durationHours} timer (${material.name})`, req.user.id]);
+    }
+
+    const timeEntry = await db.get(`
+      SELECT te.*, u.name as user_name, m.name as material_name, m.material_number
+      FROM time_entries te
+      LEFT JOIN users u ON te.user_id = u.id
+      LEFT JOIN materials m ON te.material_id = m.id
+      WHERE te.id = ?
+    `, [timeEntryId]);
+
+    res.json(timeEntry);
+  } catch (error) {
+    console.error('Error creating time entry:', error);
+    res.status(500).json({ error: 'Failed to create time entry' });
+  }
+});
+
+// Update time entry (only if not locked)
+app.put('/api/time-entries/:id', auth, async (req, res) => {
+  try {
+    const timeEntryId = Number(req.params.id);
+    const { order_id, material_id, date, start_time, end_time, notes } = req.body;
+
+    // Get existing time entry
+    const existing = await db.get('SELECT * FROM time_entries WHERE id = ?', [timeEntryId]);
+    if (!existing) {
+      return res.status(404).json({ error: 'Time entry not found' });
+    }
+
+    // Check ownership (non-admins can only edit their own)
+    if (!req.user.is_admin && existing.user_id !== req.user.id) {
+      return res.status(403).json({ error: 'Not authorized' });
+    }
+
+    // Check if locked
+    if (existing.is_locked && !req.user.is_admin) {
+      return res.status(400).json({ error: 'Cannot edit locked time entry' });
+    }
+
+    // Recalculate duration
+    const startHours = parseInt(start_time.split(':')[0]);
+    const startMinutes = parseInt(start_time.split(':')[1]);
+    const endHours = parseInt(end_time.split(':')[0]);
+    const endMinutes = parseInt(end_time.split(':')[1]);
+    
+    const totalMinutes = (endHours * 60 + endMinutes) - (startHours * 60 + startMinutes);
+    const durationMinutes = totalMinutes - 30;
+    const durationHours = (durationMinutes / 60).toFixed(2);
+
+    // Update time entry
+    await db.run(`
+      UPDATE time_entries
+      SET order_id = ?, material_id = ?, date = ?, start_time = ?, end_time = ?, duration_hours = ?, notes = ?, updated_at = CURRENT_TIMESTAMP
+      WHERE id = ?
+    `, [order_id || null, material_id, date, start_time, end_time, durationHours, notes || null, timeEntryId]);
+
+    // Update corresponding order_materials if exists
+    const orderMaterial = await db.get('SELECT * FROM order_materials WHERE time_entry_id = ?', [timeEntryId]);
+    if (orderMaterial) {
+      const material = await db.get('SELECT * FROM materials WHERE id = ?', [material_id]);
+      const totalCost = parseFloat(durationHours) * parseFloat(material.cost_price);
+      const totalSale = parseFloat(durationHours) * parseFloat(material.sales_price);
+
+      await db.run(`
+        UPDATE order_materials
+        SET material_id = ?, quantity = ?, unit_cost = ?, unit_sale = ?, total_cost = ?, total_sale = ?
+        WHERE time_entry_id = ?
+      `, [material_id, durationHours, material.cost_price, material.sales_price, totalCost, totalSale, timeEntryId]);
+    }
+
+    const timeEntry = await db.get(`
+      SELECT te.*, u.name as user_name, m.name as material_name
+      FROM time_entries te
+      LEFT JOIN users u ON te.user_id = u.id
+      LEFT JOIN materials m ON te.material_id = m.id
+      WHERE te.id = ?
+    `, [timeEntryId]);
+
+    res.json(timeEntry);
+  } catch (error) {
+    console.error('Error updating time entry:', error);
+    res.status(500).json({ error: 'Failed to update time entry' });
+  }
+});
+
+// Delete time entry (only if not locked)
+app.delete('/api/time-entries/:id', auth, async (req, res) => {
+  try {
+    const timeEntryId = Number(req.params.id);
+
+    const existing = await db.get('SELECT * FROM time_entries WHERE id = ?', [timeEntryId]);
+    if (!existing) {
+      return res.status(404).json({ error: 'Time entry not found' });
+    }
+
+    // Check ownership
+    if (!req.user.is_admin && existing.user_id !== req.user.id) {
+      return res.status(403).json({ error: 'Not authorized' });
+    }
+
+    // Check if locked
+    if (existing.is_locked && !req.user.is_admin) {
+      return res.status(400).json({ error: 'Cannot delete locked time entry' });
+    }
+
+    // Delete associated order_materials (will cascade due to ON DELETE CASCADE)
+    await db.run('DELETE FROM time_entries WHERE id = ?', [timeEntryId]);
+
+    res.json({ message: 'Time entry deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting time entry:', error);
+    res.status(500).json({ error: 'Failed to delete time entry' });
+  }
+});
+
+// Lock/unlock time entry (admin only)
+app.post('/api/time-entries/:id/lock', auth, adminAuth, async (req, res) => {
+  try {
+    const timeEntryId = Number(req.params.id);
+    const { is_locked } = req.body;
+
+    await db.run('UPDATE time_entries SET is_locked = ? WHERE id = ?', [is_locked ? 1 : 0, timeEntryId]);
+
+    const timeEntry = await db.get('SELECT * FROM time_entries WHERE id = ?', [timeEntryId]);
+    res.json(timeEntry);
+  } catch (error) {
+    console.error('Error locking/unlocking time entry:', error);
+    res.status(500).json({ error: 'Failed to lock/unlock time entry' });
+  }
+});
+
+// ==================== ORDER MATERIALS ====================
+
+// Get all materials for an order
+app.get('/api/orders/:orderId/materials', auth, async (req, res) => {
+  try {
+    const orderId = Number(req.params.orderId);
+
+    const materials = await db.all(`
+      SELECT om.*, 
+        m.name as material_name, m.material_number, m.category,
+        u.name as added_by_name,
+        te.date as time_entry_date
+      FROM order_materials om
+      LEFT JOIN materials m ON om.material_id = m.id
+      LEFT JOIN users u ON om.added_by = u.id
+      LEFT JOIN time_entries te ON om.time_entry_id = te.id
+      WHERE om.order_id = ?
+      ORDER BY om.added_at DESC
+    `, [orderId]);
+
+    res.json(materials);
+  } catch (error) {
+    console.error('Error fetching order materials:', error);
+    res.status(500).json({ error: 'Failed to fetch order materials' });
+  }
+});
+
+// Add material to order (manual)
+app.post('/api/orders/:orderId/materials', auth, async (req, res) => {
+  try {
+    const orderId = Number(req.params.orderId);
+    const { material_id, quantity } = req.body;
+
+    if (!material_id || !quantity || quantity <= 0) {
+      return res.status(400).json({ error: 'Invalid material or quantity' });
+    }
+
+    // Get material and order info
+    const material = await db.get('SELECT * FROM materials WHERE id = ?', [material_id]);
+    const order = await db.get('SELECT * FROM quotes WHERE id = ?', [orderId]);
+
+    if (!material || !order) {
+      return res.status(400).json({ error: 'Material or order not found' });
+    }
+
+    const totalCost = parseFloat(quantity) * parseFloat(material.cost_price);
+    const totalSale = parseFloat(quantity) * parseFloat(material.sales_price);
+
+    const result = await db.run(`
+      INSERT INTO order_materials (order_id, material_id, quantity, unit_cost, unit_sale, total_cost, total_sale, added_by, source)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'manual')
+    `, [orderId, material_id, quantity, material.cost_price, material.sales_price, totalCost, totalSale, req.user.id]);
+
+    // Add to timeline
+    const user = await db.get('SELECT name FROM users WHERE id = ?', [req.user.id]);
+    await db.run(`
+      INSERT INTO order_timeline (order_id, event_type, description, created_by)
+      VALUES (?, 'material_added', ?, ?)
+    `, [orderId, `${user.name} tilføjede ${quantity} ${material.unit} ${material.name}`, req.user.id]);
+
+    const orderMaterial = await db.get(`
+      SELECT om.*, m.name as material_name, m.material_number
+      FROM order_materials om
+      LEFT JOIN materials m ON om.material_id = m.id
+      WHERE om.id = ?
+    `, [result.lastID]);
+
+    res.json(orderMaterial);
+  } catch (error) {
+    console.error('Error adding material to order:', error);
+    res.status(500).json({ error: 'Failed to add material to order' });
+  }
+});
+
+// Remove material from order (only manual entries, not time_entry sourced)
+app.delete('/api/orders/:orderId/materials/:materialId', auth, async (req, res) => {
+  try {
+    const materialId = Number(req.params.materialId);
+
+    const orderMaterial = await db.get('SELECT * FROM order_materials WHERE id = ?', [materialId]);
+    if (!orderMaterial) {
+      return res.status(404).json({ error: 'Material not found' });
+    }
+
+    if (orderMaterial.source === 'time_entry') {
+      return res.status(400).json({ error: 'Cannot delete material from time entry. Delete the time entry instead.' });
+    }
+
+    await db.run('DELETE FROM order_materials WHERE id = ?', [materialId]);
+    res.json({ message: 'Material removed from order' });
+  } catch (error) {
+    console.error('Error removing material from order:', error);
+    res.status(500).json({ error: 'Failed to remove material from order' });
+  }
+});
+
 // Get complete order workspace data
 app.get('/api/orders/:orderId/workspace', auth, async (req, res) => {
   const orderId = Number(req.params.orderId);
