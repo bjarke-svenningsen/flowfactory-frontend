@@ -562,8 +562,11 @@
 
                 <div class="time-calculation" id="timeCalculation" style="display: none;">
                     <p><strong>Duration:</strong> <span id="calculatedHours">0</span> timer (minus 30 min frokost)</p>
-                    <p><strong>Kostpris:</strong> <span id="calculatedCost">0</span> kr</p>
-                    <p><strong>Salgspris:</strong> <span id="calculatedSale">0</span> kr</p>
+                    <!-- Priser kun synlige for admins -->
+                    <p id="priceInfo" style="display: none;">
+                        <strong>Kostpris:</strong> <span id="calculatedCost">0</span> kr<br>
+                        <strong>Salgspris:</strong> <span id="calculatedSale">0</span> kr
+                    </p>
                 </div>
 
                 <div class="form-group">
