@@ -217,14 +217,32 @@ const timePage = {
     },
 
     async loadOrders() {
-        // Simple version - just show message
         const orderSelect = document.getElementById('orderId');
         orderSelect.innerHTML = '<option value="">Indlæser ordre...</option>';
         
         try {
-            // You'll need to add a getAcceptedOrders method to API
-            orderSelect.innerHTML = '<option value="">Vælg ordre (implementeres snart)</option>';
+            // Fetch accepted orders from API
+            const response = await fetch('https://flowfactory-frontend.onrender.com/api/quotes?status=accepted', {
+                headers: {
+                    'Authorization': `Bearer ${sessionStorage.getItem('token')}`
+                }
+            });
+            const data = await response.json();
+            
+            orderSelect.innerHTML = '<option value="">Vælg ordre</option>';
+            
+            if (data.quotes && data.quotes.length > 0) {
+                data.quotes.forEach(order => {
+                    const option = document.createElement('option');
+                    option.value = order.id;
+                    option.textContent = `${order.quote_number} - ${order.customer_name}`;
+                    orderSelect.appendChild(option);
+                });
+            } else {
+                orderSelect.innerHTML = '<option value="">Ingen accepterede ordre</option>';
+            }
         } catch (error) {
+            console.error('Error loading orders:', error);
             orderSelect.innerHTML = '<option value="">Kunne ikke indlæse ordre</option>';
         }
     },
@@ -289,7 +307,15 @@ const timePage = {
         const materialId = document.getElementById('selectedMaterialId').value;
         
         if (!materialId) {
-            alert('Beregn venligst duration først ved at vælge start/slut tid');
+            // Better error message
+            const timeType = document.querySelector('input[name="timeType"]:checked').value;
+            const materialNumber = timeType === 'overtime' ? '1001' : '1000';
+            alert(`❌ Materiale ${materialNumber} (${timeType === 'overtime' ? 'Overtid' : 'Alm. timer'}) findes ikke!\n\nGå til Materialer-siden og opret:\n- Materiale 1000: Alm. timer (kost: 300, salg: 525)\n- Materiale 1001: Overtid (kost: 400, salg: 700)`);
+            return;
+        }
+        
+        if (entryType === 'order' && !orderId) {
+            alert('❌ Vælg venligst en ordre at registrere tiden på');
             return;
         }
         
