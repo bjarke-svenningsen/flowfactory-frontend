@@ -23,9 +23,12 @@ const timePage = {
         // Set today's date
         document.getElementById('selectedDate').valueAsDate = this.selectedDate;
 
-        // If admin, load all users for dropdown
+        // If admin, load all users for dropdown AND show price info
         if (this.currentUser.is_admin) {
             await this.loadAllUsers();
+            // Show price info for admins
+            const priceInfo = document.getElementById('priceInfo');
+            if (priceInfo) priceInfo.style.display = 'block';
         }
 
         // Load materials and time entries
@@ -229,8 +232,8 @@ const timePage = {
             });
             const data = await response.json();
             
-            // Filter for accepted orders
-            const acceptedOrders = data.quotes.filter(q => q.is_accepted === 1);
+            // Filter for accepted orders (status = 'accepted')
+            const acceptedOrders = data.filter(q => q.status === 'accepted');
             
             orderSelect.innerHTML = '<option value="">Vælg ordre</option>';
             
@@ -238,7 +241,7 @@ const timePage = {
                 acceptedOrders.forEach(order => {
                     const option = document.createElement('option');
                     option.value = order.id;
-                    option.textContent = `${order.quote_number} - ${order.customer_name}`;
+                    option.textContent = `${order.order_number || order.quote_number} - ${order.customer_name}`;
                     orderSelect.appendChild(option);
                 });
             } else {
