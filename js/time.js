@@ -221,25 +221,28 @@ const timePage = {
         orderSelect.innerHTML = '<option value="">Indlæser ordre...</option>';
         
         try {
-            // Fetch accepted orders from API
-            const response = await fetch('https://flowfactory-frontend.onrender.com/api/quotes?status=accepted', {
+            // Fetch ALL orders and filter client-side for accepted ones
+            const response = await fetch('https://flowfactory-frontend.onrender.com/api/quotes', {
                 headers: {
                     'Authorization': `Bearer ${sessionStorage.getItem('token')}`
                 }
             });
             const data = await response.json();
             
+            // Filter for accepted orders
+            const acceptedOrders = data.quotes.filter(q => q.is_accepted === 1);
+            
             orderSelect.innerHTML = '<option value="">Vælg ordre</option>';
             
-            if (data.quotes && data.quotes.length > 0) {
-                data.quotes.forEach(order => {
+            if (acceptedOrders.length > 0) {
+                acceptedOrders.forEach(order => {
                     const option = document.createElement('option');
                     option.value = order.id;
                     option.textContent = `${order.quote_number} - ${order.customer_name}`;
                     orderSelect.appendChild(option);
                 });
             } else {
-                orderSelect.innerHTML = '<option value="">Ingen accepterede ordre</option>';
+                orderSelect.innerHTML = '<option value="">Ingen accepterede ordre (accepter først en ordre)</option>';
             }
         } catch (error) {
             console.error('Error loading orders:', error);
