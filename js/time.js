@@ -400,21 +400,28 @@ const timePage = {
 // Export globally for dashboard to access
 window.timePage = timePage;
 
-// Initialize when page loads (if loaded directly)
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => {
-        timePage.init();
-    });
-} else {
-    // DOM already loaded - init immediately
-    setTimeout(() => timePage.init(), 100);
+// Wait for elements to exist before initializing
+function waitForElements() {
+    const checkElements = () => {
+        if (document.getElementById('selectedDate') && document.getElementById('timeEntryModal')) {
+            timePage.init();
+            
+            // Setup modal close listener
+            document.getElementById('timeEntryModal').addEventListener('click', (e) => {
+                if (e.target.id === 'timeEntryModal') {
+                    timePage.closeModal();
+                }
+            });
+        } else {
+            setTimeout(checkElements, 50);
+        }
+    };
+    checkElements();
 }
 
-// Close modal on background click
-setTimeout(() => {
-    document.getElementById('timeEntryModal')?.addEventListener('click', (e) => {
-        if (e.target.id === 'timeEntryModal') {
-            timePage.closeModal();
-        }
-    });
-}, 200);
+// Initialize when page loads
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', waitForElements);
+} else {
+    waitForElements();
+}

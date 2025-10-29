@@ -191,21 +191,28 @@ const materialsPage = {
 // Export globally for dashboard to access
 window.materialsPage = materialsPage;
 
-// Initialize when page loads (if loaded directly)
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => {
-        materialsPage.init();
-    });
-} else {
-    // DOM already loaded - init immediately
-    setTimeout(() => materialsPage.init(), 100);
+// Wait for elements to exist before initializing
+function waitForElements() {
+    const checkElements = () => {
+        if (document.getElementById('materialsTableBody') && document.getElementById('materialModal')) {
+            materialsPage.init();
+            
+            // Setup modal close listener
+            document.getElementById('materialModal').addEventListener('click', (e) => {
+                if (e.target.id === 'materialModal') {
+                    materialsPage.closeModal();
+                }
+            });
+        } else {
+            setTimeout(checkElements, 50);
+        }
+    };
+    checkElements();
 }
 
-// Close modal on background click
-setTimeout(() => {
-    document.getElementById('materialModal')?.addEventListener('click', (e) => {
-        if (e.target.id === 'materialModal') {
-            materialsPage.closeModal();
-        }
-    });
-}, 200);
+// Initialize when page loads
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', waitForElements);
+} else {
+    waitForElements();
+}
