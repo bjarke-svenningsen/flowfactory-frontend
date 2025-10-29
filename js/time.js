@@ -51,14 +51,17 @@ const timePage = {
             const select = document.getElementById('adminUserSelect');
             select.innerHTML = '<option value="">Mine timer</option>';
             
-            data.users.forEach(user => {
-                if (user.id !== this.currentUser.id) {
-                    const option = document.createElement('option');
-                    option.value = user.id;
-                    option.textContent = user.name;
-                    select.appendChild(option);
-                }
-            });
+            // Backend returns array directly, not { users: [] }
+            if (Array.isArray(data)) {
+                data.forEach(user => {
+                    if (user.id !== this.currentUser.id) {
+                        const option = document.createElement('option');
+                        option.value = user.id;
+                        option.textContent = user.name;
+                        select.appendChild(option);
+                    }
+                });
+            }
             
             select.style.display = 'block';
         } catch (error) {
@@ -276,7 +279,7 @@ const timePage = {
         const [endHour, endMin] = endTime.split(':').map(Number);
         
         const totalMinutes = (endHour * 60 + endMin) - (startHour * 60 + startMin);
-        const durationMinutes = totalMinutes - 30; // Minus lunch
+        const durationMinutes = totalMinutes; // NO automatic lunch deduction
         const durationHours = (durationMinutes / 60).toFixed(2);
         
         if (durationHours > 0) {
