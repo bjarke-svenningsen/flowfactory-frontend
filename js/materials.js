@@ -188,14 +188,24 @@ const materialsPage = {
     }
 };
 
-// Initialize when page loads
-document.addEventListener('DOMContentLoaded', () => {
-    materialsPage.init();
-});
+// Export globally for dashboard to access
+window.materialsPage = materialsPage;
+
+// Initialize when page loads (if loaded directly)
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+        materialsPage.init();
+    });
+} else {
+    // DOM already loaded - init immediately
+    setTimeout(() => materialsPage.init(), 100);
+}
 
 // Close modal on background click
-document.getElementById('materialModal')?.addEventListener('click', (e) => {
-    if (e.target.id === 'materialModal') {
-        materialsPage.closeModal();
-    }
-});
+setTimeout(() => {
+    document.getElementById('materialModal')?.addEventListener('click', (e) => {
+        if (e.target.id === 'materialModal') {
+            materialsPage.closeModal();
+        }
+    });
+}, 200);

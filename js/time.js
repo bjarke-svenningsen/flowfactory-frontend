@@ -371,14 +371,24 @@ const timePage = {
     }
 };
 
-// Initialize when page loads
-document.addEventListener('DOMContentLoaded', () => {
-    timePage.init();
-});
+// Export globally for dashboard to access
+window.timePage = timePage;
+
+// Initialize when page loads (if loaded directly)
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+        timePage.init();
+    });
+} else {
+    // DOM already loaded - init immediately
+    setTimeout(() => timePage.init(), 100);
+}
 
 // Close modal on background click
-document.getElementById('timeEntryModal')?.addEventListener('click', (e) => {
-    if (e.target.id === 'timeEntryModal') {
-        timePage.closeModal();
-    }
-});
+setTimeout(() => {
+    document.getElementById('timeEntryModal')?.addEventListener('click', (e) => {
+        if (e.target.id === 'timeEntryModal') {
+            timePage.closeModal();
+        }
+    });
+}, 200);
