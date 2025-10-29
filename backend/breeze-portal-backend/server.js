@@ -2910,14 +2910,14 @@ app.post('/api/time-entries', auth, async (req, res) => {
       return res.status(400).json({ error: 'Missing required fields' });
     }
 
-    // Calculate duration in hours (minus 30 min lunch break)
+    // Calculate duration in hours (NO automatic lunch deduction)
     const startHours = parseInt(start_time.split(':')[0]);
     const startMinutes = parseInt(start_time.split(':')[1]);
     const endHours = parseInt(end_time.split(':')[0]);
     const endMinutes = parseInt(end_time.split(':')[1]);
     
     const totalMinutes = (endHours * 60 + endMinutes) - (startHours * 60 + startMinutes);
-    const durationMinutes = totalMinutes - 30; // Subtract 30 min lunch
+    const durationMinutes = totalMinutes; // NO lunch deduction - user handles breaks manually
     const durationHours = (durationMinutes / 60).toFixed(2);
 
     if (durationHours <= 0) {
@@ -2998,14 +2998,14 @@ app.put('/api/time-entries/:id', auth, async (req, res) => {
       return res.status(400).json({ error: 'Cannot edit locked time entry' });
     }
 
-    // Recalculate duration
+    // Recalculate duration (NO automatic lunch deduction)
     const startHours = parseInt(start_time.split(':')[0]);
     const startMinutes = parseInt(start_time.split(':')[1]);
     const endHours = parseInt(end_time.split(':')[0]);
     const endMinutes = parseInt(end_time.split(':')[1]);
     
     const totalMinutes = (endHours * 60 + endMinutes) - (startHours * 60 + startMinutes);
-    const durationMinutes = totalMinutes - 30;
+    const durationMinutes = totalMinutes; // NO lunch deduction
     const durationHours = (durationMinutes / 60).toFixed(2);
 
     // Update time entry
