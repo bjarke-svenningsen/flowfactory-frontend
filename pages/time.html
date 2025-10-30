@@ -158,24 +158,29 @@
             position: absolute;
             left: 10px;
             right: 10px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #81c784 0%, #66bb6a 100%);
             color: white;
             border-radius: 8px;
             padding: 10px;
             cursor: pointer;
-            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+            box-shadow: 0 2px 8px rgba(129, 199, 132, 0.3);
             transition: transform 0.2s;
             overflow: hidden;
         }
 
         .time-block:hover {
             transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+            box-shadow: 0 4px 12px rgba(129, 199, 132, 0.4);
         }
 
         .time-block.overtime {
-            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%);
-            box-shadow: 0 2px 8px rgba(255, 107, 107, 0.3);
+            background: linear-gradient(135deg, #2e7d32 0%, #388e3c 100%);
+            box-shadow: 0 2px 8px rgba(46, 125, 50, 0.3);
+        }
+
+        .time-block.sick {
+            background: linear-gradient(135deg, #ef5350 0%, #e53935 100%);
+            box-shadow: 0 2px 8px rgba(239, 83, 80, 0.3);
         }
 
         .time-block.locked {
@@ -556,6 +561,10 @@
                         <label class="radio-option">
                             <input type="radio" name="timeType" value="overtime" onchange="timePage.updateMaterialSelection()">
                             <span>Overtid</span>
+                        </label>
+                        <label class="radio-option">
+                            <input type="radio" name="timeType" value="sick" onchange="timePage.updateMaterialSelection()">
+                            <span>🤒 Sygdom</span>
                         </label>
                     </div>
                 </div>

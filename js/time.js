@@ -140,10 +140,13 @@ const timePage = {
         const div = document.createElement('div');
         div.className = 'time-block';
         
-        // Check if overtime
+        // Check material type for styling
         if (entry.material_number === '1001') {
-            div.classList.add('overtime');
+            div.classList.add('overtime'); // Mørk grøn
+        } else if (entry.material_number === '1002') {
+            div.classList.add('sick'); // Rød
         }
+        // Normal timer (1000) bruger standard lys grøn styling
         
         // Check if locked
         if (entry.is_locked) {
@@ -287,11 +290,13 @@ const timePage = {
             document.getElementById('calculatedHours').textContent = durationHours;
             document.getElementById('timeCalculation').style.display = 'block';
             
-            // Find material price
+            // Find material price based on type
             const timeType = document.querySelector('input[name="timeType"]:checked').value;
-            const material = this.materials.find(m => 
-                m.material_number === (timeType === 'overtime' ? '1001' : '1000')
-            );
+            let materialNumber = '1000'; // Default: Normal timer
+            if (timeType === 'overtime') materialNumber = '1001';
+            if (timeType === 'sick') materialNumber = '1002';
+            
+            const material = this.materials.find(m => m.material_number === materialNumber);
             
             if (material) {
                 const cost = (durationHours * material.cost_price).toFixed(2);
