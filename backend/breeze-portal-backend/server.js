@@ -2936,7 +2936,13 @@ app.post('/api/time-entries', auth, async (req, res) => {
       VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     `, [req.user.id, order_id || null, material_id, date, start_time, end_time, durationHours, notes || null]);
 
-    const timeEntryId = result.lastInsertRowid || result.lastID;
+    // Get the inserted ID - compatible with both SQLite and PostgreSQL
+    const timeEntryId = result.lastInsertRowid || result.lastID || result.id;
+    
+    if (!timeEntryId) {
+      console.error('Failed to get time entry ID from result:', result);
+      return res.status(500).json({ error: 'Failed to create time entry - no ID returned' });
+    }
 
     // If linked to an order, create order_materials entry
     if (order_id) {
