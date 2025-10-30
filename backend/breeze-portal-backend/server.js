@@ -2931,18 +2931,30 @@ app.post('/api/time-entries', auth, async (req, res) => {
     }
 
     // Create time entry
-    const result = await db.run(`
-      INSERT INTO time_entries (user_id, order_id, material_id, date, start_time, end_time, duration_hours, notes)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    `, [req.user.id, order_id || null, material_id, date, start_time, end_time, durationHours, notes || null]);
+    console.log('Creating time entry with params:', { user_id: req.user.id, order_id, material_id, date, start_time, end_time, durationHours, notes });
+    
+    let result;
+    try {
+      result = await db.run(`
+        INSERT INTO time_entries (user_id, order_id, material_id, date, start_time, end_time, duration_hours, notes)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      `, [req.user.id, order_id || null, material_id, date, start_time, end_time, durationHours, notes || null]);
+      
+      console.log('INSERT result:', JSON.stringify(result));
+    } catch (insertError) {
+      console.error('INSERT failed:', insertError);
+      return res.status(500).json({ error: 'Failed to insert time entry: ' + insertError.message });
+    }
 
     // Get the inserted ID - compatible with both SQLite and PostgreSQL
     const timeEntryId = result.lastInsertRowid || result.lastID || result.id;
     
     if (!timeEntryId) {
-      console.error('Failed to get time entry ID from result:', result);
-      return res.status(500).json({ error: 'Failed to create time entry - no ID returned' });
+      console.error('Failed to get time entry ID from result:', JSON.stringify(result));
+      return res.status(500).json({ error: 'Failed to create time entry - no ID returned', result });
     }
+    
+    console.log('Time entry created with ID:', timeEntryId);
 
     // If linked to an order, create order_materials entry
     if (order_id) {
