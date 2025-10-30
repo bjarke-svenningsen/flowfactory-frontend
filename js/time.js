@@ -236,7 +236,8 @@ const timePage = {
             const data = await response.json();
             
             // Filter for accepted orders (status = 'accepted')
-            const acceptedOrders = data.filter(q => q.status === 'accepted');
+            // Exclude extra work orders to prevent duplicates (only show main orders)
+            const acceptedOrders = data.filter(q => q.status === 'accepted' && !q.is_extra_work && !q.parent_order_id);
             
             orderSelect.innerHTML = '<option value="">Vælg ordre</option>';
             

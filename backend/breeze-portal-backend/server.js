@@ -2936,7 +2936,7 @@ app.post('/api/time-entries', auth, async (req, res) => {
       VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     `, [req.user.id, order_id || null, material_id, date, start_time, end_time, durationHours, notes || null]);
 
-    const timeEntryId = result.lastID;
+    const timeEntryId = result.lastInsertRowid || result.lastID;
 
     // If linked to an order, create order_materials entry
     if (order_id) {
