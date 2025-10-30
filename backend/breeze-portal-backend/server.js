@@ -2974,7 +2974,7 @@ app.post('/api/time-entries', auth, async (req, res) => {
       // Add to order timeline
       const user = await db.get('SELECT name FROM users WHERE id = ?', [req.user.id]);
       await db.run(`
-        INSERT INTO order_timeline (order_id, event_type, description, created_by)
+        INSERT INTO order_timeline (order_id, activity_type, description, user_id)
         VALUES (?, 'time_registered', ?, ?)
       `, [order_id, `${user.name} registrerede ${durationHours} timer (${material.name})`, req.user.id]);
     }
@@ -3164,7 +3164,7 @@ app.post('/api/orders/:orderId/materials', auth, async (req, res) => {
     // Add to timeline
     const user = await db.get('SELECT name FROM users WHERE id = ?', [req.user.id]);
     await db.run(`
-      INSERT INTO order_timeline (order_id, event_type, description, created_by)
+      INSERT INTO order_timeline (order_id, activity_type, description, user_id)
       VALUES (?, 'material_added', ?, ?)
     `, [orderId, `${user.name} tilføjede ${quantity} ${material.unit} ${material.name}`, req.user.id]);
 
