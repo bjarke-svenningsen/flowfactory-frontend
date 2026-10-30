@@ -67,8 +67,9 @@ h3 { font-size: 18px; font-weight: 600; }
 }
 
 .user-avatar {
-    width: 44px !important;
-    height: 44px !important;
+    width: 52px !important;
+    height: 52px !important;
+    font-size: 17px !important;
     background-color: var(--color-dark);
     box-shadow: none !important;
 }
@@ -250,6 +251,18 @@ textarea:focus-visible {
 /* ---------- Statusmærker (pills) ---------- */
 .status-pill {
     display: inline-block;
+    padding: 4px 12px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.status-pill--draft   { background: var(--color-gray-soft);   color: var(--color-gray); }
+.status-pill--sent    { background: var(--color-blue-soft);   color: var(--color-blue); }
+.status-pill--accepted{ background: var(--color-green-soft);  color: var(--color-green); }
+.status-pill--rejected{ background: var(--color-red-soft);    color: var(--color-red); }
+.status-pill--invoiced{ background: var(--color-orange-soft); color: var(--color-orange); }
 
 /* ---------- Faner (underline-stil) ---------- */
 .tab-underline {
@@ -354,15 +367,65 @@ textarea {
     margin-right: 10px;
     vertical-align: -4px;
 }
-    padding: 4px 12px;
-    border-radius: 999px;
-    font-size: 12px;
-    font-weight: 600;
-    white-space: nowrap;
+
+/* ---------- ⋯-menu på listerækker ---------- */
+.row-menu {
+    position: relative;
+    display: inline-block;
+    vertical-align: middle;
+    margin-left: 6px;
 }
 
-.status-pill--draft   { background: var(--color-gray-soft);   color: var(--color-gray); }
-.status-pill--sent    { background: var(--color-blue-soft);   color: var(--color-blue); }
-.status-pill--accepted{ background: var(--color-green-soft);  color: var(--color-green); }
-.status-pill--rejected{ background: var(--color-red-soft);    color: var(--color-red); }
-.status-pill--invoiced{ background: var(--color-orange-soft); color: var(--color-orange); }
+.row-menu-trigger {
+    min-height: 36px;
+    min-width: 36px;
+    padding: 6px 0 !important;
+    font-size: 16px;
+    font-weight: 700;
+    letter-spacing: 1px;
+}
+
+.row-menu-pop {
+    display: none;
+    position: absolute;
+    right: 0;
+    top: calc(100% + 6px);
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-btn);
+    box-shadow: var(--shadow-md);
+    min-width: 180px;
+    padding: 6px;
+    z-index: 500;
+}
+
+.row-menu-pop.open {
+    display: block;
+}
+
+.row-menu-pop button {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 10px 12px;
+    background: transparent;
+    border: none;
+    border-radius: 6px;
+    font-family: var(--font-family);
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--color-text);
+    cursor: pointer;
+    text-align: left;
+}
+
+.row-menu-pop button:hover {
+    background: var(--color-gray-soft);
+}
+
+.row-menu-pop button.row-menu-ok { color: var(--color-green); }
+.row-menu-pop button.row-menu-warn { color: var(--color-orange); }
+.row-menu-pop button.row-menu-danger { color: var(--color-red); }
+
+.row-menu-pop .lucide { width: 16px; height: 16px; }

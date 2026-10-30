@@ -30,7 +30,12 @@ class PageLoader {
             const html = await response.text();
             this.pageContainer.innerHTML = html;
             this.currentPage = pageName;
-            
+
+            // Re-render Lucide icons injected by the loaded page
+            if (window.lucide) {
+                try { lucide.createIcons(); } catch (e) { /* ignore */ }
+            }
+
             // Call page-specific initialization if registered
             if (this.pageInitializers[pageName]) {
                 this.pageInitializers[pageName]();

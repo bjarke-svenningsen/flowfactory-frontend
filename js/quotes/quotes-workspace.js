@@ -137,57 +137,46 @@ function renderWorkspace(data) {
         <div style="max-width: 1400px; margin: 0 auto;">
             <!-- Back button -->
             <div style="margin-bottom: 20px;">
-                <button onclick="closeWorkspace()" style="padding: 10px 20px; background: #999; color: white; border: none; border-radius: 5px; cursor: pointer;">
-                    ◀ Tilbage til Ordrer
+                <button onclick="closeWorkspace()" class="btn-secondary" style="min-height: 40px;">
+                    ← Tilbage til Ordrer
                 </button>
             </div>
             
-            <!-- Workspace Header -->
-            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 25px; border-radius: 10px; margin-bottom: 30px;">
-                <!-- Top row: Title and customer -->
-                <div style="margin-bottom: 20px;">
-                    <h1 style="margin: 0 0 8px 0; font-size: 28px;">📦 Ordre ${fullOrderNumber}</h1>
-                    <p style="margin: 0; font-size: 16px; opacity: 0.9;">${data.order.title} • ${data.order.company_name}</p>
+            <!-- Workspace Header (hvid med KPI-kort) -->
+            <div class="card" style="padding: 24px 28px; margin-bottom: 24px; display: flex; justify-content: space-between; gap: 24px; flex-wrap: wrap; align-items: center;">
+                <div style="min-width: 220px;">
+                    <h1 style="margin: 0 0 6px 0;">Ordre ${fullOrderNumber}</h1>
+                    <p style="margin: 0; color: var(--color-text-muted);">${data.order.title} • ${data.order.company_name}</p>
                 </div>
-                
-                <!-- Bottom row: 3 horizontal boxes -->
-                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px;">
-                    <div style="background: rgba(255,255,255,0.2); padding: 15px; border-radius: 8px; text-align: center;">
-                        <div style="font-size: 13px; opacity: 0.9; margin-bottom: 5px;">💰 Omsætning</div>
-                        <div style="font-size: 24px; font-weight: 600;">${formatCurrency(data.financials.revenue)}</div>
+                <div class="kpi-grid" style="grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); flex: 1; min-width: 460px; max-width: 780px;">
+                    <div class="kpi-card">
+                        <div class="kpi-label">Omsætning</div>
+                        <div class="kpi-value">${formatCurrency(data.financials.revenue)}</div>
                     </div>
-                    <div style="background: rgba(255,255,255,0.2); padding: 15px; border-radius: 8px; text-align: center;">
-                        <div style="font-size: 13px; opacity: 0.9; margin-bottom: 5px;">📊 Udgifter</div>
-                        <div style="font-size: 24px; font-weight: 600;">${formatCurrency(data.financials.expenses)}</div>
+                    <div class="kpi-card kpi-red">
+                        <div class="kpi-label">Udgifter</div>
+                        <div class="kpi-value">${formatCurrency(data.financials.expenses)}</div>
                     </div>
-                    <div style="background: rgba(255,255,255,0.2); padding: 15px; border-radius: 8px; text-align: center;">
-                        <div style="font-size: 13px; opacity: 0.9; margin-bottom: 5px;">✅ Profit</div>
-                        <div style="font-size: 24px; font-weight: 600;">${formatCurrency(data.financials.profit)}</div>
-                        <div style="font-size: 12px; opacity: 0.8; margin-top: 3px;">Margin: ${data.financials.profit_margin}%</div>
+                    <div class="kpi-card kpi-green">
+                        <div class="kpi-label">Profit</div>
+                        <div class="kpi-value">${formatCurrency(data.financials.profit)}</div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-label">Margin</div>
+                        <div class="kpi-value">${data.financials.profit_margin}%</div>
+                        <div class="kpi-sub">Profit af omsætning</div>
                     </div>
                 </div>
             </div>
             
-            <!-- Tabs -->
-            <div style="display: flex; gap: 10px; margin-bottom: 30px; border-bottom: 2px solid #e0e0e0;">
-                <button onclick="switchWorkspaceTab('overview')" id="workspaceTabOverview" style="padding: 15px 25px; background: #667eea; color: white; border: none; border-radius: 8px 8px 0 0; cursor: pointer; font-weight: 600; font-size: 14px;">
-                    📊 Oversigt
-                </button>
-                <button onclick="switchWorkspaceTab('expenses')" id="workspaceTabExpenses" style="padding: 15px 25px; background: transparent; color: #666; border: none; border-radius: 8px 8px 0 0; cursor: pointer; font-weight: 600; font-size: 14px;">
-                    💰 Udgifter (${workspaceExpenses.length})
-                </button>
-                <button onclick="switchWorkspaceTab('materials')" id="workspaceTabMaterials" style="padding: 15px 25px; background: transparent; color: #666; border: none; border-radius: 8px 8px 0 0; cursor: pointer; font-weight: 600; font-size: 14px;">
-                    ⏱ Timer & Materialer (${workspaceMaterials.length})
-                </button>
-                <button onclick="switchWorkspaceTab('documents')" id="workspaceTabDocuments" style="padding: 15px 25px; background: transparent; color: #666; border: none; border-radius: 8px 8px 0 0; cursor: pointer; font-weight: 600; font-size: 14px;">
-                    📎 Dokumenter (${workspaceDocuments.length})
-                </button>
-                <button onclick="switchWorkspaceTab('timeline')" id="workspaceTabTimeline" style="padding: 15px 25px; background: transparent; color: #666; border: none; border-radius: 8px 8px 0 0; cursor: pointer; font-weight: 600; font-size: 14px;">
-                    🕐 Timeline (${workspaceTimeline.length})
-                </button>
-                <button onclick="switchWorkspaceTab('notes')" id="workspaceTabNotes" style="padding: 15px 25px; background: transparent; color: #666; border: none; border-radius: 8px 8px 0 0; cursor: pointer; font-weight: 600; font-size: 14px;">
-                    📝 Noter (${workspaceNotes.length})
-                </button>
+            <!-- Tabs (underline-stil) -->
+            <div class="tab-underline" style="margin-bottom: 28px;">
+                <button onclick="switchWorkspaceTab('overview')" id="workspaceTabOverview" class="tab-underline-btn active">Oversigt</button>
+                <button onclick="switchWorkspaceTab('expenses')" id="workspaceTabExpenses" class="tab-underline-btn">Udgifter (${workspaceExpenses.length})</button>
+                <button onclick="switchWorkspaceTab('materials')" id="workspaceTabMaterials" class="tab-underline-btn">Timer & Materialer (${workspaceMaterials.length})</button>
+                <button onclick="switchWorkspaceTab('documents')" id="workspaceTabDocuments" class="tab-underline-btn">Dokumenter (${workspaceDocuments.length})</button>
+                <button onclick="switchWorkspaceTab('timeline')" id="workspaceTabTimeline" class="tab-underline-btn">Timeline (${workspaceTimeline.length})</button>
+                <button onclick="switchWorkspaceTab('notes')" id="workspaceTabNotes" class="tab-underline-btn">Noter (${workspaceNotes.length})</button>
             </div>
             
             <!-- Tab Content -->
@@ -202,17 +191,13 @@ function renderWorkspace(data) {
 function switchWorkspaceTab(tab) {
     currentWorkspaceTab = tab;
     
-    // Update button styles
+    // Update button styles (underline-stil)
     ['overview', 'expenses', 'materials', 'documents', 'timeline', 'notes'].forEach(t => {
         const btn = document.getElementById(`workspaceTab${t.charAt(0).toUpperCase() + t.slice(1)}`);
         if (btn) {
-            if (t === tab) {
-                btn.style.background = '#667eea';
-                btn.style.color = 'white';
-            } else {
-                btn.style.background = 'transparent';
-                btn.style.color = '#666';
-            }
+            btn.classList.toggle('active', t === tab);
+            btn.style.background = 'transparent';
+            btn.style.color = '';
         }
     });
     

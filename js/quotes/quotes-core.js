@@ -44,29 +44,28 @@ function renderQuotesList() {
     if (filteredQuotes.length === 0) {
         container.innerHTML = `
             <div style="text-align: center; padding: 60px 20px; color: #999;">
-                <div style="font-size: 64px; margin-bottom: 20px;">💼</div>
                 <h3>Ingen tilbud endnu</h3>
                 <p style="margin: 10px 0 20px 0;">Opret dit første tilbud for at komme i gang</p>
-                <button onclick="showCreateQuote()" style="padding: 12px 30px; background: #667eea; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 16px;">
-                    ➕ Opret Tilbud
+                <button onclick="showCreateQuote()" class="btn-primary" style="min-height: 44px; font-size: 15px;">
+                    Opret Tilbud
                 </button>
             </div>
         `;
         return;
     }
     
-    const statusColors = {
-        'draft': '#999',
-        'sent': '#2196f3',
-        'accepted': '#4caf50',
-        'rejected': '#f44336'
+    const statusPillClass = {
+        'draft': 'status-pill--draft',
+        'sent': 'status-pill--sent',
+        'accepted': 'status-pill--accepted',
+        'rejected': 'status-pill--rejected'
     };
     
     const statusText = {
-        'draft': '📝 Udkast',
-        'sent': '📧 Sendt',
-        'accepted': '✅ Accepteret',
-        'rejected': '❌ Afvist'
+        'draft': 'Udkast',
+        'sent': 'Sendt',
+        'accepted': 'Accepteret',
+        'rejected': 'Afvist'
     };
     
     container.innerHTML = `
@@ -99,27 +98,30 @@ function renderQuotesList() {
                         <td style="padding: 15px;">${new Date(quote.date).toLocaleDateString('da-DK')}</td>
                         <td style="padding: 15px; text-align: right; font-weight: 600;">${formatCurrency(quote.total)}</td>
                         <td style="padding: 15px; text-align: center;">
-                            <span style="background: ${statusColors[quote.status]}; color: white; padding: 8px 16px; border-radius: 20px; font-size: 13px; font-weight: 600; display: inline-block; min-width: 100px;">
-                                ${statusText[quote.status]}
+                            <span class="status-pill ${statusPillClass[quote.status] || 'status-pill--draft'}">
+                                ${statusText[quote.status] || quote.status}
                             </span>
                         </td>
-                        <td style="padding: 15px; text-align: center;">
-                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px; max-width: 280px; margin: 0 auto;">
-                                <button onclick="viewQuote(${quote.id})" style="padding: 8px 12px; background: #2196f3; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; white-space: nowrap;">
-                                    👁️ Se
-                                </button>
-                                <button onclick="editQuote(${quote.id})" style="padding: 8px 12px; background: #667eea; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; white-space: nowrap;">
-                                    ✏️ Rediger
-                                </button>
-                                <button onclick="acceptQuote(${quote.id})" style="padding: 8px 12px; background: #4caf50; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; white-space: nowrap;">
-                                    ✅ Acceptér
-                                </button>
-                                <button onclick="rejectQuote(${quote.id})" style="padding: 8px 12px; background: #f44336; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; white-space: nowrap;">
-                                    ❌ Afvis
-                                </button>
-                                <button onclick="deleteQuote(${quote.id})" style="padding: 8px 12px; background: #d32f2f; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; white-space: nowrap; grid-column: span 2;">
-                                    🗑️ Slet
-                                </button>
+                        <td style="padding: 15px; text-align: center; white-space: nowrap;">
+                            <button onclick="viewQuote(${quote.id})" class="btn-secondary" style="min-height: 36px; padding: 6px 16px; font-size: 13px;">
+                                Se
+                            </button>
+                            <div class="row-menu">
+                                <button onclick="toggleRowMenu(event, ${quote.id})" class="btn-secondary row-menu-trigger" aria-label="Flere handlinger">⋯</button>
+                                <div id="rowMenu${quote.id}" class="row-menu-pop">
+                                    <button onclick="closeRowMenus(); editQuote(${quote.id});">
+                                        <i data-lucide="pencil"></i> Rediger
+                                    </button>
+                                    <button onclick="closeRowMenus(); acceptQuote(${quote.id});" class="row-menu-ok">
+                                        <i data-lucide="check"></i> Acceptér
+                                    </button>
+                                    <button onclick="closeRowMenus(); rejectQuote(${quote.id});" class="row-menu-warn">
+                                        <i data-lucide="x"></i> Afvis
+                                    </button>
+                                    <button onclick="closeRowMenus(); deleteQuote(${quote.id});" class="row-menu-danger">
+                                        <i data-lucide="trash-2"></i> Slet
+                                    </button>
+                                </div>
                             </div>
                         </td>
                     </tr>
@@ -128,7 +130,25 @@ function renderQuotesList() {
             </tbody>
         </table>
     `;
+    if (window.lucide) {
+        try { lucide.createIcons(); } catch (e) { /* ignore */ }
+    }
 }
+
+// ⋯-menu på listerækker
+function toggleRowMenu(event, id) {
+    event.stopPropagation();
+    const menu = document.getElementById(`rowMenu${id}`);
+    const wasOpen = menu && menu.classList.contains('open');
+    closeRowMenus();
+    if (menu && !wasOpen) menu.classList.add('open');
+}
+
+function closeRowMenus() {
+    document.querySelectorAll('.row-menu-pop.open').forEach(m => m.classList.remove('open'));
+}
+
+document.addEventListener('click', function () { closeRowMenus(); });
 
 // Show create quote
 function showCreateQuote() {
