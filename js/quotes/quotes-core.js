@@ -147,9 +147,23 @@ function showCreateQuote() {
 // View quote - ALWAYS opens workspace for all statuses (draft, sent, accepted, rejected)
 async function viewQuote(quoteId) {
     try {
-        // ALWAYS open workspace regardless of status
-        // This allows viewing/editing quotes in all states
-        await openOrderWorkspace(quoteId);
+        // Load the quote to check its status
+        const token = sessionStorage.getItem('token');
+        const response = await fetch(`/api/quotes/${quoteId}`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (!response.ok) throw new Error('Kunne ikke indlæse tilbud');
+        const quote = await response.json();
+
+        if (quote.status === 'accepted') {
+            // Accepted quotes are real orders - open the order workspace
+            await openOrderWorkspace(quoteId);
+        } else {
+            // Draft/sent quotes - show the quote itself (preview), not the order workspace
+            currentQuote = quote;
+            currentView = 'preview';
+            renderQuotePreview();
+        }
     } catch (error) {
         console.error('Error loading quote:', error);
         alert('Kunne ikke indlæse tilbud: ' + error.message);
