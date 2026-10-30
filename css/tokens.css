@@ -45,29 +45,37 @@ body,
     font-family: var(--font-family) !important;
     background: var(--color-bg) !important;
     color: var(--color-text);
+    font-size: 16px;
     line-height: 1.55;
 }
 
-h1 { font-size: 24px; font-weight: 700; }
-h2 { font-size: 20px; font-weight: 600; }
-h3 { font-size: 16px; font-weight: 600; }
+h1 { font-size: 26px; font-weight: 700; }
+h2 { font-size: 22px; font-weight: 600; }
+h3 { font-size: 18px; font-weight: 600; }
 
 /* ---------- Header ---------- */
 .top-nav {
     background: var(--color-surface);
     border-bottom: 1px solid var(--color-border);
     box-shadow: none !important;
-    min-height: 64px !important;
-    padding: 10px 35px !important;
+    min-height: 92px !important;
+    padding: 16px 35px !important;
 }
 
 .top-nav .logo-nav {
-    height: 44px !important;
+    height: 64px !important;
 }
 
 .user-avatar {
+    width: 44px !important;
+    height: 44px !important;
     background-color: var(--color-dark);
     box-shadow: none !important;
+}
+
+#navUserName {
+    font-size: 15px;
+    font-weight: 500;
 }
 
 .logout-btn {
@@ -75,7 +83,8 @@ h3 { font-size: 16px; font-weight: 600; }
     color: var(--color-text) !important;
     border: 1px solid var(--color-border) !important;
     border-radius: var(--radius-btn) !important;
-    padding: 8px 16px !important;
+    padding: 10px 20px !important;
+    font-size: 15px !important;
     font-weight: 500;
     transition: background 0.15s, border-color 0.15s;
 }
@@ -87,11 +96,20 @@ h3 { font-size: 16px; font-weight: 600; }
 
 /* ---------- Sidemenu ---------- */
 .sidebar {
+    width: 220px !important;
     border-radius: var(--radius-card) !important;
     box-shadow: var(--shadow-sm) !important;
+    padding: 22px !important;
+}
+
+.sidebar h3 {
+    font-size: 17px;
+    margin-bottom: 16px;
 }
 
 .menu-item {
+    padding: 13px 16px !important;
+    font-size: 15px !important;
     border-radius: var(--radius-btn) !important;
     border-left: 3px solid transparent;
     font-weight: 500;
@@ -110,7 +128,8 @@ h3 { font-size: 16px; font-weight: 600; }
 
 .content-area {
     border-radius: var(--radius-card) !important;
-
+    box-shadow: var(--shadow-sm) !important;
+}
 /* ---------- Lucide-ikoner ---------- */
 .lucide,
 .icon-18 {
@@ -166,8 +185,6 @@ input:focus {
     background: var(--color-gray-soft);
     transform: none;
 }
-    box-shadow: var(--shadow-sm) !important;
-}
 
 /* ---------- Knapper (genbrugelige) ---------- */
 .btn-primary,
@@ -177,11 +194,11 @@ input:focus {
     align-items: center;
     justify-content: center;
     gap: 8px;
-    min-height: 40px;
-    padding: 8px 18px;
+    min-height: 44px;
+    padding: 10px 22px;
     border-radius: var(--radius-btn);
     font-family: var(--font-family);
-    font-size: 14px;
+    font-size: 15px;
     font-weight: 600;
     cursor: pointer;
     border: 1px solid transparent;
