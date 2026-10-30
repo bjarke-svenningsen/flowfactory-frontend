@@ -8,6 +8,7 @@ let workspaceTimeline = [];
 let workspaceNotes = [];
 let workspaceExtraWorkOrders = [];
 let workspaceFinancials = null;
+let workspaceMaterials = [];
 let currentWorkspaceTab = 'overview';
 let extraWorkLines = [];
 let parentOrderId = null; // Track parent order for back navigation
@@ -72,6 +73,7 @@ async function openOrderWorkspace(orderId, fromParentId = null) {
         workspaceDocuments = data.documents;
         workspaceTimeline = data.timeline;
         workspaceNotes = data.notes;
+        workspaceMaterials = data.materials || [];
         workspaceExtraWorkOrders = data.extra_work_orders || [];
         workspaceFinancials = data.financials;
         
@@ -174,6 +176,9 @@ function renderWorkspace(data) {
                 <button onclick="switchWorkspaceTab('expenses')" id="workspaceTabExpenses" style="padding: 15px 25px; background: transparent; color: #666; border: none; border-radius: 8px 8px 0 0; cursor: pointer; font-weight: 600; font-size: 14px;">
                     💰 Udgifter (${workspaceExpenses.length})
                 </button>
+                <button onclick="switchWorkspaceTab('materials')" id="workspaceTabMaterials" style="padding: 15px 25px; background: transparent; color: #666; border: none; border-radius: 8px 8px 0 0; cursor: pointer; font-weight: 600; font-size: 14px;">
+                    ⏱ Timer & Materialer (${workspaceMaterials.length})
+                </button>
                 <button onclick="switchWorkspaceTab('documents')" id="workspaceTabDocuments" style="padding: 15px 25px; background: transparent; color: #666; border: none; border-radius: 8px 8px 0 0; cursor: pointer; font-weight: 600; font-size: 14px;">
                     📎 Dokumenter (${workspaceDocuments.length})
                 </button>
@@ -198,7 +203,7 @@ function switchWorkspaceTab(tab) {
     currentWorkspaceTab = tab;
     
     // Update button styles
-    ['overview', 'expenses', 'documents', 'timeline', 'notes'].forEach(t => {
+    ['overview', 'expenses', 'materials', 'documents', 'timeline', 'notes'].forEach(t => {
         const btn = document.getElementById(`workspaceTab${t.charAt(0).toUpperCase() + t.slice(1)}`);
         if (btn) {
             if (t === tab) {
@@ -218,6 +223,8 @@ function switchWorkspaceTab(tab) {
         renderWorkspaceOverview(content);
     } else if (tab === 'expenses') {
         renderWorkspaceExpenses(content);
+    } else if (tab === 'materials') {
+        renderWorkspaceMaterials(content);
     } else if (tab === 'documents') {
         renderWorkspaceDocuments(content);
     } else if (tab === 'timeline') {
@@ -1202,6 +1209,81 @@ async function deleteDocument(documentId) {
         console.error('Delete error:', error);
         alert('Kunne ikke slette dokument: ' + error.message);
     }
+}
+
+// Render "Timer & Materialer" tab - shows labor and material lines on the order
+function renderWorkspaceMaterials(container) {
+    const lines = workspaceMaterials || [];
+    
+    if (lines.length === 0) {
+        container.innerHTML = `
+            <div style="background: white; padding: 30px; border-radius: 10px; border: 2px solid #e0e0e0;">
+                <h3 style="margin: 0 0 20px 0;">⏱ Timer & Materialer</h3>
+                <p style="color: #666; text-align: center; padding: 40px;">Ingen timer eller materialer registreret på denne sag endnu.<br>
+                <span style="font-size: 13px;">Timer registreret via "Min Tid" med denne sag valgt, dukker automatisk op her.</span></p>
+            </div>
+        `;
+        return;
+    }
+    
+    let totalCost = 0;
+    let totalSale = 0;
+    let totalHours = 0;
+    
+    const rows = lines.map(line => {
+        const isTime = line.source === 'time_entry';
+        const cost = parseFloat(line.total_cost) || 0;
+        const sale = parseFloat(line.total_sale) || 0;
+        totalCost += cost;
+        totalSale += sale;
+        if (isTime) totalHours += parseFloat(line.quantity) || 0;
+        
+        const description = isTime
+            ? `⏱ Timeregistrering (${line.material_number || '?'})`
+            : `📦 ${line.material_name || 'Materiale'} (${line.material_number || '?'})`;
+        const date = line.time_entry_date || (line.added_at ? line.added_at.substring(0, 10) : '');
+        
+        return `
+            <tr style="border-bottom: 1px solid #eee;">
+                <td style="padding: 10px 12px; font-size: 13px; white-space: nowrap;">${date}</td>
+                <td style="padding: 10px 12px; font-size: 13px;">${description}</td>
+                <td style="padding: 10px 12px; font-size: 13px;">${line.added_by_name || '-'}</td>
+                <td style="padding: 10px 12px; font-size: 13px; text-align: right;">${line.quantity} ${isTime ? 't' : ''}</td>
+                <td style="padding: 10px 12px; font-size: 13px; text-align: right;">${cost.toFixed(2)} kr</td>
+                <td style="padding: 10px 12px; font-size: 13px; text-align: right; color: #2e7d32;">${sale.toFixed(2)} kr</td>
+            </tr>
+        `;
+    }).join('');
+    
+    container.innerHTML = `
+        <div style="background: white; padding: 30px; border-radius: 10px; border: 2px solid #e0e0e0;">
+            <h3 style="margin: 0 0 20px 0;">⏱ Timer & Materialer</h3>
+            <div style="overflow-x: auto;">
+                <table style="width: 100%; border-collapse: collapse;">
+                    <thead>
+                        <tr style="border-bottom: 2px solid #e0e0e0; text-align: left;">
+                            <th style="padding: 10px 12px; font-size: 12px; color: #666; text-transform: uppercase;">Dato</th>
+                            <th style="padding: 10px 12px; font-size: 12px; color: #666; text-transform: uppercase;">Beskrivelse</th>
+                            <th style="padding: 10px 12px; font-size: 12px; color: #666; text-transform: uppercase;">Registreret af</th>
+                            <th style="padding: 10px 12px; font-size: 12px; color: #666; text-transform: uppercase; text-align: right;">Antal</th>
+                            <th style="padding: 10px 12px; font-size: 12px; color: #666; text-transform: uppercase; text-align: right;">Udgift</th>
+                            <th style="padding: 10px 12px; font-size: 12px; color: #666; text-transform: uppercase; text-align: right;">Salg</th>
+                        </tr>
+                    </thead>
+                    <tbody>${rows}</tbody>
+                    <tfoot>
+                        <tr style="border-top: 2px solid #e0e0e0; font-weight: 700;">
+                            <td colspan="3" style="padding: 12px; font-size: 13px;">I alt${totalHours > 0 ? ` (${totalHours.toFixed(2)} timer)` : ''}</td>
+                            <td></td>
+                            <td style="padding: 12px; font-size: 13px; text-align: right; color: #c62828;">${totalCost.toFixed(2)} kr</td>
+                            <td style="padding: 12px; font-size: 13px; text-align: right; color: #2e7d32;">${totalSale.toFixed(2)} kr</td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+            <p style="font-size: 12px; color: #999; margin-top: 15px;">💡 Udgifterne er allerede trukket fra sagens overskud. Salgssøjlen viser linjernes fakturerbare værdi (relevant ved forbrugssager).</p>
+        </div>
+    `;
 }
 
 // Render timeline tab

@@ -3387,6 +3387,20 @@ app.get('/api/orders/:orderId/workspace', auth, async (req, res) => {
   // Get lines
   const lines = await db.all('SELECT * FROM quote_lines WHERE quote_id = ? ORDER BY sort_order, id', [orderId]);
   
+  // Get material/labor lines (time entries + manual additions) shown in "Timer & Materialer" tab
+  const materials = await db.all(`
+    SELECT om.*, 
+      m.name as material_name, m.material_number, m.category,
+      u.name as added_by_name,
+      te.date as time_entry_date
+    FROM order_materials om
+    LEFT JOIN materials m ON om.material_id = m.id
+    LEFT JOIN users u ON om.added_by = u.id
+    LEFT JOIN time_entries te ON om.time_entry_id = te.id
+    WHERE om.order_id = ?
+    ORDER BY om.added_at DESC
+  `, [orderId]);
+  
   // Check if order has an invoice
   const invoice = await db.get(`
     SELECT i.*, u.name as created_by_name
@@ -3429,6 +3443,7 @@ app.get('/api/orders/:orderId/workspace', auth, async (req, res) => {
   res.json({
     order,
     lines,
+    materials,
     extra_work_orders: extraWorkOrdersWithNumbers,
     invoice: invoice || null,
     expenses: {
