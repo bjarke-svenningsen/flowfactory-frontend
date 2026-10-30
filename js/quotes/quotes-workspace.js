@@ -641,15 +641,26 @@ function showAddExpense() {
             <h2 style="margin: 0 0 20px 0;">➕ Tilføj Udgift</h2>
             
             <form id="expenseForm" onsubmit="event.preventDefault(); saveExpense();">
+                <div style="margin-bottom: 20px; padding: 15px; background: #f5f7ff; border: 1px solid #d0d7ff; border-radius: 8px;">
+                    <label style="display: block; margin-bottom: 8px; font-weight: 600;">🔍 Træk fra materiale-database <span style="font-weight: 400; color: #888;">(valgfrit — søg på nr. eller navn, fx "8000")</span></label>
+                    <input type="text" id="expenseMaterialSearch" autocomplete="off" placeholder="Søg materiale..." oninput="filterMaterialSearch(this.value)" onfocus="filterMaterialSearch(this.value)" style="width: 100%; padding: 10px; border: 1px solid #c5c5f0; border-radius: 5px; font-size: 14px; background: white;">
+                    <div id="expenseMaterialResults" style="display: none; max-height: 220px; overflow-y: auto; border: 1px solid #c5c5f0; border-radius: 5px; margin-top: 5px; background: white;"></div>
+                    <div id="expenseMaterialSelected" style="display: none; margin-top: 10px; padding: 10px; background: #e8f5e9; border-radius: 5px; font-size: 13px;"></div>
+                </div>
+
                 <div style="margin-bottom: 20px;">
                     <label style="display: block; margin-bottom: 8px; font-weight: 600;">Beskrivelse *</label>
                     <textarea id="expenseDescription" required rows="3" style="width: 100%; padding: 10px; border: 1px solid #e0e0e0; border-radius: 5px; font-size: 14px; resize: vertical;"></textarea>
                 </div>
                 
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
+                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; margin-bottom: 20px;">
+                    <div>
+                        <label style="display: block; margin-bottom: 8px; font-weight: 600;">Antal</label>
+                        <input type="number" id="expenseQuantity" min="0" step="0.01" value="1" oninput="recalcExpenseAmount()" style="width: 100%; padding: 10px; border: 1px solid #e0e0e0; border-radius: 5px; font-size: 14px;">
+                    </div>
                     <div>
                         <label style="display: block; margin-bottom: 8px; font-weight: 600;">Beløb (DKK) *</label>
-                        <input type="number" id="expenseAmount" required min="0" step="0.01" style="width: 100%; padding: 10px; border: 1px solid #e0e0e0; border-radius: 5px; font-size: 14px;">
+                        <input type="number" id="expenseAmount" required min="0" step="0.01" oninput="clearExpenseMaterialLink()" style="width: 100%; padding: 10px; border: 1px solid #e0e0e0; border-radius: 5px; font-size: 14px;">
                     </div>
                     
                     <div>
@@ -683,6 +694,95 @@ function showAddExpense() {
     `;
     
     document.body.appendChild(modal);
+    loadMaterialsForExpense();
+}
+
+// ===== Material search in expense modal =====
+let expenseMaterialsCache = [];
+let selectedExpenseMaterial = null;
+
+async function loadMaterialsForExpense() {
+    try {
+        const token = sessionStorage.getItem('token');
+        const response = await fetch('/api/materials', {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (response.ok) expenseMaterialsCache = await response.json();
+    } catch (error) {
+        console.error('Could not load materials:', error);
+    }
+}
+
+function filterMaterialSearch(query) {
+    const resultsDiv = document.getElementById('expenseMaterialResults');
+    if (!resultsDiv) return;
+    
+    const q = (query || '').trim().toLowerCase();
+    if (!q) {
+        resultsDiv.style.display = 'none';
+        resultsDiv.innerHTML = '';
+        return;
+    }
+    
+    const matches = expenseMaterialsCache.filter(m =>
+        (m.material_number || '').toLowerCase().includes(q) ||
+        (m.name || '').toLowerCase().includes(q)
+    ).slice(0, 20);
+    
+    if (matches.length === 0) {
+        resultsDiv.innerHTML = '<div style="padding: 10px; color: #999; font-size: 13px;">Ingen materialer matcher</div>';
+        resultsDiv.style.display = 'block';
+        return;
+    }
+    
+    resultsDiv.innerHTML = matches.map(m => `
+        <div onclick="selectExpenseMaterial(${m.id})" style="padding: 10px; cursor: pointer; border-bottom: 1px solid #f0f0f0;" onmouseover="this.style.background='#f5f7ff'" onmouseout="this.style.background='white'">
+            <strong>${m.material_number}</strong> — ${m.name}
+            <span style="float: right; color: #666; font-size: 12px;">Kost: ${formatCurrency(m.cost_price)} | Salg: ${formatCurrency(m.sales_price)} / ${m.unit || 'stk'}</span>
+        </div>
+    `).join('');
+    resultsDiv.style.display = 'block';
+}
+
+function selectExpenseMaterial(materialId) {
+    const material = expenseMaterialsCache.find(m => m.id === materialId);
+    if (!material) return;
+    
+    selectedExpenseMaterial = material;
+    
+    // Fill description and amount from the material (cost price as expense)
+    document.getElementById('expenseDescription').value = `${material.material_number} - ${material.name}`;
+    const qty = parseFloat(document.getElementById('expenseQuantity').value) || 1;
+    document.getElementById('expenseAmount').value = (material.cost_price * qty).toFixed(2);
+    
+    // Show selected material info
+    const selectedDiv = document.getElementById('expenseMaterialSelected');
+    selectedDiv.innerHTML = `✅ <strong>${material.material_number} — ${material.name}</strong><br>
+        Kostpris: ${formatCurrency(material.cost_price)} | Salgspris: ${formatCurrency(material.sales_price)} pr. ${material.unit || 'stk'} (beløb = antal × kostpris, kan redigeres)
+        <button type="button" onclick="clearExpenseMaterialLink()" style="float: right; padding: 2px 8px; background: #999; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">Fjern</button>`;
+    selectedDiv.style.display = 'block';
+    
+    // Hide search results
+    document.getElementById('expenseMaterialResults').style.display = 'none';
+    document.getElementById('expenseMaterialSearch').value = `${material.material_number}`;
+}
+
+function recalcExpenseAmount() {
+    if (!selectedExpenseMaterial) return;
+    const qty = parseFloat(document.getElementById('expenseQuantity').value) || 0;
+    document.getElementById('expenseAmount').value = (selectedExpenseMaterial.cost_price * qty).toFixed(2);
+}
+
+function clearExpenseMaterialLink() {
+    // Only clear when user manually edits the amount and a material is linked
+    if (!selectedExpenseMaterial) return;
+    const expected = (selectedExpenseMaterial.cost_price * (parseFloat(document.getElementById('expenseQuantity').value) || 1)).toFixed(2);
+    const current = document.getElementById('expenseAmount').value;
+    if (current !== expected) {
+        selectedExpenseMaterial = null;
+        const selectedDiv = document.getElementById('expenseMaterialSelected');
+        if (selectedDiv) selectedDiv.style.display = 'none';
+    }
 }
 
 // Close expense modal
@@ -1847,3 +1947,7 @@ window.toggleOrderDetailsEdit = toggleOrderDetailsEdit;
 window.cancelOrderDetailsEdit = cancelOrderDetailsEdit;
 window.saveOrderDetails = saveOrderDetails;
 window.getStatusBadge = getStatusBadge;
+window.filterMaterialSearch = filterMaterialSearch;
+window.selectExpenseMaterial = selectExpenseMaterial;
+window.recalcExpenseAmount = recalcExpenseAmount;
+window.clearExpenseMaterialLink = clearExpenseMaterialLink;
