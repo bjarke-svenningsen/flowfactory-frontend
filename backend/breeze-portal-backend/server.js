@@ -2881,7 +2881,22 @@ app.put('/api/materials/:id', auth, adminAuth, async (req, res) => {
     `, [material_number, name, description, category, unit, cost_price, sales_price, is_active ?? 1, materialId]);
 
     const material = await db.get('SELECT * FROM materials WHERE id = ?', [materialId]);
-    res.json(material);
+
+    // Propagate price changes to time-entry-sourced order_materials lines
+    // (hours on orders use live prices, so e.g. a corrected hourly cost updates existing time lines)
+    const propagate = await db.run(`
+      UPDATE order_materials
+      SET unit_cost = ?, unit_sale = ?,
+          total_cost = ROUND(quantity * ?, 2),
+          total_sale = ROUND(quantity * ?, 2)
+      WHERE material_id = ? AND source = 'time_entry'
+    `, [material.cost_price, material.sales_price, material.cost_price, material.sales_price, materialId]);
+
+    if (propagate.changes > 0) {
+      console.log(`Material ${materialId} price change propagated to ${propagate.changes} time-entry line(s)`);
+    }
+
+    res.json({ ...material, updated_lines: propagate.changes });
   } catch (error) {
     console.error('Error updating material:', error);
     res.status(500).json({ error: 'Failed to update material' });
