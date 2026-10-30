@@ -323,7 +323,7 @@ app.get('/api/users', auth, async (req, res) => {
 app.get('/api/posts', auth, async (req, res) => {
   try {
     const posts = await db.all(`
-      SELECT p.id, p.content, p.created_at,
+      SELECT p.id, p.content, p.created_at, p.image_url,
              u.id as user_id, u.name as user_name, u.avatar_url
       FROM posts p
       JOIN users u ON u.id = p.user_id
@@ -352,11 +352,34 @@ app.post('/api/posts', auth, async (req, res) => {
   if (!content) return res.status(400).json({ error: 'Missing content' });
   const info = await db.run('INSERT INTO posts (user_id, content) VALUES (?, ?)', [req.user.id, content]);
   const post = await db.get(`
-    SELECT p.id, p.content, p.created_at, u.id as user_id, u.name as user_name, u.avatar_url
+    SELECT p.id, p.content, p.created_at, p.image_url, u.id as user_id, u.name as user_name, u.avatar_url
     FROM posts p JOIN users u ON u.id = p.user_id WHERE p.id = ?
   `, [info.lastInsertRowid]);
   res.json(post);
   io.emit('feed:new_post', post);
+});
+
+// Upload billede til et opslag (gemmes permanent i uploads/ og DB)
+app.post('/api/posts/:id/image', auth, upload.single('image'), async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
+    const postId = Number(req.params.id);
+    const post = await db.get('SELECT * FROM posts WHERE id = ?', [postId]);
+    if (!post) return res.status(404).json({ error: 'Post not found' });
+    if (post.user_id !== req.user.id) return res.status(403).json({ error: 'Not allowed' });
+
+    // Sikr at kolonnen findes (Postgres og SQLite)
+    try {
+      await db.run('ALTER TABLE posts ADD COLUMN image_url TEXT');
+    } catch (e) { /* kolonnen findes allerede */ }
+
+    const imageUrl = `/uploads/${req.file.filename}`;
+    await db.run('UPDATE posts SET image_url = ? WHERE id = ?', [imageUrl, postId]);
+    res.json({ image_url: imageUrl });
+  } catch (error) {
+    console.error('Post image upload error:', error);
+    res.status(500).json({ error: 'Failed to upload image' });
+  }
 });
 
 app.post('/api/posts/:id/like', auth, async (req, res) => {

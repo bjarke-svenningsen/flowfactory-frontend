@@ -2,6 +2,16 @@
 let posts = [];
 let currentAttachments = [];
 
+// Konverter dataURL (base64) til Blob så den kan uploades via FormData
+function dataURLtoBlob(dataURL) {
+    const [meta, b64] = dataURL.split(',');
+    const mime = (meta.match(/data:(.*?);/) || [])[1] || 'application/octet-stream';
+    const bin = atob(b64);
+    const arr = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+    return new Blob([arr], { type: mime });
+}
+
 // Emoji picker state
 let feedEmojiPickerOpen = false;
 let currentCommentEmojiPicker = null;
@@ -38,9 +48,36 @@ async function addPost() {
                 timestamp: new Date(newPost.created_at + (newPost.created_at.includes('Z') ? '' : 'Z')),
                 likes: newPost.likes || 0,
                 attachments: [...currentAttachments],
+                image_url: newPost.image_url || null,
                 avatar_url: newPost.avatar_url,
                 localPhoto: window.currentUser.profilePhoto || null  // Gem lokalt billede!
             });
+
+            // Upload vedhæftede billeder til serveren så de overlever refresh
+            const imageAtt = currentAttachments.find(a => a.type === 'image');
+            if (imageAtt) {
+                try {
+                    const fd = new FormData();
+                    fd.append('image', dataURLtoBlob(imageAtt.data), imageAtt.name || 'billede.png');
+                    const upRes = await fetch(`/api/posts/${newPost.id}/image`, {
+                        method: 'POST',
+                        headers: { 'Authorization': `Bearer ${token}` },
+                        body: fd
+                    });
+                    if (upRes.ok) {
+                        const j = await upRes.json();
+                        posts[0].image_url = j.image_url;
+                    } else {
+                        console.error('Billede-upload fejlede:', upRes.status);
+                        alert('⚠️ Opslaget blev gemt, men billedet kunne ikke uploades.');
+                    }
+                } catch (e) {
+                    console.error('Billede-upload fejlede:', e);
+                    alert('⚠️ Opslaget blev gemt, men billedet kunne ikke uploades.');
+                }
+            } else if (currentAttachments.length > 0) {
+                alert('⚠️ Bemærk: video- og fil-vedhæftninger gemmes ikke permanent endnu.');
+            }
         } else {
             throw new Error(`Backend svarede ${response.status} ${response.statusText || ''}`.trim());
         }
@@ -306,7 +343,10 @@ async function renderPosts() {
         
         // Generer HTML for vedhæftede filer
         let attachmentsHTML = '';
-        if (post.attachments && post.attachments.length > 0) {
+        if (post.image_url) {
+            // Permanent gemt billede fra serveren
+            attachmentsHTML = `<img src="${post.image_url}" alt="Opslagsbillede" class="post-image" onclick="openImageModal('${post.image_url}')">`;
+        } else if (post.attachments && post.attachments.length > 0) {
             attachmentsHTML = post.attachments.map(att => {
                 if (att.type === 'image') {
                     return `<img src="${att.data}" alt="${att.name}" class="post-image" onclick="openImageModal('${att.data}')">`;
