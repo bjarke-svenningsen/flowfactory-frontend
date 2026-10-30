@@ -162,6 +162,21 @@ async function viewQuote(quoteId) {
             // Draft/sent quotes - show the quote itself (preview), not the order workspace
             currentQuote = quote;
             currentView = 'preview';
+            
+            // Highlight the Tilbud tab (not Godkendte Ordre)
+            ['quotes', 'orders', 'invoiced', 'rejected', 'customers'].forEach(t => {
+                const btn = document.getElementById(`tab${t.charAt(0).toUpperCase() + t.slice(1)}`);
+                if (btn) {
+                    if (t === 'quotes') {
+                        btn.style.background = '#667eea';
+                        btn.style.color = 'white';
+                    } else {
+                        btn.style.background = 'transparent';
+                        btn.style.color = '#666';
+                    }
+                }
+            });
+            
             renderQuotePreview();
         }
     } catch (error) {
