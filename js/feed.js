@@ -42,12 +42,18 @@ async function addPost() {
                 localPhoto: window.currentUser.profilePhoto || null  // Gem lokalt billede!
             });
         } else {
-            throw new Error('Backend ikke tilgængelig');
+            throw new Error(`Backend svarede ${response.status} ${response.statusText || ''}`.trim());
         }
     } catch (error) {
         // IKKE længere: gem lokalt i det skjulte. Brugeren skal vide at posten IKKE blev gemt!
         console.error('Kunne ikke gemme post:', error);
-        alert('❌ Posten kunne ikke gemmes på serveren' + (error.message.includes('401') || error.message === 'Backend ikke tilgængelig' ? '. Prøv at logge ud og ind igen.' : ': ' + error.message));
+        if (error.message.includes('401')) {
+            alert('❌ Posten kunne ikke gemmes: din session er udløbet. Log ud og ind igen.');
+        } else if (error.message.includes('Failed to fetch')) {
+            alert('❌ Posten kunne ikke gemmes: ingen forbindelse til serveren. Tjek din internetforbindelse.');
+        } else {
+            alert('❌ Posten kunne ikke gemmes: ' + error.message);
+        }
         return;
     }
 
