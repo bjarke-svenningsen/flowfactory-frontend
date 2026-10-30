@@ -18,7 +18,7 @@ async function addPost() {
     // Prøv at sende til backend
     try {
         const token = sessionStorage.getItem('token');
-        const response = await fetch('https://flowfactory-frontend.onrender.com/api/posts', {
+        const response = await fetch('/api/posts', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -174,7 +174,7 @@ async function loadPosts() {
     if (feedAvatar && window.currentUser) {
         // Check for profile_image first (server URL), then profilePhoto (old base64)
         if (window.currentUser.profile_image) {
-            const imageUrl = 'https://flowfactory-frontend.onrender.com' + window.currentUser.profile_image;
+            const imageUrl = '' + window.currentUser.profile_image;
             feedAvatar.style.backgroundImage = `url(${imageUrl})`;
             feedAvatar.style.backgroundSize = 'cover';
             feedAvatar.style.backgroundPosition = 'center';
@@ -192,7 +192,7 @@ async function loadPosts() {
     
     try {
         const token = sessionStorage.getItem('token');
-        const response = await fetch('https://flowfactory-frontend.onrender.com/api/posts', {
+        const response = await fetch('/api/posts', {
             headers: {
                 'Authorization': `Bearer ${token}`
             }
@@ -239,7 +239,7 @@ async function loadPosts() {
 async function loadCommentsForPost(postId) {
     try {
         const token = sessionStorage.getItem('token');
-        const response = await fetch(`https://flowfactory-frontend.onrender.com/api/posts/${postId}/comments`, {
+        const response = await fetch(`/api/posts/${postId}/comments`, {
             headers: {
                 'Authorization': `Bearer ${token}`
             }
@@ -283,7 +283,7 @@ async function renderPosts() {
         let avatarHTML;
         if (isOwnPost && window.currentUser.profile_image) {
             // 1. FØRST: Brug brugerens NUVÆRENDE uploadede billede (server URL)
-            const imageUrl = 'https://flowfactory-frontend.onrender.com' + window.currentUser.profile_image;
+            const imageUrl = '' + window.currentUser.profile_image;
             avatarHTML = `<div class="user-avatar" style="background-image: url(${imageUrl}); background-size: cover; background-position: center;"></div>`;
         } else if (isOwnPost && window.currentUser.profilePhoto) {
             // 2. DEREFTER: Brug brugerens NUVÆRENDE uploadede billede (old base64)
@@ -293,7 +293,7 @@ async function renderPosts() {
             avatarHTML = `<div class="user-avatar" style="background-image: url(${post.localPhoto}); background-size: cover; background-position: center;"></div>`;
         } else if (post.avatar_url) {
             // 3. SÅ: Brug avatar fra backend
-            avatarHTML = `<div class="user-avatar" style="background-image: url(https://flowfactory-frontend.onrender.com${post.avatar_url}); background-size: cover; background-position: center;"></div>`;
+            avatarHTML = `<div class="user-avatar" style="background-image: url(${post.avatar_url}); background-size: cover; background-position: center;"></div>`;
         } else {
             // 4. SIDST: Fallback til initialer
             avatarHTML = `<div class="user-avatar">${postInitials}</div>`;
@@ -362,7 +362,7 @@ async function renderPosts() {
                 // Comment avatar
                 let commentAvatarHTML;
                 if (comment.avatar_url) {
-                    const commentImageUrl = 'https://flowfactory-frontend.onrender.com' + comment.avatar_url;
+                    const commentImageUrl = '' + comment.avatar_url;
                     commentAvatarHTML = `<div class="comment-avatar" style="background-image: url(${commentImageUrl}); background-size: cover; background-position: center;"></div>`;
                 } else if (comment.localPhoto) {
                     commentAvatarHTML = `<div class="comment-avatar" style="background-image: url(${comment.localPhoto}); background-size: cover; background-position: center;"></div>`;
@@ -397,7 +397,7 @@ async function renderPosts() {
         // Current user avatar for comment input
         let currentUserAvatarHTML;
         if (window.currentUser.profile_image) {
-            const imageUrl = 'https://flowfactory-frontend.onrender.com' + window.currentUser.profile_image;
+            const imageUrl = '' + window.currentUser.profile_image;
             currentUserAvatarHTML = `<div class="comment-avatar" style="background-image: url(${imageUrl}); background-size: cover; background-position: center;"></div>`;
         } else if (window.currentUser.profilePhoto) {
             currentUserAvatarHTML = `<div class="comment-avatar" style="background-image: url(${window.currentUser.profilePhoto}); background-size: cover; background-position: center;"></div>`;
@@ -565,7 +565,7 @@ async function likePost(postId) {
     // Gem til backend i baggrunden (non-blocking!)
     try {
         const token = sessionStorage.getItem('token');
-        fetch(`https://flowfactory-frontend.onrender.com/api/posts/${postId}/like`, {
+        fetch(`/api/posts/${postId}/like`, {
             method: 'POST',
             headers: { 'Authorization': `Bearer ${token}` }
         }).catch(error => {
@@ -629,7 +629,7 @@ async function addComment(postId) {
     // Gem til backend
     try {
         const token = sessionStorage.getItem('token');
-        const response = await fetch(`https://flowfactory-frontend.onrender.com/api/posts/${postId}/comments`, {
+        const response = await fetch(`/api/posts/${postId}/comments`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -736,7 +736,7 @@ async function deletePost(postId) {
     if (confirm('Er du sikker på at du vil slette dette opslag?')) {
         try {
             const token = sessionStorage.getItem('token');
-            const response = await fetch(`https://flowfactory-frontend.onrender.com/api/posts/${postId}`, {
+            const response = await fetch(`/api/posts/${postId}`, {
                 method: 'DELETE',
                 headers: { 'Authorization': `Bearer ${token}` }
             });
@@ -886,7 +886,7 @@ async function editComment(postId, commentIndex) {
         // Update in backend
         try {
             const token = sessionStorage.getItem('token');
-            const response = await fetch(`https://flowfactory-frontend.onrender.com/api/posts/${postId}/comments/${comment.id}`, {
+            const response = await fetch(`/api/posts/${postId}/comments/${comment.id}`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
@@ -925,7 +925,7 @@ async function deleteComment(postId, commentIndex) {
         // Delete from backend
         try {
             const token = sessionStorage.getItem('token');
-            const response = await fetch(`https://flowfactory-frontend.onrender.com/api/posts/${postId}/comments/${comment.id}`, {
+            const response = await fetch(`/api/posts/${postId}/comments/${comment.id}`, {
                 method: 'DELETE',
                 headers: {
                     'Authorization': `Bearer ${token}`
@@ -974,7 +974,7 @@ async function detectAndRenderLinks(content, postId) {
                 const controller = new AbortController();
                 const timeoutId = setTimeout(() => controller.abort(), 1000); // 1 second timeout (3x faster!)
                 
-                const response = await fetch('https://flowfactory-frontend.onrender.com/api/link-preview', {
+                const response = await fetch('/api/link-preview', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',

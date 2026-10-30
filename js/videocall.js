@@ -111,7 +111,7 @@ function initVideoCallSocket() {
         videoSocket = socket;
         console.log('Reusing existing socket for video calls');
     } else {
-        videoSocket = io('https://flowfactory-frontend.onrender.com');
+        videoSocket = io('');
         
         // Authenticate socket
         const token = sessionStorage.getItem('token');
@@ -887,7 +887,7 @@ function loadVideoCallColleagues() {
     
     // Fetch colleagues from API
     const token = sessionStorage.getItem('token');
-    fetch('https://flowfactory-frontend.onrender.com/api/users', {
+    fetch('/api/users', {
         headers: { 'Authorization': `Bearer ${token}` }
     })
     .then(res => res.json())

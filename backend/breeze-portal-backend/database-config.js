@@ -3,6 +3,7 @@
 import Database from 'better-sqlite3';
 import pg from 'pg';
 import path from 'path';
+import fs from 'fs';
 import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -10,8 +11,8 @@ const __dirname = path.dirname(__filename);
 
 const { Pool } = pg;
 
-// FORCE SUPABASE CONNECTION (hardcoded for now)
-const DATABASE_URL = process.env.DATABASE_URL?.trim() || 'postgresql://postgres.sggdtvbkvcuufurssklb:Olineersej123@aws-1-eu-west-1.pooler.supabase.com:6543/postgres';
+// Only use PostgreSQL if DATABASE_URL is explicitly set (otherwise SQLite)
+const DATABASE_URL = process.env.DATABASE_URL?.trim() || '';
 const isProduction = DATABASE_URL && DATABASE_URL.length > 10 && DATABASE_URL.startsWith('postgresql://');
 
 console.log('🔍 DATABASE_URL exists:', !!DATABASE_URL);
@@ -32,10 +33,28 @@ if (isProduction) {
   console.log('🔗 Connecting to:', DATABASE_URL.substring(0, 30) + '...');
 }
 
-// SQLite database (for development)
+// SQLite database (for development / Render with persistent disk)
 let sqliteDb = null;
 if (!isProduction) {
-  const DB_PATH = path.join(__dirname, 'breeze.db');
+  // On Render, DATA_DIR points to the persistent disk so data survives deploys
+  const DATA_DIR = process.env.DATA_DIR || __dirname;
+  if (DATA_DIR !== __dirname && !fs.existsSync(DATA_DIR)) {
+    fs.mkdirSync(DATA_DIR, { recursive: true });
+  }
+  const DB_PATH = path.join(DATA_DIR, 'breeze.db');
+
+  // First run on persistent disk: seed with bundled database (if present)
+  if (DATA_DIR !== __dirname && !fs.existsSync(DB_PATH)) {
+    const seedDb = path.join(__dirname, 'breeze.db');
+    if (fs.existsSync(seedDb)) {
+      fs.copyFileSync(seedDb, DB_PATH);
+      for (const ext of ['-wal', '-shm']) {
+        if (fs.existsSync(seedDb + ext)) fs.copyFileSync(seedDb + ext, DB_PATH + ext);
+      }
+      console.log('🌱 Seeded persistent disk database from bundled breeze.db');
+    }
+  }
+
   sqliteDb = new Database(DB_PATH);
   sqliteDb.pragma('journal_mode = WAL');
   console.log('✅ SQLite database initialized at:', DB_PATH);

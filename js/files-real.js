@@ -14,7 +14,7 @@ async function loadRealFiles() {
         await loadFolders();
         
         // Load all files (mine + shared will be filtered in UI)
-        const response = await fetch('https://flowfactory-frontend.onrender.com/api/files?view=my', {
+        const response = await fetch('/api/files?view=my', {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         
@@ -69,7 +69,7 @@ async function createFlowFactoryFolder() {
     
     try {
         const token = sessionStorage.getItem('token');
-        const response = await fetch('https://flowfactory-frontend.onrender.com/api/folders', {
+        const response = await fetch('/api/folders', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -249,7 +249,7 @@ function isImage(filename) {
 async function loadSharedFiles() {
     try {
         const token = sessionStorage.getItem('token');
-        const response = await fetch('https://flowfactory-frontend.onrender.com/api/files?view=shared', {
+        const response = await fetch('/api/files?view=shared', {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         
@@ -418,7 +418,7 @@ async function uploadFileToExplorer(event) {
         
         console.log('Uploading file...', file.name);
         
-        const response = await fetch('https://flowfactory-frontend.onrender.com/api/files/upload', {
+        const response = await fetch('/api/files/upload', {
             method: 'POST',
             headers: { 'Authorization': `Bearer ${token}` },
             body: formData
@@ -471,7 +471,7 @@ async function openRealFile(fileId) {
 async function previewImage(fileId, filename) {
     try {
         const token = sessionStorage.getItem('token');
-        const response = await fetch(`https://flowfactory-frontend.onrender.com/api/files/download/${fileId}`, {
+        const response = await fetch(`/api/files/download/${fileId}`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         
@@ -499,7 +499,7 @@ async function previewImage(fileId, filename) {
 async function downloadRealFile(fileId) {
     try {
         const token = sessionStorage.getItem('token');
-        const response = await fetch(`https://flowfactory-frontend.onrender.com/api/files/download/${fileId}`, {
+        const response = await fetch(`/api/files/download/${fileId}`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         
@@ -534,7 +534,7 @@ async function deleteSelected() {
     
     try {
         const token = sessionStorage.getItem('token');
-        const response = await fetch(`https://flowfactory-frontend.onrender.com/api/files/${selectedFileId}`, {
+        const response = await fetch(`/api/files/${selectedFileId}`, {
             method: 'DELETE',
             headers: { 'Authorization': `Bearer ${token}` }
         });
@@ -596,7 +596,7 @@ function formatFileSize(bytes) {
 async function loadFolders() {
     try {
         const token = sessionStorage.getItem('token');
-        const response = await fetch('https://flowfactory-frontend.onrender.com/api/folders', {
+        const response = await fetch('/api/folders', {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         
@@ -622,7 +622,7 @@ async function showNewFolderDialog() {
     
     try {
         const token = sessionStorage.getItem('token');
-        const response = await fetch('https://flowfactory-frontend.onrender.com/api/folders', {
+        const response = await fetch('/api/folders', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -731,7 +731,7 @@ async function createSubfolder() {
     
     try {
         const token = sessionStorage.getItem('token');
-        const response = await fetch('https://flowfactory-frontend.onrender.com/api/folders', {
+        const response = await fetch('/api/folders', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -768,7 +768,7 @@ async function renameFolderSelected() {
     
     try {
         const token = sessionStorage.getItem('token');
-        const response = await fetch(`https://flowfactory-frontend.onrender.com/api/folders/${selectedFolderId}`, {
+        const response = await fetch(`/api/folders/${selectedFolderId}`, {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',
@@ -800,7 +800,7 @@ async function deleteFolderSelected() {
     
     try {
         const token = sessionStorage.getItem('token');
-        const response = await fetch(`https://flowfactory-frontend.onrender.com/api/folders/${selectedFolderId}`, {
+        const response = await fetch(`/api/folders/${selectedFolderId}`, {
             method: 'DELETE',
             headers: { 'Authorization': `Bearer ${token}` }
         });
@@ -860,7 +860,7 @@ async function transferToOrder() {
     
     try {
         const token = sessionStorage.getItem('token');
-        const response = await fetch(`https://flowfactory-frontend.onrender.com/api/files/${selectedFileId}/transfer-to-order`, {
+        const response = await fetch(`/api/files/${selectedFileId}/transfer-to-order`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -953,7 +953,7 @@ async function renameSelected() {
     
     try {
         const token = sessionStorage.getItem('token');
-        const response = await fetch(`https://flowfactory-frontend.onrender.com/api/files/${selectedFileId}/rename`, {
+        const response = await fetch(`/api/files/${selectedFileId}/rename`, {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',
@@ -1002,7 +1002,7 @@ async function shareFile() {
         const token = sessionStorage.getItem('token');
         
         // Find bruger ved email
-        const usersResponse = await fetch('https://flowfactory-frontend.onrender.com/api/users', {
+        const usersResponse = await fetch('/api/users', {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         
@@ -1017,7 +1017,7 @@ async function shareFile() {
         }
         
         // Share file via backend API
-        const shareResponse = await fetch(`https://flowfactory-frontend.onrender.com/api/files/${selectedFileId}/share`, {
+        const shareResponse = await fetch(`/api/files/${selectedFileId}/share`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -1106,7 +1106,7 @@ async function handleFolderDrop(event, folderId) {
     
     try {
         const token = sessionStorage.getItem('token');
-        const response = await fetch(`https://flowfactory-frontend.onrender.com/api/files/${draggedFileId}/move`, {
+        const response = await fetch(`/api/files/${draggedFileId}/move`, {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',

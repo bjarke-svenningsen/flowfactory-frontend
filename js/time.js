@@ -41,7 +41,7 @@ const timePage = {
 
     async loadAllUsers() {
         try {
-            const response = await fetch('https://flowfactory-frontend.onrender.com/api/users', {
+            const response = await fetch('/api/users', {
                 headers: {
                     'Authorization': `Bearer ${sessionStorage.getItem('token')}`
                 }
@@ -231,7 +231,7 @@ const timePage = {
         
         try {
             // Fetch ALL orders and filter client-side for accepted ones
-            const response = await fetch('https://flowfactory-frontend.onrender.com/api/quotes', {
+            const response = await fetch('/api/quotes', {
                 headers: {
                     'Authorization': `Bearer ${sessionStorage.getItem('token')}`
                 }

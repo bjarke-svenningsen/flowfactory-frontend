@@ -52,7 +52,7 @@ if (createDemoBtn) {
         msgEl.textContent = 'Demo-bruger findes allerede. Tryk "Log ind".';
         msgEl.className = 'message success';
       } else {
-        msgEl.textContent = 'Fejl: ' + err.message + '\n\nBackend URL: https://flowfactory-frontend.onrender.com';
+        msgEl.textContent = 'Fejl: ' + err.message + '\n\nBackend URL: ';
         msgEl.className = 'message error';
       }
     }

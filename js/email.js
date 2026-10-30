@@ -2,7 +2,7 @@
 // Windows 95 Style Email Client for FlowFactory Portal
 // Integrates with backend email service on Render
 
-const API_URL = 'https://flowfactory-frontend.onrender.com';
+const API_URL = '';
 
 function getToken() {
   return sessionStorage.getItem('token') || '';

@@ -35,7 +35,7 @@ async function saveProfile() {
 
     try {
         const token = sessionStorage.getItem('token');
-        const response = await fetch('https://flowfactory-frontend.onrender.com/api/users/me', {
+        const response = await fetch('/api/users/me', {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',
@@ -117,7 +117,7 @@ async function changeProfilePhoto(event) {
         formData.append('profile_picture', file);
         
         const token = sessionStorage.getItem('token');
-        const response = await fetch('https://flowfactory-frontend.onrender.com/api/users/me/profile-picture', {
+        const response = await fetch('/api/users/me/profile-picture', {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${token}`
@@ -136,7 +136,7 @@ async function changeProfilePhoto(event) {
         sessionStorage.setItem('currentUser', JSON.stringify(window.currentUser));
         
         // Update images with server URL
-        const serverUrl = 'https://flowfactory-frontend.onrender.com' + user.profile_image;
+        const serverUrl = '' + user.profile_image;
         updateProfileImages(serverUrl);
         
         alert('✅ Profilbillede uploadet!');
@@ -174,7 +174,7 @@ function updateProfileImages(imageUrl) {
 async function loadUserActivity() {
     try {
         const token = sessionStorage.getItem('token');
-        const response = await fetch('https://flowfactory-frontend.onrender.com/api/users/activity', {
+        const response = await fetch('/api/users/activity', {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         
@@ -219,7 +219,7 @@ window.pageLoader.registerPageInit('profile', function() {
         
         // Check for profile_image first (server URL), then profilePhoto (old base64)
         if (window.currentUser.profile_image) {
-            const imageUrl = 'https://flowfactory-frontend.onrender.com' + window.currentUser.profile_image;
+            const imageUrl = '' + window.currentUser.profile_image;
             document.getElementById('profileAvatar').style.backgroundImage = `url(${imageUrl})`;
             document.getElementById('profileAvatar').style.backgroundSize = 'cover';
             document.getElementById('profileAvatar').textContent = '';

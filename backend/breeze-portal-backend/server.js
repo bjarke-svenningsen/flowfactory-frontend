@@ -67,7 +67,8 @@ app.options('*', cors());
 app.use(express.json());
 
 // Determine uploads directory - use persistent disk on Render, local uploads otherwise
-const UPLOADS_DIR = process.env.RENDER ? '/opt/render/project/src/persistent/uploads' : path.join(__dirname, 'uploads');
+const DATA_DIR = process.env.DATA_DIR || '';
+const UPLOADS_DIR = DATA_DIR ? path.join(DATA_DIR, 'uploads') : path.join(__dirname, 'uploads');
 
 // Ensure uploads directory exists
 if (!fs.existsSync(UPLOADS_DIR)) {
@@ -76,6 +77,10 @@ if (!fs.existsSync(UPLOADS_DIR)) {
 
 // Serve static files from uploads directory
 app.use('/uploads', express.static(UPLOADS_DIR));
+
+// Serve the frontend (portal) directly from this server - one service for everything
+const FRONTEND_DIR = path.join(__dirname, '..', '..');
+app.use(express.static(FRONTEND_DIR, { index: 'index.html' }));
 
 // Configure multer for file uploads
 const storage = multer.diskStorage({
@@ -1079,8 +1084,8 @@ app.post('/api/admin/send-invitation', auth, adminAuth, async (req, res) => {
       VALUES (?, ?, ?)
     `, [code, req.user.id, expiresAt.toISOString()]);
     
-    // Create registration URL
-    const registrationUrl = `https://flowfactory-denmark.netlify.app/register.html?code=${code}`;
+    // Create registration URL (same origin as this server)
+    const registrationUrl = `${req.protocol}://${req.get('host')}/register.html?code=${code}`;
     
     // Send email
     const mailOptions = {
@@ -4372,6 +4377,11 @@ app.get('/api/debug/documents', async (req, res) => {
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
+});
+
+// Fallback: serve index.html for any non-API route (so /dashboard etc. works)
+app.get(/^\/(?!api|uploads|socket\.io).*/, (req, res) => {
+  res.sendFile(path.join(FRONTEND_DIR, 'index.html'));
 });
 
 // Initialize database and start server

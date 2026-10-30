@@ -94,7 +94,7 @@ function loadUserData() {
 
     // Check for profile_image from server (persistent) or profilePhoto (old base64 - deprecated)
     if (currentUser.profile_image) {
-        const imageUrl = 'https://flowfactory-frontend.onrender.com' + currentUser.profile_image;
+        const imageUrl = '' + currentUser.profile_image;
         document.getElementById('navAvatar').style.backgroundImage = `url(${imageUrl})`;
         document.getElementById('navAvatar').style.backgroundSize = 'cover';
         document.getElementById('navAvatar').textContent = '';

@@ -1,7 +1,7 @@
 // js/api.js
-// PRODUCTION: Backend hosted on Render with Supabase database
-// Updated: 2025-10-14
-const API = 'https://flowfactory-frontend.onrender.com';
+// API base: empty = same origin (the backend serves the frontend itself).
+// Works identically locally and in production - never change this again.
+const API = '';
 
 function token() {
   return sessionStorage.getItem('token') || '';

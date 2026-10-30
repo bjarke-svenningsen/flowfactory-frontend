@@ -1,79 +1,45 @@
-# 🚀 SÅDAN STARTER DU PORTALEN
+# 🚀 Breeze Portalen — START HER
 
-## Alt du skal gøre:
+## Sådan fungerer det nu (ÉN samlet løsning)
 
-### 1. Dobbeltklik på `START-PORTAL.bat`
+Hele portalen (frontend + backend + database) kører som **én tjeneste på Render**:
 
-Det er det! Filen vil:
-- ✅ Starte backend med SQLite database (lokal) på port 4000
-- ✅ Starte frontend på port 8000
-- ✅ Åbne to vinduer (et til backend, et til frontend)
+- **URL:** https://flowfactory-portal.onrender.com *(tjek den præcise URL i dit Render-dashboard)*
+- **Database:** SQLite — ligger på Render-disken (`/data/breeze.db`) og overlever deploys
+- **Deploy:** Sker automatisk når der pushes til GitHub — du skal intet gøre
 
-### 2. Gå til portalen
-
-Åbn din browser og gå til: **http://localhost:8000**
-
-**VIGTIGT:** Du skal vente på at begge servere er startet før du forsøger at logge ind!
-- Backend vindue skal vise: "🚀 Breeze backend kører på http://localhost:4000"
-- Frontend vindue skal vise: "Serving HTTP on :: port 8000"
-
-### 3. Log ind
+## Log ind
 
 ```
 Email:    bjarke.sv@gmail.com
-Password: Olineersej123
+Password: (som du normalt bruger)
 ```
 
-**NU ER API'EN SAT TIL LOCALHOST** - Så frontend forbinder til din lokale backend!
+## Sådan opdaterer du portalen (fremover)
 
-## Sådan stopper du portalen
+1. Lav dine ændringer (fx med hjælp fra Cline)
+2. Push til GitHub: `git add -A; git commit -m "beskrivelse"; git push`
+3. Færdig — Render deployer automatisk på 2-5 minutter
 
-Luk de to cmd-vinduer der åbnede sig.
+**Du skal ALDRIG rette API-URL'er igen.** Frontend kalder sit eget domæne (relativ sti i `js/api.js`).
 
----
+## Kør lokalt (til udvikling)
 
-## Hvis noget går galt
+1. Åbn et terminalvindue i mappen `backend/breeze-portal-backend`
+2. Kør: `npm install` (første gang) og derefter `node server.js`
+3. Åbn http://localhost:4000 — portalen kører lokalt med lokal database
 
-### Problem: "Failed to fetch" eller "Cannot connect to backend"
+## Filstruktur (det vigtigste)
 
-**Løsning:**
-1. Luk alle cmd-vinduer
-2. Åbn PowerShell som administrator
-3. Kør: `taskkill /F /IM node.exe`
-4. Dobbeltklik på `START-PORTAL.bat` igen
+- `backend/breeze-portal-backend/server.js` — hele backenden (serverer OGSÅ frontend)
+- `backend/breeze-portal-backend/database-config.js` — database-opsætning (SQLite)
+- `js/api.js` — API-hjælper (brug relativ sti, rør ikke ved den)
+- `pages/` + `js/` — frontend-sider
 
-### Problem: Backend crasher med PostgreSQL fejl
+## Render-opsætning (reference)
 
-**Løsning:**
-Du har stadig DATABASE_URL i din PowerShell session. Luk PowerShell og åbn en ny, eller kør:
-```powershell
-$env:DATABASE_URL = $null
-```
+- **Web Service**, Node, Root Directory: `backend/breeze-portal-backend`
+- Build: `npm install` · Start: `node server.js`
+- **Environment variables:** `DATA_DIR=/data`, `JWT_SECRET=<hemmelig nøgle>`
+- **Persistent Disk:** mount på `/data`, 1 GB
 
----
-
-## Din data er sikker! 🔒
-
-- **Lokal SQLite database:** `backend/breeze-portal-backend/breeze.db`
-  - Indeholder: 1 bruger, 4 posts, 2 filer, 5 ordrer, 2 kunder
-  
-- **PostgreSQL på Railway:** Data er også gemt her (backup)
-  - Connection string findes i: `backend/breeze-portal-backend/.env.backup`
-
----
-
-## Hvad er hvad?
-
-- **START-PORTAL.bat** → Start alt (brug denne!)
-- **START-BACKEND-SQLITE.bat** → Start kun backend (for debugging)
-- **.env** → Konfiguration (skal være tom eller kun have kommentar)
-- **.env.backup** → PostgreSQL connection (RØR IKKE!)
-
----
-
-## Nu kan du arbejde videre! ✨
-
-Når portalen kører, kan du arbejde med filhåndtering:
-1. Undermapper i mapper (Windows Explorer stil)
-2. Højreklik menu på mapper og filer
-3. "Overfør til ordre" funktion
