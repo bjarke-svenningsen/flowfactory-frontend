@@ -39,7 +39,7 @@ async function openOrderWorkspace(orderId, fromParentId = null) {
     
     try {
         const token = sessionStorage.getItem('token');
-        const response = await fetch(`https://flowfactory-frontend.onrender.com/api/orders/${orderId}/workspace`, {
+        const response = await fetch(`/api/orders/${orderId}/workspace`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         
@@ -702,7 +702,7 @@ async function saveExpense() {
     
     try {
         const token = sessionStorage.getItem('token');
-        const response = await fetch(`https://flowfactory-frontend.onrender.com/api/orders/${currentWorkspaceOrder.id}/expenses`, {
+        const response = await fetch(`/api/orders/${currentWorkspaceOrder.id}/expenses`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -801,7 +801,7 @@ async function updateExpense(expenseId) {
     
     try {
         const token = sessionStorage.getItem('token');
-        const response = await fetch(`https://flowfactory-frontend.onrender.com/api/orders/${currentWorkspaceOrder.id}/expenses/${expenseId}`, {
+        const response = await fetch(`/api/orders/${currentWorkspaceOrder.id}/expenses/${expenseId}`, {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',
@@ -831,7 +831,7 @@ async function deleteExpense(expenseId) {
     
     try {
         const token = sessionStorage.getItem('token');
-        const response = await fetch(`https://flowfactory-frontend.onrender.com/api/orders/${currentWorkspaceOrder.id}/expenses/${expenseId}`, {
+        const response = await fetch(`/api/orders/${currentWorkspaceOrder.id}/expenses/${expenseId}`, {
             method: 'DELETE',
             headers: { 'Authorization': `Bearer ${token}` }
         });
@@ -1027,7 +1027,7 @@ async function uploadDocument() {
     
     try {
         const token = sessionStorage.getItem('token');
-        const response = await fetch(`https://flowfactory-frontend.onrender.com/api/orders/${currentWorkspaceOrder.id}/documents`, {
+        const response = await fetch(`/api/orders/${currentWorkspaceOrder.id}/documents`, {
             method: 'POST',
             headers: { 'Authorization': `Bearer ${token}` },
             body: formData
@@ -1075,7 +1075,7 @@ async function previewDocument(documentId, filename) {
         
         // Ensure file_path starts with /
         const filePath = doc.file_path.startsWith('/') ? doc.file_path : '/' + doc.file_path;
-        const fileUrl = `https://flowfactory-frontend.onrender.com${filePath}`;
+        const fileUrl = `${filePath}`;
         
         console.log('Constructed file URL:', fileUrl);
         
@@ -1155,7 +1155,7 @@ async function downloadDocument(documentId, filename) {
         }
         
         // Construct download URL
-        const downloadUrl = `https://flowfactory-frontend.onrender.com${doc.file_path}`;
+        const downloadUrl = `${doc.file_path}`;
         
         // Create temporary link and trigger download
         const a = document.createElement('a');
@@ -1177,7 +1177,7 @@ async function deleteDocument(documentId) {
     
     try {
         const token = sessionStorage.getItem('token');
-        const response = await fetch(`https://flowfactory-frontend.onrender.com/api/orders/${currentWorkspaceOrder.id}/documents/${documentId}`, {
+        const response = await fetch(`/api/orders/${currentWorkspaceOrder.id}/documents/${documentId}`, {
             method: 'DELETE',
             headers: { 'Authorization': `Bearer ${token}` }
         });
@@ -1456,7 +1456,7 @@ async function saveExtraWork(parentOrderId) {
     
     try {
         const token = sessionStorage.getItem('token');
-        const response = await fetch(`https://flowfactory-frontend.onrender.com/api/quotes/${parentOrderId}/extra-work`, {
+        const response = await fetch(`/api/quotes/${parentOrderId}/extra-work`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -1533,7 +1533,7 @@ async function saveWorkDescription() {
     
     try {
         const token = sessionStorage.getItem('token');
-        const response = await fetch(`https://flowfactory-frontend.onrender.com/api/orders/${currentWorkspaceOrder.id}/work-description`, {
+        const response = await fetch(`/api/orders/${currentWorkspaceOrder.id}/work-description`, {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',
@@ -1579,7 +1579,7 @@ async function loadOrderDetailsContactPersons() {
     
     try {
         const token = sessionStorage.getItem('token');
-        const response = await fetch(`https://flowfactory-frontend.onrender.com/api/customers/${customerId}/contacts`, {
+        const response = await fetch(`/api/customers/${customerId}/contacts`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         
@@ -1633,7 +1633,7 @@ async function saveOrderDetails() {
     
     try {
         const token = sessionStorage.getItem('token');
-        const response = await fetch(`https://flowfactory-frontend.onrender.com/api/orders/${currentWorkspaceOrder.id}/details`, {
+        const response = await fetch(`/api/orders/${currentWorkspaceOrder.id}/details`, {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',
@@ -1709,7 +1709,7 @@ async function viewOriginalQuote(orderId) {
     try {
         // Load the quote data
         const token = sessionStorage.getItem('token');
-        const response = await fetch(`https://flowfactory-frontend.onrender.com/api/quotes/${orderId}`, {
+        const response = await fetch(`/api/quotes/${orderId}`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         

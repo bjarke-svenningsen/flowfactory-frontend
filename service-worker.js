@@ -1,20 +1,20 @@
 // Breeze Portal Service Worker
 // Provides offline caching and PWA functionality
 
-const CACHE_NAME = 'breeze-portal-v2';
+const CACHE_NAME = 'breeze-portal-v3';
 const urlsToCache = [
-  '/flowfactory-frontend/',
-  '/flowfactory-frontend/dashboard.html',
-  '/flowfactory-frontend/index.html',
-  '/flowfactory-frontend/css/dashboard.css',
-  '/flowfactory-frontend/css/login.css',
-  '/flowfactory-frontend/css/windows-dialog.css',
-  '/flowfactory-frontend/css/mobile.css',
-  '/flowfactory-frontend/js/dashboard.js',
-  '/flowfactory-frontend/js/login.js',
-  '/flowfactory-frontend/js/api.js',
-  '/flowfactory-frontend/logobreeze.png',
-  '/flowfactory-frontend/favicon.svg'
+  '/',
+  '/dashboard.html',
+  '/index.html',
+  '/css/dashboard.css',
+  '/css/login.css',
+  '/css/windows-dialog.css',
+  '/css/mobile.css',
+  '/js/dashboard.js',
+  '/js/login.js',
+  '/js/api.js',
+  '/logobreeze.png',
+  '/favicon.svg'
 ];
 
 // Install event - cache resources

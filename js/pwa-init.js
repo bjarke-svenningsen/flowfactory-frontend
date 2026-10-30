@@ -22,7 +22,7 @@ if ('serviceWorker' in navigator) {
     }
     
     // Now register fresh service worker
-    navigator.serviceWorker.register('/flowfactory-frontend/service-worker.js')
+    navigator.serviceWorker.register('/service-worker.js')
       .then(registration => {
         console.log('✅ Service Worker registered:', registration);
       })

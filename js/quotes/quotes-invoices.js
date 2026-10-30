@@ -6,7 +6,7 @@ let currentInvoiceFilter = 'all';
 async function loadInvoiced() {
     try {
         const token = sessionStorage.getItem('token');
-        const response = await fetch('https://flowfactory-frontend.onrender.com/api/invoices', {
+        const response = await fetch('/api/invoices', {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         
@@ -116,7 +116,7 @@ async function createInvoiceFromOrder(orderId) {
     
     try {
         const token = sessionStorage.getItem('token');
-        const response = await fetch(`https://flowfactory-frontend.onrender.com/api/invoices/from-order/${orderId}`, {
+        const response = await fetch(`/api/invoices/from-order/${orderId}`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -151,7 +151,7 @@ async function createInvoiceFromOrder(orderId) {
 async function viewInvoice(invoiceId) {
     try {
         const token = sessionStorage.getItem('token');
-        const response = await fetch(`https://flowfactory-frontend.onrender.com/api/invoices/${invoiceId}`, {
+        const response = await fetch(`/api/invoices/${invoiceId}`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         
@@ -325,7 +325,7 @@ async function sendInvoice(invoiceId) {
     
     try {
         const token = sessionStorage.getItem('token');
-        const response = await fetch(`https://flowfactory-frontend.onrender.com/api/invoices/${invoiceId}/send`, {
+        const response = await fetch(`/api/invoices/${invoiceId}/send`, {
             method: 'POST',
             headers: { 'Authorization': `Bearer ${token}` }
         });
@@ -350,7 +350,7 @@ async function deleteInvoice(invoiceId) {
     
     try {
         const token = sessionStorage.getItem('token');
-        const response = await fetch(`https://flowfactory-frontend.onrender.com/api/invoices/${invoiceId}`, {
+        const response = await fetch(`/api/invoices/${invoiceId}`, {
             method: 'DELETE',
             headers: { 'Authorization': `Bearer ${token}` }
         });
@@ -375,7 +375,7 @@ async function deleteInvoiceFromPreview(invoiceId) {
     
     try {
         const token = sessionStorage.getItem('token');
-        const response = await fetch(`https://flowfactory-frontend.onrender.com/api/invoices/${invoiceId}`, {
+        const response = await fetch(`/api/invoices/${invoiceId}`, {
             method: 'DELETE',
             headers: { 'Authorization': `Bearer ${token}` }
         });

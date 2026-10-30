@@ -2,7 +2,7 @@
   "name": "Breeze Portal",
   "short_name": "Breeze",
   "description": "Virksomhedsportal til Breeze",
-  "start_url": "/flowfactory-frontend/",
+  "start_url": "/",
   "display": "standalone",
   "background_color": "#f5f5f5",
   "theme_color": "#667eea",

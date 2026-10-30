@@ -10,7 +10,7 @@ let currentOrderTab = 'quotes';
 async function loadQuotes() {
     try {
         const token = sessionStorage.getItem('token');
-        const response = await fetch('https://flowfactory-frontend.onrender.com/api/quotes', {
+        const response = await fetch('/api/quotes', {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         
@@ -160,7 +160,7 @@ async function viewQuote(quoteId) {
 async function editQuote(quoteId) {
     try {
         const token = sessionStorage.getItem('token');
-        const response = await fetch(`https://flowfactory-frontend.onrender.com/api/quotes/${quoteId}`, {
+        const response = await fetch(`/api/quotes/${quoteId}`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         
@@ -181,7 +181,7 @@ async function deleteQuote(quoteId) {
     
     try {
         const token = sessionStorage.getItem('token');
-        const response = await fetch(`https://flowfactory-frontend.onrender.com/api/quotes/${quoteId}`, {
+        const response = await fetch(`/api/quotes/${quoteId}`, {
             method: 'DELETE',
             headers: { 'Authorization': `Bearer ${token}` }
         });
@@ -202,7 +202,7 @@ async function sendQuote(quoteId) {
     
     try {
         const token = sessionStorage.getItem('token');
-        const response = await fetch(`https://flowfactory-frontend.onrender.com/api/quotes/${quoteId}/send`, {
+        const response = await fetch(`/api/quotes/${quoteId}/send`, {
             method: 'POST',
             headers: { 'Authorization': `Bearer ${token}` }
         });
@@ -468,7 +468,7 @@ async function loadQuoteContactPersons() {
     
     try {
         const token = sessionStorage.getItem('token');
-        const response = await fetch(`https://flowfactory-frontend.onrender.com/api/customers/${customerId}/contacts`, {
+        const response = await fetch(`/api/customers/${customerId}/contacts`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         
@@ -560,8 +560,8 @@ async function saveQuote(status = 'draft') {
     try {
         const token = sessionStorage.getItem('token');
         const url = currentView === 'edit' 
-            ? `https://flowfactory-frontend.onrender.com/api/quotes/${currentQuote.id}`
-            : 'https://flowfactory-frontend.onrender.com/api/quotes';
+            ? `/api/quotes/${currentQuote.id}`
+            : '/api/quotes';
         
         const method = currentView === 'edit' ? 'PUT' : 'POST';
         
@@ -777,7 +777,7 @@ async function acceptQuote(quoteId) {
     
     try {
         const token = sessionStorage.getItem('token');
-        const response = await fetch(`https://flowfactory-frontend.onrender.com/api/quotes/${quoteId}/accept`, {
+        const response = await fetch(`/api/quotes/${quoteId}/accept`, {
             method: 'POST',
             headers: { 'Authorization': `Bearer ${token}` }
         });
@@ -804,7 +804,7 @@ async function rejectQuote(quoteId) {
     
     try {
         const token = sessionStorage.getItem('token');
-        const response = await fetch(`https://flowfactory-frontend.onrender.com/api/quotes/${quoteId}/reject`, {
+        const response = await fetch(`/api/quotes/${quoteId}/reject`, {
             method: 'POST',
             headers: { 'Authorization': `Bearer ${token}` }
         });
@@ -910,7 +910,7 @@ function filterQuotesByStatus(status) {
 async function loadOrders() {
     try {
         const token = sessionStorage.getItem('token');
-        const response = await fetch('https://flowfactory-frontend.onrender.com/api/quotes', {
+        const response = await fetch('/api/quotes', {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         
@@ -981,7 +981,7 @@ function renderOrdersContent(orders) {
 async function loadRejected() {
     try {
         const token = sessionStorage.getItem('token');
-        const response = await fetch('https://flowfactory-frontend.onrender.com/api/quotes', {
+        const response = await fetch('/api/quotes', {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         
@@ -1050,7 +1050,7 @@ async function moveOrderBackToQuote(quoteId) {
     
     try {
         const token = sessionStorage.getItem('token');
-        const response = await fetch(`https://flowfactory-frontend.onrender.com/api/quotes/${quoteId}/revert`, {
+        const response = await fetch(`/api/quotes/${quoteId}/revert`, {
             method: 'POST',
             headers: { 'Authorization': `Bearer ${token}` }
         });
@@ -1077,7 +1077,7 @@ async function moveRejectedBackToQuote(quoteId) {
     
     try {
         const token = sessionStorage.getItem('token');
-        const response = await fetch(`https://flowfactory-frontend.onrender.com/api/quotes/${quoteId}/revert`, {
+        const response = await fetch(`/api/quotes/${quoteId}/revert`, {
             method: 'POST',
             headers: { 'Authorization': `Bearer ${token}` }
         });
