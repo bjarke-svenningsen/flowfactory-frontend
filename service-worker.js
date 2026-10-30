@@ -1,7 +1,7 @@
 // Breeze Portal Service Worker
 // Provides offline caching and PWA functionality
 
-const CACHE_NAME = 'breeze-portal-v3';
+const CACHE_NAME = 'breeze-portal-v4';
 const urlsToCache = [
   '/',
   '/dashboard.html',
@@ -35,8 +35,11 @@ self.addEventListener('install', event => {
 // Fetch event - NETWORK FIRST for HTML/JS/CSS, then cache
 self.addEventListener('fetch', event => {
   // Always fetch fresh HTML, JS, CSS files
+  // Lad POST/PUT/DELETE og API/socket-trafik passere urørt (POST må ikke caches, API må aldrig caches)
+  if (event.request.method !== 'GET') return;
   const url = new URL(event.request.url);
-  const shouldAlwaysFetch = 
+  if (url.pathname.startsWith('/api/') || url.pathname.startsWith('/socket.io/')) return;
+  const shouldAlwaysFetch =
     event.request.url.includes('.html') ||
     event.request.url.includes('.js') ||
     event.request.url.includes('.css') ||
@@ -48,6 +51,7 @@ self.addEventListener('fetch', event => {
     event.respondWith(
       fetch(event.request)
         .then(response => {
+          if (!response || !response.ok) return response;
           // Cache the fresh response
           const responseToCache = response.clone();
           caches.open(CACHE_NAME).then(cache => {

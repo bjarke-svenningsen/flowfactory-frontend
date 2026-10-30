@@ -213,7 +213,7 @@ app.post('/api/auth/register', async (req, res) => {
     // Mark invite as used
     await db.run('UPDATE invite_codes SET used_by = ? WHERE id = ?', [info.lastInsertRowid, invite.id]);
     
-    const user = await db.get('SELECT id, name, email, position, department, phone, profile_image, is_admin FROM users WHERE id = ?',
+    const user = await db.get('SELECT id, name, email, position, department, phone, avatar_url AS profile_image, is_admin FROM users WHERE id = ?',
       [info.lastInsertRowid]);
     const token = signToken(user);
     return res.json({ user, token, message: 'Account created successfully!' });
@@ -255,7 +255,7 @@ app.post('/api/auth/login', async (req, res) => {
 
 // Users
 app.get('/api/users/me', auth, async (req, res) => {
-  const user = await db.get('SELECT id, name, email, position, department, phone, profile_image, is_admin, created_at FROM users WHERE id = ?', [req.user.id]);
+  const user = await db.get('SELECT id, name, email, position, department, phone, avatar_url AS profile_image, is_admin, created_at FROM users WHERE id = ?', [req.user.id]);
   res.json({ user });
 });
 
@@ -266,7 +266,7 @@ app.post('/api/users/me/profile-picture', auth, upload.single('profile_picture')
   }
   
   // Delete old profile picture if exists
-  const user = await db.get('SELECT profile_image FROM users WHERE id = ?', [req.user.id]);
+  const user = await db.get('SELECT avatar_url AS profile_image FROM users WHERE id = ?', [req.user.id]);
   if (user.profile_image && user.profile_image.startsWith('/uploads/')) {
     const oldFilename = user.profile_image.replace('/uploads/', '');
     const oldPath = path.join(UPLOADS_DIR, oldFilename);
@@ -277,9 +277,9 @@ app.post('/api/users/me/profile-picture', auth, upload.single('profile_picture')
   
   // Save new profile picture path
   const profileImagePath = `/uploads/${req.file.filename}`;
-  await db.run('UPDATE users SET profile_image = ? WHERE id = ?', [profileImagePath, req.user.id]);
+  await db.run('UPDATE users SET avatar_url = ? WHERE id = ?', [profileImagePath, req.user.id]);
   
-  const updatedUser = await db.get('SELECT id, name, email, position, department, phone, profile_image, is_admin FROM users WHERE id = ?', [req.user.id]);
+  const updatedUser = await db.get('SELECT id, name, email, position, department, phone, avatar_url AS profile_image, is_admin FROM users WHERE id = ?', [req.user.id]);
   res.json({ user: updatedUser });
 });
 
@@ -303,16 +303,16 @@ app.put('/api/users/me', auth, async (req, res) => {
     position=COALESCE(?, position),
     department=COALESCE(?, department),
     phone=COALESCE(?, phone),
-    profile_image=COALESCE(?, profile_image)
+    avatar_url=COALESCE(?, avatar_url)
     WHERE id = ?`, [name, position, department, phone, profile_image, req.user.id]);
-  const user = await db.get('SELECT id, name, email, position, department, phone, profile_image FROM users WHERE id = ?', [req.user.id]);
+  const user = await db.get('SELECT id, name, email, position, department, phone, avatar_url AS profile_image FROM users WHERE id = ?', [req.user.id]);
   res.json({ user });
 });
 
 // Liste alle brugere (til medarbejder-panelet)
 app.get('/api/users', auth, async (req, res) => {
   const rows = await db.all(`
-    SELECT id, name, email, position, department, phone, profile_image, created_at
+    SELECT id, name, email, position, department, phone, avatar_url AS profile_image, created_at
     FROM users
     ORDER BY name ASC
   `);
@@ -324,7 +324,7 @@ app.get('/api/posts', auth, async (req, res) => {
   try {
     const posts = await db.all(`
       SELECT p.id, p.content, p.created_at,
-             u.id as user_id, u.name as user_name, u.profile_image
+             u.id as user_id, u.name as user_name, u.avatar_url
       FROM posts p
       JOIN users u ON u.id = p.user_id
       ORDER BY p.id DESC
@@ -352,7 +352,7 @@ app.post('/api/posts', auth, async (req, res) => {
   if (!content) return res.status(400).json({ error: 'Missing content' });
   const info = await db.run('INSERT INTO posts (user_id, content) VALUES (?, ?)', [req.user.id, content]);
   const post = await db.get(`
-    SELECT p.id, p.content, p.created_at, u.id as user_id, u.name as user_name, u.profile_image
+    SELECT p.id, p.content, p.created_at, u.id as user_id, u.name as user_name, u.avatar_url
     FROM posts p JOIN users u ON u.id = p.user_id WHERE p.id = ?
   `, [info.lastInsertRowid]);
   res.json(post);
@@ -407,7 +407,7 @@ app.get('/api/posts/:id/comments', auth, async (req, res) => {
   
   const comments = await db.all(`
     SELECT c.id, c.content, c.created_at, c.user_id,
-           u.name as author, u.profile_image as avatar_url
+           u.name as author, u.avatar_url
     FROM comments c
     JOIN users u ON c.user_id = u.id
     WHERE c.post_id = ?
@@ -433,7 +433,7 @@ app.post('/api/posts/:id/comments', auth, async (req, res) => {
   
   const comment = await db.get(`
     SELECT c.id, c.content, c.created_at, c.user_id,
-           u.name as author, u.profile_image as avatar_url
+           u.name as author, u.avatar_url
     FROM comments c
     JOIN users u ON c.user_id = u.id
     WHERE c.id = ?
@@ -464,7 +464,7 @@ app.put('/api/posts/:postId/comments/:commentId', auth, async (req, res) => {
   
   const updated = await db.get(`
     SELECT c.id, c.content, c.created_at, c.user_id,
-           u.name as author, u.profile_image as avatar_url
+           u.name as author, u.avatar_url
     FROM comments c
     JOIN users u ON c.user_id = u.id
     WHERE c.id = ?
@@ -2592,7 +2592,7 @@ app.get('/api/orders/:orderId/timeline', auth, async (req, res) => {
   const orderId = Number(req.params.orderId);
   
   const timeline = await db.all(`
-    SELECT t.*, u.name as user_name, u.profile_image
+    SELECT t.*, u.name as user_name, u.avatar_url AS profile_image
     FROM order_timeline t
     JOIN users u ON t.user_id = u.id
     WHERE t.order_id = ?
@@ -2618,7 +2618,7 @@ app.post('/api/orders/:orderId/timeline', auth, async (req, res) => {
   `, [orderId, activity_type, description, req.user.id]);
   
   const entry = await db.get(`
-    SELECT t.*, u.name as user_name, u.profile_image
+    SELECT t.*, u.name as user_name, u.avatar_url AS profile_image
     FROM order_timeline t
     JOIN users u ON t.user_id = u.id
     WHERE t.id = ?
@@ -2634,7 +2634,7 @@ app.get('/api/orders/:orderId/notes', auth, async (req, res) => {
   const orderId = Number(req.params.orderId);
   
   const notes = await db.all(`
-    SELECT n.*, u.name as created_by_name, u.profile_image
+    SELECT n.*, u.name as created_by_name, u.avatar_url AS profile_image
     FROM order_notes n
     JOIN users u ON n.created_by = u.id
     WHERE n.order_id = ?
@@ -2665,7 +2665,7 @@ app.post('/api/orders/:orderId/notes', auth, async (req, res) => {
   `, [orderId, 'Note tilføjet', req.user.id]);
   
   const note = await db.get(`
-    SELECT n.*, u.name as created_by_name, u.profile_image
+    SELECT n.*, u.name as created_by_name, u.avatar_url AS profile_image
     FROM order_notes n
     JOIN users u ON n.created_by = u.id
     WHERE n.id = ?
@@ -2689,7 +2689,7 @@ app.put('/api/orders/:orderId/notes/:noteId', auth, async (req, res) => {
   `, [content, is_pinned ? 1 : 0, noteId]);
   
   const note = await db.get(`
-    SELECT n.*, u.name as created_by_name, u.profile_image
+    SELECT n.*, u.name as created_by_name, u.avatar_url AS profile_image
     FROM order_notes n
     JOIN users u ON n.created_by = u.id
     WHERE n.id = ?
@@ -3291,7 +3291,7 @@ app.get('/api/orders/:orderId/workspace', auth, async (req, res) => {
   
   // Get timeline
   const timeline = await db.all(`
-    SELECT t.*, u.name as user_name, u.profile_image
+    SELECT t.*, u.name as user_name, u.avatar_url AS profile_image
     FROM order_timeline t
     JOIN users u ON t.user_id = u.id
     WHERE t.order_id = ?
@@ -3301,7 +3301,7 @@ app.get('/api/orders/:orderId/workspace', auth, async (req, res) => {
   
   // Get notes
   const notes = await db.all(`
-    SELECT n.*, u.name as created_by_name, u.profile_image
+    SELECT n.*, u.name as created_by_name, u.avatar_url AS profile_image
     FROM order_notes n
     JOIN users u ON n.created_by = u.id
     WHERE n.order_id = ?
@@ -4132,7 +4132,7 @@ app.get('/api/setup-database', async (req, res) => {
         position TEXT DEFAULT '',
         department TEXT DEFAULT '',
         phone TEXT DEFAULT '',
-        profile_image TEXT DEFAULT '',
+        avatar_url TEXT DEFAULT '',
         is_admin INTEGER DEFAULT 0,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
