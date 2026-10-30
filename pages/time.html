@@ -449,6 +449,7 @@
                 <button id="viewDay" class="active" onclick="timePage.changeView('day')">Dag</button>
                 <button id="viewWeek" onclick="timePage.changeView('week')">Uge</button>
                 <button id="viewMonth" onclick="timePage.changeView('month')">Måned</button>
+                <button id="viewWorkshop" onclick="timePage.changeView('workshop')">🔧 Værksted</button>
             </div>
 
             <div class="date-picker">
@@ -505,6 +506,9 @@
         </div>
     </div>
 
+        <!-- Workshop View -->
+        <div id="workshopView" style="display: none;"></div>
+
     <!-- Time Entry Modal -->
     <div class="modal" id="timeEntryModal">
         <div class="modal-content">
@@ -528,7 +532,7 @@
                         </label>
                         <label class="radio-option">
                             <input type="radio" name="entryType" value="internal" onchange="timePage.toggleEntryType()">
-                            <span>Intern Tid</span>
+                            <span>🔧 Værksted (intern tid)</span>
                         </label>
                     </div>
                 </div>

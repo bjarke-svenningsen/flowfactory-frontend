@@ -1658,15 +1658,35 @@ app.get('/api/quotes', auth, async (req, res) => {
     const mainExpenses = await db.get(`
       SELECT SUM(amount) as total FROM order_expenses WHERE order_id = ?
     `, [quote.id]);
-    const expenses_main = mainExpenses?.total || 0;
+    let expenses_main = mainExpenses?.total || 0;
+    
+    // Add labor/material costs (order_materials) as expenses - excludes sick time (material_number '1')
+    const mainMaterialCost = await db.get(`
+      SELECT SUM(om.total_cost) as total
+      FROM order_materials om
+      LEFT JOIN materials m ON om.material_id = m.id
+      WHERE om.order_id = ? AND (m.material_number IS NULL OR m.material_number != '1')
+    `, [quote.id]);
+    const mainLaborCost = mainMaterialCost?.total || 0;
+    expenses_main += mainLaborCost;
     
     // Get extra work expenses
     let expenses_extra = 0;
+    let extraLaborCost = 0;
     for (const eo of extraWorkOrders) {
       const extraExpenses = await db.get(`
         SELECT SUM(amount) as total FROM order_expenses WHERE order_id = ?
       `, [eo.id]);
       expenses_extra += (extraExpenses?.total || 0);
+      
+      const extraMaterialCost = await db.get(`
+        SELECT SUM(om.total_cost) as total
+        FROM order_materials om
+        LEFT JOIN materials m ON om.material_id = m.id
+        WHERE om.order_id = ? AND (m.material_number IS NULL OR m.material_number != '1')
+      `, [eo.id]);
+      extraLaborCost += (extraMaterialCost?.total || 0);
+      expenses_extra += (extraMaterialCost?.total || 0);
     }
     
     // Calculate total expenses
@@ -3303,8 +3323,22 @@ app.get('/api/orders/:orderId/workspace', auth, async (req, res) => {
   
   let totalExpenses = expenses.reduce((sum, exp) => sum + exp.amount, 0);
   
+  // Labor/material costs (order_materials) count as expenses - excludes sick time (material_number '1')
+  const laborCostForOrder = async (orderId) => {
+    const res = await db.get(`
+      SELECT SUM(om.total_cost) as total
+      FROM order_materials om
+      LEFT JOIN materials m ON om.material_id = m.id
+      WHERE om.order_id = ? AND (m.material_number IS NULL OR m.material_number != '1')
+    `, [orderId]);
+    return res?.total || 0;
+  };
+  const mainLaborCost = await laborCostForOrder(orderId);
+  totalExpenses += mainLaborCost;
+  
   // Get expenses for all extra work orders and aggregate
   let extraWorkExpenses = [];
+  let extraLaborCost = 0;
   for (const extraOrder of extraWorkOrders) {
     const extraExpenses = await db.all(`
       SELECT e.*, u.name as created_by_name
@@ -3316,6 +3350,10 @@ app.get('/api/orders/:orderId/workspace', auth, async (req, res) => {
     
     extraWorkExpenses = [...extraWorkExpenses, ...extraExpenses];
     totalExpenses += extraExpenses.reduce((sum, exp) => sum + exp.amount, 0);
+    
+    const extraOrderLaborCost = await laborCostForOrder(extraOrder.id);
+    extraLaborCost += extraOrderLaborCost;
+    totalExpenses += extraOrderLaborCost;
   }
   
   // Get documents
@@ -3370,8 +3408,8 @@ app.get('/api/orders/:orderId/workspace', auth, async (req, res) => {
   const profitMargin = totalRevenue > 0 ? ((profit / totalRevenue) * 100).toFixed(2) : 0;
   
   // Calculate split expenses
-  const mainOrderExpenses = expenses.reduce((sum, exp) => sum + exp.amount, 0);
-  const extraWorkExpensesTotal = extraWorkExpenses.reduce((sum, exp) => sum + exp.amount, 0);
+  const mainOrderExpenses = expenses.reduce((sum, exp) => sum + exp.amount, 0) + mainLaborCost;
+  const extraWorkExpensesTotal = extraWorkExpenses.reduce((sum, exp) => sum + exp.amount, 0) + extraLaborCost;
   
   // Calculate split profit
   const mainOrderRevenue = order.total || 0;
@@ -3396,7 +3434,8 @@ app.get('/api/orders/:orderId/workspace', auth, async (req, res) => {
     expenses: {
       items: expenses,
       extra_work_expenses: extraWorkExpenses,
-      total: totalExpenses
+      total: totalExpenses,
+      labor_cost: mainLaborCost + extraLaborCost
     },
     documents,
     timeline,
