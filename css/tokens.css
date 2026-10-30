@@ -1,0 +1,351 @@
+/* =====================================================
+   SG SEEST DESIGN TOKENS & GLOBAL KOMPONENTER
+   Brand: sort/gul. Lys, ren, rolig med gul accent.
+   Indlæses EFTER dashboard.css (overskriver lilla).
+   ===================================================== */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+:root {
+    /* Farver */
+    --color-bg: #F6F7F9;
+    --color-surface: #FFFFFF;
+    --color-text: #1A1A1A;
+    --color-text-muted: #6B7280;
+    --color-border: #E5E7EB;
+    --color-accent: #F5B800;
+    --color-accent-hover: #D9A200;
+    --color-accent-soft: #FEF3D0;
+    --color-dark: #1A1A1A;
+
+    /* Statusfarver (dæmpede) */
+    --color-green: #16A34A;
+    --color-green-soft: #EAF6EE;
+    --color-red: #DC2626;
+    --color-red-soft: #FDECEC;
+    --color-blue: #2563EB;
+    --color-blue-soft: #EAF1FD;
+    --color-orange: #D97706;
+    --color-orange-soft: #FCF1E2;
+    --color-gray: #6B7280;
+    --color-gray-soft: #EEF0F3;
+
+    /* Form */
+    --radius-card: 12px;
+    --radius-btn: 8px;
+    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.06);
+    --shadow-md: 0 1px 3px rgba(0, 0, 0, 0.06), 0 4px 12px rgba(0, 0, 0, 0.04);
+
+    /* Typografi */
+    --font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+/* ---------- Basis ---------- */
+body,
+.dashboard {
+    font-family: var(--font-family) !important;
+    background: var(--color-bg) !important;
+    color: var(--color-text);
+    line-height: 1.55;
+}
+
+h1 { font-size: 24px; font-weight: 700; }
+h2 { font-size: 20px; font-weight: 600; }
+h3 { font-size: 16px; font-weight: 600; }
+
+/* ---------- Header ---------- */
+.top-nav {
+    background: var(--color-surface);
+    border-bottom: 1px solid var(--color-border);
+    box-shadow: none !important;
+    min-height: 64px !important;
+    padding: 10px 35px !important;
+}
+
+.top-nav .logo-nav {
+    height: 44px !important;
+}
+
+.user-avatar {
+    background: var(--color-dark) !important;
+    box-shadow: none !important;
+}
+
+.logout-btn {
+    background: var(--color-surface) !important;
+    color: var(--color-text) !important;
+    border: 1px solid var(--color-border) !important;
+    border-radius: var(--radius-btn) !important;
+    padding: 8px 16px !important;
+    font-weight: 500;
+    transition: background 0.15s, border-color 0.15s;
+}
+
+.logout-btn:hover {
+    background: var(--color-gray-soft) !important;
+    border-color: var(--color-text-muted) !important;
+}
+
+/* ---------- Sidemenu ---------- */
+.sidebar {
+    border-radius: var(--radius-card) !important;
+    box-shadow: var(--shadow-sm) !important;
+}
+
+.menu-item {
+    border-radius: var(--radius-btn) !important;
+    border-left: 3px solid transparent;
+    font-weight: 500;
+    color: var(--color-text) !important;
+}
+
+.menu-item:hover {
+    background: var(--color-gray-soft) !important;
+}
+
+.menu-item.active {
+    background: var(--color-accent-soft) !important;
+    border-left-color: var(--color-accent);
+    color: var(--color-text) !important;
+}
+
+.content-area {
+    border-radius: var(--radius-card) !important;
+
+/* ---------- Lucide-ikoner ---------- */
+.lucide,
+.icon-18 {
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+}
+
+.menu-item .lucide {
+    width: 20px;
+    height: 20px;
+    margin-right: 10px;
+    vertical-align: -4px;
+}
+
+/* ---------- Log ind-siden ---------- */
+body {
+    background: var(--color-bg) !important;
+}
+
+.login-box {
+    border-radius: var(--radius-card);
+    box-shadow: var(--shadow-md);
+    border: 1px solid var(--color-border);
+}
+
+input:focus {
+    outline: none;
+    border-color: var(--color-accent);
+    box-shadow: 0 0 0 3px var(--color-accent-soft);
+}
+
+.login-btn {
+    background: var(--color-accent) !important;
+    color: var(--color-dark) !important;
+    border-radius: var(--radius-btn) !important;
+    min-height: 46px;
+}
+
+.login-btn:hover {
+    background: var(--color-accent-hover) !important;
+    transform: none;
+}
+
+.register-btn {
+    background: var(--color-surface);
+    color: var(--color-text);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-btn);
+}
+
+.register-btn:hover {
+    background: var(--color-gray-soft);
+    transform: none;
+}
+    box-shadow: var(--shadow-sm) !important;
+}
+
+/* ---------- Knapper (genbrugelige) ---------- */
+.btn-primary,
+.btn-secondary,
+.btn-danger {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-height: 40px;
+    padding: 8px 18px;
+    border-radius: var(--radius-btn);
+    font-family: var(--font-family);
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    border: 1px solid transparent;
+    transition: background 0.15s, border-color 0.15s, box-shadow 0.15s;
+}
+
+.btn-primary {
+    background: var(--color-accent);
+    color: var(--color-dark);
+}
+
+.btn-primary:hover {
+    background: var(--color-accent-hover);
+}
+
+.btn-secondary {
+    background: var(--color-surface);
+    color: var(--color-text);
+    border-color: var(--color-border);
+}
+
+.btn-secondary:hover {
+    background: var(--color-gray-soft);
+    border-color: var(--color-text-muted);
+}
+
+.btn-danger {
+    background: var(--color-surface);
+    color: var(--color-red);
+    border-color: var(--color-border);
+}
+
+.btn-danger:hover {
+    background: var(--color-red);
+    color: #fff;
+    border-color: var(--color-red);
+}
+
+.btn-primary:focus-visible,
+.btn-secondary:focus-visible,
+.btn-danger:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 1px;
+}
+
+/* ---------- Statusmærker (pills) ---------- */
+.status-pill {
+    display: inline-block;
+
+/* ---------- Faner (underline-stil) ---------- */
+.tab-underline {
+    display: flex;
+    gap: 4px;
+    border-bottom: 2px solid var(--color-border);
+}
+
+.tab-underline-btn {
+    padding: 12px 18px;
+    background: transparent;
+    border: none;
+    border-bottom: 3px solid transparent;
+    margin-bottom: -2px;
+    font-family: var(--font-family);
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--color-text-muted);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    transition: color 0.15s, border-color 0.15s;
+}
+
+.tab-underline-btn:hover {
+    color: var(--color-text);
+}
+
+.tab-underline-btn.active {
+    color: var(--color-text);
+    border-bottom-color: var(--color-accent);
+    font-weight: 600;
+}
+
+/* ---------- Kort & KPI ---------- */
+.card {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-card);
+    box-shadow: var(--shadow-sm);
+}
+
+.kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+}
+
+.kpi-card {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-card);
+    box-shadow: var(--shadow-sm);
+    padding: 20px;
+}
+
+.kpi-card .kpi-label {
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--color-text-muted);
+    margin-bottom: 6px;
+}
+
+.kpi-card .kpi-value {
+    font-size: 26px;
+    font-weight: 700;
+    color: var(--color-text);
+}
+
+.kpi-card .kpi-sub {
+    font-size: 12px;
+    color: var(--color-text-muted);
+    margin-top: 4px;
+}
+
+.kpi-card.kpi-green .kpi-value { color: var(--color-green); }
+.kpi-card.kpi-red .kpi-value   { color: var(--color-red); }
+
+/* ---------- Formularer ---------- */
+input:not([type='checkbox']):not([type='radio']),
+select,
+textarea {
+    font-family: var(--font-family);
+    font-size: 14px;
+    color: var(--color-text);
+}
+
+/* ---------- Lucide-ikoner ---------- */
+.lucide,
+.icon-18 {
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+}
+
+.menu-item .lucide {
+    width: 20px;
+    height: 20px;
+    margin-right: 10px;
+    vertical-align: -4px;
+}
+    padding: 4px 12px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.status-pill--draft   { background: var(--color-gray-soft);   color: var(--color-gray); }
+.status-pill--sent    { background: var(--color-blue-soft);   color: var(--color-blue); }
+.status-pill--accepted{ background: var(--color-green-soft);  color: var(--color-green); }
+.status-pill--rejected{ background: var(--color-red-soft);    color: var(--color-red); }
+.status-pill--invoiced{ background: var(--color-orange-soft); color: var(--color-orange); }
