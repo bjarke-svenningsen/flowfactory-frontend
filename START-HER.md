@@ -4,7 +4,7 @@
 
 Hele portalen (frontend + backend + database) kører som **én tjeneste på Render**:
 
-- **URL:** https://flowfactory-portal.onrender.com *(tjek den præcise URL i dit Render-dashboard)*
+- **URL:** https://flowfactory-frontend-20zs.onrender.com
 - **Database:** SQLite — ligger på Render-disken (`/data/breeze.db`) og overlever deploys
 - **Deploy:** Sker automatisk når der pushes til GitHub — du skal intet gøre
 
