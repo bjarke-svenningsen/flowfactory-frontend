@@ -1,4 +1,4 @@
-# 🔒 SUPABASE RLS SETUP GUIDE
+﻿# ðŸ”’ SUPABASE RLS SETUP GUIDE
 
 ## Problem
 Supabase shows 29 security errors: "RLS Disabled in Public"
@@ -8,7 +8,7 @@ Enable RLS (Row Level Security) on all tables. Since your backend uses **service
 
 ---
 
-## ✅ STEP 1: Run the SQL Script
+## âœ… STEP 1: Run the SQL Script
 
 ### Option A: Using Supabase Dashboard (Recommended)
 1. Go to your Supabase project: https://supabase.com/dashboard
@@ -16,7 +16,7 @@ Enable RLS (Row Level Security) on all tables. Since your backend uses **service
 3. Click **"New Query"**
 4. Copy and paste the entire contents of **ENABLE-RLS.sql**
 5. Click **"Run"** button
-6. ✅ Done! All 29 tables now have RLS enabled
+6. âœ… Done! All 29 tables now have RLS enabled
 
 ### Option B: Using Supabase CLI
 ```bash
@@ -26,35 +26,35 @@ supabase db execute --file ENABLE-RLS.sql
 
 ---
 
-## 🧪 STEP 2: Verify Everything Works
+## ðŸ§ª STEP 2: Verify Everything Works
 
 ### Test Your Application
-1. Go to https://flowfactory-denmark.netlify.app
+1. Go to https://flowfactory-frontend-20zs.onrender.com
 2. Log in
 3. Try these actions:
-   - ✅ View dashboard
-   - ✅ Create a quote
-   - ✅ View files
-   - ✅ Send a message
-   - ✅ Create a post
+   - âœ… View dashboard
+   - âœ… Create a quote
+   - âœ… View files
+   - âœ… Send a message
+   - âœ… Create a post
 
-**If everything works → Perfect! RLS is enabled correctly.**
+**If everything works â†’ Perfect! RLS is enabled correctly.**
 
 ### Check Supabase Security Warnings
 1. Go to Supabase Dashboard
-2. Click **"Advisors"** or **"Database"** → **"Advisors"**
-3. ✅ All 29 "RLS Disabled" errors should be **GONE**!
+2. Click **"Advisors"** or **"Database"** â†’ **"Advisors"**
+3. âœ… All 29 "RLS Disabled" errors should be **GONE**!
 
 ---
 
-## 🔍 Why This Works
+## ðŸ” Why This Works
 
 ### Your Architecture
 ```
 Frontend (GitHub Pages)
-    ↓
+    â†“
 Backend (Render + Service Role)
-    ↓
+    â†“
 Database (Supabase)
 ```
 
@@ -62,7 +62,7 @@ Database (Supabase)
 - **Service role** = Backend credentials with **bypass RLS** privilege
 - When you enable RLS, regular users can't access tables directly
 - But your **backend's service role** bypasses RLS automatically
-- So nothing breaks! 🎉
+- So nothing breaks! ðŸŽ‰
 
 ### Security Benefits
 1. **No PostgREST exposure**: Tables can't be accessed via Supabase's auto-generated API
@@ -71,53 +71,53 @@ Database (Supabase)
 
 ---
 
-## 📊 Tables Protected (29 Total)
+## ðŸ“Š Tables Protected (29 Total)
 
 ### Authentication & Users (4)
-- ✅ users
-- ✅ pending_users
-- ✅ invite_codes
-- ✅ user_activity
+- âœ… users
+- âœ… pending_users
+- âœ… invite_codes
+- âœ… user_activity
 
 ### Social Features (4)
-- ✅ posts
-- ✅ reactions
-- ✅ comments
-- ✅ messages
+- âœ… posts
+- âœ… reactions
+- âœ… comments
+- âœ… messages
 
 ### File Management (3)
-- ✅ files
-- ✅ folders
-- ✅ file_shares
+- âœ… files
+- âœ… folders
+- âœ… file_shares
 
 ### Customer & Quotes (5)
-- ✅ customers
-- ✅ customer_contacts
-- ✅ quotes
-- ✅ quote_lines
-- ✅ quote_attachments
+- âœ… customers
+- âœ… customer_contacts
+- âœ… quotes
+- âœ… quote_lines
+- âœ… quote_attachments
 
 ### Invoicing (2)
-- ✅ invoices
-- ✅ invoice_lines
+- âœ… invoices
+- âœ… invoice_lines
 
 ### Order Workspace (4)
-- ✅ order_expenses
-- ✅ order_documents
-- ✅ order_timeline
-- ✅ order_notes
+- âœ… order_expenses
+- âœ… order_documents
+- âœ… order_timeline
+- âœ… order_notes
 
 ### Email Integration (6)
-- ✅ email_accounts
-- ✅ emails
-- ✅ email_attachments
-- ✅ email_labels
-- ✅ email_folders
-- ✅ email_ordre_links
+- âœ… email_accounts
+- âœ… emails
+- âœ… email_attachments
+- âœ… email_labels
+- âœ… email_folders
+- âœ… email_ordre_links
 
 ---
 
-## ❓ FAQ
+## â“ FAQ
 
 ### Q: Will this break my application?
 **A: NO!** Your backend uses service role credentials which automatically bypass RLS.
@@ -143,28 +143,28 @@ ALTER TABLE table_name DISABLE ROW LEVEL SECURITY;
 
 ---
 
-## 🎯 Expected Result
+## ðŸŽ¯ Expected Result
 
 **BEFORE:**
 ```
-❌ 29 security errors in Supabase
-❌ "RLS Disabled in Public" warnings
+âŒ 29 security errors in Supabase
+âŒ "RLS Disabled in Public" warnings
 ```
 
 **AFTER:**
 ```
-✅ 0 security errors
-✅ All tables protected with RLS
-✅ Backend still works perfectly (service role bypass)
+âœ… 0 security errors
+âœ… All tables protected with RLS
+âœ… Backend still works perfectly (service role bypass)
 ```
 
 ---
 
-## 📞 Need Help?
+## ðŸ“ž Need Help?
 
 If you encounter issues:
-1. Check Supabase logs: Dashboard → Logs
-2. Check backend logs: Render → Logs
+1. Check Supabase logs: Dashboard â†’ Logs
+2. Check backend logs: Render â†’ Logs
 3. Verify service role credentials in Render environment variables
 
 ---

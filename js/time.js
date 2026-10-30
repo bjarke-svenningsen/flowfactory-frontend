@@ -35,9 +35,10 @@ function getWeekNumber(d) {
 }
 
 // Hvilken tidstype er en registrering (ud fra materiale-nummer)
+// NB: String() da DB kan returnere tal (8000) eller tekst ('8000')
 function getTimeType(entry) {
-    if (entry.material_number === TIME_MATERIALS.overtime) return 'overtime';
-    if (entry.material_number === TIME_MATERIALS.sick) return 'sick';
+    if (String(entry.material_number) === String(TIME_MATERIALS.overtime)) return 'overtime';
+    if (String(entry.material_number) === String(TIME_MATERIALS.sick)) return 'sick';
     return 'normal';
 }
 
@@ -621,7 +622,8 @@ const timePage = {
             if (timeType === 'overtime') materialNumber = TIME_MATERIALS.overtime;
             if (timeType === 'sick') materialNumber = TIME_MATERIALS.sick;
             
-            const material = this.materials.find(m => m.material_number === materialNumber);
+            // String()-sammenligning: DB kan returnere materiale-nummer som tal eller tekst
+            const material = this.materials.find(m => String(m.material_number) === String(materialNumber));
             
             if (material) {
                 const cost = (durationHours * material.cost_price).toFixed(2);
@@ -629,6 +631,10 @@ const timePage = {
                 document.getElementById('calculatedCost').textContent = cost;
                 document.getElementById('calculatedSale').textContent = sale;
                 document.getElementById('selectedMaterialId').value = material.id;
+            } else {
+                console.warn('Materiale ikke fundet for nr.', materialNumber,
+                    '| Materialer hentet:', this.materials.length,
+                    '| Numre:', this.materials.map(m => m.material_number).join(', '));
             }
         } else {
             document.getElementById('timeCalculation').style.display = 'none';

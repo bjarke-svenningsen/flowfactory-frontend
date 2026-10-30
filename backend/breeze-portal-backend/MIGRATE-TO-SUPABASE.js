@@ -1,4 +1,4 @@
-// MIGRATE-TO-SUPABASE.js - Migrate all data from SQLite to Supabase
+﻿// MIGRATE-TO-SUPABASE.js - Migrate all data from SQLite to Supabase
 import Database from 'better-sqlite3';
 import pg from 'pg';
 import path from 'path';
@@ -17,7 +17,7 @@ const supabasePool = new Pool({
   ssl: { rejectUnauthorized: false }
 });
 
-console.log('🚀 Starting data migration from SQLite to Supabase...\n');
+console.log('ðŸš€ Starting data migration from SQLite to Supabase...\n');
 
 async function migrate() {
   try {
@@ -45,14 +45,14 @@ async function migrate() {
     ];
 
     for (const table of tablesToMigrate) {
-      console.log(`📋 Migrating table: ${table}`);
+      console.log(`ðŸ“‹ Migrating table: ${table}`);
       
       try {
         // Get all rows from SQLite
         const rows = sqliteDb.prepare(`SELECT * FROM ${table}`).all();
         
         if (rows.length === 0) {
-          console.log(`   ⚠️  Table ${table} is empty, skipping...\n`);
+          console.log(`   âš ï¸  Table ${table} is empty, skipping...\n`);
           continue;
         }
 
@@ -63,7 +63,7 @@ async function migrate() {
         
         // Clear existing data in Supabase table
         await supabasePool.query(`DELETE FROM ${table}`);
-        console.log(`   🗑️  Cleared existing data`);
+        console.log(`   ðŸ—‘ï¸  Cleared existing data`);
 
         // Insert rows one by one
         let inserted = 0;
@@ -78,22 +78,22 @@ async function migrate() {
             await supabasePool.query(query, values);
             inserted++;
           } catch (insertError) {
-            console.log(`   ⚠️  Failed to insert row: ${insertError.message}`);
+            console.log(`   âš ï¸  Failed to insert row: ${insertError.message}`);
           }
         }
 
-        console.log(`   ✅ Inserted ${inserted}/${rows.length} rows\n`);
+        console.log(`   âœ… Inserted ${inserted}/${rows.length} rows\n`);
       } catch (tableError) {
-        console.log(`   ❌ Error migrating ${table}: ${tableError.message}\n`);
+        console.log(`   âŒ Error migrating ${table}: ${tableError.message}\n`);
       }
     }
 
-    console.log('🎉 Migration complete!\n');
-    console.log('✅ All data has been migrated to Supabase!');
-    console.log('\nYou can now test your portal at: https://flowfactory-denmark.netlify.app');
+    console.log('ðŸŽ‰ Migration complete!\n');
+    console.log('âœ… All data has been migrated to Supabase!');
+    console.log('\nYou can now test your portal at: https://flowfactory-frontend-20zs.onrender.com');
     
   } catch (error) {
-    console.error('❌ Migration failed:', error);
+    console.error('âŒ Migration failed:', error);
   } finally {
     sqliteDb.close();
     await supabasePool.end();

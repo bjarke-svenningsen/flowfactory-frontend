@@ -1,4 +1,4 @@
-// OPRET-ADMIN-SQLITE.js - Opret admin bruger i SQLite database
+﻿// OPRET-ADMIN-SQLITE.js - Opret admin bruger i SQLite database
 import Database from 'better-sqlite3';
 import bcrypt from 'bcryptjs';
 import path from 'path';
@@ -7,9 +7,9 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-console.log('═══════════════════════════════════════');
-console.log('🔧 OPRET ADMIN I SQLITE DATABASE');
-console.log('═══════════════════════════════════════\n');
+console.log('â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•');
+console.log('ðŸ”§ OPRET ADMIN I SQLITE DATABASE');
+console.log('â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•\n');
 
 const email = 'bjarke.sv@gmail.com';
 const password = 'Olineersej123';
@@ -18,16 +18,16 @@ const name = 'Bjarke';
 try {
   // Connect to SQLite database
   const dbPath = path.join(__dirname, 'breeze.db');
-  console.log('📊 Database path:', dbPath);
+  console.log('ðŸ“Š Database path:', dbPath);
   
   const db = new Database(dbPath);
-  console.log('✅ Forbundet til SQLite database!\n');
+  console.log('âœ… Forbundet til SQLite database!\n');
   
   // Check if user already exists
   const existing = db.prepare('SELECT * FROM users WHERE email = ?').get(email.toLowerCase());
   
   if (existing) {
-    console.log('⚠️  Bruger findes allerede!');
+    console.log('âš ï¸  Bruger findes allerede!');
     console.log('   Email:', existing.email);
     console.log('   Name:', existing.name);
     console.log('   Is Admin:', existing.is_admin);
@@ -35,15 +35,15 @@ try {
     
     // Make sure user is admin
     if (existing.is_admin === 0) {
-      console.log('\n💾 Opdaterer til admin...');
+      console.log('\nðŸ’¾ Opdaterer til admin...');
       db.prepare('UPDATE users SET is_admin = 1 WHERE id = ?').run(existing.id);
-      console.log('✅ Bruger opdateret til admin!');
+      console.log('âœ… Bruger opdateret til admin!');
     } else {
-      console.log('\n✅ Bruger er allerede admin!');
+      console.log('\nâœ… Bruger er allerede admin!');
     }
     
   } else {
-    console.log('💾 Opretter ny admin bruger...');
+    console.log('ðŸ’¾ Opretter ny admin bruger...');
     
     const password_hash = bcrypt.hashSync(password, 10);
     
@@ -52,7 +52,7 @@ try {
       VALUES (?, ?, ?, 'CEO', '', '', '', 1)
     `).run(name, email.toLowerCase(), password_hash);
     
-    console.log('✅ Admin bruger oprettet!');
+    console.log('âœ… Admin bruger oprettet!');
     console.log('   User ID:', info.lastInsertRowid);
   }
   
@@ -60,7 +60,7 @@ try {
   const user = db.prepare('SELECT id, name, email, is_admin, created_at FROM users WHERE email = ?')
     .get(email.toLowerCase());
   
-  console.log('\n📋 Bruger i SQLite database:');
+  console.log('\nðŸ“‹ Bruger i SQLite database:');
   console.log('   ID:', user.id);
   console.log('   Name:', user.name);
   console.log('   Email:', user.email);
@@ -69,19 +69,19 @@ try {
   
   db.close();
   
-  console.log('\n═══════════════════════════════════════');
-  console.log('🎉 KLAR! LOGIN SKULLE VIRKE NU!');
-  console.log('═══════════════════════════════════════\n');
+  console.log('\nâ•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•');
+  console.log('ðŸŽ‰ KLAR! LOGIN SKULLE VIRKE NU!');
+  console.log('â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•\n');
   
-  console.log('🌐 TEST LOGIN NU:');
-  console.log('   URL:      https://flowfactory-denmark.netlify.app');
+  console.log('ðŸŒ TEST LOGIN NU:');
+  console.log('   URL:      https://flowfactory-frontend-20zs.onrender.com');
   console.log('   Email:    bjarke.sv@gmail.com');
   console.log('   Password: Olineersej123\n');
   
-  console.log('═══════════════════════════════════════\n');
+  console.log('â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•\n');
   
 } catch (error) {
-  console.error('❌ Fejl:', error.message);
+  console.error('âŒ Fejl:', error.message);
   console.error('\nFuld fejl:', error);
   process.exit(1);
 }

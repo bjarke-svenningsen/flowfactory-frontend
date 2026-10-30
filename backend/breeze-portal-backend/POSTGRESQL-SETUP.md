@@ -1,114 +1,114 @@
-# PostgreSQL Setup Guide - Railway
+﻿# PostgreSQL Setup Guide - Railway
 
 Din backend bruger nu **smart database switching**:
 - **Lokalt (development):** SQLite database
 - **Production (Railway):** PostgreSQL database
 
-Dette betyder at din database **overlever redeploys** og data ikke går tabt! 🎉
+Dette betyder at din database **overlever redeploys** og data ikke gÃ¥r tabt! ðŸŽ‰
 
 ---
 
-## 🚀 Step 1: Tilføj PostgreSQL til Railway
+## ðŸš€ Step 1: TilfÃ¸j PostgreSQL til Railway
 
-### 1.1 Gå til Railway Dashboard
-1. Åbn [railway.app](https://railway.app)
+### 1.1 GÃ¥ til Railway Dashboard
+1. Ã…bn [railway.app](https://railway.app)
 2. Log ind
 3. Find dit backend projekt (flowfactory-backend-production)
 
-### 1.2 Tilføj PostgreSQL Database
-1. Klik på dit projekt
-2. Klik **"+ New"** knappen (øverst til højre)
-3. Vælg **"Database"**
-4. Vælg **"Add PostgreSQL"**
+### 1.2 TilfÃ¸j PostgreSQL Database
+1. Klik pÃ¥ dit projekt
+2. Klik **"+ New"** knappen (Ã¸verst til hÃ¸jre)
+3. VÃ¦lg **"Database"**
+4. VÃ¦lg **"Add PostgreSQL"**
 
-### 1.3 Vent på Database Provisioning
+### 1.3 Vent pÃ¥ Database Provisioning
 Railway opretter automatisk:
 - PostgreSQL database
 - `DATABASE_URL` environment variable
 - Connection credentials
 
-**Vent 1-2 minutter** mens Railway sætter databasen op.
+**Vent 1-2 minutter** mens Railway sÃ¦tter databasen op.
 
 ---
 
-## 🔧 Step 2: Setup Database Tabeller
+## ðŸ”§ Step 2: Setup Database Tabeller
 
-### 2.1 Åbn Railway Shell
-1. I Railway dashboard, klik på dit **backend service** (IKKE databasen)
-2. Gå til **"Deployments"** tab
-3. Klik på den seneste deployment
-4. Find og klik **"View Logs"** eller **"Terminal"** (afhængigt af UI)
+### 2.1 Ã…bn Railway Shell
+1. I Railway dashboard, klik pÃ¥ dit **backend service** (IKKE databasen)
+2. GÃ¥ til **"Deployments"** tab
+3. Klik pÃ¥ den seneste deployment
+4. Find og klik **"View Logs"** eller **"Terminal"** (afhÃ¦ngigt af UI)
 5. Du skulle nu have en terminal
 
-### 2.2 Kør Setup Script
-I Railway terminalen, kør:
+### 2.2 KÃ¸r Setup Script
+I Railway terminalen, kÃ¸r:
 ```bash
 node setup-postgres.js
 ```
 
 **Output du skulle se:**
 ```
-🚀 Setting up PostgreSQL database...
+ðŸš€ Setting up PostgreSQL database...
 
-✅ Users table created
-✅ Messages table created
-✅ Posts table created
-✅ Comments table created
-✅ Files table created
-✅ Customers table created
-✅ Quotes table created
-✅ Quote items table created
-✅ Customer contacts table created
-✅ Orders table created
-✅ Order items table created
-✅ Order documents table created
+âœ… Users table created
+âœ… Messages table created
+âœ… Posts table created
+âœ… Comments table created
+âœ… Files table created
+âœ… Customers table created
+âœ… Quotes table created
+âœ… Quote items table created
+âœ… Customer contacts table created
+âœ… Orders table created
+âœ… Order items table created
+âœ… Order documents table created
 
-🎉 PostgreSQL database setup complete!
+ðŸŽ‰ PostgreSQL database setup complete!
 ```
 
 ---
 
-## 👤 Step 3: Opret Admin Bruger
+## ðŸ‘¤ Step 3: Opret Admin Bruger
 
 ### 3.1 Opdater .env (lokalt)
-Først, få din DATABASE_URL fra Railway:
+FÃ¸rst, fÃ¥ din DATABASE_URL fra Railway:
 
-1. I Railway dashboard, klik på **PostgreSQL** servicen
-2. Gå til **"Variables"** tab
-3. Find `DATABASE_URL` og kopier værdien
+1. I Railway dashboard, klik pÃ¥ **PostgreSQL** servicen
+2. GÃ¥ til **"Variables"** tab
+3. Find `DATABASE_URL` og kopier vÃ¦rdien
 
 ### 3.2 Test Lokalt (Valgfrit)
-Du kan teste PostgreSQL lokalt før deployment:
+Du kan teste PostgreSQL lokalt fÃ¸r deployment:
 
 Opret `.env` fil i `backend/breeze-portal-backend/`:
 ```env
 DATABASE_URL=postgresql://postgres:xxx@xxx.railway.app:5432/railway
 ```
 
-Kør:
+KÃ¸r:
 ```bash
 node create-admin.js
 ```
 
-### 3.3 Opret Admin på Railway
-I Railway terminal, kør:
+### 3.3 Opret Admin pÃ¥ Railway
+I Railway terminal, kÃ¸r:
 ```bash
 node create-admin.js
 ```
 
-**Følg instruktionerne:**
+**FÃ¸lg instruktionerne:**
 1. Indtast email: `bjarke.sv@gmail.com`
 2. Indtast password: `Olineersej123`
 3. Indtast navn: `Bjarke`
 
 ---
 
-## 🎯 Step 4: Verificer Setup
+## ðŸŽ¯ Step 4: Verificer Setup
 
 ### 4.1 Tjek Database Connection
 Test at backend kan forbinde til PostgreSQL:
 
-Åbn i browser:
+Ã…bn i browser:
 ```
 https://flowfactory-backend-production.up.railway.app/
 ```
@@ -117,50 +117,50 @@ https://flowfactory-backend-production.up.railway.app/
 ```json
 {
   "ok": true,
-  "message": "Breeze API kører!"
+  "message": "Breeze API kÃ¸rer!"
 }
 ```
 
 ### 4.2 Tjek Logs
 I Railway:
-1. Gå til **"Deployments"** → **"View Logs"**
+1. GÃ¥ til **"Deployments"** â†’ **"View Logs"**
 2. Du skulle se:
 ```
-📊 Database Mode: PostgreSQL (Production)
-✅ PostgreSQL connection pool created
+ðŸ“Š Database Mode: PostgreSQL (Production)
+âœ… PostgreSQL connection pool created
 ```
 
 ### 4.3 Test Login
-Gå til din portal:
+GÃ¥ til din portal:
 ```
-https://flowfactory-denmark.netlify.app
+https://flowfactory-frontend-20zs.onrender.com
 ```
 
 Log ind med:
 - Email: `bjarke.sv@gmail.com`
 - Password: `Olineersej123`
 
-**Det skulle virke nu! 🎉**
+**Det skulle virke nu! ðŸŽ‰**
 
 ---
 
-## ✅ Fordele ved PostgreSQL
+## âœ… Fordele ved PostgreSQL
 
-### Før (SQLite):
-❌ Database resetter ved hver deploy  
-❌ Data går tabt ved redeploy  
-❌ Ingen persistent storage  
+### FÃ¸r (SQLite):
+âŒ Database resetter ved hver deploy  
+âŒ Data gÃ¥r tabt ved redeploy  
+âŒ Ingen persistent storage  
 
 ### Nu (PostgreSQL):
-✅ Database overlever redeploys  
-✅ Persistent data storage  
-✅ Production-ready  
-✅ Gratis på Railway  
-✅ Automatisk backups  
+âœ… Database overlever redeploys  
+âœ… Persistent data storage  
+âœ… Production-ready  
+âœ… Gratis pÃ¥ Railway  
+âœ… Automatisk backups  
 
 ---
 
-## 🔄 Hvordan det virker
+## ðŸ”„ Hvordan det virker
 
 ### Smart Database Switching
 Din `database-config.js` tjekker automatisk:
@@ -180,39 +180,39 @@ const isProduction = !!process.env.DATABASE_URL;
 - Production-ready
 
 ### Zero Code Changes Needed!
-Din eksisterende kode virker uden ændringer:
+Din eksisterende kode virker uden Ã¦ndringer:
 
 ```javascript
-// Dette virker både lokalt og i production
+// Dette virker bÃ¥de lokalt og i production
 const user = await db.get('SELECT * FROM users WHERE email = ?', [email]);
 ```
 
-Database-config håndterer automatisk forskellen mellem SQLite og PostgreSQL!
+Database-config hÃ¥ndterer automatisk forskellen mellem SQLite og PostgreSQL!
 
 ---
 
-## 🐛 Troubleshooting
+## ðŸ› Troubleshooting
 
 ### Problem: "DATABASE_URL not found"
-**Løsning:**
-1. Tjek at PostgreSQL er tilføjet i Railway
-2. Vent 1-2 minutter efter tilføjelse
+**LÃ¸sning:**
+1. Tjek at PostgreSQL er tilfÃ¸jet i Railway
+2. Vent 1-2 minutter efter tilfÃ¸jelse
 3. Genstart backend service
 
 ### Problem: "Connection refused"
-**Løsning:**
+**LÃ¸sning:**
 1. Tjek Railway logs for fejl
-2. Verificer at PostgreSQL kører
+2. Verificer at PostgreSQL kÃ¸rer
 3. Tjek DATABASE_URL variablen er sat korrekt
 
 ### Problem: "Table does not exist"
-**Løsning:**
-1. Kør `node setup-postgres.js` igen
+**LÃ¸sning:**
+1. KÃ¸r `node setup-postgres.js` igen
 2. Tjek Railway terminal output for fejl
 
 ---
 
-## 📊 Database Migration (Hvis du har eksisterende data)
+## ðŸ“Š Database Migration (Hvis du har eksisterende data)
 
 Hvis du har data i din lokale SQLite database, som du vil migrere:
 
@@ -225,17 +225,17 @@ Jeg kan lave et script til dig hvis du har data der skal migreres!
 
 ---
 
-## 🎉 Færdig!
+## ðŸŽ‰ FÃ¦rdig!
 
 Din portal bruger nu PostgreSQL i production!
 
 **Benefits:**
-✅ Data overlever redeploys  
-✅ Login virker permanent  
-✅ Filer, beskeder, alt persisterer  
-✅ Production-ready setup  
+âœ… Data overlever redeploys  
+âœ… Login virker permanent  
+âœ… Filer, beskeder, alt persisterer  
+âœ… Production-ready setup  
 
 **Test din portal nu:**
-https://flowfactory-denmark.netlify.app
+https://flowfactory-frontend-20zs.onrender.com
 
-**Held og lykke! 🚀**
+**Held og lykke! ðŸš€**

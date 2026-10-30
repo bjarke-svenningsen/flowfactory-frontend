@@ -12,7 +12,8 @@
 ## HVAD VI IKKE BRUGER LÆNGERE
 - ❌ Supabase PostgreSQL — droppet. Slet projektet i Supabase.
 - ❌ GitHub Pages — droppet. Frontend serveres af backend.
-- ❌ Netlify / Railway — aldrig brugt / forladt.
+- ❌ Railway — forladt. Brug Render.
+- ⚠️ Gammelt forladt site `flowfactory-denmark` på den gamle static host findes STADIG og bygger ved hvert git push (bruger credits!) — slet det i det gamle dashboard.
 - ❌ URL-fix-scripts — slettet. Der findes kun ÉN URL: tjenestens egen.
 
 ## Render-indstillinger (reference)

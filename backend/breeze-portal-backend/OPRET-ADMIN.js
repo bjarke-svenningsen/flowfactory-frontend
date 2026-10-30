@@ -1,16 +1,16 @@
-// OPRET-ADMIN.js - Smart script der automatisk finder de rigtige kolonner
+﻿// OPRET-ADMIN.js - Smart script der automatisk finder de rigtige kolonner
 import pg from 'pg';
 import bcrypt from 'bcryptjs';
 
 const { Pool } = pg;
 
-// HARDCODED DATABASE_URL - så det ALTID virker
+// HARDCODED DATABASE_URL - sÃ¥ det ALTID virker
 const DATABASE_URL = 'postgresql://postgres:bWBKtSXRuaoeNzdgKRbZGgWYwFUnTDLg@shortline.proxy.rlwy.net:56745/railway';
 
 async function createAdmin() {
-  console.log('═══════════════════════════════════════');
-  console.log('🚀 OPRET ADMIN BRUGER - SMART SCRIPT');
-  console.log('═══════════════════════════════════════\n');
+  console.log('â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•');
+  console.log('ðŸš€ OPRET ADMIN BRUGER - SMART SCRIPT');
+  console.log('â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•\n');
 
   const email = 'bjarke.sv@gmail.com';
   const password = 'Olineersej123';
@@ -22,10 +22,10 @@ async function createAdmin() {
       ssl: { rejectUnauthorized: false }
     });
 
-    console.log('✅ Forbundet til Railway PostgreSQL!\n');
+    console.log('âœ… Forbundet til Railway PostgreSQL!\n');
 
     // Tjek tabel struktur
-    console.log('📊 Tjekker users tabel struktur...\n');
+    console.log('ðŸ“Š Tjekker users tabel struktur...\n');
     
     const tableInfo = await pool.query(`
       SELECT column_name, data_type, is_nullable
@@ -38,7 +38,7 @@ async function createAdmin() {
     const columns = {};
     tableInfo.rows.forEach(col => {
       columns[col.column_name] = col.data_type;
-      console.log(`  ✓ ${col.column_name} (${col.data_type})`);
+      console.log(`  âœ“ ${col.column_name} (${col.data_type})`);
     });
     console.log('');
 
@@ -46,15 +46,15 @@ async function createAdmin() {
     const existing = await pool.query('SELECT * FROM users WHERE email = $1', [email.toLowerCase()]);
     
     if (existing.rows.length > 0) {
-      console.log('⚠️  Bruger findes allerede!');
+      console.log('âš ï¸  Bruger findes allerede!');
       console.log('Email:', existing.rows[0].email);
-      console.log('\n✅ Du kan logge ind nu!\n');
+      console.log('\nâœ… Du kan logge ind nu!\n');
       await pool.end();
       
-      console.log('═══════════════════════════════════════');
-      console.log('🌐 TEST LOGIN NU:');
-      console.log('═══════════════════════════════════════');
-      console.log('URL:      https://flowfactory-denmark.netlify.app');
+      console.log('â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•');
+      console.log('ðŸŒ TEST LOGIN NU:');
+      console.log('â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•');
+      console.log('URL:      https://flowfactory-frontend-20zs.onrender.com');
       console.log('Email:    bjarke.sv@gmail.com');
       console.log('Password: Olineersej123\n');
       
@@ -63,14 +63,14 @@ async function createAdmin() {
 
     // Hash password
     const password_hash = bcrypt.hashSync(password, 10);
-    console.log('🔐 Password hash genereret...\n');
+    console.log('ðŸ” Password hash genereret...\n');
 
-    // Byg INSERT query dynamisk baseret på eksisterende kolonner
+    // Byg INSERT query dynamisk baseret pÃ¥ eksisterende kolonner
     let insertColumns = ['email'];
     let insertValues = [email.toLowerCase()];
     let paramCount = 1;
 
-    // Tilføj kolonner hvis de eksisterer
+    // TilfÃ¸j kolonner hvis de eksisterer
     if (columns['name']) {
       insertColumns.push('name');
       insertValues.push(name);
@@ -121,34 +121,34 @@ async function createAdmin() {
     const placeholders = insertValues.map((_, i) => `$${i + 1}`).join(', ');
     const sql = `INSERT INTO users (${insertColumns.join(', ')}) VALUES (${placeholders})`;
 
-    console.log('💾 Opretter admin bruger...');
+    console.log('ðŸ’¾ Opretter admin bruger...');
     console.log('   Kolonner:', insertColumns.join(', '));
     console.log('');
 
     await pool.query(sql, insertValues);
 
-    console.log('✅ Admin bruger oprettet!\n');
+    console.log('âœ… Admin bruger oprettet!\n');
 
     await pool.end();
 
-    console.log('═══════════════════════════════════════');
-    console.log('🎉 SUCCESS! ADMIN BRUGER KLAR!');
-    console.log('═══════════════════════════════════════\n');
+    console.log('â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•');
+    console.log('ðŸŽ‰ SUCCESS! ADMIN BRUGER KLAR!');
+    console.log('â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•\n');
     
-    console.log('📝 Login oplysninger:');
+    console.log('ðŸ“ Login oplysninger:');
     console.log('   Email:    bjarke.sv@gmail.com');
     console.log('   Password: Olineersej123\n');
     
-    console.log('🌐 GÅ TIL PORTALEN OG LOG IND:');
-    console.log('   https://flowfactory-denmark.netlify.app\n');
+    console.log('ðŸŒ GÃ… TIL PORTALEN OG LOG IND:');
+    console.log('   https://flowfactory-frontend-20zs.onrender.com\n');
 
-    console.log('═══════════════════════════════════════\n');
+    console.log('â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•\n');
 
     process.exit(0);
 
   } catch (error) {
-    console.error('\n❌ FEJL:', error.message);
-    console.error('\n💡 Fuld fejl info:', error);
+    console.error('\nâŒ FEJL:', error.message);
+    console.error('\nðŸ’¡ Fuld fejl info:', error);
     process.exit(1);
   }
 }

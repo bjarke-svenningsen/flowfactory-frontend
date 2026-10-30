@@ -1,5 +1,5 @@
-// quick-setup-railway.js - Setup Railway PostgreSQL fra din computer
-// Kør dette script lokalt for at oprette database og admin bruger
+﻿// quick-setup-railway.js - Setup Railway PostgreSQL fra din computer
+// KÃ¸r dette script lokalt for at oprette database og admin bruger
 
 import pg from 'pg';
 import bcrypt from 'bcryptjs';
@@ -17,7 +17,7 @@ const colors = {
 };
 
 async function setupDatabase() {
-  console.log(`\n${colors.blue}🚀 Railway PostgreSQL Setup${colors.reset}\n`);
+  console.log(`\n${colors.blue}ðŸš€ Railway PostgreSQL Setup${colors.reset}\n`);
 
   // Prompt for DATABASE_URL
   const rl = readline.createInterface({
@@ -27,22 +27,22 @@ async function setupDatabase() {
 
   const question = (query) => new Promise((resolve) => rl.question(query, resolve));
 
-  console.log(`${colors.yellow}📝 Først skal vi have din DATABASE_URL fra Railway:${colors.reset}\n`);
-  console.log(`1. Gå til railway.app`);
-  console.log(`2. Klik på dit backend projekt`);
-  console.log(`3. Klik på PostgreSQL servicen (ikke backend)`);
-  console.log(`4. Gå til "Variables" tab`);
-  console.log(`5. Find DATABASE_URL og kopiér hele værdien\n`);
+  console.log(`${colors.yellow}ðŸ“ FÃ¸rst skal vi have din DATABASE_URL fra Railway:${colors.reset}\n`);
+  console.log(`1. GÃ¥ til railway.app`);
+  console.log(`2. Klik pÃ¥ dit backend projekt`);
+  console.log(`3. Klik pÃ¥ PostgreSQL servicen (ikke backend)`);
+  console.log(`4. GÃ¥ til "Variables" tab`);
+  console.log(`5. Find DATABASE_URL og kopiÃ©r hele vÃ¦rdien\n`);
 
   const DATABASE_URL = await question(`${colors.blue}DATABASE_URL:${colors.reset} `);
 
   if (!DATABASE_URL || !DATABASE_URL.trim() || !DATABASE_URL.includes('postgres')) {
-    console.log(`\n${colors.red}❌ Ugyldig DATABASE_URL!${colors.reset}`);
+    console.log(`\n${colors.red}âŒ Ugyldig DATABASE_URL!${colors.reset}`);
     rl.close();
     process.exit(1);
   }
 
-  console.log(`\n${colors.yellow}👤 Nu skal vi oprette din admin bruger:${colors.reset}\n`);
+  console.log(`\n${colors.yellow}ðŸ‘¤ Nu skal vi oprette din admin bruger:${colors.reset}\n`);
 
   const email = await question(`Email (default: bjarke.sv@gmail.com): `) || 'bjarke.sv@gmail.com';
   const password = await question(`Password (default: Olineersej123): `) || 'Olineersej123';
@@ -50,7 +50,7 @@ async function setupDatabase() {
 
   rl.close();
 
-  console.log(`\n${colors.blue}🔄 Forbinder til PostgreSQL...${colors.reset}`);
+  console.log(`\n${colors.blue}ðŸ”„ Forbinder til PostgreSQL...${colors.reset}`);
 
   try {
     const pool = new Pool({
@@ -60,10 +60,10 @@ async function setupDatabase() {
 
     // Test connection
     await pool.query('SELECT NOW()');
-    console.log(`${colors.green}✅ Forbindelse etableret!${colors.reset}\n`);
+    console.log(`${colors.green}âœ… Forbindelse etableret!${colors.reset}\n`);
 
     // Create tables
-    console.log(`${colors.blue}📊 Opretter database tabeller...${colors.reset}`);
+    console.log(`${colors.blue}ðŸ“Š Opretter database tabeller...${colors.reset}`);
 
     await pool.query(`
       CREATE TABLE IF NOT EXISTS users (
@@ -79,7 +79,7 @@ async function setupDatabase() {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `);
-    console.log(`${colors.green}✅ Users table${colors.reset}`);
+    console.log(`${colors.green}âœ… Users table${colors.reset}`);
 
     await pool.query(`
       CREATE TABLE IF NOT EXISTS messages (
@@ -90,7 +90,7 @@ async function setupDatabase() {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `);
-    console.log(`${colors.green}✅ Messages table${colors.reset}`);
+    console.log(`${colors.green}âœ… Messages table${colors.reset}`);
 
     await pool.query(`
       CREATE TABLE IF NOT EXISTS posts (
@@ -100,7 +100,7 @@ async function setupDatabase() {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `);
-    console.log(`${colors.green}✅ Posts table${colors.reset}`);
+    console.log(`${colors.green}âœ… Posts table${colors.reset}`);
 
     await pool.query(`
       CREATE TABLE IF NOT EXISTS reactions (
@@ -112,7 +112,7 @@ async function setupDatabase() {
         UNIQUE(post_id, user_id)
       )
     `);
-    console.log(`${colors.green}✅ Reactions table${colors.reset}`);
+    console.log(`${colors.green}âœ… Reactions table${colors.reset}`);
 
     await pool.query(`
       CREATE TABLE IF NOT EXISTS files (
@@ -127,7 +127,7 @@ async function setupDatabase() {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `);
-    console.log(`${colors.green}✅ Files table${colors.reset}`);
+    console.log(`${colors.green}âœ… Files table${colors.reset}`);
 
     await pool.query(`
       CREATE TABLE IF NOT EXISTS folders (
@@ -138,7 +138,7 @@ async function setupDatabase() {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `);
-    console.log(`${colors.green}✅ Folders table${colors.reset}`);
+    console.log(`${colors.green}âœ… Folders table${colors.reset}`);
 
     await pool.query(`
       CREATE TABLE IF NOT EXISTS customers (
@@ -157,7 +157,7 @@ async function setupDatabase() {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `);
-    console.log(`${colors.green}✅ Customers table${colors.reset}`);
+    console.log(`${colors.green}âœ… Customers table${colors.reset}`);
 
     await pool.query(`
       CREATE TABLE IF NOT EXISTS quotes (
@@ -186,7 +186,7 @@ async function setupDatabase() {
         accepted_at TIMESTAMP
       )
     `);
-    console.log(`${colors.green}✅ Quotes/Orders table${colors.reset}`);
+    console.log(`${colors.green}âœ… Quotes/Orders table${colors.reset}`);
 
     await pool.query(`
       CREATE TABLE IF NOT EXISTS quote_lines (
@@ -202,18 +202,18 @@ async function setupDatabase() {
         sort_order INTEGER DEFAULT 0
       )
     `);
-    console.log(`${colors.green}✅ Quote lines table${colors.reset}`);
+    console.log(`${colors.green}âœ… Quote lines table${colors.reset}`);
 
-    console.log(`\n${colors.green}🎉 Alle tabeller oprettet!${colors.reset}\n`);
+    console.log(`\n${colors.green}ðŸŽ‰ Alle tabeller oprettet!${colors.reset}\n`);
 
     // Create admin user
-    console.log(`${colors.blue}👤 Opretter admin bruger...${colors.reset}`);
+    console.log(`${colors.blue}ðŸ‘¤ Opretter admin bruger...${colors.reset}`);
 
     // Check if user exists
     const existing = await pool.query('SELECT id FROM users WHERE email = $1', [email.toLowerCase()]);
     
     if (existing.rows.length > 0) {
-      console.log(`${colors.yellow}⚠️  Bruger findes allerede - opdaterer til admin...${colors.reset}`);
+      console.log(`${colors.yellow}âš ï¸  Bruger findes allerede - opdaterer til admin...${colors.reset}`);
       await pool.query('UPDATE users SET is_admin = 1 WHERE email = $1', [email.toLowerCase()]);
     } else {
       const password_hash = bcrypt.hashSync(password, 10);
@@ -223,25 +223,25 @@ async function setupDatabase() {
       `, [name, email.toLowerCase(), password_hash]);
     }
 
-    console.log(`${colors.green}✅ Admin bruger oprettet!${colors.reset}\n`);
+    console.log(`${colors.green}âœ… Admin bruger oprettet!${colors.reset}\n`);
 
     await pool.end();
 
-    console.log(`${colors.green}═══════════════════════════════════════${colors.reset}`);
-    console.log(`${colors.green}🎉 SETUP KOMPLET!${colors.reset}`);
-    console.log(`${colors.green}═══════════════════════════════════════${colors.reset}\n`);
+    console.log(`${colors.green}â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•${colors.reset}`);
+    console.log(`${colors.green}ðŸŽ‰ SETUP KOMPLET!${colors.reset}`);
+    console.log(`${colors.green}â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•${colors.reset}\n`);
 
-    console.log(`${colors.blue}📝 Login oplysninger:${colors.reset}`);
+    console.log(`${colors.blue}ðŸ“ Login oplysninger:${colors.reset}`);
     console.log(`Email:    ${colors.yellow}${email}${colors.reset}`);
     console.log(`Password: ${colors.yellow}${password}${colors.reset}\n`);
 
-    console.log(`${colors.blue}🌐 Test login nu:${colors.reset}`);
-    console.log(`${colors.yellow}https://flowfactory-denmark.netlify.app${colors.reset}\n`);
+    console.log(`${colors.blue}ðŸŒ Test login nu:${colors.reset}`);
+    console.log(`${colors.yellow}https://flowfactory-frontend-20zs.onrender.com${colors.reset}\n`);
 
     process.exit(0);
 
   } catch (error) {
-    console.error(`\n${colors.red}❌ Fejl:${colors.reset}`, error.message);
+    console.error(`\n${colors.red}âŒ Fejl:${colors.reset}`, error.message);
     process.exit(1);
   }
 }

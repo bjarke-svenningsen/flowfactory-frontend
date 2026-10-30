@@ -1,10 +1,10 @@
-// Auto-create admin for Bjarke
+﻿// Auto-create admin for Bjarke
 import Database from 'better-sqlite3';
 import bcrypt from 'bcryptjs';
 
 const db = new Database('breeze.db');
 
-const name = 'Bjarke Lüthi Svenningsen';
+const name = 'Bjarke LÃ¼thi Svenningsen';
 const email = 'bjarke.sv@gmail.com';
 const password = 'Olineersej123';
 
@@ -15,7 +15,7 @@ const password_hash = bcrypt.hashSync(password, 10);
 const existing = db.prepare('SELECT id FROM users WHERE email = ?').get(email.toLowerCase());
 
 if (existing) {
-  console.log('✅ Bruger eksisterer allerede!');
+  console.log('âœ… Bruger eksisterer allerede!');
   console.log('Email:', email);
   console.log('Du kan logge ind nu!');
 } else {
@@ -25,13 +25,13 @@ if (existing) {
     VALUES (?, ?, ?, 1)
   `).run(name, email.toLowerCase(), password_hash);
   
-  console.log('✅ ADMIN BRUGER OPRETTET!');
+  console.log('âœ… ADMIN BRUGER OPRETTET!');
   console.log('------------------------');
   console.log('Navn:', name);
   console.log('Email:', email);
   console.log('Password: Olineersej123');
   console.log('------------------------');
-  console.log('Gå til https://flowfactory-denmark.netlify.app og log ind!');
+  console.log('GÃ¥ til https://flowfactory-frontend-20zs.onrender.com og log ind!');
 }
 
 db.close();

@@ -1,4 +1,4 @@
-// create-admin-final.js - Opretter admin bruger med correct kolonne navne
+﻿// create-admin-final.js - Opretter admin bruger med correct kolonne navne
 import pg from 'pg';
 import bcrypt from 'bcryptjs';
 import dotenv from 'dotenv';
@@ -8,14 +8,14 @@ dotenv.config();
 const { Pool } = pg;
 
 async function createAdmin() {
-  console.log('🚀 Opretter admin bruger...\n');
+  console.log('ðŸš€ Opretter admin bruger...\n');
 
   const email = 'bjarke.sv@gmail.com';
   const password = 'Olineersej123';
   const name = 'Bjarke';
 
   if (!process.env.DATABASE_URL) {
-    console.error('❌ DATABASE_URL not found in .env file!');
+    console.error('âŒ DATABASE_URL not found in .env file!');
     process.exit(1);
   }
 
@@ -33,7 +33,7 @@ async function createAdmin() {
       ORDER BY ordinal_position
     `);
 
-    console.log('📊 Users table structure:');
+    console.log('ðŸ“Š Users table structure:');
     tableInfo.rows.forEach(col => {
       console.log(`  - ${col.column_name}: ${col.data_type}`);
     });
@@ -43,8 +43,8 @@ async function createAdmin() {
     const existing = await pool.query('SELECT id FROM users WHERE email = $1', [email.toLowerCase()]);
     
     if (existing.rows.length > 0) {
-      console.log('⚠️  Bruger findes allerede!');
-      console.log('✅ Du kan logge ind nu!');
+      console.log('âš ï¸  Bruger findes allerede!');
+      console.log('âœ… Du kan logge ind nu!');
     } else {
       const password_hash = bcrypt.hashSync(password, 10);
       
@@ -54,24 +54,24 @@ async function createAdmin() {
         VALUES ($1, $2, $3)
       `, [name, email.toLowerCase(), password_hash]);
       
-      console.log('✅ Admin bruger oprettet!');
+      console.log('âœ… Admin bruger oprettet!');
     }
 
     await pool.end();
 
-    console.log('\n═══════════════════════════════════════');
-    console.log('🎉 ADMIN BRUGER KLAR!');
-    console.log('═══════════════════════════════════════\n');
-    console.log('📝 Login oplysninger:');
+    console.log('\nâ•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•');
+    console.log('ðŸŽ‰ ADMIN BRUGER KLAR!');
+    console.log('â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•\n');
+    console.log('ðŸ“ Login oplysninger:');
     console.log(`Email:    ${email}`);
     console.log(`Password: ${password}\n`);
-    console.log('🌐 Test login nu:');
-    console.log('https://flowfactory-denmark.netlify.app\n');
+    console.log('ðŸŒ Test login nu:');
+    console.log('https://flowfactory-frontend-20zs.onrender.com\n');
 
     process.exit(0);
   } catch (error) {
-    console.error('❌ Fejl:', error.message);
-    console.error('\n💡 Debug info:', error);
+    console.error('âŒ Fejl:', error.message);
+    console.error('\nðŸ’¡ Debug info:', error);
     process.exit(1);
   }
 }

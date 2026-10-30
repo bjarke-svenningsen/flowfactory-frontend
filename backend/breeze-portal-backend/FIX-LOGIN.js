@@ -1,4 +1,4 @@
-// FIX-LOGIN.js - Godkend brugeren så login virker!
+﻿// FIX-LOGIN.js - Godkend brugeren sÃ¥ login virker!
 import pg from 'pg';
 
 const { Pool } = pg;
@@ -6,9 +6,9 @@ const { Pool } = pg;
 const DATABASE_URL = 'postgresql://postgres:bWBKtSXRuaoeNzdgKRbZGgWYwFUnTDLg@shortline.proxy.rlwy.net:56745/railway';
 
 async function fixLogin() {
-  console.log('═══════════════════════════════════════');
-  console.log('🔧 FIX LOGIN - GODKEND BRUGER');
-  console.log('═══════════════════════════════════════\n');
+  console.log('â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•');
+  console.log('ðŸ”§ FIX LOGIN - GODKEND BRUGER');
+  console.log('â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•\n');
 
   const email = 'bjarke.sv@gmail.com';
 
@@ -18,20 +18,20 @@ async function fixLogin() {
       ssl: { rejectUnauthorized: false }
     });
 
-    console.log('✅ Forbundet til PostgreSQL!\n');
+    console.log('âœ… Forbundet til PostgreSQL!\n');
 
     // Opdater is_approved til TRUE
-    console.log('💾 Opdaterer is_approved til TRUE...');
+    console.log('ðŸ’¾ Opdaterer is_approved til TRUE...');
     await pool.query('UPDATE users SET is_approved = TRUE WHERE email = $1', [email.toLowerCase()]);
     
-    console.log('✅ Bruger godkendt!\n');
+    console.log('âœ… Bruger godkendt!\n');
 
     // Verificer opdatering
     const result = await pool.query('SELECT email, name, is_approved FROM users WHERE email = $1', [email.toLowerCase()]);
     
     if (result.rows.length > 0) {
       const user = result.rows[0];
-      console.log('📋 Opdateret bruger:');
+      console.log('ðŸ“‹ Opdateret bruger:');
       console.log('   Email:', user.email);
       console.log('   Name:', user.name);
       console.log('   Is Approved:', user.is_approved);
@@ -40,21 +40,21 @@ async function fixLogin() {
 
     await pool.end();
 
-    console.log('═══════════════════════════════════════');
-    console.log('🎉 KLAR! LOGIN SKULLE VIRKE NU!');
-    console.log('═══════════════════════════════════════\n');
+    console.log('â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•');
+    console.log('ðŸŽ‰ KLAR! LOGIN SKULLE VIRKE NU!');
+    console.log('â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•\n');
     
-    console.log('🌐 TEST LOGIN NU:');
-    console.log('   URL:      https://flowfactory-denmark.netlify.app');
+    console.log('ðŸŒ TEST LOGIN NU:');
+    console.log('   URL:      https://flowfactory-frontend-20zs.onrender.com');
     console.log('   Email:    bjarke.sv@gmail.com');
     console.log('   Password: Olineersej123\n');
 
-    console.log('═══════════════════════════════════════\n');
+    console.log('â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•\n');
 
     process.exit(0);
 
   } catch (error) {
-    console.error('❌ Fejl:', error.message);
+    console.error('âŒ Fejl:', error.message);
     process.exit(1);
   }
 }

@@ -15,7 +15,10 @@ services:
         generateValue: true
       - key: JWT_SECRET
         generateValue: true
+      # SKAL matche Persistent Disk mountPath herunder, ellers mistes uploads ved deploy
+      - key: DATA_DIR
+        value: /opt/render/project/src/persistent
     disk:
       name: uploads-storage
       mountPath: /opt/render/project/src/persistent
-      sizeGB: 1
+      sizeGB: 7

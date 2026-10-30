@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html>
 <head>
     <title>Godkend Bruger</title>
@@ -11,7 +11,7 @@
     <script>
         async function approve() {
             const result = document.getElementById('result');
-            result.textContent = 'Prøver...';
+            result.textContent = 'PrÃ¸ver...';
             
             try {
                 // Godkend bruger direkte
@@ -22,17 +22,17 @@
                 });
                 
                 if (response.ok) {
-                    result.textContent = '✅ DU ER NU GODKENDT OG ADMIN! Gå til sitet og log ind!';
+                    result.textContent = 'âœ… DU ER NU GODKENDT OG ADMIN! GÃ¥ til sitet og log ind!';
                     result.style.color = 'green';
                     setTimeout(() => {
-                        window.location.href = 'https://flowfactory-denmark.netlify.app';
+                        window.location.href = 'https://flowfactory-frontend-20zs.onrender.com';
                     }, 2000);
                 } else {
-                    result.textContent = '❌ Fejl: ' + response.status;
+                    result.textContent = 'âŒ Fejl: ' + response.status;
                     result.style.color = 'red';
                 }
             } catch (error) {
-                result.textContent = '❌ Fejl: ' + error.message;
+                result.textContent = 'âŒ Fejl: ' + error.message;
                 result.style.color = 'red';
             }
         }

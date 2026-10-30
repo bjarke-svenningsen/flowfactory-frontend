@@ -213,10 +213,7 @@ pm2 logs flowfactory-portal --lines 100
 
 ## Frontend Deployment
 
-Frontend kan deployes til:
-- **Netlify** (gratis tier)
-- **Vercel** (gratis tier)
-- **GitHub Pages**
+Frontend serveres af backend'en på Render (én service) — ingen ekstern static host.
 - **Nginx static hosting**
 
 Opdater API endpoint i frontend til din server:

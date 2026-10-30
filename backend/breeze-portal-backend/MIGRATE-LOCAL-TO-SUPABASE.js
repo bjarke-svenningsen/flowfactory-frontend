@@ -1,10 +1,10 @@
-// MIGRATE-LOCAL-TO-SUPABASE.js - Migrate local SQLite data to Supabase with column mapping
+﻿// MIGRATE-LOCAL-TO-SUPABASE.js - Migrate local SQLite data to Supabase with column mapping
 import Database from 'better-sqlite3';
 import pg from 'pg';
 
 const { Pool } = pg;
 
-console.log('🚀 Starting migration from LOCAL SQLite to Supabase...\n');
+console.log('ðŸš€ Starting migration from LOCAL SQLite to Supabase...\n');
 
 // Local SQLite database (source)
 const sqliteDb = new Database('breeze.db');
@@ -15,7 +15,7 @@ const supabasePool = new Pool({
   ssl: { rejectUnauthorized: false }
 });
 
-// Column mapping: SQLite column name → Supabase column name
+// Column mapping: SQLite column name â†’ Supabase column name
 const COLUMN_MAPPINGS = {
   users: {
     avatar_url: 'profile_image'  // Only difference!
@@ -23,14 +23,14 @@ const COLUMN_MAPPINGS = {
 };
 
 async function migrateTable(tableName) {
-  console.log(`📋 Migrating table: ${tableName}`);
+  console.log(`ðŸ“‹ Migrating table: ${tableName}`);
   
   try {
     // Get all rows from SQLite
     const sqliteRows = sqliteDb.prepare(`SELECT * FROM ${tableName}`).all();
     
     if (sqliteRows.length === 0) {
-      console.log(`   ⚠️  Table ${tableName} is empty, skipping...\n`);
+      console.log(`   âš ï¸  Table ${tableName} is empty, skipping...\n`);
       return;
     }
     
@@ -48,7 +48,7 @@ async function migrateTable(tableName) {
     
     // Clear existing data in Supabase table
     await supabasePool.query(`DELETE FROM ${tableName}`);
-    console.log(`   🗑️  Cleared existing data in Supabase`);
+    console.log(`   ðŸ—‘ï¸  Cleared existing data in Supabase`);
     
     // Insert rows one by one
     let inserted = 0;
@@ -68,21 +68,21 @@ async function migrateTable(tableName) {
       } catch (insertError) {
         failed++;
         if (failed <= 3) { // Only show first 3 errors
-          console.log(`   ⚠️  Failed to insert row: ${insertError.message}`);
+          console.log(`   âš ï¸  Failed to insert row: ${insertError.message}`);
         }
       }
     }
     
-    console.log(`   ✅ Inserted ${inserted}/${sqliteRows.length} rows (${failed} failed)\n`);
+    console.log(`   âœ… Inserted ${inserted}/${sqliteRows.length} rows (${failed} failed)\n`);
     
   } catch (error) {
-    console.log(`   ❌ Error migrating ${tableName}: ${error.message}\n`);
+    console.log(`   âŒ Error migrating ${tableName}: ${error.message}\n`);
   }
 }
 
 async function migrate() {
   try {
-    console.log('📊 Data to migrate:');
+    console.log('ðŸ“Š Data to migrate:');
     console.log('  - 1 user');
     console.log('  - 5 posts');
     console.log('  - 2 customers');
@@ -116,20 +116,20 @@ async function migrate() {
       await migrateTable(table);
     }
 
-    console.log('🎉 Migration complete!\n');
-    console.log('✅ All data has been migrated from local SQLite to Supabase!');
-    console.log('\n📋 NEXT STEPS:');
-    console.log('1. Go to: https://flowfactory-denmark.netlify.app');
+    console.log('ðŸŽ‰ Migration complete!\n');
+    console.log('âœ… All data has been migrated from local SQLite to Supabase!');
+    console.log('\nðŸ“‹ NEXT STEPS:');
+    console.log('1. Go to: https://flowfactory-frontend-20zs.onrender.com');
     console.log('2. Login with your credentials');
     console.log('3. You should see:');
-    console.log('   ✅ Admin button (you have is_admin = 1)');
-    console.log('   ✅ Your 5 posts in the feed');
-    console.log('   ✅ Your 2 customers');
-    console.log('   ✅ Your 5 quotes');
-    console.log('   ✅ Everything working perfectly!\n');
+    console.log('   âœ… Admin button (you have is_admin = 1)');
+    console.log('   âœ… Your 5 posts in the feed');
+    console.log('   âœ… Your 2 customers');
+    console.log('   âœ… Your 5 quotes');
+    console.log('   âœ… Everything working perfectly!\n');
     
   } catch (error) {
-    console.error('❌ Migration failed:', error);
+    console.error('âŒ Migration failed:', error);
   } finally {
     sqliteDb.close();
     await supabasePool.end();

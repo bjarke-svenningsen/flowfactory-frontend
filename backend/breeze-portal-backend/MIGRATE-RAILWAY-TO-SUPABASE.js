@@ -1,4 +1,4 @@
-// MIGRATE-RAILWAY-TO-SUPABASE.js - Migrate all data from Railway to Supabase
+﻿// MIGRATE-RAILWAY-TO-SUPABASE.js - Migrate all data from Railway to Supabase
 import pg from 'pg';
 
 const { Pool } = pg;
@@ -15,7 +15,7 @@ const supabasePool = new Pool({
   ssl: { rejectUnauthorized: false }
 });
 
-console.log('🚀 Starting data migration from Railway to Supabase...\n');
+console.log('ðŸš€ Starting data migration from Railway to Supabase...\n');
 
 async function getTableColumns(pool, tableName) {
   const result = await pool.query(`
@@ -28,7 +28,7 @@ async function getTableColumns(pool, tableName) {
 }
 
 async function migrateTable(tableName) {
-  console.log(`📋 Migrating table: ${tableName}`);
+  console.log(`ðŸ“‹ Migrating table: ${tableName}`);
   
   try {
     // Get columns from both databases
@@ -36,12 +36,12 @@ async function migrateTable(tableName) {
     const supabaseColumns = await getTableColumns(supabasePool, tableName);
     
     if (railwayColumns.length === 0) {
-      console.log(`   ⚠️  Table ${tableName} doesn't exist in Railway, skipping...\n`);
+      console.log(`   âš ï¸  Table ${tableName} doesn't exist in Railway, skipping...\n`);
       return;
     }
     
     if (supabaseColumns.length === 0) {
-      console.log(`   ⚠️  Table ${tableName} doesn't exist in Supabase, skipping...\n`);
+      console.log(`   âš ï¸  Table ${tableName} doesn't exist in Supabase, skipping...\n`);
       return;
     }
     
@@ -49,7 +49,7 @@ async function migrateTable(tableName) {
     const commonColumns = railwayColumns.filter(col => supabaseColumns.includes(col));
     
     if (commonColumns.length === 0) {
-      console.log(`   ⚠️  No common columns between Railway and Supabase for ${tableName}, skipping...\n`);
+      console.log(`   âš ï¸  No common columns between Railway and Supabase for ${tableName}, skipping...\n`);
       return;
     }
     
@@ -60,7 +60,7 @@ async function migrateTable(tableName) {
     const railwayData = await railwayPool.query(selectQuery);
     
     if (railwayData.rows.length === 0) {
-      console.log(`   ⚠️  Table ${tableName} is empty in Railway, skipping...\n`);
+      console.log(`   âš ï¸  Table ${tableName} is empty in Railway, skipping...\n`);
       return;
     }
     
@@ -68,7 +68,7 @@ async function migrateTable(tableName) {
     
     // Clear existing data in Supabase table
     await supabasePool.query(`DELETE FROM ${tableName}`);
-    console.log(`   🗑️  Cleared existing data in Supabase`);
+    console.log(`   ðŸ—‘ï¸  Cleared existing data in Supabase`);
     
     // Insert rows one by one
     let inserted = 0;
@@ -87,15 +87,15 @@ async function migrateTable(tableName) {
       } catch (insertError) {
         failed++;
         if (failed <= 3) { // Only show first 3 errors
-          console.log(`   ⚠️  Failed to insert row: ${insertError.message}`);
+          console.log(`   âš ï¸  Failed to insert row: ${insertError.message}`);
         }
       }
     }
     
-    console.log(`   ✅ Inserted ${inserted}/${railwayData.rows.length} rows (${failed} failed)\n`);
+    console.log(`   âœ… Inserted ${inserted}/${railwayData.rows.length} rows (${failed} failed)\n`);
     
   } catch (error) {
-    console.log(`   ❌ Error migrating ${tableName}: ${error.message}\n`);
+    console.log(`   âŒ Error migrating ${tableName}: ${error.message}\n`);
   }
 }
 
@@ -128,15 +128,15 @@ async function migrate() {
       await migrateTable(table);
     }
 
-    console.log('🎉 Migration complete!\n');
-    console.log('✅ All data has been migrated from Railway to Supabase!');
-    console.log('\n📋 NEXT STEPS:');
-    console.log('1. Go to: https://flowfactory-denmark.netlify.app');
+    console.log('ðŸŽ‰ Migration complete!\n');
+    console.log('âœ… All data has been migrated from Railway to Supabase!');
+    console.log('\nðŸ“‹ NEXT STEPS:');
+    console.log('1. Go to: https://flowfactory-frontend-20zs.onrender.com');
     console.log('2. Login with your Railway credentials');
     console.log('3. All your data should be there!\n');
     
   } catch (error) {
-    console.error('❌ Migration failed:', error);
+    console.error('âŒ Migration failed:', error);
   } finally {
     await railwayPool.end();
     await supabasePool.end();

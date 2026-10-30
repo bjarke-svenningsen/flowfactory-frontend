@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html>
 <head>
     <title>Godkend Bjarke</title>
@@ -10,17 +10,17 @@
     </style>
 </head>
 <body>
-    <h1>🔧 Godkend Bjarke som Admin</h1>
+    <h1>ðŸ”§ Godkend Bjarke som Admin</h1>
     <p>Email: bjarke.sv@outlook.dk</p>
     
-    <button onclick="approve()">✅ Godkend og gør til Admin</button>
+    <button onclick="approve()">âœ… Godkend og gÃ¸r til Admin</button>
     
     <div id="result"></div>
     
     <script>
         async function approve() {
             const result = document.getElementById('result');
-            result.innerHTML = '⏳ Arbejder...';
+            result.innerHTML = 'â³ Arbejder...';
             result.style.color = '#666';
             
             try {
@@ -33,14 +33,14 @@
                 const data = await response.json();
                 
                 if (response.ok) {
-                    result.innerHTML = '✅ SUCCES! Du er nu admin!<br><br>Log ind nu på:<br><a href="https://flowfactory-denmark.netlify.app">flowfactory-denmark.netlify.app</a>';
+                    result.innerHTML = 'âœ… SUCCES! Du er nu admin!<br><br>Log ind nu pÃ¥:<br><a href="https://flowfactory-frontend-20zs.onrender.com">flowfactory-frontend-20zs.onrender.com</a>';
                     result.style.color = 'green';
                 } else {
-                    result.innerHTML = '❌ Fejl: ' + (data.error || response.status) + '<br><br>Måske er brugeren ikke oprettet endnu?';
+                    result.innerHTML = 'âŒ Fejl: ' + (data.error || response.status) + '<br><br>MÃ¥ske er brugeren ikke oprettet endnu?';
                     result.style.color = 'red';
                 }
             } catch (error) {
-                result.innerHTML = '❌ Netværksfejl: ' + error.message + '<br><br>Backend endpointet er måske ikke deployed endnu.';
+                result.innerHTML = 'âŒ NetvÃ¦rksfejl: ' + error.message + '<br><br>Backend endpointet er mÃ¥ske ikke deployed endnu.';
                 result.style.color = 'red';
             }
         }
