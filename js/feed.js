@@ -45,19 +45,16 @@ async function addPost() {
             throw new Error('Backend ikke tilgængelig');
         }
     } catch (error) {
-        // Fallback: Gem lokalt hvis backend er nede
-        console.log('Backend offline, gemmer lokalt');
-        const post = {
-            id: Date.now(),
-            author: window.currentUser.name,
-            content: content,
-            timestamp: new Date(),
-            likes: 0,
-            attachments: [...currentAttachments],
-            localPhoto: window.currentUser.profilePhoto || null
-        };
-        posts.unshift(post);
+        // IKKE længere: gem lokalt i det skjulte. Brugeren skal vide at posten IKKE blev gemt!
+        console.error('Kunne ikke gemme post:', error);
+        alert('❌ Posten kunne ikke gemmes på serveren' + (error.message.includes('401') || error.message === 'Backend ikke tilgængelig' ? '. Prøv at logge ud og ind igen.' : ': ' + error.message));
+        return;
     }
+
+    // Opdater cache så posten også ses ved næste instant-load
+    try {
+        localStorage.setItem('feedPosts', JSON.stringify(posts));
+    } catch (e) { /* ignore */ }
 
     document.getElementById('postContent').value = '';
     currentAttachments = [];
@@ -228,11 +225,13 @@ async function loadPosts() {
             return;
         }
     } catch (error) {
-        console.log('Kunne ikke hente posts fra backend, loader demo posts');
+        console.error('Kunne ikke hente posts fra backend:', error);
+        alert('⚠️ Kunne ikke hente opslag fra serveren. Viser gemte opslag – prøv at logge ud og ind igen, hvis det fortsætter.');
+        return;
     }
-    
-    // Fallback: Hvis backend ikke virker, load demo posts
-    await loadDemoPosts();
+
+    // Fallback: Hvis svaret ikke var OK (fx 401), vis ikke demo-data i det skjulte
+    console.warn('Backend svarede ikke OK for /api/posts – beholder cachede opslag');
 }
 
 // Load comments for a specific post from backend

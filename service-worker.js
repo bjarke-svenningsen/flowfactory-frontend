@@ -1,7 +1,7 @@
 // SG Seest Gulvteknik Service Worker
 // Provides offline caching and PWA functionality
 
-const CACHE_NAME = 'breeze-portal-v5';
+const CACHE_NAME = 'breeze-portal-v6';
 const urlsToCache = [
   '/',
   '/dashboard.html',
@@ -38,7 +38,7 @@ self.addEventListener('fetch', event => {
   // Lad POST/PUT/DELETE og API/socket-trafik passere urørt (POST må ikke caches, API må aldrig caches)
   if (event.request.method !== 'GET') return;
   const url = new URL(event.request.url);
-  if (url.pathname.startsWith('/api/') || url.pathname.startsWith('/socket.io/')) return;
+  if (url.pathname.startsWith('/api/') || url.pathname.startsWith('/socket.io/') || url.pathname.startsWith('/uploads/')) return;
   const shouldAlwaysFetch =
     event.request.url.includes('.html') ||
     event.request.url.includes('.js') ||
