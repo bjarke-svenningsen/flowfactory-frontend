@@ -89,7 +89,14 @@ function loadUserData() {
         return;
     }
 
-    const currentUser = JSON.parse(userData);
+    // Render immediately from cached data...
+    renderUserData(JSON.parse(userData));
+
+    // ...then refresh from server so avatar/profile changes show without re-login
+    refreshCurrentUser();
+}
+
+function renderUserData(currentUser) {
     const initials = currentUser.name.split(' ').map(n => n[0]).join('');
 
     // Check for profile_image from server (persistent) or profilePhoto (old base64 - deprecated)
@@ -113,6 +120,22 @@ function loadUserData() {
     // Show Materialer menu item only for admins
     if (currentUser.is_admin) {
         document.getElementById('materialsMenuItem').style.display = 'block';
+    }
+}
+
+async function refreshCurrentUser() {
+    try {
+        const res = await fetch('/api/users/me', {
+            headers: { 'Authorization': `Bearer ${sessionStorage.getItem('token')}` }
+        });
+        if (!res.ok) return;
+        const data = await res.json();
+        if (!data.user) return;
+        sessionStorage.setItem('currentUser', JSON.stringify(data.user));
+        renderUserData(data.user);
+    } catch (error) {
+        // Offline or server error - keep cached data
+        console.error('Could not refresh user data:', error);
     }
 }
 
