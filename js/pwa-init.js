@@ -71,7 +71,7 @@ function showInstallPrompt() {
   
   promptDiv.innerHTML = `
     <div>
-      <div style="font-weight: 600; margin-bottom: 5px;">📱 Installer Breeze Portal</div>
+      <div style="font-weight: 600; margin-bottom: 5px;">📱 Installer SG Seest Gulvteknik Portal</div>
       <div style="font-size: 12px; opacity: 0.9;">Tilføj til hjemmeskærm for hurtig adgang</div>
     </div>
     <div style="display: flex; gap: 10px;">

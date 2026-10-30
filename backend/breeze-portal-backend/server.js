@@ -29,7 +29,7 @@ const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-change-me';
 
 // CORS configuration - Allow specific origins
 const allowedOrigins = [
-  'https://flowfactory-denmark.netlify.app',
+  'https://flowfactory-frontend-20zs.onrender.com',
   'https://bjarke-svenningsen.github.io',
   'http://localhost:5500',
   'http://127.0.0.1:5500'
@@ -138,7 +138,7 @@ async function logOrderEvent(orderId, activityType, description, userId) {
 }
 
 // --- Routes ---
-app.get('/', (req, res) => res.json({ ok: true, message: 'Breeze API kører!' }));
+app.get('/', (req, res) => res.json({ ok: true, message: 'SG Seest Gulvteknik API kører!' }));
 
 // Link Preview - Fetch Open Graph metadata for URLs
 app.post('/api/link-preview', auth, async (req, res) => {
@@ -1091,7 +1091,7 @@ app.post('/api/admin/send-invitation', auth, adminAuth, async (req, res) => {
     const mailOptions = {
       from: process.env.EMAIL_FROM || process.env.EMAIL_USER,
       to: email,
-      subject: 'Invitation til FlowFactory Portal',
+      subject: 'Invitation til SG Seest Gulvteknik Portal',
       html: `
         <!DOCTYPE html>
         <html>
@@ -1110,12 +1110,12 @@ app.post('/api/admin/send-invitation', auth, adminAuth, async (req, res) => {
           <div class="container">
             <div class="header">
               <h1>🎉 Du er inviteret!</h1>
-              <p>Velkommen til FlowFactory Portal</p>
+              <p>Velkommen til SG Seest Gulvteknik Portal</p>
             </div>
             <div class="content">
               ${name ? `<p>Hej ${name},</p>` : '<p>Hej!</p>'}
               
-              <p>Du er blevet inviteret til at oprette en konto på <strong>FlowFactory Portal</strong> - vores nye interne kommunikationsplatform.</p>
+              <p>Du er blevet inviteret til at oprette en konto på <strong>SG Seest Gulvteknik Portal</strong> - vores nye interne kommunikationsplatform.</p>
               
               <p><strong>Din invitation kode:</strong></p>
               <div class="code-box">${code}</div>
@@ -1130,7 +1130,7 @@ app.post('/api/admin/send-invitation', auth, adminAuth, async (req, res) => {
               
               <hr style="border: none; border-top: 1px solid #ddd; margin: 30px 0;">
               
-              <h3>💡 Hvad kan du med FlowFactory Portal?</h3>
+              <h3>💡 Hvad kan du med SG Seest Gulvteknik Portal?</h3>
               <ul>
                 <li>📰 Del og se opslag fra kolleger</li>
                 <li>💬 Chat direkte med teamet</li>
@@ -1141,7 +1141,7 @@ app.post('/api/admin/send-invitation', auth, adminAuth, async (req, res) => {
             </div>
             <div class="footer">
               <p>Denne invitation blev sendt af ${req.user.name}</p>
-              <p>© ${new Date().getFullYear()} FlowFactory - Alle rettigheder forbeholdes</p>
+              <p>© ${new Date().getFullYear()} SG Seest Gulvteknik ApS - Alle rettigheder forbeholdes</p>
             </div>
           </div>
         </body>
@@ -1936,7 +1936,7 @@ app.post('/api/quotes/:id/send', auth, async (req, res) => {
         <p>Vedhæftet finder du vores tilbud på <strong>${quote.title}</strong>.</p>
         <p>Tilbuddet er gyldigt til ${quote.valid_until ? new Date(quote.valid_until).toLocaleDateString('da-DK') : 'videre varsel'}.</p>
         <p>Hvis du har spørgsmål, er du velkommen til at kontakte os.</p>
-        <p>Med venlig hilsen,<br>${quote.created_by_name}<br>FlowFactory ApS</p>
+        <p>Med venlig hilsen,<br>${quote.created_by_name}<br>SG Seest Gulvteknik ApS</p>
       `
     };
     
@@ -2341,7 +2341,7 @@ app.post('/api/invoices/:id/send', auth, async (req, res) => {
         <p>Forfaldsdato: ${new Date(invoice.due_date).toLocaleDateString('da-DK')}</p>
         <p>Betalingsbetingelser: ${invoice.payment_terms}</p>
         <p>Hvis du har spørgsmål, er du velkommen til at kontakte os.</p>
-        <p>Med venlig hilsen,<br>${invoice.created_by_name}<br>FlowFactory ApS</p>
+        <p>Med venlig hilsen,<br>${invoice.created_by_name}<br>SG Seest Gulvteknik ApS</p>
       `
     };
     
@@ -4306,7 +4306,7 @@ app.get('/api/create-first-admin', async (req, res) => {
         success: true, 
         message: '🎉 Admin user created successfully!',
         email: email,
-        next_step: 'Go to https://flowfactory-denmark.netlify.app and login!'
+        next_step: 'Go to https://flowfactory-frontend-20zs.onrender.com and login!'
       });
     } else {
       // SQLite mode (local development)
@@ -4389,7 +4389,7 @@ async function startServer() {
   try {
     await initializeDatabase();
     httpServer.listen(PORT, () => {
-      console.log(`🚀 Breeze backend kører på http://localhost:${PORT}`);
+      console.log(`🚀 SG Seest Gulvteknik backend kører på http://localhost:${PORT}`);
       console.log(`📊 Database: ${db._isProduction ? 'PostgreSQL (Supabase)' : 'SQLite (breeze.db)'}`);
     });
   } catch (error) {

@@ -45,25 +45,25 @@ function showAdminButtons() {
     }
 }
 
-// Create FlowFactory company folder (admin only)
-async function createFlowFactoryFolder() {
+// Create SG Seest Gulvteknik company folder (admin only)
+async function createCompanyFolder() {
     const user = JSON.parse(sessionStorage.getItem('user'));
-    console.log('FlowFactory: User data:', user); // DEBUG
-    console.log('FlowFactory: is_admin value:', user?.is_admin, 'type:', typeof user?.is_admin); // DEBUG
+    console.log('Portal: User data:', user); // DEBUG
+    console.log('Portal: is_admin value:', user?.is_admin, 'type:', typeof user?.is_admin); // DEBUG
     
     if (!user || (user.is_admin !== 1 && user.is_admin !== true)) {
-        alert('Kun admins kan oprette FlowFactory mapper\n\nDEBUG: is_admin = ' + user?.is_admin);
+        alert('Kun admins kan oprette firma mapper\n\nDEBUG: is_admin = ' + user?.is_admin);
         return;
     }
     
-    // Check if FlowFactory folder already exists
-    const existingFlowFactory = allFolders.find(f => f.is_company_folder && f.name === 'FlowFactory');
-    if (existingFlowFactory) {
-        alert('❌ FlowFactory mappen findes allerede!');
+    // Check if company folder already exists
+    const existingCompanyFolder = allFolders.find(f => f.is_company_folder && f.name === 'SG Seest Gulvteknik');
+    if (existingCompanyFolder) {
+        alert('❌ firma mappen findes allerede!');
         return;
     }
     
-    if (!confirm('Opret FlowFactory mappe?\n\nDenne mappe vil være synlig for alle brugere i firmaet.')) {
+    if (!confirm('Opret firma mappe?\n\nDenne mappe vil være synlig for alle brugere i firmaet.')) {
         return;
     }
     
@@ -76,22 +76,22 @@ async function createFlowFactoryFolder() {
                 'Authorization': `Bearer ${token}`
             },
             body: JSON.stringify({
-                name: 'FlowFactory',
+                name: 'SG Seest Gulvteknik',
                 is_company_folder: true
             })
         });
         
         if (!response.ok) {
             const error = await response.json();
-            throw new Error(error.error || 'Failed to create FlowFactory folder');
+            throw new Error(error.error || 'Failed to create company folder');
         }
         
-        alert('✅ FlowFactory mappe oprettet!\n\nAlle brugere kan nu se og bruge denne mappe.');
+        alert('✅ firma mappe oprettet!\n\nAlle brugere kan nu se og bruge denne mappe.');
         await loadFolders();
         renderFolderTree();
     } catch (error) {
-        console.error('Create FlowFactory folder error:', error);
-        alert('Kunne ikke oprette FlowFactory mappe: ' + error.message);
+        console.error('Create company folder error:', error);
+        alert('Kunne ikke oprette firma mappe: ' + error.message);
     }
 }
 
@@ -124,11 +124,11 @@ function renderFolderTree() {
         </div>
     `;
     
-    // Show company folders first (FlowFactory)
+    // Show company folders first (firma)
     const companyFolders = allFolders.filter(f => f.is_company_folder && !f.parent_id);
     if (companyFolders.length > 0) {
         html += '<div style=\"margin-top: 10px; padding-top: 10px; border-top: 1px solid #e0e0e0;\"></div>';
-        html += '<div style=\"padding: 5px 10px; font-size: 12px; color: #999; font-weight: 600;\">🏢 FLOWFACTORY</div>';
+        html += '<div style=\"padding: 5px 10px; font-size: 12px; color: #999; font-weight: 600;\">🏢 SG SEEST GULVTEKNIK</div>';
         html += renderFolderBranch(companyFolders, 0, true);
     }
     

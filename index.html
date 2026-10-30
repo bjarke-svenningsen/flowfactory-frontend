@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Log ind – Flowfactory Virksomhedsportal</title>
+  <title>Log ind – SG Seest Gulvteknik Portal</title>
   <link rel="icon" type="image/svg+xml" href="favicon.svg" />
   <link rel="stylesheet" href="css/login.css" />
 </head>
@@ -12,7 +12,7 @@
   <div class="login-container">
     <div class="login-box">
       <div class="logo" style="text-align:center;margin-bottom:16px;">
-        <img src="logobreeze.png" alt="Logo" style="max-height:80px;opacity:.9" />
+        <img src="seestlogo.png" alt="Logo" style="max-height:80px;opacity:.9" />
       </div>
 
       <form id="loginForm">
@@ -41,7 +41,7 @@
   <div class="login-container" id="registerContainer" style="display: none;">
     <div class="login-box">
       <div class="logo" style="text-align:center;margin-bottom:16px;">
-        <img src="logobreeze.png" alt="Logo" style="max-height:80px;opacity:.9" />
+        <img src="seestlogo.png" alt="Logo" style="max-height:80px;opacity:.9" />
       </div>
 
       <h2 style="text-align: center; margin-bottom: 20px;">Opret Bruger</h2>
@@ -110,7 +110,7 @@
       };
       
       try {
-        const response = await fetch('https://flowfactory-frontend.onrender.com/api/auth/register', {
+        const response = await fetch('/api/auth/register', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(data)

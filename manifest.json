@@ -1,7 +1,7 @@
 {
-  "name": "Breeze Portal",
-  "short_name": "Breeze",
-  "description": "Virksomhedsportal til Breeze",
+  "name": "SG Seest Gulvteknik Portal",
+  "short_name": "SG Seest",
+  "description": "Virksomhedsportal til SG Seest Gulvteknik",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#f5f5f5",
@@ -9,12 +9,12 @@
   "orientation": "any",
   "icons": [
     {
-      "src": "logobreeze.png",
+      "src": "seestlogo.png",
       "sizes": "192x192",
       "type": "image/png"
     },
     {
-      "src": "logobreeze.png",
+      "src": "seestlogo.png",
       "sizes": "512x512",
       "type": "image/png"
     }

@@ -1,5 +1,5 @@
 // js/email.js
-// Windows 95 Style Email Client for FlowFactory Portal
+// Windows 95 Style Email Client for SG Seest Gulvteknik Portal
 // Integrates with backend email service on Render
 
 const API_URL = '';

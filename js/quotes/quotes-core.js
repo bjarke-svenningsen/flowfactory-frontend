@@ -641,7 +641,7 @@ function renderQuotePreview() {
                 <!-- Minimal Header -->
                 <div style="display: flex; justify-content: space-between; align-items: start; padding-bottom: 30px; border-bottom: 1px solid #000; margin-bottom: 40px;">
                     <div style="background: transparent !important; margin-top: 0; padding: 0;">
-                        <img src="flowfactory-logo.png" alt="FlowFactory ApS" style="height: 80px; width: auto; display: block; background: transparent !important; background-color: transparent !important; margin: 0; padding: 0;">
+                        <img src="seestlogo.png" alt="SG Seest Gulvteknik ApS" style="height: 80px; width: auto; display: block; background: transparent !important; background-color: transparent !important; margin: 0; padding: 0;">
                     </div>
                     <div style="text-align: right;">
                         <h2 style="margin: 0 0 15px 0; font-size: 24px; font-weight: 700; color: #000;">TILBUD</h2>
@@ -756,8 +756,8 @@ function renderQuotePreview() {
                 <!-- Footer -->
                 <div style="border-top: 1px solid #000; padding-top: 20px; margin-top: 40px; text-align: center;">
                     <p style="margin: 0; color: #666; font-size: 11px;">
-                        FlowFactory ApS • Erhvervsvej 123 • 8600 Silkeborg • CVR: 12345678<br>
-                        Email: kontakt@flowfactory.dk • Telefon: +45 12 34 56 78 • www.flowfactory.dk
+                        SG Seest Gulvteknik ApS • Tandholtvej 39, Seest • DK-6000 Kolding • CVR: 41435208<br>
+                        Email: kontakt@seestgulvteknik.dk • Telefon: 75 52 10 54 • www.seestgulvteknik.dk
                     </p>
                 </div>
             </div>
