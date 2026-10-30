@@ -28,14 +28,30 @@ async function addPost() {
     // Prøv at sende til backend
     try {
         const token = sessionStorage.getItem('token');
-        const response = await fetch('/api/posts', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
-            },
-            body: JSON.stringify({ content })
-        });
+        const imageAtt = currentAttachments.find(a => a.type === 'image');
+
+        let response;
+        if (imageAtt) {
+            // Med billede: multipart FormData i én request (billedet gemmes permanent)
+            const fd = new FormData();
+            fd.append('content', content);
+            fd.append('image', dataURLtoBlob(imageAtt.data), imageAtt.name || 'billede.png');
+            response = await fetch('/api/posts', {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}` },
+                body: fd
+            });
+        } else {
+            // Kun tekst (eller video/fil: tekst alene)
+            response = await fetch('/api/posts', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ content })
+            });
+        }
 
         if (response.ok) {
             const newPost = await response.json();
@@ -53,33 +69,16 @@ async function addPost() {
                 localPhoto: window.currentUser.profilePhoto || null  // Gem lokalt billede!
             });
 
-            // Upload vedhæftede billeder til serveren så de overlever refresh
-            const imageAtt = currentAttachments.find(a => a.type === 'image');
-            if (imageAtt) {
-                try {
-                    const fd = new FormData();
-                    fd.append('image', dataURLtoBlob(imageAtt.data), imageAtt.name || 'billede.png');
-                    const upRes = await fetch(`/api/posts/${newPost.id}/image`, {
-                        method: 'POST',
-                        headers: { 'Authorization': `Bearer ${token}` },
-                        body: fd
-                    });
-                    if (upRes.ok) {
-                        const j = await upRes.json();
-                        posts[0].image_url = j.image_url;
-                    } else {
-                        console.error('Billede-upload fejlede:', upRes.status);
-                        alert('⚠️ Opslaget blev gemt, men billedet kunne ikke uploades.');
-                    }
-                } catch (e) {
-                    console.error('Billede-upload fejlede:', e);
-                    alert('⚠️ Opslaget blev gemt, men billedet kunne ikke uploades.');
-                }
-            } else if (currentAttachments.length > 0) {
+            if (currentAttachments.some(a => a.type !== 'image')) {
                 alert('⚠️ Bemærk: video- og fil-vedhæftninger gemmes ikke permanent endnu.');
             }
         } else {
-            throw new Error(`Backend svarede ${response.status} ${response.statusText || ''}`.trim());
+            let msg = '';
+            try {
+                const j = await response.json();
+                msg = j.error || '';
+            } catch (e) { /* intet JSON-svar */ }
+            throw new Error(`Backend svarede ${response.status} ${response.statusText || ''} ${msg}`.trim());
         }
     } catch (error) {
         // IKKE længere: gem lokalt i det skjulte. Brugeren skal vide at posten IKKE blev gemt!

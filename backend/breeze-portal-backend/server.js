@@ -347,16 +347,28 @@ app.get('/api/posts', auth, async (req, res) => {
   }
 });
 
-app.post('/api/posts', auth, async (req, res) => {
-  const { content } = req.body;
-  if (!content) return res.status(400).json({ error: 'Missing content' });
-  const info = await db.run('INSERT INTO posts (user_id, content) VALUES (?, ?)', [req.user.id, content]);
-  const post = await db.get(`
-    SELECT p.id, p.content, p.created_at, p.image_url, u.id as user_id, u.name as user_name, u.avatar_url
-    FROM posts p JOIN users u ON u.id = p.user_id WHERE p.id = ?
-  `, [info.lastInsertRowid]);
-  res.json(post);
-  io.emit('feed:new_post', post);
+app.post('/api/posts', auth, upload.single('image'), async (req, res) => {
+  try {
+    const content = (req.body?.content || '').trim();
+    if (!content && !req.file) return res.status(400).json({ error: 'Missing content' });
+
+    // Sikr at kolonnen findes
+    try {
+      await db.run('ALTER TABLE posts ADD COLUMN image_url TEXT');
+    } catch (e) { /* kolonnen findes allerede */ }
+
+    const imageUrl = req.file ? `/uploads/${req.file.filename}` : null;
+    const info = await db.run('INSERT INTO posts (user_id, content, image_url) VALUES (?, ?, ?)', [req.user.id, content, imageUrl]);
+    const post = await db.get(`
+      SELECT p.id, p.content, p.created_at, p.image_url, u.id as user_id, u.name as user_name, u.avatar_url
+      FROM posts p JOIN users u ON u.id = p.user_id WHERE p.id = ?
+    `, [info.lastInsertRowid]);
+    res.json(post);
+    io.emit('feed:new_post', post);
+  } catch (error) {
+    console.error('Create post error:', error);
+    res.status(500).json({ error: 'Failed to create post' });
+  }
 });
 
 // Upload billede til et opslag (gemmes permanent i uploads/ og DB)
