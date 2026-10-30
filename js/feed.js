@@ -248,6 +248,7 @@ async function loadPosts() {
                 likes: p.likes || 0,
                 likedByUser: false, // Initialiser til false for alle posts
                 attachments: [],
+                image_url: p.image_url || null,
                 avatar_url: p.avatar_url,
                 localPhoto: null,
                 comments: [] // Vil blive loaded async
@@ -790,7 +791,10 @@ async function deletePost(postId) {
                 posts = posts.filter(p => p.id !== postId);
                 await renderPosts();
             } else {
-                alert('❌ Kunne ikke slette opslag - prøv igen');
+                let msg = '';
+                try { const j = await response.json(); msg = j.error || ''; } catch (e) {}
+                console.error('Delete svarede', response.status, msg);
+                alert('❌ Kunne ikke slette opslag (' + response.status + (msg ? ': ' + msg : '') + ')');
             }
         } catch (error) {
             console.error('Delete error:', error);

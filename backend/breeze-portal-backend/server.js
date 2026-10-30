@@ -421,9 +421,12 @@ app.delete('/api/posts/:id', auth, async (req, res) => {
     return res.status(404).json({ error: 'Post not found' });
   }
   
-  // Check if user owns the post
+  // Check if user owns the post (admins må slette alle)
   if (post.user_id !== req.user.id) {
-    return res.status(403).json({ error: 'Permission denied' });
+    const me = await db.get('SELECT is_admin FROM users WHERE id = ?', [req.user.id]);
+    if (!me || !me.is_admin) {
+      return res.status(403).json({ error: 'Permission denied' });
+    }
   }
   
   // Delete post (reactions and comments will be cascade deleted if foreign key constraints are set)
