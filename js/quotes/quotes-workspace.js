@@ -107,18 +107,12 @@ function renderWorkspace(data) {
         ordersTab.style.display = 'block';
     }
     
-    // Update tab buttons to highlight "Ordrer" tab
+    // Update tab buttons — styres KUN af .active-klassen (gul understregning)
     const tabs = ['quotes', 'orders', 'invoiced', 'rejected', 'customers'];
     tabs.forEach(t => {
         const btn = document.getElementById(`tab${t.charAt(0).toUpperCase() + t.slice(1)}`);
         if (btn) {
-            if (t === 'orders') {
-                btn.style.background = 'var(--color-accent-hover)';
-                btn.style.color = 'white';
-            } else {
-                btn.style.background = 'transparent';
-                btn.style.color = '#666';
-            }
+            btn.classList.toggle('active', t === 'orders');
         }
     });
     

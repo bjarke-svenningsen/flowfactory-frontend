@@ -92,17 +92,11 @@ function renderInvoicedContent(invoices) {
 function filterInvoicesByStatus(status) {
     currentInvoiceFilter = status;
     
-    // Update button styles
+    // Update filter pills — styres KUN af .active-klassen
     ['InvAll', 'Accepted', 'Invoiced'].forEach(s => {
         const btn = document.getElementById(`filter${s}`);
         if (btn) {
-            if ((s === 'InvAll' && status === 'all') || s.toLowerCase() === status) {
-                btn.style.background = 'var(--color-accent-hover)';
-                btn.style.color = 'white';
-            } else {
-                btn.style.background = '#e0e0e0';
-                btn.style.color = '#666';
-            }
+            btn.classList.toggle('active', (s === 'InvAll' && status === 'all') || s.toLowerCase() === status);
         }
     });
     

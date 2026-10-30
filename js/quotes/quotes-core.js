@@ -219,17 +219,11 @@ async function viewQuote(quoteId) {
             currentQuote = quote;
             currentView = 'preview';
             
-            // Highlight the Tilbud tab (not Godkendte Ordre)
+            // Highlight the Tilbud tab (not Godkendte Ordre) — styres KUN af .active-klassen
             ['quotes', 'orders', 'invoiced', 'rejected', 'customers'].forEach(t => {
                 const btn = document.getElementById(`tab${t.charAt(0).toUpperCase() + t.slice(1)}`);
                 if (btn) {
-                    if (t === 'quotes') {
-                        btn.style.background = 'var(--color-accent-hover)';
-                        btn.style.color = 'white';
-                    } else {
-                        btn.style.background = 'transparent';
-                        btn.style.color = '#666';
-                    }
+                    btn.classList.toggle('active', t === 'quotes');
                 }
             });
             
