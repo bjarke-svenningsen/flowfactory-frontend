@@ -590,7 +590,7 @@ function toggleCamera() {
             
             const btn = document.getElementById('camBtn');
             if (btn) {
-                btn.style.background = cameraEnabled ? '#2196f3' : '#f44336';
+                btn.style.background = cameraEnabled ? 'var(--color-blue)' : 'var(--color-red)';
                 btn.textContent = cameraEnabled ? '📹 Kamera' : '📹 Kamera (Slukket)';
             }
         }
@@ -607,7 +607,7 @@ function toggleMicrophone() {
             
             const btn = document.getElementById('micBtn');
             if (btn) {
-                btn.style.background = microphoneEnabled ? '#4caf50' : '#f44336';
+                btn.style.background = microphoneEnabled ? 'var(--color-green)' : 'var(--color-red)';
                 btn.textContent = microphoneEnabled ? '🎤 Mikrofon' : '🎤 Mikrofon (Slukket)';
             }
         }
@@ -625,7 +625,7 @@ function toggleRemoteAudio() {
     
     const btn = document.getElementById('remoteMuteBtn');
     if (btn) {
-        btn.style.background = remoteAudioMuted ? '#f44336' : '#ff9800';
+        btn.style.background = remoteAudioMuted ? 'var(--color-red)' : 'var(--color-orange)';
         btn.textContent = remoteAudioMuted ? '🔇 Lyd fra' : '🔊 Lyd fra';
     }
     
@@ -906,7 +906,7 @@ function loadVideoCallColleagues() {
         colleaguesList.innerHTML = others.map(colleague => {
             const initials = colleague.name.split(' ').map(n => n[0]).join('');
             const isOnline = window.onlineUsers && window.onlineUsers.has(colleague.id);
-            const statusColor = isOnline ? '#4caf50' : '#999';
+            const statusColor = isOnline ? 'var(--color-green)' : '#999';
             const statusText = isOnline ? 'Online' : 'Offline';
             
             return `
@@ -928,7 +928,7 @@ function loadVideoCallColleagues() {
         console.error('Error loading colleagues:', error);
         const colleaguesList = document.getElementById('colleaguesList');
         if (colleaguesList) {
-            colleaguesList.innerHTML = '<p style="text-align: center; color: #f44336; padding: 20px;">Kunne ikke indlæse kolleger</p>';
+            colleaguesList.innerHTML = '<p style="text-align: center; color: var(--color-red); padding: 20px;">Kunne ikke indlæse kolleger</p>';
         }
     });
 }

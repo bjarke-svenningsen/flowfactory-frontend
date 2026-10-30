@@ -173,21 +173,18 @@ function renderColleagues() {
         const initials = colleague.name.split(' ').map(n => n[0]).join('');
         const isCurrentUser = colleague.email === window.currentUser.email;
         
-        // Tjek for profilbillede
-        let avatarHTML;
-        if (isCurrentUser && window.currentUser.profilePhoto) {
-            avatarHTML = `<div class="colleague-avatar" style="background-image: url(${window.currentUser.profilePhoto}); background-size: cover; background-position: center;"></div>`;
-        } else if (colleague.avatar_url) {
-            avatarHTML = `<div class="colleague-avatar" style="background-image: url(${colleague.avatar_url}); background-size: cover; background-position: center;"></div>`;
-        } else {
-            avatarHTML = `<div class="colleague-avatar">${initials}</div>`;
-        }
+        // Tjek for profilbillede (API'et returnerer avatar_url AS profile_image)
+        const photoUrl = (isCurrentUser && (window.currentUser.profile_image || window.currentUser.profilePhoto))
+            || colleague.profile_image || colleague.avatar_url || null;
+        const avatarHTML = window.renderAvatar
+            ? window.renderAvatar(colleague.name, photoUrl, 72)
+            : `<div class="colleague-avatar">${initials}</div>`;
         
         return `
             <div class="colleague-card">
                 ${avatarHTML}
                 <div class="colleague-info">
-                    <h3>${colleague.name}${isCurrentUser ? ' <span style="color: #667eea; font-size: 12px;">(Dig)</span>' : ''}</h3>
+                    <h3>${colleague.name}${isCurrentUser ? ' <span style="color: var(--color-accent-hover); font-size: 12px;">(Dig)</span>' : ''}</h3>
                     <div class="colleague-detail">
                         <span class="detail-label">Stilling:</span>
                         <span class="detail-value">${colleague.position || 'Ikke angivet'}</span>
@@ -208,19 +205,20 @@ function renderColleagues() {
                 ${!isCurrentUser ? `
                 <div class="colleague-actions">
                     <button class="colleague-action-btn" onclick="sendEmailToColleague('${colleague.email}')" title="Send email">
-                        ✉️ Email
+                        <i data-lucide="mail"></i> Email
                     </button>
                     <button class="colleague-action-btn" onclick="callColleague('${colleague.phone}')" title="Ring op">
-                        📞 Ring
+                        <i data-lucide="phone"></i> Ring
                     </button>
                     <button class="colleague-action-btn" onclick="startChatWithColleague(${colleague.id})" title="Start chat">
-                        💬 Chat
+                        <i data-lucide="message-circle"></i> Chat
                     </button>
                 </div>
                 ` : ''}
             </div>
         `;
     }).join('');
+    if (window.lucide) { try { lucide.createIcons(); } catch (e) { /* ignore */ } }
 }
 
 // Send email til kollega

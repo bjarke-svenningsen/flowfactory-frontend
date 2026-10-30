@@ -135,20 +135,56 @@ function renderQuotesList() {
     }
 }
 
-// ⋯-menu på listerækker
+// ⋯-menu på listerækker — vises FIXED under <body> så den aldrig klippes af overflow.
+// Åbner opad hvis der ikke er plads nedenunder. Lukker ved klik udenfor, Escape og scroll.
 function toggleRowMenu(event, id) {
     event.stopPropagation();
-    const menu = document.getElementById(`rowMenu${id}`);
-    const wasOpen = menu && menu.classList.contains('open');
+    const pop = document.getElementById(`rowMenu${id}`);
+    if (!pop) return;
+    const wasOpen = pop.classList.contains('floating');
     closeRowMenus();
-    if (menu && !wasOpen) menu.classList.add('open');
+    if (wasOpen) return;
+    const trigger = event.currentTarget || event.target;
+    pop.classList.add('floating');
+    pop.classList.add('open');
+    pop._trigger = trigger;
+    document.body.appendChild(pop);
+    positionRowMenu(pop);
+    if (window.lucide) { try { lucide.createIcons(); } catch (e) { /* ignore */ } }
+}
+
+function positionRowMenu(pop) {
+    const t = pop._trigger;
+    if (!t) return;
+    const r = t.getBoundingClientRect();
+    const mw = pop.offsetWidth || 180;
+    const mh = pop.offsetHeight || 180;
+    let left = r.right - mw;
+    if (left < 8) left = 8;
+    if (left + mw > window.innerWidth - 8) left = window.innerWidth - mw - 8;
+    let top = r.bottom + 6;
+    if (top + mh > window.innerHeight - 8) top = r.top - mh - 6; // åbn opad
+    if (top < 8) top = 8;
+    pop.style.left = Math.round(left) + 'px';
+    pop.style.top = Math.round(top) + 'px';
 }
 
 function closeRowMenus() {
-    document.querySelectorAll('.row-menu-pop.open').forEach(m => m.classList.remove('open'));
+    document.querySelectorAll('.row-menu-pop.floating').forEach(m => {
+        m.classList.remove('open', 'floating');
+        m.style.left = '';
+        m.style.top = '';
+    });
 }
 
-document.addEventListener('click', function () { closeRowMenus(); });
+document.addEventListener('click', function (e) {
+    if (!e.target.closest('.row-menu-pop')) closeRowMenus();
+});
+document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') closeRowMenus();
+});
+window.addEventListener('scroll', closeRowMenus, true);
+window.addEventListener('resize', closeRowMenus);
 
 // Show create quote
 function showCreateQuote() {
@@ -188,7 +224,7 @@ async function viewQuote(quoteId) {
                 const btn = document.getElementById(`tab${t.charAt(0).toUpperCase() + t.slice(1)}`);
                 if (btn) {
                     if (t === 'quotes') {
-                        btn.style.background = '#667eea';
+                        btn.style.background = 'var(--color-accent-hover)';
                         btn.style.color = 'white';
                     } else {
                         btn.style.background = 'transparent';
@@ -306,7 +342,7 @@ function renderQuoteForm() {
                                 </option>
                             `).join('')}
                         </select>
-                        <button onclick="showQuickCreateCustomer()" style="padding: 10px 20px; background: #4caf50; color: white; border: none; border-radius: 5px; cursor: pointer; white-space: nowrap;">
+                        <button onclick="showQuickCreateCustomer()" style="padding: 10px 20px; background: var(--color-green); color: white; border: none; border-radius: 5px; cursor: pointer; white-space: nowrap;">
                             ➕ Ny Kunde
                         </button>
                     </div>
@@ -339,7 +375,7 @@ function renderQuoteForm() {
             <div style="margin-bottom: 30px;">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
                     <h3 style="margin: 0;">Tilbudslinjer</h3>
-                    <button onclick="addQuoteLine()" style="padding: 8px 16px; background: #667eea; color: white; border: none; border-radius: 5px; cursor: pointer;">
+                    <button onclick="addQuoteLine()" style="padding: 8px 16px; background: var(--color-accent-hover); color: white; border: none; border-radius: 5px; cursor: pointer;">
                         ➕ Tilføj Linje
                     </button>
                 </div>
@@ -367,7 +403,7 @@ function renderQuoteForm() {
                     <div>
                         <strong>Moms (25%):</strong> <span id="quoteVat">0,00 kr.</span>
                     </div>
-                    <div style="font-size: 20px; color: #667eea;">
+                    <div style="font-size: 20px; color: var(--color-accent-hover);">
                         <strong>TOTAL:</strong> <span id="quoteTotal">0,00 kr.</span>
                     </div>
                 </div>
@@ -377,10 +413,10 @@ function renderQuoteForm() {
                 <button onclick="backToQuotesList()" style="padding: 12px 24px; background: #999; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 14px;">
                     Annuller
                 </button>
-                <button onclick="saveQuote('draft')" style="padding: 12px 24px; background: #667eea; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 14px;">
+                <button onclick="saveQuote('draft')" style="padding: 12px 24px; background: var(--color-accent-hover); color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 14px;">
                     💾 Gem som Udkast
                 </button>
-                <button onclick="saveAndPreviewQuote()" style="padding: 12px 24px; background: #4caf50; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 14px;">
+                <button onclick="saveAndPreviewQuote()" style="padding: 12px 24px; background: var(--color-green); color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 14px;">
                     👁️ Gem & Se Preview
                 </button>
             </div>
@@ -409,7 +445,7 @@ function renderQuoteLines() {
         <div style="background: #f9f9f9; padding: 15px; border-radius: 8px; margin-bottom: 15px; border: 2px solid #e0e0e0;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
                 <strong>Linje ${index + 1}</strong>
-                <button onclick="removeLine(${index})" style="padding: 5px 10px; background: #f44336; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">
+                <button onclick="removeLine(${index})" style="padding: 5px 10px; background: var(--color-red); color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">
                     🗑️ Fjern
                 </button>
             </div>
@@ -444,7 +480,7 @@ function renderQuoteLines() {
                 
                 <div>
                     <label style="display: block; margin-bottom: 5px; font-size: 13px; font-weight: 600;">Total</label>
-                    <div id="lineTotal${index}" style="padding: 8px; background: white; border: 1px solid #ddd; border-radius: 4px; font-size: 13px; font-weight: 600; color: #667eea;">
+                    <div id="lineTotal${index}" style="padding: 8px; background: white; border: 1px solid #ddd; border-radius: 4px; font-size: 13px; font-weight: 600; color: var(--color-accent-hover);">
                         ${formatCurrency(calculateLineTotal(line))}
                     </div>
                 </div>
@@ -664,7 +700,7 @@ function renderQuotePreview() {
     // Ensure lines is an array
     if (!currentQuote.lines || !Array.isArray(currentQuote.lines)) {
         console.error('Invalid quote lines:', currentQuote.lines);
-        container.innerHTML = '<div style="padding: 40px; text-align: center; color: #f44336;">⚠️ Kunne ikke indlæse tilbudslinjer. Prøv at genindlæse siden.</div>';
+        container.innerHTML = '<div style="padding: 40px; text-align: center; color: var(--color-red);">⚠️ Kunne ikke indlæse tilbudslinjer. Prøv at genindlæse siden.</div>';
         return;
     }
     
@@ -672,16 +708,16 @@ function renderQuotePreview() {
     container.innerHTML = `
         <div style="max-width: 900px; margin: 0 auto;">
             <div style="display: flex; gap: 15px; margin-bottom: 20px;">
-                <button onclick="editQuote(${currentQuote.id})" style="padding: 10px 20px; background: #667eea; color: white; border: none; border-radius: 5px; cursor: pointer;">
+                <button onclick="editQuote(${currentQuote.id})" style="padding: 10px 20px; background: var(--color-accent-hover); color: white; border: none; border-radius: 5px; cursor: pointer;">
                     ✏️ Rediger
                 </button>
-                <button onclick="sendQuote(${currentQuote.id})" style="padding: 10px 20px; background: #4caf50; color: white; border: none; border-radius: 5px; cursor: pointer;">
+                <button onclick="sendQuote(${currentQuote.id})" style="padding: 10px 20px; background: var(--color-green); color: white; border: none; border-radius: 5px; cursor: pointer;">
                     📧 Send til Kunde
                 </button>
-                <button onclick="downloadQuotePDF(${currentQuote.id})" style="padding: 10px 20px; background: #2196f3; color: white; border: none; border-radius: 5px; cursor: pointer;">
+                <button onclick="downloadQuotePDF(${currentQuote.id})" style="padding: 10px 20px; background: var(--color-blue); color: white; border: none; border-radius: 5px; cursor: pointer;">
                     📄 Download PDF
                 </button>
-                <button onclick="deleteQuote(${currentQuote.id})" style="padding: 10px 20px; background: #f44336; color: white; border: none; border-radius: 5px; cursor: pointer;">
+                <button onclick="deleteQuote(${currentQuote.id})" style="padding: 10px 20px; background: var(--color-red); color: white; border: none; border-radius: 5px; cursor: pointer;">
                     🗑️ Slet
                 </button>
             </div>
@@ -904,15 +940,8 @@ function switchOrderTab(tab) {
         const content = document.getElementById(`orderTab${t.charAt(0).toUpperCase() + t.slice(1)}`);
         
         if (btn && content) {
-            if (t === tab) {
-                btn.style.background = '#667eea';
-                btn.style.color = 'white';
-                content.style.display = 'block';
-            } else {
-                btn.style.background = 'transparent';
-                btn.style.color = '#666';
-                content.style.display = 'none';
-            }
+            btn.classList.toggle('active', t === tab);
+            content.style.display = t === tab ? 'block' : 'none';
         }
     });
     
@@ -942,13 +971,7 @@ function filterQuotesByStatus(status) {
     ['All', 'Draft', 'Sent', 'Rejected'].forEach(s => {
         const btn = document.getElementById(`filter${s}`);
         if (btn) {
-            if (s.toLowerCase() === status) {
-                btn.style.background = '#667eea';
-                btn.style.color = 'white';
-            } else {
-                btn.style.background = '#e0e0e0';
-                btn.style.color = '#666';
-            }
+            btn.classList.toggle('active', s.toLowerCase() === status);
         }
     });
     
@@ -983,7 +1006,7 @@ function renderOrdersContent(orders) {
     if (orders.length === 0) {
         container.innerHTML = `
             <div style="text-align: center; padding: 60px 20px; color: #999;">
-                <div style="font-size: 64px; margin-bottom: 20px;">📦</div>
+                <div style="font-size: 44px; margin-bottom: 20px; color: var(--color-text-muted); display: flex; justify-content: center;"><i data-lucide="package" style="width:48px;height:48px;"></i></div>
                 <h3>Ingen ordrer endnu</h3>
                 <p style="margin: 10px 0;">Acceptér et tilbud for at se det her</p>
             </div>
@@ -1000,22 +1023,22 @@ function renderOrdersContent(orders) {
             : displayNumber;
         
         html += `
-            <div style="background: white; border: 2px solid #4caf50; border-radius: 8px; padding: 20px; margin-bottom: 15px;">
-                <div style="display: flex; justify-content: space-between; align-items: start;">
-                    <div style="flex: 1;">
+            <div class="order-card" style="padding: 20px; margin-bottom: 15px;">
+                <div style="display: flex; justify-content: space-between; align-items: start; gap: 16px; flex-wrap: wrap;">
+                    <div style="flex: 1; min-width: 0;">
                         <h4 style="margin: 0 0 10px 0;">Ordre ${fullOrderNumber}</h4>
                         <p style="margin: 5px 0;"><strong>Kunde:</strong> ${order.customer_name}</p>
                         <p style="margin: 5px 0;"><strong>Titel:</strong> ${order.title}</p>
                         <p style="margin: 3px 0 5px 0; font-size: 0.85em; color: #888; font-style: italic;">Oprettet af ${order.created_by_name || 'Ukendt'}</p>
                         <p style="margin: 5px 0;"><strong>Total:</strong> ${formatCurrency(order.total)}</p>
-                        <p style="margin: 5px 0; color: #4caf50; font-weight: 600;">✅ Accepteret: ${new Date(order.accepted_at).toLocaleDateString('da-DK')}</p>
+                        <p style="margin: 5px 0;"><span class="status-pill status-pill--accepted">Accepteret</span> <span style="color: var(--color-text-muted);">${new Date(order.accepted_at).toLocaleDateString('da-DK')}</span></p>
                     </div>
                     <div style="display: flex; flex-direction: column; gap: 10px;">
-                        <button onclick="viewQuote(${order.id})" style="padding: 10px 20px; background: #2196f3; color: white; border: none; border-radius: 5px; cursor: pointer; white-space: nowrap;">
-                            👁️ Se Ordre
+                        <button onclick="viewQuote(${order.id})" class="btn-secondary" style="white-space: nowrap;">
+                            <i data-lucide="eye"></i> Se Ordre
                         </button>
-                        <button onclick="moveOrderBackToQuote(${order.id})" style="padding: 10px 20px; background: #9e9e9e; color: white; border: none; border-radius: 5px; cursor: pointer; white-space: nowrap;">
-                            ◀ Rykke til Tilbud
+                        <button onclick="moveOrderBackToQuote(${order.id})" class="btn-secondary" style="white-space: nowrap;">
+                            <i data-lucide="undo-2"></i> Rykke til Tilbud
                         </button>
                     </div>
                 </div>
@@ -1053,7 +1076,7 @@ function renderRejectedContent(quotes) {
     if (quotes.length === 0) {
         container.innerHTML = `
             <div style="text-align: center; padding: 60px 20px; color: #999;">
-                <div style="font-size: 64px; margin-bottom: 20px;">❌</div>
+                <div style="font-size: 44px; margin-bottom: 20px; color: var(--color-red); display: flex; justify-content: center;"><i data-lucide="x-circle" style="width:48px;height:48px;"></i></div>
                 <h3>Ingen afviste tilbud</h3>
                 <p style="margin: 10px 0;">Afviste tilbud vises her</p>
             </div>
@@ -1064,24 +1087,24 @@ function renderRejectedContent(quotes) {
     let html = '';
     quotes.forEach(quote => {
         html += `
-            <div style="background: white; border: 1px solid #f44336; border-radius: 8px; padding: 20px; margin-bottom: 15px;">
-                <div style="display: flex; justify-content: space-between; align-items: start;">
-                    <div style="flex: 1;">
+            <div class="order-card" style="padding: 20px; margin-bottom: 15px;">
+                <div style="display: flex; justify-content: space-between; align-items: start; gap: 16px; flex-wrap: wrap;">
+                    <div style="flex: 1; min-width: 0;">
                         <h4 style="margin: 0 0 10px 0;">Tilbud ${quote.quote_number}</h4>
                         <p style="margin: 5px 0;"><strong>Kunde:</strong> ${quote.customer_name}</p>
                         <p style="margin: 5px 0;"><strong>Titel:</strong> ${quote.title}</p>
                         <p style="margin: 3px 0 5px 0; font-size: 0.85em; color: #888; font-style: italic;">Oprettet af ${quote.created_by_name || 'Ukendt'}</p>
                         <p style="margin: 5px 0;"><strong>Total:</strong> ${formatCurrency(quote.total)}</p>
-                        <p style="margin: 5px 0; color: #f44336; font-weight: 600;">❌ Afvist: ${new Date(quote.date).toLocaleDateString('da-DK')}</p>
+                        <p style="margin: 5px 0; color: var(--color-red); font-weight: 600;">❌ Afvist: ${new Date(quote.date).toLocaleDateString('da-DK')}</p>
                     </div>
                     <div style="display: flex; flex-direction: column; gap: 10px;">
-                        <button onclick="viewQuote(${quote.id})" style="padding: 10px 20px; background: #2196f3; color: white; border: none; border-radius: 5px; cursor: pointer; white-space: nowrap;">
+                        <button onclick="viewQuote(${quote.id})" style="padding: 10px 20px; background: var(--color-blue); color: white; border: none; border-radius: 5px; cursor: pointer; white-space: nowrap;">
                             👁️ Se Tilbud
                         </button>
                         <button onclick="moveRejectedBackToQuote(${quote.id})" style="padding: 10px 20px; background: #9e9e9e; color: white; border: none; border-radius: 5px; cursor: pointer; white-space: nowrap;">
                             ◀ Rykke til Tilbud
                         </button>
-                        <button onclick="deleteQuote(${quote.id})" style="padding: 10px 20px; background: #f44336; color: white; border: none; border-radius: 5px; cursor: pointer; white-space: nowrap;">
+                        <button onclick="deleteQuote(${quote.id})" style="padding: 10px 20px; background: var(--color-red); color: white; border: none; border-radius: 5px; cursor: pointer; white-space: nowrap;">
                             🗑️ Slet
                         </button>
                     </div>

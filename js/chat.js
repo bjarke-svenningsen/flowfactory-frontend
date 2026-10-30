@@ -131,7 +131,7 @@ function renderUserList() {
                     <div style="font-size: 12px; color: #999;">${getStatusText(user.status)}</div>
                 </div>
                 <button onclick="event.stopPropagation(); if(typeof startVideoCall !== 'undefined') startVideoCall(${user.id}, '${user.name.replace(/'/g, "\\'")}');" 
-                        style="padding: 6px 10px; background: ${isOnline ? '#4caf50' : '#ccc'}; color: white; border: none; border-radius: 15px; cursor: ${isOnline ? 'pointer' : 'not-allowed'}; font-size: 12px;"
+                        style="padding: 6px 10px; background: ${isOnline ? 'var(--color-green)' : '#ccc'}; color: white; border: none; border-radius: 15px; cursor: ${isOnline ? 'pointer' : 'not-allowed'}; font-size: 12px;"
                         ${!isOnline ? 'disabled' : ''}
                         title="${isOnline ? 'Start videoopkald' : 'Bruger er offline'}">
                     📞
@@ -165,8 +165,8 @@ async function openChatWith(userId) {
     document.getElementById('chatUserName').textContent = user.name;
     document.getElementById('chatUserStatus').textContent = getStatusText(user.status);
     document.getElementById('chatUserStatus').style.color = 
-        user.status === 'online' ? '#4caf50' : 
-        user.status === 'busy' ? '#f44336' : '#9e9e9e';
+        user.status === 'online' ? 'var(--color-green)' : 
+        user.status === 'busy' ? 'var(--color-red)' : '#9e9e9e';
     
     renderUserList();
     

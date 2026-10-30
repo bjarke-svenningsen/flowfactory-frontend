@@ -41,8 +41,8 @@ function renderInvoicedContent(invoices) {
     
     const statusColors = {
         'draft': '#999',
-        'sent': '#2196f3',
-        'paid': '#4caf50'
+        'sent': 'var(--color-blue)',
+        'paid': 'var(--color-green)'
     };
     const statusText = {
         'draft': '📝 Udkast',
@@ -68,15 +68,15 @@ function renderInvoicedContent(invoices) {
                         </p>
                     </div>
                     <div style="display: flex; flex-direction: column; gap: 10px;">
-                        <button onclick="viewInvoice(${invoice.id})" style="padding: 10px 20px; background: #2196f3; color: white; border: none; border-radius: 5px; cursor: pointer; white-space: nowrap;">
+                        <button onclick="viewInvoice(${invoice.id})" style="padding: 10px 20px; background: var(--color-blue); color: white; border: none; border-radius: 5px; cursor: pointer; white-space: nowrap;">
                             👁️ Se Faktura
                         </button>
                         ${invoice.status === 'draft' ? `
-                            <button onclick="sendInvoice(${invoice.id})" style="padding: 10px 20px; background: #4caf50; color: white; border: none; border-radius: 5px; cursor: pointer; white-space: nowrap;">
+                            <button onclick="sendInvoice(${invoice.id})" style="padding: 10px 20px; background: var(--color-green); color: white; border: none; border-radius: 5px; cursor: pointer; white-space: nowrap;">
                                 📧 Send
                             </button>
                         ` : ''}
-                        <button onclick="deleteInvoice(${invoice.id})" style="padding: 10px 20px; background: #f44336; color: white; border: none; border-radius: 5px; cursor: pointer; white-space: nowrap;">
+                        <button onclick="deleteInvoice(${invoice.id})" style="padding: 10px 20px; background: var(--color-red); color: white; border: none; border-radius: 5px; cursor: pointer; white-space: nowrap;">
                             🗑️ Slet Faktura
                         </button>
                     </div>
@@ -97,7 +97,7 @@ function filterInvoicesByStatus(status) {
         const btn = document.getElementById(`filter${s}`);
         if (btn) {
             if ((s === 'InvAll' && status === 'all') || s.toLowerCase() === status) {
-                btn.style.background = '#667eea';
+                btn.style.background = 'var(--color-accent-hover)';
                 btn.style.color = 'white';
             } else {
                 btn.style.background = '#e0e0e0';
@@ -188,14 +188,14 @@ function renderInvoicePreview(invoice) {
                     ◀ Tilbage
                 </button>
                 ${invoice.status === 'draft' ? `
-                    <button onclick="sendInvoice(${invoice.id})" style="padding: 10px 20px; background: #4caf50; color: white; border: none; border-radius: 5px; cursor: pointer;">
+                    <button onclick="sendInvoice(${invoice.id})" style="padding: 10px 20px; background: var(--color-green); color: white; border: none; border-radius: 5px; cursor: pointer;">
                         📧 Send til Kunde
                     </button>
                 ` : ''}
-                <button onclick="window.print()" style="padding: 10px 20px; background: #2196f3; color: white; border: none; border-radius: 5px; cursor: pointer;">
+                <button onclick="window.print()" style="padding: 10px 20px; background: var(--color-blue); color: white; border: none; border-radius: 5px; cursor: pointer;">
                     🖨️ Print / PDF
                 </button>
-                <button onclick="deleteInvoiceFromPreview(${invoice.id})" style="padding: 10px 20px; background: #f44336; color: white; border: none; border-radius: 5px; cursor: pointer;">
+                <button onclick="deleteInvoiceFromPreview(${invoice.id})" style="padding: 10px 20px; background: var(--color-red); color: white; border: none; border-radius: 5px; cursor: pointer;">
                     🗑️ Slet Faktura
                 </button>
             </div>

@@ -57,7 +57,7 @@ function showInstallPrompt() {
     bottom: 20px;
     left: 20px;
     right: 20px;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: var(--color-dark);
     color: white;
     padding: 15px 20px;
     border-radius: 10px;
@@ -75,7 +75,7 @@ function showInstallPrompt() {
       <div style="font-size: 12px; opacity: 0.9;">Tilføj til hjemmeskærm for hurtig adgang</div>
     </div>
     <div style="display: flex; gap: 10px;">
-      <button id="pwa-install-btn" style="padding: 8px 16px; background: white; color: #667eea; border: none; border-radius: 5px; font-weight: 600; cursor: pointer;">
+      <button id="pwa-install-btn" style="padding: 8px 16px; background: white; color: var(--color-accent-hover); border: none; border-radius: 5px; font-weight: 600; cursor: pointer;">
         Installer
       </button>
       <button id="pwa-dismiss-btn" style="padding: 8px 16px; background: rgba(255,255,255,0.2); color: white; border: none; border-radius: 5px; cursor: pointer;">
@@ -135,7 +135,7 @@ function initMobileMenu() {
     top: 15px;
     left: 15px;
     z-index: 9998;
-    background: #667eea;
+    background: var(--color-accent-hover);
     color: white;
     border: none;
     width: 44px;

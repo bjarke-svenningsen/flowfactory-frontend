@@ -73,10 +73,10 @@ async function loadPendingUsers() {
                         <p style="margin: 5px 0; color: #999; font-size: 12px;">Anmodet: ${new Date(user.created_at).toLocaleString('da-DK')}</p>
                     </div>
                     <div style="display: flex; gap: 10px;">
-                        <button onclick="approveUser(${user.id})" style="padding: 8px 16px; background: #4caf50; color: white; border: none; border-radius: 5px; cursor: pointer;">
+                        <button onclick="approveUser(${user.id})" style="padding: 8px 16px; background: var(--color-green); color: white; border: none; border-radius: 5px; cursor: pointer;">
                             ✅ Godkend
                         </button>
-                        <button onclick="rejectUser(${user.id})" style="padding: 8px 16px; background: #f44336; color: white; border: none; border-radius: 5px; cursor: pointer;">
+                        <button onclick="rejectUser(${user.id})" style="padding: 8px 16px; background: var(--color-red); color: white; border: none; border-radius: 5px; cursor: pointer;">
                             ❌ Afvis
                         </button>
                     </div>
@@ -210,7 +210,7 @@ async function loadInviteCodes() {
             const isExpired = new Date(code.expires_at) < new Date();
             const isUsed = code.used_by !== null;
             const status = isUsed ? '✅ Brugt' : isExpired ? '⏰ Udløbet' : '🟢 Aktiv';
-            const statusColor = isUsed ? '#4caf50' : isExpired ? '#999' : '#2196f3';
+            const statusColor = isUsed ? 'var(--color-green)' : isExpired ? '#999' : 'var(--color-blue)';
             
             return `
                 <div style="border: 1px solid #e0e0e0; border-radius: 8px; padding: 15px; margin-bottom: 10px;">
@@ -223,7 +223,7 @@ async function loadInviteCodes() {
                             ${isUsed ? `<p style="margin: 5px 0; color: #666;">Brugt af: ${code.used_by_name}</p>` : ''}
                         </div>
                         ${!isUsed ? `
-                            <button onclick="deleteInviteCode(${code.id})" style="padding: 8px 16px; background: #f44336; color: white; border: none; border-radius: 5px; cursor: pointer;">
+                            <button onclick="deleteInviteCode(${code.id})" style="padding: 8px 16px; background: var(--color-red); color: white; border: none; border-radius: 5px; cursor: pointer;">
                                 🗑️ Slet
                             </button>
                         ` : ''}
@@ -289,11 +289,11 @@ async function loadAllUsers() {
                                 ${user.id !== window.currentUser.id ? `
                                     <div style="display: flex; gap: 5px; justify-content: center;">
                                         ${!user.is_admin ? `
-                                            <button onclick="makeAdmin(${user.id})" style="padding: 5px 10px; background: #667eea; color: white; border: none; border-radius: 3px; cursor: pointer; font-size: 12px;">
+                                            <button onclick="makeAdmin(${user.id})" style="padding: 5px 10px; background: var(--color-accent-hover); color: white; border: none; border-radius: 3px; cursor: pointer; font-size: 12px;">
                                                 Gør til admin
                                             </button>
                                         ` : `
-                                            <button onclick="removeAdmin(${user.id})" style="padding: 5px 10px; background: #f44336; color: white; border: none; border-radius: 3px; cursor: pointer; font-size: 12px;">
+                                            <button onclick="removeAdmin(${user.id})" style="padding: 5px 10px; background: var(--color-red); color: white; border: none; border-radius: 3px; cursor: pointer; font-size: 12px;">
                                                 Fjern admin
                                             </button>
                                         `}

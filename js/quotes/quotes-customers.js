@@ -38,7 +38,7 @@ async function loadCustomersTable() {
                 <div style="font-size: 64px; margin-bottom: 20px;">👥</div>
                 <h3>Ingen kunder endnu</h3>
                 <p style="margin: 10px 0 20px 0;">Opret din første kunde for at komme i gang</p>
-                <button onclick="showCreateCustomer()" style="padding: 12px 30px; background: #667eea; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 16px;">
+                <button onclick="showCreateCustomer()" style="padding: 12px 30px; background: var(--color-accent-hover); color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 16px;">
                     ➕ Opret Kunde
                 </button>
             </div>
@@ -67,10 +67,10 @@ async function loadCustomersTable() {
                         <td style="padding: 15px;">${customer.email || '-'}</td>
                         <td style="padding: 15px;">${customer.phone || '-'}</td>
                         <td style="padding: 15px; text-align: center;">
-                            <button onclick="editCustomer(${customer.id})" style="padding: 6px 12px; margin: 2px; background: #667eea; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">
+                            <button onclick="editCustomer(${customer.id})" style="padding: 6px 12px; margin: 2px; background: var(--color-accent-hover); color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">
                                 ✏️ Rediger
                             </button>
-                            <button onclick="deleteCustomer(${customer.id})" style="padding: 6px 12px; margin: 2px; background: #f44336; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">
+                            <button onclick="deleteCustomer(${customer.id})" style="padding: 6px 12px; margin: 2px; background: var(--color-red); color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">
                                 🗑️ Slet
                             </button>
                         </td>
@@ -160,7 +160,7 @@ function showCreateCustomer(fromQuoteForm = false) {
                     <button type="button" onclick="closeCustomerModal()" style="padding: 12px 24px; background: #999; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 14px;">
                         Annuller
                     </button>
-                    <button type="submit" style="padding: 12px 24px; background: #667eea; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 14px;">
+                    <button type="submit" style="padding: 12px 24px; background: var(--color-accent-hover); color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 14px;">
                         💾 Gem Kunde
                     </button>
                 </div>
@@ -322,7 +322,7 @@ function editCustomer(customerId) {
                     <button type="button" onclick="closeCustomerModal()" style="padding: 12px 24px; background: #999; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 14px;">
                         Annuller
                     </button>
-                    <button type="submit" style="padding: 12px 24px; background: #667eea; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 14px;">
+                    <button type="submit" style="padding: 12px 24px; background: var(--color-accent-hover); color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 14px;">
                         💾 Gem Ændringer
                     </button>
                 </div>
@@ -443,7 +443,7 @@ function renderContactsList(customerId) {
         container.innerHTML = `
             <div style="text-align: center; padding: 20px; color: #999; border: 2px dashed #e0e0e0; border-radius: 8px;">
                 <p>Ingen kontaktpersoner endnu</p>
-                <button onclick="showAddContact(${customerId})" style="padding: 8px 16px; background: #667eea; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 13px;">
+                <button onclick="showAddContact(${customerId})" style="padding: 8px 16px; background: var(--color-accent-hover); color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 13px;">
                     ➕ Tilføj Første Kontakt
                 </button>
             </div>
@@ -454,28 +454,28 @@ function renderContactsList(customerId) {
     container.innerHTML = `
         <div style="margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center;">
             <strong style="font-size: 14px;">📇 Kontaktpersoner (${customerContacts.length})</strong>
-            <button onclick="showAddContact(${customerId})" style="padding: 6px 12px; background: #667eea; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 12px;">
+            <button onclick="showAddContact(${customerId})" style="padding: 6px 12px; background: var(--color-accent-hover); color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 12px;">
                 ➕ Tilføj Kontakt
             </button>
         </div>
         <div style="max-height: 300px; overflow-y: auto; border: 1px solid #e0e0e0; border-radius: 8px; background: #f9f9f9;">
             ${customerContacts.map(contact => `
-                <div style="padding: 12px; border-bottom: 1px solid #e0e0e0; background: white; ${contact.is_primary ? 'border-left: 4px solid #4caf50;' : ''}">
+                <div style="padding: 12px; border-bottom: 1px solid #e0e0e0; background: white; ${contact.is_primary ? 'border-left: 4px solid var(--color-green);' : ''}">
                     <div style="display: flex; justify-content: space-between; align-items: start;">
                         <div style="flex: 1;">
                             <div style="font-weight: 600; margin-bottom: 4px;">
                                 ${contact.name}
-                                ${contact.is_primary ? '<span style="background: #4caf50; color: white; padding: 2px 8px; border-radius: 12px; font-size: 11px; margin-left: 8px;">PRIMÆR</span>' : ''}
+                                ${contact.is_primary ? '<span style="background: var(--color-green); color: white; padding: 2px 8px; border-radius: 12px; font-size: 11px; margin-left: 8px;">PRIMÆR</span>' : ''}
                             </div>
                             ${contact.title ? `<div style="color: #666; font-size: 13px; margin-bottom: 4px;">${contact.title}</div>` : ''}
-                            ${contact.email ? `<div style="color: #667eea; font-size: 13px; margin-bottom: 2px;">📧 ${contact.email}</div>` : ''}
+                            ${contact.email ? `<div style="color: var(--color-accent-hover); font-size: 13px; margin-bottom: 2px;">📧 ${contact.email}</div>` : ''}
                             ${contact.phone ? `<div style="color: #666; font-size: 13px;">📞 ${contact.phone}</div>` : ''}
                         </div>
                         <div style="display: flex; gap: 5px;">
-                            <button onclick="editContact(${customerId}, ${contact.id})" style="padding: 4px 8px; background: #667eea; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 11px;">
+                            <button onclick="editContact(${customerId}, ${contact.id})" style="padding: 4px 8px; background: var(--color-accent-hover); color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 11px;">
                                 ✏️
                             </button>
-                            <button onclick="deleteContact(${customerId}, ${contact.id})" style="padding: 4px 8px; background: #f44336; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 11px;">
+                            <button onclick="deleteContact(${customerId}, ${contact.id})" style="padding: 4px 8px; background: var(--color-red); color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 11px;">
                                 🗑️
                             </button>
                         </div>
@@ -529,7 +529,7 @@ function showAddContact(customerId) {
                     <button type="button" onclick="closeContactModal()" style="padding: 12px 24px; background: #999; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 14px;">
                         Annuller
                     </button>
-                    <button type="submit" style="padding: 12px 24px; background: #667eea; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 14px;">
+                    <button type="submit" style="padding: 12px 24px; background: var(--color-accent-hover); color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 14px;">
                         💾 Gem Kontakt
                     </button>
                 </div>
@@ -630,7 +630,7 @@ function editContact(customerId, contactId) {
                     <button type="button" onclick="closeContactModal()" style="padding: 12px 24px; background: #999; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 14px;">
                         Annuller
                     </button>
-                    <button type="submit" style="padding: 12px 24px; background: #667eea; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 14px;">
+                    <button type="submit" style="padding: 12px 24px; background: var(--color-accent-hover); color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 14px;">
                         💾 Gem Ændringer
                     </button>
                 </div>

@@ -140,7 +140,7 @@
   .email-item.current {
     background: #0a246a;
     color: white;
-    border-left-color: #2196F3;
+    border-left-color: var(--color-blue);
   }
 
   .email-item.current .email-preview {
@@ -618,7 +618,7 @@
 <!-- Compose Dialog - Enhanced -->
 <div class="win95-dialog-overlay" id="compose-overlay"></div>
 <div class="win95-dialog" id="compose-dialog" style="width: 700px; height: 650px;">
-  <div class="win95-dialog-title" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+  <div class="win95-dialog-title" style="background: var(--color-dark);">
     <span>✉️ Ny Email</span>
     <button class="win95-dialog-close" onclick="emailClient.closeCompose()">✕</button>
   </div>
@@ -754,7 +754,7 @@
 <!-- Signature Editor Dialog -->
 <div class="win95-dialog-overlay" id="signature-overlay"></div>
 <div class="win95-dialog" id="signature-dialog" style="width: 500px;">
-  <div class="win95-dialog-title" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+  <div class="win95-dialog-title" style="background: var(--color-dark);">
     <span>✍️ Redigér Email Signatur</span>
     <button class="win95-dialog-close" onclick="emailClient.closeSignatureEditor()">✕</button>
   </div>

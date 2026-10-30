@@ -113,7 +113,7 @@ function renderWorkspace(data) {
         const btn = document.getElementById(`tab${t.charAt(0).toUpperCase() + t.slice(1)}`);
         if (btn) {
             if (t === 'orders') {
-                btn.style.background = '#667eea';
+                btn.style.background = 'var(--color-accent-hover)';
                 btn.style.color = 'white';
             } else {
                 btn.style.background = 'transparent';
@@ -148,7 +148,7 @@ function renderWorkspace(data) {
                     <h1 style="margin: 0 0 6px 0;">Ordre ${fullOrderNumber}</h1>
                     <p style="margin: 0; color: var(--color-text-muted);">${data.order.title} • ${data.order.company_name}</p>
                 </div>
-                <div class="kpi-grid" style="grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); flex: 1; min-width: 460px; max-width: 780px;">
+                <div class="kpi-grid" style="flex: 1 1 420px; min-width: 0;">
                     <div class="kpi-card">
                         <div class="kpi-label">Omsætning</div>
                         <div class="kpi-value">${formatCurrency(data.financials.revenue)}</div>
@@ -243,7 +243,7 @@ function renderWorkspaceOverview(container) {
                         <div style="margin-bottom: 20px;">
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
                                 <div style="font-weight: 600; font-size: 16px;">💰 Omsætning</div>
-                                <div style="font-size: 20px; font-weight: 600; color: #667eea;">${formatCurrency(workspaceFinancials.revenue)}</div>
+                                <div style="font-size: 20px; font-weight: 600; color: var(--color-accent-hover);">${formatCurrency(workspaceFinancials.revenue)}</div>
                             </div>
                             <div style="padding-left: 25px; font-size: 14px; color: #666;">
                                 <div style="display: flex; justify-content: space-between; padding: 5px 0;">
@@ -263,7 +263,7 @@ function renderWorkspaceOverview(container) {
                         <div style="margin-bottom: 20px;">
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
                                 <div style="font-weight: 600; font-size: 16px;">📊 Udgifter</div>
-                                <div style="font-size: 20px; font-weight: 600; color: #f44336;">${formatCurrency(workspaceFinancials.expenses)}</div>
+                                <div style="font-size: 20px; font-weight: 600; color: var(--color-red);">${formatCurrency(workspaceFinancials.expenses)}</div>
                             </div>
                             <div style="padding-left: 25px; font-size: 14px; color: #666;">
                                 <div style="display: flex; justify-content: space-between; padding: 5px 0;">
@@ -283,7 +283,7 @@ function renderWorkspaceOverview(container) {
                         <div>
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
                                 <div style="font-weight: 600; font-size: 16px;">✅ Profit</div>
-                                <div style="font-size: 20px; font-weight: 600; color: ${profit >= 0 ? '#4caf50' : '#f44336'};">${formatCurrency(workspaceFinancials.profit)} (${profitMargin}%)</div>
+                                <div style="font-size: 20px; font-weight: 600; color: ${profit >= 0 ? 'var(--color-green)' : 'var(--color-red)'};">${formatCurrency(workspaceFinancials.profit)} (${profitMargin}%)</div>
                             </div>
                             <div style="padding-left: 25px; font-size: 14px; color: #666;">
                                 <div style="display: flex; justify-content: space-between; padding: 5px 0;">
@@ -302,19 +302,19 @@ function renderWorkspaceOverview(container) {
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin: 0 0 30px 0;">
                         <div style="background: white; padding: 20px; border-radius: 10px; border: 2px solid #e0e0e0;">
                             <div style="color: #666; font-size: 14px; margin-bottom: 5px;">💰 Omsætning</div>
-                            <div style="font-size: 28px; font-weight: 600; color: #667eea;">${formatCurrency(revenue)}</div>
+                            <div style="font-size: 28px; font-weight: 600; color: var(--color-accent-hover);">${formatCurrency(revenue)}</div>
                         </div>
                         <div style="background: white; padding: 20px; border-radius: 10px; border: 2px solid #e0e0e0;">
                             <div style="color: #666; font-size: 14px; margin-bottom: 5px;">📊 Udgifter</div>
-                            <div style="font-size: 28px; font-weight: 600; color: #f44336;">${formatCurrency(totalExpenses)}</div>
+                            <div style="font-size: 28px; font-weight: 600; color: var(--color-red);">${formatCurrency(totalExpenses)}</div>
                         </div>
                         <div style="background: white; padding: 20px; border-radius: 10px; border: 2px solid #e0e0e0;">
                             <div style="color: #666; font-size: 14px; margin-bottom: 5px;">✅ Profit</div>
-                            <div style="font-size: 28px; font-weight: 600; color: ${profit >= 0 ? '#4caf50' : '#f44336'};">${formatCurrency(profit)}</div>
+                            <div style="font-size: 28px; font-weight: 600; color: ${profit >= 0 ? 'var(--color-green)' : 'var(--color-red)'};">${formatCurrency(profit)}</div>
                         </div>
                         <div style="background: white; padding: 20px; border-radius: 10px; border: 2px solid #e0e0e0;">
                             <div style="color: #666; font-size: 14px; margin-bottom: 5px;">📈 Margin</div>
-                            <div style="font-size: 28px; font-weight: 600; color: ${profit >= 0 ? '#4caf50' : '#f44336'};">${revenue > 0 ? ((profit / revenue) * 100).toFixed(1) : 0}%</div>
+                            <div style="font-size: 28px; font-weight: 600; color: ${profit >= 0 ? 'var(--color-green)' : 'var(--color-red)'};">${revenue > 0 ? ((profit / revenue) * 100).toFixed(1) : 0}%</div>
                         </div>
                     </div>
                 `}
@@ -323,7 +323,7 @@ function renderWorkspaceOverview(container) {
                 <div style="background: white; padding: 20px; border-radius: 10px; border: 2px solid #e0e0e0; margin: 0; min-height: 250px;">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
                         <h3 style="margin: 0;">📋 Ordre Detaljer</h3>
-                        <button id="orderDetailsEditBtn" onclick="toggleOrderDetailsEdit()" style="padding: 6px 12px; background: #667eea; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 13px;">
+                        <button id="orderDetailsEditBtn" onclick="toggleOrderDetailsEdit()" style="padding: 6px 12px; background: var(--color-accent-hover); color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 13px;">
                             ✏️ Rediger
                         </button>
                     </div>
@@ -379,7 +379,7 @@ function renderWorkspaceOverview(container) {
                             <button onclick="cancelOrderDetailsEdit()" style="padding: 8px 16px; background: #999; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 13px;">
                                 Annuller
                             </button>
-                            <button onclick="saveOrderDetails()" style="padding: 8px 16px; background: #4caf50; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 13px;">
+                            <button onclick="saveOrderDetails()" style="padding: 8px 16px; background: var(--color-green); color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 13px;">
                                 💾 Gem
                             </button>
                         </div>
@@ -423,25 +423,25 @@ function renderWorkspaceOverview(container) {
                     </div>
                 </div>
                 
-                <!-- Quick actions -->
-                <div style="background: white; padding: 20px; border-radius: 10px; border: 2px solid #e0e0e0; flex: 1;">
-                    <h3 style="margin: 0 0 15px 0;">⚡ Hurtige Handlinger</h3>
-                    <div style="display: flex; flex-direction: column; gap: 10px;">
-                        <button onclick="viewOriginalQuote(${currentWorkspaceOrder.id})" style="padding: 12px 20px; background: #2196f3; color: white; border: none; border-radius: 5px; cursor: pointer; text-align: left;">
-                            📄 Se Tilbud (PDF)
+                <!-- Quick actions: ens hvide knapper i grid -->
+                <div class="quick-actions-card">
+                    <h3 style="margin: 0 0 15px 0; display: flex; align-items: center; gap: 8px;"><i data-lucide="zap"></i> Hurtige Handlinger</h3>
+                    <div class="quick-actions-grid">
+                        <button onclick="viewOriginalQuote(${currentWorkspaceOrder.id})" class="quick-action-btn">
+                            <i data-lucide="file-text"></i> Se Tilbud (PDF)
                         </button>
-                        <button onclick="switchWorkspaceTab('expenses')" style="padding: 12px 20px; background: #667eea; color: white; border: none; border-radius: 5px; cursor: pointer; text-align: left;">
-                            ➕ Tilføj Udgift
+                        <button onclick="switchWorkspaceTab('expenses')" class="quick-action-btn">
+                            <i data-lucide="plus"></i> Tilføj Udgift
                         </button>
-                        <button onclick="switchWorkspaceTab('documents')" style="padding: 12px 20px; background: #667eea; color: white; border: none; border-radius: 5px; cursor: pointer; text-align: left;">
-                            📎 Upload Dokument
+                        <button onclick="switchWorkspaceTab('documents')" class="quick-action-btn">
+                            <i data-lucide="paperclip"></i> Upload Dokument
                         </button>
-                        <button onclick="switchWorkspaceTab('notes')" style="padding: 12px 20px; background: #667eea; color: white; border: none; border-radius: 5px; cursor: pointer; text-align: left;">
-                            📝 Tilføj Note
+                        <button onclick="switchWorkspaceTab('notes')" class="quick-action-btn">
+                            <i data-lucide="sticky-note"></i> Tilføj Note
                         </button>
                         ${renderInvoiceButton()}
-                        <button onclick="createExtraWork(${currentWorkspaceOrder.id})" style="padding: 12px 20px; background: #ff9800; color: white; border: none; border-radius: 5px; cursor: pointer; text-align: left;">
-                            ➕ Ekstraarbejde
+                        <button onclick="createExtraWork(${currentWorkspaceOrder.id})" class="quick-action-btn accent-orange">
+                            <i data-lucide="hammer"></i> Ekstraarbejde
                         </button>
                     </div>
                 </div>
@@ -451,9 +451,9 @@ function renderWorkspaceOverview(container) {
         <!-- Arbejdsbeskrivelse Section (Full Width) -->
         <div style="background: white; padding: 30px; border-radius: 10px; border: 2px solid #e0e0e0; margin-top: 30px;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                <h3 style="margin: 0;">📋 Arbejdsbeskrivelse</h3>
-                <button id="workDescEditBtn" onclick="toggleWorkDescriptionEdit()" style="padding: 8px 16px; background: #667eea; color: white; border: none; border-radius: 5px; cursor: pointer;">
-                    ✏️ Rediger
+                <h3 style="margin: 0; display: flex; align-items: center; gap: 8px;"><i data-lucide="clipboard-list"></i> Arbejdsbeskrivelse</h3>
+                <button id="workDescEditBtn" onclick="toggleWorkDescriptionEdit()" class="btn-secondary">
+                    <i data-lucide="pencil"></i> Rediger
                 </button>
             </div>
             
@@ -471,7 +471,7 @@ function renderWorkspaceOverview(container) {
                     <button onclick="cancelWorkDescriptionEdit()" style="padding: 10px 20px; background: #999; color: white; border: none; border-radius: 5px; cursor: pointer;">
                         Annuller
                     </button>
-                    <button onclick="saveWorkDescription()" style="padding: 10px 20px; background: #4caf50; color: white; border: none; border-radius: 5px; cursor: pointer;">
+                    <button onclick="saveWorkDescription()" style="padding: 10px 20px; background: var(--color-green); color: white; border: none; border-radius: 5px; cursor: pointer;">
                         💾 Gem
                     </button>
                 </div>
@@ -481,19 +481,19 @@ function renderWorkspaceOverview(container) {
         <!-- Extra Work Orders Section -->
         ${workspaceExtraWorkOrders && workspaceExtraWorkOrders.length > 0 ? `
             <div style="margin-top: 30px;">
-                <div style="background: white; padding: 30px; border-radius: 10px; border: 2px solid #ff9800;">
-                    <h3 style="margin: 0 0 20px 0; color: #ff9800;">🔧 Ekstraarbejde (${workspaceExtraWorkOrders.length})</h3>
+                <div style="background: white; padding: 30px; border-radius: 10px; border: 2px solid var(--color-orange);">
+                    <h3 style="margin: 0 0 20px 0; color: var(--color-orange);">🔧 Ekstraarbejde (${workspaceExtraWorkOrders.length})</h3>
                     <div style="display: grid; gap: 15px;">
                         ${workspaceExtraWorkOrders.map(extraOrder => `
-                            <div style="background: #fff3e0; padding: 20px; border-radius: 8px; border: 1px solid #ff9800;">
+                            <div style="background: #fff3e0; padding: 20px; border-radius: 8px; border: 1px solid var(--color-orange);">
                                 <div style="display: flex; justify-content: space-between; align-items: start;">
                                     <div style="flex: 1;">
-                                        <h4 style="margin: 0 0 10px 0; color: #ff9800;">Ordre ${extraOrder.full_order_number}</h4>
+                                        <h4 style="margin: 0 0 10px 0; color: var(--color-orange);">Ordre ${extraOrder.full_order_number}</h4>
                                         <p style="margin: 5px 0;"><strong>Titel:</strong> ${extraOrder.title}</p>
                                         <p style="margin: 5px 0;"><strong>Total:</strong> ${formatCurrency(extraOrder.total)}</p>
                                         <p style="margin: 5px 0; font-size: 12px; color: #666;">Oprettet: ${new Date(extraOrder.created_at).toLocaleDateString('da-DK')}</p>
                                     </div>
-                                    <button onclick="openOrderWorkspace(${extraOrder.id}, ${currentWorkspaceOrder.id})" style="padding: 10px 20px; background: #ff9800; color: white; border: none; border-radius: 5px; cursor: pointer; white-space: nowrap;">
+                                    <button onclick="openOrderWorkspace(${extraOrder.id}, ${currentWorkspaceOrder.id})" style="padding: 10px 20px; background: var(--color-orange); color: white; border: none; border-radius: 5px; cursor: pointer; white-space: nowrap;">
                                         👁️ Åbn
                                     </button>
                                 </div>
@@ -512,14 +512,14 @@ function renderInvoiceButton() {
     if (currentWorkspaceInvoice) {
         // Invoice exists - show "See Invoice" button
         return `
-            <button onclick=\"viewInvoiceFromWorkspace(${currentWorkspaceInvoice.id})\" style=\"padding: 12px 20px; background: #2196f3; color: white; border: none; border-radius: 5px; cursor: pointer; text-align: left;\">
+            <button onclick=\"viewInvoiceFromWorkspace(${currentWorkspaceInvoice.id})\" style=\"padding: 12px 20px; background: var(--color-blue); color: white; border: none; border-radius: 5px; cursor: pointer; text-align: left;\">
                 👁️ Se Faktura ${currentWorkspaceInvoice.invoice_number}
             </button>
         `;
     } else {
         // No invoice - show "Create Invoice" button
         return `
-            <button onclick=\"createInvoiceFromOrder(${currentWorkspaceOrder.id})\" style=\"padding: 12px 20px; background: #4caf50; color: white; border: none; border-radius: 5px; cursor: pointer; text-align: left;\">
+            <button onclick=\"createInvoiceFromOrder(${currentWorkspaceOrder.id})\" style=\"padding: 12px 20px; background: var(--color-green); color: white; border: none; border-radius: 5px; cursor: pointer; text-align: left;\">
                 💰 Opret Faktura
             </button>
         `;
@@ -553,7 +553,7 @@ function renderWorkspaceExpenses(container) {
                     <h3 style="margin: 0 0 10px 0;">💰 Udgifter</h3>
                     <p style="margin: 0; color: #666;">Total udgifter: <strong>${formatCurrency(totalExpenses)}</strong></p>
                 </div>
-                <button onclick="showAddExpense()" style="padding: 12px 24px; background: #667eea; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: 600;">
+                <button onclick="showAddExpense()" style="padding: 12px 24px; background: var(--color-accent-hover); color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: 600;">
                     ➕ Tilføj Udgift
                 </button>
             </div>
@@ -598,13 +598,13 @@ function renderExpensesList() {
                         <td style="padding: 15px;">${new Date(exp.expense_date).toLocaleDateString('da-DK')}</td>
                         <td style="padding: 15px;">${exp.description}</td>
                         <td style="padding: 15px;">${exp.category || '-'}</td>
-                        <td style="padding: 15px; text-align: right; font-weight: 600; color: #f44336;">${formatCurrency(exp.amount)}</td>
+                        <td style="padding: 15px; text-align: right; font-weight: 600; color: var(--color-red);">${formatCurrency(exp.amount)}</td>
                         <td style="padding: 15px;">${exp.created_by_name}</td>
                         <td style="padding: 15px; text-align: center;">
-                            <button onclick="editExpense(${exp.id})" style="padding: 6px 12px; margin-right: 5px; background: #667eea; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">
+                            <button onclick="editExpense(${exp.id})" style="padding: 6px 12px; margin-right: 5px; background: var(--color-accent-hover); color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">
                                 ✏️ Rediger
                             </button>
-                            <button onclick="deleteExpense(${exp.id})" style="padding: 6px 12px; background: #f44336; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">
+                            <button onclick="deleteExpense(${exp.id})" style="padding: 6px 12px; background: var(--color-red); color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">
                                 🗑️ Slet
                             </button>
                         </td>
@@ -670,7 +670,7 @@ function showAddExpense() {
                     <button type="button" onclick="closeExpenseModal()" style="padding: 12px 24px; background: #999; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 14px;">
                         Annuller
                     </button>
-                    <button type="submit" style="padding: 12px 24px; background: #667eea; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 14px;">
+                    <button type="submit" style="padding: 12px 24px; background: var(--color-accent-hover); color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 14px;">
                         💾 Gem Udgift
                     </button>
                 </div>
@@ -868,7 +868,7 @@ function editExpense(expenseId) {
                     <button type="button" onclick="closeExpenseModal()" style="padding: 12px 24px; background: #999; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 14px;">
                         Annuller
                     </button>
-                    <button type="submit" style="padding: 12px 24px; background: #667eea; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 14px;">
+                    <button type="submit" style="padding: 12px 24px; background: var(--color-accent-hover); color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 14px;">
                         💾 Gem Ændringer
                     </button>
                 </div>
@@ -951,7 +951,7 @@ function renderWorkspaceDocuments(container) {
                     <h3 style="margin: 0 0 10px 0;">📎 Dokumenter</h3>
                     <p style="margin: 0; color: #666;">Dokumenter tilknyttet denne ordre (${workspaceDocuments.length})</p>
                 </div>
-                <button onclick="showUploadDocument()" style="padding: 12px 24px; background: #667eea; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: 600;">
+                <button onclick="showUploadDocument()" style="padding: 12px 24px; background: var(--color-accent-hover); color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: 600;">
                     ➕ Upload Dokument
                 </button>
             </div>
@@ -997,13 +997,13 @@ function renderDocumentsList() {
                             </div>
                         </div>
                         <div style="display: flex; gap: 10px;">
-                            <button onclick="previewDocument(${doc.id}, '${doc.original_name.replace(/'/g, "\\'")}')" style="padding: 8px 16px; background: #2196f3; color: white; border: none; border-radius: 5px; cursor: pointer;">
+                            <button onclick="previewDocument(${doc.id}, '${doc.original_name.replace(/'/g, "\\'")}')" style="padding: 8px 16px; background: var(--color-blue); color: white; border: none; border-radius: 5px; cursor: pointer;">
                                 👁️ Preview
                             </button>
-                            <button onclick="downloadDocument(${doc.id}, '${doc.original_name.replace(/'/g, "\\'")}')" style="padding: 8px 16px; background: #667eea; color: white; border: none; border-radius: 5px; cursor: pointer;">
+                            <button onclick="downloadDocument(${doc.id}, '${doc.original_name.replace(/'/g, "\\'")}')" style="padding: 8px 16px; background: var(--color-accent-hover); color: white; border: none; border-radius: 5px; cursor: pointer;">
                                 💾 Download
                             </button>
-                            <button onclick="deleteDocument(${doc.id})" style="padding: 8px 16px; background: #f44336; color: white; border: none; border-radius: 5px; cursor: pointer;">
+                            <button onclick="deleteDocument(${doc.id})" style="padding: 8px 16px; background: var(--color-red); color: white; border: none; border-radius: 5px; cursor: pointer;">
                                 🗑️ Slet
                             </button>
                         </div>
@@ -1070,7 +1070,7 @@ function showUploadDocument() {
                     <button type="button" onclick="closeDocumentModal()" style="padding: 12px 24px; background: #999; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 14px;">
                         Annuller
                     </button>
-                    <button type="submit" style="padding: 12px 24px; background: #667eea; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 14px;">
+                    <button type="submit" style="padding: 12px 24px; background: var(--color-accent-hover); color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 14px;">
                         📤 Upload
                     </button>
                 </div>
@@ -1207,7 +1207,7 @@ async function previewDocument(documentId, filename) {
                 <div style="position: relative; width: 90%; height: 90%; background: white; border-radius: 10px; padding: 20px;">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
                         <h3 style="margin: 0;">${filename}</h3>
-                        <button onclick="closePreviewModal()" style="padding: 10px 20px; background: #f44336; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: 600;">
+                        <button onclick="closePreviewModal()" style="padding: 10px 20px; background: var(--color-red); color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: 600;">
                             ✕ Luk
                         </button>
                     </div>
@@ -1379,7 +1379,7 @@ function renderWorkspaceTimeline(container) {
             ${workspaceTimeline.length === 0 ? 
                 '<p style="color: #666; text-align: center; padding: 40px;">Ingen aktiviteter endnu</p>' :
                 workspaceTimeline.map(entry => `
-                    <div style="padding: 15px; border-left: 3px solid #667eea; margin-bottom: 15px; background: #f9f9f9;">
+                    <div style="padding: 15px; border-left: 3px solid var(--color-accent-hover); margin-bottom: 15px; background: #f9f9f9;">
                         <div style="font-weight: 600; margin-bottom: 5px;">${entry.description}</div>
                         <div style="font-size: 12px; color: #666;">${entry.user_name} • ${convertUTCtoLocal(entry.created_at)}</div>
                     </div>
@@ -1428,7 +1428,7 @@ async function createExtraWork(parentOrderId) {
     
     modal.innerHTML = `
         <div style="background: white; border-radius: 10px; padding: 30px; max-width: 1000px; width: 90%; max-height: 90vh; overflow-y: auto; margin: 20px;">
-            <h2 style="margin: 0 0 20px 0; color: #ff9800;">➕ Opret Ekstraarbejde</h2>
+            <h2 style="margin: 0 0 20px 0; color: var(--color-orange);">➕ Opret Ekstraarbejde</h2>
             <p style="color: #666; margin-bottom: 30px;">Ekstraarbejde oprettes som en under-ordre knyttet til hoved-ordren.</p>
             
             <form id="extraWorkForm" onsubmit="event.preventDefault(); saveExtraWork(${parentOrderId});">
@@ -1445,14 +1445,14 @@ async function createExtraWork(parentOrderId) {
                 <div style="margin-bottom: 30px;">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
                         <h3 style="margin: 0;">Arbejdslinjer</h3>
-                        <button type="button" onclick="addExtraWorkLine()" style="padding: 8px 16px; background: #ff9800; color: white; border: none; border-radius: 5px; cursor: pointer;">
+                        <button type="button" onclick="addExtraWorkLine()" style="padding: 8px 16px; background: var(--color-orange); color: white; border: none; border-radius: 5px; cursor: pointer;">
                             ➕ Tilføj Linje
                         </button>
                     </div>
                     <div id="extraWorkLinesContainer"></div>
                 </div>
                 
-                <div style="background: #fff3e0; padding: 20px; border-radius: 8px; margin-bottom: 30px; border: 2px solid #ff9800;">
+                <div style="background: #fff3e0; padding: 20px; border-radius: 8px; margin-bottom: 30px; border: 2px solid var(--color-orange);">
                     <div style="display: flex; justify-content: flex-end; gap: 15px; font-size: 16px;">
                         <div>
                             <strong>Subtotal:</strong> <span id="extraWorkSubtotal">0,00 kr.</span>
@@ -1460,7 +1460,7 @@ async function createExtraWork(parentOrderId) {
                         <div>
                             <strong>Moms (25%):</strong> <span id="extraWorkVat">0,00 kr.</span>
                         </div>
-                        <div style="font-size: 20px; color: #ff9800;">
+                        <div style="font-size: 20px; color: var(--color-orange);">
                             <strong>TOTAL:</strong> <span id="extraWorkTotal">0,00 kr.</span>
                         </div>
                     </div>
@@ -1470,7 +1470,7 @@ async function createExtraWork(parentOrderId) {
                     <button type="button" onclick="closeExtraWorkModal()" style="padding: 12px 24px; background: #999; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 14px;">
                         Annuller
                     </button>
-                    <button type="submit" style="padding: 12px 24px; background: #ff9800; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 14px;">
+                    <button type="submit" style="padding: 12px 24px; background: var(--color-orange); color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 14px;">
                         💾 Opret Ekstraarbejde
                     </button>
                 </div>
@@ -1498,7 +1498,7 @@ function renderExtraWorkLines() {
         <div style="background: #f9f9f9; padding: 15px; border-radius: 8px; margin-bottom: 15px; border: 2px solid #e0e0e0;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
                 <strong>Linje ${index + 1}</strong>
-                <button type="button" onclick="removeExtraWorkLine(${index})" style="padding: 5px 10px; background: #f44336; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">
+                <button type="button" onclick="removeExtraWorkLine(${index})" style="padding: 5px 10px; background: var(--color-red); color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">
                     🗑️ Fjern
                 </button>
             </div>
@@ -1533,7 +1533,7 @@ function renderExtraWorkLines() {
                 
                 <div>
                     <label style="display: block; margin-bottom: 5px; font-size: 13px; font-weight: 600;">Total</label>
-                    <div id="extraLineTotal${index}" style="padding: 8px; background: white; border: 1px solid #ddd; border-radius: 4px; font-size: 13px; font-weight: 600; color: #ff9800;">
+                    <div id="extraLineTotal${index}" style="padding: 8px; background: white; border: 1px solid #ddd; border-radius: 4px; font-size: 13px; font-weight: 600; color: var(--color-orange);">
                         ${formatCurrency(calculateLineTotal(line))}
                     </div>
                 </div>
@@ -1862,9 +1862,9 @@ if (document.readyState === 'loading') {
 function getStatusBadge(status) {
     const statusConfig = {
         'draft': { icon: '📝', text: 'Udkast', color: '#999' },
-        'sent': { icon: '📧', text: 'Sendt', color: '#2196f3' },
-        'accepted': { icon: '✅', text: 'Accepteret', color: '#4caf50' },
-        'rejected': { icon: '❌', text: 'Afvist', color: '#f44336' }
+        'sent': { icon: '📧', text: 'Sendt', color: 'var(--color-blue)' },
+        'accepted': { icon: '✅', text: 'Accepteret', color: 'var(--color-green)' },
+        'rejected': { icon: '❌', text: 'Afvist', color: 'var(--color-red)' }
     };
     
     const config = statusConfig[status] || statusConfig['draft'];

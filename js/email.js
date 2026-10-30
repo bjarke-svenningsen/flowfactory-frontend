@@ -1113,7 +1113,7 @@ const emailClient = {
       top: 20px;
       right: 20px;
       padding: 16px 24px;
-      background: ${type === 'success' ? '#4caf50' : type === 'error' ? '#f44336' : '#2196f3'};
+      background: ${type === 'success' ? 'var(--color-green)' : type === 'error' ? 'var(--color-red)' : 'var(--color-blue)'};
       color: white;
       border-radius: 8px;
       box-shadow: 0 4px 12px rgba(0,0,0,0.15);
@@ -1673,10 +1673,10 @@ const emailClient = {
       
       if (y < rect.height / 3) {
         // Drop above
-        event.currentTarget.style.borderTop = '2px solid #2196F3';
+        event.currentTarget.style.borderTop = '2px solid var(--color-blue)';
       } else if (y > (rect.height * 2) / 3) {
         // Drop below
-        event.currentTarget.style.borderBottom = '2px solid #2196F3';
+        event.currentTarget.style.borderBottom = '2px solid var(--color-blue)';
       } else {
         // Drop on
         event.currentTarget.style.background = '#e0e8ff';

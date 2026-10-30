@@ -320,26 +320,14 @@ async function renderPosts() {
         const timeAgo = getTimeAgo(post.timestamp);
         const postInitials = post.author.split(' ').map(n => n[0]).join('');
         const isOwnPost = post.author === window.currentUser.name;
-        
-        // Tjek om vi har et profilbillede - FORBEDRET LOGIK
-        let avatarHTML;
-        if (isOwnPost && window.currentUser.profile_image) {
-            // 1. FØRST: Brug brugerens NUVÆRENDE uploadede billede (server URL)
-            const imageUrl = '' + window.currentUser.profile_image;
-            avatarHTML = `<div class="user-avatar" style="background-image: url(${imageUrl}); background-size: cover; background-position: center;"></div>`;
-        } else if (isOwnPost && window.currentUser.profilePhoto) {
-            // 2. DEREFTER: Brug brugerens NUVÆRENDE uploadede billede (old base64)
-            avatarHTML = `<div class="user-avatar" style="background-image: url(${window.currentUser.profilePhoto}); background-size: cover; background-position: center;"></div>`;
-        } else if (post.localPhoto) {
-            // 2. DEREFTER: Brug lokalt gemt billede fra da opslaget blev lavet
-            avatarHTML = `<div class="user-avatar" style="background-image: url(${post.localPhoto}); background-size: cover; background-position: center;"></div>`;
-        } else if (post.avatar_url) {
-            // 3. SÅ: Brug avatar fra backend
-            avatarHTML = `<div class="user-avatar" style="background-image: url(${post.avatar_url}); background-size: cover; background-position: center;"></div>`;
-        } else {
-            // 4. SIDST: Fallback til initialer
-            avatarHTML = `<div class="user-avatar">${postInitials}</div>`;
-        }
+
+        // Fælles avatar-komponent: samme billedkilde som headeren (profile_image / profilePhoto / avatar_url)
+        const photoUrl = isOwnPost
+            ? (window.currentUser.profile_image || window.currentUser.profilePhoto || post.localPhoto || null)
+            : (post.avatar_url || post.localPhoto || null);
+        const avatarHTML = window.renderAvatar
+            ? window.renderAvatar(post.author, photoUrl, 40)
+            : `<div class="user-avatar">${postInitials}</div>`;
         
         // Generer HTML for vedhæftede filer
         let attachmentsHTML = '';
@@ -391,8 +379,8 @@ async function renderPosts() {
         // Rediger/slet knapper kun for egne opslag
         const optionsHTML = isOwnPost ? `
             <div class="post-options">
-                <button class="post-option-btn" onclick="editPost(${post.id})">✏️ Rediger</button>
-                <button class="post-option-btn delete" onclick="deletePost(${post.id})">🗑️ Slet</button>
+                <button class="post-option-btn" onclick="editPost(${post.id})">Rediger</button>
+                <button class="post-option-btn delete" onclick="deletePost(${post.id})">Slet</button>
             </div>
         ` : '';
         
@@ -467,8 +455,8 @@ async function renderPosts() {
                 <div id="link-preview-${post.id}" class="link-preview-container"></div>
                 ${attachmentsHTML}
                 <div class="post-actions">
-                    <button class="post-action-btn" onclick="likePost(${post.id})">👍 Synes godt om (${post.likes})</button>
-                    <button class="post-action-btn" onclick="commentOnPost(${post.id})">💬 Kommenter${post.comments && post.comments.length > 0 ? ` (${post.comments.length})` : ''}</button>
+                    <button class="post-action-btn" onclick="likePost(${post.id})">Synes godt om (${post.likes})</button>
+                    <button class="post-action-btn" onclick="commentOnPost(${post.id})">Kommenter${post.comments && post.comments.length > 0 ? ` (${post.comments.length})` : ''}</button>
                     <button class="post-action-btn" onclick="sharePost(${post.id})">↗️ Del</button>
                 </div>
                 
@@ -574,7 +562,7 @@ async function renderPosts() {
                                 </div>
                             </div>
                         </div>
-                        <button onclick="addComment(${post.id})" style="padding: 8px 16px; background: #667eea; color: white; border: none; border-radius: 18px; cursor: pointer; font-weight: 600;">Post</button>
+                        <button onclick="addComment(${post.id})" style="padding: 8px 16px; background: var(--color-accent-hover); color: white; border: none; border-radius: 18px; cursor: pointer; font-weight: 600;">Post</button>
                     </div>
                 </div>
             </div>

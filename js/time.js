@@ -261,7 +261,7 @@ const timePage = {
         let html = `<div class="week-day-header" style="background:#f5f5f5;color:#666;">Uge ${getWeekNumber(monday)}</div>`;
         days.forEach(day => {
             const isToday = fmtDate(new Date()) === day.iso;
-            const todayStyle = isToday ? 'background:linear-gradient(135deg,#2e7d32 0%,#388e3c 100%);' : '';
+            const todayStyle = isToday ? 'background:var(--color-accent);color:var(--color-dark);border:2px solid var(--color-accent);' : '';
             html += `<div class="week-day-header" style="${todayStyle}">
                 ${DAY_NAMES[day.date.getDay()]}<br>
                 <span style="font-weight:400;font-size:12px;">${day.date.getDate()}. ${MONTH_NAMES[day.date.getMonth()]}</span>
@@ -398,9 +398,9 @@ const timePage = {
         const isToday = iso === todayIso;
         
         let style = `border-left:1px solid #f0f0f0;min-height:70px;padding:8px;cursor:pointer;background:${isWeekend ? '#fafafa' : 'white'};`;
-        if (isToday) style += 'box-shadow: inset 0 0 0 2px #667eea;';
+        if (isToday) style += 'box-shadow: inset 0 0 0 2px var(--color-accent-hover);';
         
-        let content = `<div style="font-size:12px;color:${isToday ? '#667eea' : '#999'};font-weight:600;">${d.getDate()}</div>`;
+        let content = `<div style="font-size:12px;color:${isToday ? 'var(--color-accent-hover)' : '#999'};font-weight:600;">${d.getDate()}</div>`;
         if (dayHours > 0) {
             const hasOvertime = dayEntries.some(e => getTimeType(e) === 'overtime');
             const hasSick = dayEntries.some(e => getTimeType(e) === 'sick');

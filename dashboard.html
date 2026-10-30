@@ -12,6 +12,7 @@
     <meta name="apple-mobile-web-app-title" content="SG Seest Gulvteknik">
     <link rel="stylesheet" href="css/dashboard.css">
     <link rel="stylesheet" href="css/tokens.css">
+<link rel="stylesheet" href="css/redesign-fixes.css">
     <link rel="stylesheet" href="css/windows-dialog.css">
     <link rel="stylesheet" href="css/mobile.css">
     <!-- Quill.js Rich Text Editor -->
@@ -72,7 +73,7 @@
         
         <div class="floating-video-body" id="floatingVideoBody">
             <div class="floating-video-placeholder" id="floatingPlaceholder">
-                <div class="initials">📹</div>
+                <div class="initials" style="display:flex;justify-content:center;"><i data-lucide="video" style="width:40px;height:40px;"></i></div>
                 <p>Forbinder...</p>
             </div>
         </div>
@@ -82,10 +83,10 @@
         </div>
         
         <div class="floating-video-controls">
-            <button class="floating-control-btn floating-mic-btn" id="floatingMicBtn" onclick="toggleFloatingMic()" title="Mikrofon">🎤</button>
-            <button class="floating-control-btn floating-cam-btn" id="floatingCamBtn" onclick="toggleFloatingCam()" title="Kamera">📹</button>
-            <button class="floating-control-btn floating-share-btn" id="floatingShareBtn" onclick="floatingShareScreen()" title="Del skærm">🖥️</button>
-            <button class="floating-control-btn floating-end-btn" onclick="endFloatingCall()" title="Læg på">📞</button>
+            <button class="floating-control-btn floating-mic-btn" id="floatingMicBtn" onclick="toggleFloatingMic()" title="Mikrofon"><i data-lucide="mic"></i></button>
+            <button class="floating-control-btn floating-cam-btn" id="floatingCamBtn" onclick="toggleFloatingCam()" title="Kamera"><i data-lucide="video"></i></button>
+            <button class="floating-control-btn floating-share-btn" id="floatingShareBtn" onclick="floatingShareScreen()" title="Del skærm"><i data-lucide="monitor-up"></i></button>
+            <button class="floating-control-btn floating-end-btn" onclick="endFloatingCall()" title="Læg på"><i data-lucide="phone-off"></i></button>
         </div>
     </div>
 

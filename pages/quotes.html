@@ -1,46 +1,36 @@
 <!-- Tab Navigation -->
 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-    <h2 style="margin: 0;">📋 Ordrestyring</h2>
+    <h2 style="margin: 0; display: flex; align-items: center; gap: 10px;"><i data-lucide="clipboard-list"></i> Ordrestyring</h2>
 </div>
 
-<div style="display: flex; border-bottom: 2px solid #e0e0e0; margin-bottom: 20px; gap: 5px;">
-    <button id="tabQuotes" onclick="switchOrderTab('quotes')" style="padding: 12px 24px; background: transparent; color: #666; border: none; border-radius: 5px 5px 0 0; cursor: pointer; font-weight: 600;">
-        📄 Tilbud
-    </button>
-    <button id="tabOrders" onclick="switchOrderTab('orders')" style="padding: 12px 24px; background: transparent; color: #666; border: none; border-radius: 5px 5px 0 0; cursor: pointer; font-weight: 600;">
-        📦 Godkendte Ordre
-    </button>
-    <button id="tabInvoiced" onclick="switchOrderTab('invoiced')" style="padding: 12px 24px; background: transparent; color: #666; border: none; border-radius: 5px 5px 0 0; cursor: pointer; font-weight: 600;">
-        💰 Faktureret
-    </button>
-    <button id="tabRejected" onclick="switchOrderTab('rejected')" style="padding: 12px 24px; background: transparent; color: #666; border: none; border-radius: 5px 5px 0 0; cursor: pointer; font-weight: 600;">
-        ❌ Afvist
-    </button>
-    <button id="tabCustomers" onclick="switchOrderTab('customers')" style="padding: 12px 24px; background: transparent; color: #666; border: none; border-radius: 5px 5px 0 0; cursor: pointer; font-weight: 600;">
-        👥 Kunder
-    </button>
+<div class="tab-underline" style="margin-bottom: 20px;">
+    <button id="tabQuotes" onclick="switchOrderTab('quotes')" class="tab-underline-btn">Tilbud</button>
+    <button id="tabOrders" onclick="switchOrderTab('orders')" class="tab-underline-btn">Godkendte Ordre</button>
+    <button id="tabInvoiced" onclick="switchOrderTab('invoiced')" class="tab-underline-btn">Faktureret</button>
+    <button id="tabRejected" onclick="switchOrderTab('rejected')" class="tab-underline-btn">Afvist</button>
+    <button id="tabCustomers" onclick="switchOrderTab('customers')" class="tab-underline-btn">Kunder</button>
 </div>
 
 <!-- TAB 1: TILBUD -->
 <div id="orderTabQuotes" class="order-tab-content" style="display: none;">
     <div id="quotesListView">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-            <div style="display: flex; gap: 10px;">
-                <button onclick="filterQuotesByStatus('all')" id="filterAll" style="padding: 8px 16px; background: #667eea; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 13px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; gap: 10px; flex-wrap: wrap;">
+            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                <button onclick="filterQuotesByStatus('all')" id="filterAll" class="filter-pill active">
                     Alle
                 </button>
-                <button onclick="filterQuotesByStatus('draft')" id="filterDraft" style="padding: 8px 16px; background: #e0e0e0; color: #666; border: none; border-radius: 5px; cursor: pointer; font-size: 13px;">
-                    📝 Udkast
+                <button onclick="filterQuotesByStatus('draft')" id="filterDraft" class="filter-pill">
+                    Udkast
                 </button>
-                <button onclick="filterQuotesByStatus('sent')" id="filterSent" style="padding: 8px 16px; background: #e0e0e0; color: #666; border: none; border-radius: 5px; cursor: pointer; font-size: 13px;">
-                    📧 Sendt
+                <button onclick="filterQuotesByStatus('sent')" id="filterSent" class="filter-pill">
+                    Sendt
                 </button>
-                <button onclick="filterQuotesByStatus('rejected')" id="filterRejected" style="padding: 8px 16px; background: #e0e0e0; color: #666; border: none; border-radius: 5px; cursor: pointer; font-size: 13px;">
-                    ❌ Afvist
+                <button onclick="filterQuotesByStatus('rejected')" id="filterRejected" class="filter-pill">
+                    Afvist
                 </button>
             </div>
-            <button onclick="showCreateQuote()" style="padding: 10px 20px; background: #667eea; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 14px;">
-                ➕ Nyt Tilbud
+            <button onclick="showCreateQuote()" class="btn-primary">
+                <i data-lucide="plus"></i> Nyt Tilbud
             </button>
         </div>
         
@@ -75,8 +65,8 @@
 <div id="orderTabCustomers" class="order-tab-content" style="display: none;">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
         <div></div>
-        <button onclick="showCreateCustomer()" style="padding: 10px 20px; background: #4caf50; color: white; border: none; border-radius: 5px; cursor: pointer;">
-            ➕ Opret Ny Kunde
+        <button onclick="showCreateCustomer()" class="btn-primary">
+            <i data-lucide="user-plus"></i> Opret Ny Kunde
         </button>
     </div>
     
@@ -86,8 +76,8 @@
 <!-- Form View -->
 <div id="quotesFormView" style="display: none;">
     <div style="margin-bottom: 20px;">
-        <button onclick="backToQuotesList()" style="padding: 8px 16px; background: #999; color: white; border: none; border-radius: 5px; cursor: pointer;">
-            ← Tilbage til oversigt
+        <button onclick="backToQuotesList()" class="btn-secondary">
+            <i data-lucide="arrow-left"></i> Tilbage til oversigt
         </button>
     </div>
     
@@ -97,8 +87,8 @@
 <!-- Preview View -->
 <div id="quotesPreviewView" style="display: none;">
     <div style="margin-bottom: 20px;">
-        <button onclick="backToQuotesList()" style="padding: 8px 16px; background: #999; color: white; border: none; border-radius: 5px; cursor: pointer;">
-            ← Tilbage til oversigt
+        <button onclick="backToQuotesList()" class="btn-secondary">
+            <i data-lucide="arrow-left"></i> Tilbage til oversigt
         </button>
     </div>
     
