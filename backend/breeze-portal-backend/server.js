@@ -2982,11 +2982,28 @@ app.get('/api/time-entries', auth, async (req, res) => {
 // Create time entry
 app.post('/api/time-entries', auth, async (req, res) => {
   try {
-    const { order_id, material_id, date, start_time, end_time, notes } = req.body;
+    const { order_id, material_id, date, start_time, end_time, notes, entry_type } = req.body;
 
     if (!material_id || !date || !start_time || !end_time) {
       return res.status(400).json({ error: 'Missing required fields' });
     }
+
+    // Server-side validering af entry_type: 'order' | 'workshop' | 'sick'
+    const VALID_ENTRY_TYPES = ['order', 'workshop', 'sick'];
+    if (entry_type && !VALID_ENTRY_TYPES.includes(entry_type)) {
+      return res.status(400).json({ error: 'Ugyldig registreringstype' });
+    }
+    const entryType = VALID_ENTRY_TYPES.includes(entry_type) ? entry_type : 'order';
+    if (entryType === 'order' && !order_id) {
+      return res.status(400).json({ error: 'Ordre-registrering kræver en valgt ordre' });
+    }
+    // Kun ordre-registreringer må pege på en ordre
+    const finalOrderId = entryType === 'order' ? order_id : null;
+
+    // Sikr at kolonnen findes (Postgres og SQLite) - som posts.image_url-mønsteret
+    try {
+      await db.run("ALTER TABLE time_entries ADD COLUMN entry_type TEXT DEFAULT 'order'");
+    } catch (e) { /* kolonnen findes allerede */ }
 
     // Calculate duration in hours (NO automatic lunch deduction)
     const startHours = parseInt(start_time.split(':')[0]);
@@ -3014,9 +3031,9 @@ app.post('/api/time-entries', auth, async (req, res) => {
     let result;
     try {
       result = await db.run(`
-        INSERT INTO time_entries (user_id, order_id, material_id, date, start_time, end_time, duration_hours, notes)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-      `, [req.user.id, order_id || null, material_id, date, start_time, end_time, durationHours, notes || null]);
+        INSERT INTO time_entries (user_id, order_id, material_id, date, start_time, end_time, duration_hours, notes, entry_type)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `, [req.user.id, finalOrderId, material_id, date, start_time, end_time, durationHours, notes || null, entryType]);
       
       console.log('INSERT result:', JSON.stringify(result));
     } catch (insertError) {
@@ -3076,13 +3093,29 @@ app.post('/api/time-entries', auth, async (req, res) => {
 app.put('/api/time-entries/:id', auth, async (req, res) => {
   try {
     const timeEntryId = Number(req.params.id);
-    const { order_id, material_id, date, start_time, end_time, notes } = req.body;
+    const { order_id, material_id, date, start_time, end_time, notes, entry_type } = req.body;
 
     // Get existing time entry
     const existing = await db.get('SELECT * FROM time_entries WHERE id = ?', [timeEntryId]);
     if (!existing) {
       return res.status(404).json({ error: 'Time entry not found' });
     }
+
+    // Server-side validering af entry_type: 'order' | 'workshop' | 'sick'
+    const VALID_ENTRY_TYPES = ['order', 'workshop', 'sick'];
+    if (entry_type && !VALID_ENTRY_TYPES.includes(entry_type)) {
+      return res.status(400).json({ error: 'Ugyldig registreringstype' });
+    }
+    const entryType = VALID_ENTRY_TYPES.includes(entry_type) ? entry_type : (existing.entry_type || 'order');
+    if (entryType === 'order' && !order_id) {
+      return res.status(400).json({ error: 'Ordre-registrering kræver en valgt ordre' });
+    }
+    const finalOrderId = entryType === 'order' ? order_id : null;
+
+    // Sikr at kolonnen findes (Postgres og SQLite)
+    try {
+      await db.run("ALTER TABLE time_entries ADD COLUMN entry_type TEXT DEFAULT 'order'");
+    } catch (e) { /* kolonnen findes allerede */ }
 
     // Check ownership (non-admins can only edit their own)
     if (!req.user.is_admin && existing.user_id !== req.user.id) {
@@ -3107,9 +3140,9 @@ app.put('/api/time-entries/:id', auth, async (req, res) => {
     // Update time entry
     await db.run(`
       UPDATE time_entries
-      SET order_id = ?, material_id = ?, date = ?, start_time = ?, end_time = ?, duration_hours = ?, notes = ?, updated_at = CURRENT_TIMESTAMP
+      SET order_id = ?, material_id = ?, date = ?, start_time = ?, end_time = ?, duration_hours = ?, notes = ?, entry_type = ?, updated_at = CURRENT_TIMESTAMP
       WHERE id = ?
-    `, [order_id || null, material_id, date, start_time, end_time, durationHours, notes || null, timeEntryId]);
+    `, [finalOrderId, material_id, date, start_time, end_time, durationHours, notes || null, entryType, timeEntryId]);
 
     // Update corresponding order_materials if exists
     const orderMaterial = await db.get('SELECT * FROM order_materials WHERE time_entry_id = ?', [timeEntryId]);

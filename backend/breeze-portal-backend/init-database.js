@@ -525,6 +525,7 @@ export async function initializeDatabase() {
       end_time ${db._isProduction ? 'TIME' : 'TEXT'} NOT NULL,
       duration_hours ${db._isProduction ? 'DECIMAL(5,2)' : 'REAL'} NOT NULL,
       is_locked INTEGER DEFAULT 0,
+      entry_type TEXT DEFAULT 'order',
       notes TEXT,
       created_at ${db._isProduction ? 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP' : "TEXT DEFAULT (datetime('now'))"},
       updated_at ${db._isProduction ? 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP' : "TEXT DEFAULT (datetime('now'))"}${db._isProduction ? '' : ',\n  FOREIGN KEY(user_id) REFERENCES users(id),\n  FOREIGN KEY(order_id) REFERENCES quotes(id),\n  FOREIGN KEY(material_id) REFERENCES materials(id)'}
