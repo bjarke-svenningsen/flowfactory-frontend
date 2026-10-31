@@ -2597,3 +2597,90 @@ svg.lucide-building-2 { color: var(--company-stroke); fill: var(--company-fill);
     height: 40px;
     flex-shrink: 0;
 }
+
+/* ============================================================
+   VIDEO-DOCK: indlejret Jitsi-opkald, messenger-stil
+   ============================================================ */
+#videoDock {
+    position: fixed;
+    left: 18px;
+    bottom: 18px;
+    width: 380px;
+    height: 280px;
+    background: #fff;
+    border-radius: 14px;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.28);
+    overflow: hidden;
+    z-index: 2500;
+    display: none;
+    flex-direction: column;
+}
+
+.video-dock-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 12px;
+    background: linear-gradient(135deg, #f7b731, #f5a623);
+    color: #fff;
+    font-size: 13px;
+    font-weight: 600;
+    flex-shrink: 0;
+}
+
+.video-dock-title {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.video-dock-btns { display: flex; gap: 6px; }
+
+.video-dock-btn {
+    background: rgba(255,255,255,0.25);
+    border: none;
+    color: #fff;
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 14px;
+    line-height: 1;
+}
+
+.video-dock-btn:hover { background: rgba(255,255,255,0.4); }
+.video-dock-btn-end:hover { background: #e41e3f; }
+
+.video-dock-body {
+    flex: 1;
+    min-height: 0;
+    background: #1c1e21;
+}
+
+.video-dock-body iframe { width: 100%; height: 100%; border: none; }
+
+/* Minimeret: lille boble nederst i hojre hjorne */
+#videoDock.minimized {
+    width: 84px;
+    height: 84px;
+    left: auto;
+    right: 18px;
+    bottom: 18px;
+    border-radius: 50%;
+    cursor: pointer;
+}
+
+#videoDock.minimized .video-dock-header,
+#videoDock.minimized .video-dock-body { display: none; }
+
+.video-dock-bubble { display: none; }
+
+#videoDock.minimized .video-dock-bubble {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    font-size: 34px;
+    background: linear-gradient(135deg, #f7b731, #f5a623);
+}

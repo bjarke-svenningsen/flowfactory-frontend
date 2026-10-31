@@ -651,6 +651,58 @@ function handleTyping() {
     }, 3000);
 }
 
+// Videoopkald via Jitsi indlejret i docket panel (messenger-stil, ingen popup)
+let videoDock = null;
+let videoDockApi = null;
+let videoDockPeerName = '';
+
+function ensureVideoDock(peerName) {
+    if (!videoDock) {
+        videoDock = document.createElement('div');
+        videoDock.id = 'videoDock';
+        videoDock.innerHTML = `
+            <div class="video-dock-header">
+                <span class="video-dock-title">📹 Videoopkald</span>
+                <div class="video-dock-btns">
+                    <button class="video-dock-btn" id="videoDockMin" title="Minimer">−</button>
+                    <button class="video-dock-btn video-dock-btn-end" id="videoDockEnd" title="Afslut">✕</button>
+                </div>
+            </div>
+            <div class="video-dock-body" id="videoDockBody"></div>
+            <div class="video-dock-bubble" id="videoDockBubble" title="Vis videoopkald">📹</div>
+        `;
+        document.body.appendChild(videoDock);
+        document.getElementById('videoDockMin').addEventListener('click', () => videoDock.classList.add('minimized'));
+        document.getElementById('videoDockBubble').addEventListener('click', () => videoDock.classList.remove('minimized'));
+        document.getElementById('videoDockEnd').addEventListener('click', closeVideoDock);
+    }
+    document.getElementById('videoDockTitle').textContent = '📹 ' + peerName;
+    videoDock.classList.remove('minimized');
+    videoDock.style.display = 'flex';
+}
+
+function closeVideoDock() {
+    if (videoDockApi) {
+        try { videoDockApi.dispose(); } catch (e) { /* allerede lukket */ }
+        videoDockApi = null;
+    }
+    if (videoDock) {
+        videoDock.style.display = 'none';
+        document.getElementById('videoDockBody').innerHTML = '';
+    }
+}
+
+async function loadJitsiScript() {
+    if (window.JitsiMeetExternalAPI) return;
+    await new Promise((resolve, reject) => {
+        const s = document.createElement('script');
+        s.src = 'https://meet.jit.si/external_api.js';
+        s.onload = resolve;
+        s.onerror = reject;
+        document.head.appendChild(s);
+    });
+}
+
 // Videoopkald via Jitsi (ingen konto/noegler - offentlig infrastruktur)
 async function startVideoCall(userId, userName) {
     try {
@@ -668,7 +720,21 @@ async function startVideoCall(userId, userName) {
         }
         const room = 'seest-conv' + convId + '-' + Math.random().toString(36).substring(2, 10);
         const url = 'https://meet.jit.si/' + room;
-        window.open(url, '_blank');
+        // Aflut evt. igangvaerende opkald og aabn docket video
+        if (videoDockApi) closeVideoDock();
+        ensureVideoDock(userName);
+        try {
+            await loadJitsiScript();
+            videoDockApi = new JitsiMeetExternalAPI('meet.jit.si', {
+                roomName: room,
+                parentNode: document.getElementById('videoDockBody'),
+                width: '100%',
+                height: '100%'
+            });
+        } catch (e) {
+            // Fallback: aabn i nyt vindue hvis embed fejler (fx blokeret)
+            window.open(url, '_blank');
+        }
         // Del linket i samtalen, sa modtageren kan joine direkte
         try {
             const response = await fetch('/api/chat/messages', {
@@ -681,7 +747,7 @@ async function startVideoCall(userId, userName) {
                 storeMessage(msg);
                 if (currentConversationId === convId) renderMessages();
             }
-        } catch (e) { /* linket er stadig aabnet */ }
+        } catch (e) { /* linket er stadig sendt */ }
     } catch (error) {
         alert('Videoopkald kunne ikke startes');
     }
