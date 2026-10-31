@@ -28,7 +28,7 @@
     <div class="files-columns">
         <aside class="files-tree" id="folderTree"></aside>
 
-        <div class="files-main">
+        <div class="files-main" id="filesMain" ondragover="handleMainDragOver(event)" ondrop="handleMainDrop(event)" ondragleave="handleMainDragLeave(event)">
             <table class="files-table" id="fileTable">
                 <thead>
                     <tr>

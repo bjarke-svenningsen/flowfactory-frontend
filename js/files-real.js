@@ -2135,12 +2135,78 @@ async function handleFolderDrop(event, folderId, opts) {
     await moveOrCopyFilesToFolder(ids, folderId, isCopy);
 }
 
-// Drop på "Mine filer" (roden)
+// Drop paa "Mine filer" (roden)
 function handleRootDragOver(event) {
     handleFolderDragOver(event, null);
 }
 async function handleRootDrop(event) {
     await handleFolderDrop(event, null);
+}
+
+// Hovedvinduet (filliste/gitter) er ogsaa et slipmaal: eksterne filer/mapper
+// lander i den mappe der er aaben/highlightet (currentFolderId, null = Mine filer).
+function handleMainDragOver(event) {
+    const dt = event.dataTransfer;
+    const isExternal = !draggedKind && !!dt && ((dt.files && dt.files.length > 0) ||
+        (dt.items && dt.items.length > 0 && typeof dt.items[0].webkitGetAsEntry === 'function'));
+    if (isExternal) {
+        console.debug('[drag] dragover: eksternt traek genkendt i hovedvinduet (mappe', currentFolderId, ')');
+        event.preventDefault();
+        event.stopPropagation();
+        if (dt) dt.dropEffect = 'copy';
+        markDropZone(event.currentTarget, 'inside');
+        return;
+    }
+    if (!draggedKind || draggedIds.length === 0) return;
+    if (!validateDrop(currentFolderId)) {
+        if (event.dataTransfer) event.dataTransfer.dropEffect = 'none';
+        return;
+    }
+    event.preventDefault();
+    event.stopPropagation();
+    if (event.dataTransfer) event.dataTransfer.dropEffect = dragIsCopy ? 'copy' : 'move';
+    markDropZone(event.currentTarget, 'inside');
+}
+
+async function handleMainDrop(event) {
+    cancelExpandTimer();
+    clearDropMarks();
+    event.preventDefault();
+    event.stopPropagation();
+
+    const dt = event.dataTransfer;
+    console.debug('[drag] drop modtaget i hovedvinduet | mappe:', currentFolderId,
+        '| files:', dt && dt.files ? dt.files.length : 0,
+        '| items:', dt && dt.items ? dt.items.length : 0,
+        '| intern drag:', draggedKind);
+
+    // Eksterne filer/mapper fra computeren -> upload til den aabne mappe
+    const hasExternalFiles = !!(dt && ((dt.files && dt.files.length > 0) ||
+        (dt.items && dt.items.length > 0 && typeof dt.items[0].webkitGetAsEntry === 'function')));
+    if (hasExternalFiles) {
+        await handleExternalDrop(event, currentFolderId);
+        return;
+    }
+
+    // Internt traek -> flyt/kopier til den aabne mappe
+    if (dragCancelled || !draggedKind || draggedIds.length === 0) { resetDragState(); return; }
+    const kind = draggedKind;
+    const ids = draggedIds.slice();
+    const isCopy = dragIsCopy;
+    resetDragState();
+
+    if (kind === 'folder') {
+        await applyFolderDrop(event, ids[0], currentFolderId, {});
+        return;
+    }
+    await moveOrCopyFilesToFolder(ids, currentFolderId, isCopy);
+}
+
+function handleMainDragLeave(event) {
+    if (event.currentTarget && event.currentTarget.classList) {
+        event.currentTarget.classList.remove('drop-target');
+    }
+    cancelExpandTimer();
 }
 
 // Fælles filer-advarsel med "Spørg ikke igen"

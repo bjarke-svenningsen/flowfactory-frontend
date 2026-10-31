@@ -1766,6 +1766,13 @@ svg.lucide-building-2 { color: var(--company-stroke); fill: var(--company-fill);
 }
 .folder-row.drop-above, .grid-card.drop-above, .tree-node.drop-above { box-shadow: inset 0 3px 0 var(--color-accent); }
 .folder-row.drop-below, .grid-card.drop-below, .tree-node.drop-below { box-shadow: inset 0 -3px 0 var(--color-accent); }
+/* Hovedvinduet (filliste/gitter) som slipmaal: gul ramme om hele omraadet */
+.files-main.drop-target {
+    outline: 3px dashed var(--color-accent);
+    outline-offset: -3px;
+    background: var(--color-accent-soft);
+    border-radius: 4px;
+}
 .folder-row, .grid-card { cursor: default; }
 .folder-row[draggable="true"], .grid-card[draggable="true"] { cursor: grab; }
 
