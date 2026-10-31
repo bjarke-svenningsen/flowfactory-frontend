@@ -215,8 +215,8 @@ function renderFolderBranch(folders, level, opts = {}) {
                  oncontextmenu="showFolderContextMenu(event, ${folder.id}, '${safeName}'); return false;"
                  data-folder-id="${folder.id}"
                  ${canDragFolder ? 'draggable="true" ondragstart="handleFolderDragStart(event, ' + folder.id + ')"' : ''}
-                 ondrop="handleFolderDrop(event, ${folder.id})"
-                 ondragover="handleFolderDragOver(event)"
+                 ondrop="handleFolderDrop(event, ${folder.id}${companyTop ? ', { companyTop: true }' : ''})"
+                 ondragover="handleFolderDragOver(event, ${folder.id}${companyTop ? ', { companyTop: true }' : ''})"
                  ondragleave="handleFolderDragLeave(event)">
                 <span class="tree-chevron" onclick="toggleFolder(event, ${folder.id})">${hasChildren ? '<i data-lucide="' + (isExpanded ? 'chevron-down' : 'chevron-right') + '"></i>' : ''}</span>
                 <i data-lucide="${companyTop ? 'building-2' : 'folder'}"></i>
@@ -401,13 +401,13 @@ function renderBreadcrumb() {
     const crumb = document.getElementById('filesCrumb');
     if (!crumb) return;
     const names = { all: 'Alle filer', root: 'Mine filer', documents: 'Dokumenter', images: 'Billeder', shared: 'Delte filer' };
-    let html = '<span class="crumb-root">Alle filer</span>';
+    let html = '<span class="crumb-root" ondragover="handleFolderDragOver(event, null)" ondrop="handleFolderDrop(event, null)" ondragleave="handleFolderDragLeave(event)">Alle filer</span>';
     if (currentFilter === 'folder' && currentFolderId) {
         const path = getFolderPath(currentFolderId);
         path.forEach((f, i) => {
             const last = i === path.length - 1;
             html += '<span class="crumb-sep">/</span>';
-            html += '<span class="crumb-item' + (last ? ' current' : '') + '" onclick="openFolder(' + f.id + ', \'' + folderDisplayName(f).replace(/'/g, "\\'") + '\')">' + escapeFileName(folderDisplayName(f)) + '</span>';
+            html += '<span class="crumb-item' + (last ? ' current' : '') + '" onclick="openFolder(' + f.id + ', \'' + folderDisplayName(f).replace(/'/g, "\\'") + '\')" ondragover="handleFolderDragOver(event, ' + f.id + ')" ondrop="handleFolderDrop(event, ' + f.id + ')" ondragleave="handleFolderDragLeave(event)">' + escapeFileName(folderDisplayName(f)) + '</span>';
         });
     } else {
         html += '<span class="crumb-sep">/</span><span class="crumb-item current">' + (names[currentFilter] || 'Alle filer') + '</span>';
@@ -437,6 +437,9 @@ function toggleSelectAllFiles(event) {
 
 function toggleFileCheckbox(event, fileId) {
     event.stopPropagation();
+    const cb = event.target;
+    if (cb && cb.checked) checkedFileIds.add(Number(fileId));
+    else checkedFileIds.delete(Number(fileId));
     selectRealFile(fileId, null);
 }
 
@@ -502,7 +505,7 @@ function renderRealFiles() {
         const safeName = folder.name.replace(/'/g, "\\'");
         const date = new Date(folder.created_at).toLocaleDateString('da-DK');
         html += `
-            <tr class="folder-row" onclick="selectFolder(${folder.id}, event)" ondblclick="openFolder(${folder.id}, '${safeName}')" oncontextmenu="showFolderContextMenu(event, ${folder.id}, '${safeName}'); return false;">
+            <tr class="folder-row" data-folder-id="${folder.id}" draggable="true" onclick="selectFolder(${folder.id}, event)" ondblclick="openFolder(${folder.id}, '${safeName}')" oncontextmenu="showFolderContextMenu(event, ${folder.id}, '${safeName}'); return false;" ondragstart="handleFolderDragStart(event, ${folder.id})" ondragover="handleFolderDragOver(event, ${folder.id})" ondrop="handleFolderDrop(event, ${folder.id})" ondragleave="handleFolderDragLeave(event)">
                 <td class="col-check"></td>
                 <td><div class="col-name-cell">${folderIconHtml()}<span class="file-name-text">${escapeFileName(folder.name)}</span></div></td>
                 <td class="col-size">${fCount} ${fCount === 1 ? 'fil' : 'filer'}</td>
@@ -519,7 +522,7 @@ function renderRealFiles() {
         const selCls = selectedFileId === file.id ? ' row-selected' : '';
         return `
             <tr class="file-row${selCls}" draggable="true" data-file-id="${file.id}" onclick="selectRealFile(${file.id}, event)" ondblclick="openRealFile(${file.id})" oncontextmenu="showContextMenu(event, ${file.id})" ondragstart="handleFileDragStart(event, ${file.id})">
-                <td class="col-check"><input type="checkbox" onclick="toggleFileCheckbox(event, ${file.id})"></td>
+                <td class="col-check"><input type="checkbox"${checkedFileIds.has(file.id) ? ' checked' : ''} onclick="toggleFileCheckbox(event, ${file.id})"></td>
                 <td><div class="col-name-cell">${icon}<span class="file-name-text">${escapeFileName(file.original_name)}</span></div></td>
                 <td class="col-size">${size}</td>
                 <td class="col-type">${type}</td>
@@ -541,7 +544,7 @@ function renderFilesGrid(files, subfolders) {
     subfolders.forEach(folder => {
         const safeName = folder.name.replace(/'/g, "\\'");
         html += `
-            <div class="grid-card" onclick="openFolder(${folder.id}, '${safeName}')" oncontextmenu="showFolderContextMenu(event, ${folder.id}, '${safeName}'); return false;">
+            <div class="grid-card" data-folder-id="${folder.id}" draggable="true" ondragstart="handleFolderDragStart(event, ${folder.id})" ondragover="handleFolderDragOver(event, ${folder.id})" ondrop="handleFolderDrop(event, ${folder.id})" ondragleave="handleFolderDragLeave(event)" onclick="openFolder(${folder.id}, '${safeName}')" oncontextmenu="showFolderContextMenu(event, ${folder.id}, '${safeName}'); return false;">
                 <div class="grid-thumb" style="display:flex;align-items:center;justify-content:center;">${folderIconHtml()}</div>
                 <div class="grid-name">${escapeFileName(folder.name)}</div>
             </div>`;
@@ -552,7 +555,7 @@ function renderFilesGrid(files, subfolders) {
             ? '<img class="grid-thumb" src="/api/files/download/' + file.id + '" alt="" loading="lazy" onerror="this.style.display=\'none\'">'
             : '<div class="grid-thumb" style="display:flex;align-items:center;justify-content:center;">' + fileTypeIconHtml(file.original_name) + '</div>';
         html += `
-            <div class="grid-card" data-file-id="${file.id}" onclick="selectRealFile(${file.id}, event)" ondblclick="openRealFile(${file.id})" oncontextmenu="showContextMenu(event, ${file.id})">
+            <div class="grid-card" data-file-id="${file.id}" draggable="true" ondragstart="handleFileDragStart(event, ${file.id})" ondragover="event.preventDefault()" onclick="selectRealFile(${file.id}, event)" ondblclick="openRealFile(${file.id})" oncontextmenu="showContextMenu(event, ${file.id})">
                 ${thumb}
                 <div class="grid-name">${escapeFileName(file.original_name)}</div>
             </div>`;
@@ -1498,201 +1501,355 @@ function closeImageModal() {
     modal.style.display = 'none';
 }
 
-// Drag and drop functionality
-let draggedFileId = null;
-let draggedFolderId = null;
+// ============================================================
+// Drag & drop i Filer (internt flyt/kopiér)
+// - Flervalg: markerede filer (checkbox) følger med i trækket
+// - Almindeligt træk = flyt, Ctrl/Cmd = kopiér
+// - Mapper i træ, fillisten, gitter og brødkrumme er slip-mål
+// - Ugyldigt mål = forbudt-markør og ingen gul ramme
+// - Mapper foldes ud efter ca. 600 ms hover; Esc annullerer
+// ============================================================
+let draggedIds = [];       // id'er under træk (flere filer eller én mappe)
+let draggedKind = null;    // 'files' | 'folder'
+let dragIsCopy = false;    // Ctrl/Cmd = kopiér
+let dragCancelled = false;
+let hoverExpandTimer = null;
+const checkedFileIds = new Set(); // husker afkrydsede filer på tværs af renders
+
+function resetDragState() {
+    draggedIds = [];
+    draggedKind = null;
+    dragIsCopy = false;
+    dragCancelled = false;
+    cancelExpandTimer();
+    clearDropMarks();
+}
+
+function cancelExpandTimer() {
+    if (hoverExpandTimer) { clearTimeout(hoverExpandTimer); hoverExpandTimer = null; }
+}
+
+function clearDropMarks() {
+    document.querySelectorAll('.drop-target, .drop-above, .drop-below').forEach(function (el) {
+        el.classList.remove('drop-target', 'drop-above', 'drop-below');
+    });
+}
+
+function getCheckedFileIds() {
+    const ids = [];
+    document.querySelectorAll('#fileListBody input[type="checkbox"]:checked').forEach(function (cb) {
+        const row = cb.closest('tr[data-file-id]');
+        if (row) ids.push(Number(row.getAttribute('data-file-id')));
+    });
+    return ids;
+}
+
+// Lille "spøgelsesbillede" med antal ved flervalg
+function makeDragGhost(text) {
+    const c = document.createElement('canvas');
+    c.width = 170; c.height = 34;
+    const ctx = c.getContext('2d');
+    ctx.fillStyle = '#FEF3C7';
+    ctx.strokeStyle = '#D97706';
+    ctx.lineWidth = 2;
+    if (ctx.roundRect) {
+        ctx.beginPath(); ctx.roundRect(2, 2, 166, 30, 6); ctx.fill(); ctx.stroke();
+    } else {
+        ctx.fillRect(2, 2, 166, 30);
+    }
+    ctx.fillStyle = '#1A1A1A';
+    ctx.font = '600 13px Inter, Arial, sans-serif';
+    ctx.fillText(text, 12, 21);
+    return c;
+}
+
+function meIsAdmin() {
+    let u = null;
+    try { u = window.currentUser || JSON.parse(sessionStorage.getItem('currentUser') || 'null'); } catch (e) { /* ignore */ }
+    return !!(u && u.is_admin);
+}
+
+// Klientside-kopi af servertjekket (serveren gennemtvinger stadig 403)
+function canWriteFolderClient(folder) {
+    if (!folder) return true; // roden = egne filer
+    return folder.created_by === getCurrentUserId() || isInCompanyTreeClient(folder) || meIsAdmin();
+}
+
+function isDescendantFolder(folderId, ancestorId) {
+    let cur = allFolders.find(function (f) { return f.id === folderId; });
+    let guard = 0;
+    while (cur && cur.parent_id && guard++ < 50) {
+        if (cur.parent_id === ancestorId) return true;
+        cur = allFolders.find(function (f) { return f.id === cur.parent_id; });
+    }
+    return false;
+}
+
+function validateDrop(targetFolderId) {
+    if (dragCancelled || !draggedKind || draggedIds.length === 0) return false;
+    if (draggedKind === 'files') {
+        if (targetFolderId === null || targetFolderId === undefined) return true; // Mine filer
+        const target = allFolders.find(function (f) { return f.id === targetFolderId; });
+        return !!target && canWriteFolderClient(target);
+    }
+    // Mappe-træk
+    const draggedId = draggedIds[0];
+    if (draggedId === targetFolderId) return false;
+    if (targetFolderId === null || targetFolderId === undefined) return true; // rodniveau
+    const target = allFolders.find(function (f) { return f.id === targetFolderId; });
+    if (!target) return false;
+    if (isDescendantFolder(targetFolderId, draggedId)) return false;
+    return canWriteFolderClient(target);
+}
+
+function markDropZone(el, zone) {
+    if (!el || !el.classList) return;
+    el.classList.remove('drop-target', 'drop-above', 'drop-below');
+    if (zone === 'inside') el.classList.add('drop-target');
+    else if (zone === 'before') el.classList.add('drop-above');
+    else if (zone === 'after') el.classList.add('drop-below');
+}
+
+// Fold lukket mappe ud efter ca. 600 ms hover
+function scheduleExpand(folderId) {
+    if (expandedFolders.has(folderId)) return;
+    const hasChildren = allFolders.some(function (f) { return f.parent_id === folderId; });
+    if (!hasChildren) return;
+    cancelExpandTimer();
+    hoverExpandTimer = setTimeout(function () {
+        hoverExpandTimer = null;
+        expandedFolders.add(folderId);
+        renderFolderTree();
+    }, 600);
+}
+
+// Esc afbryder et igangværende træk
+document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && draggedKind) {
+        dragCancelled = true;
+        cancelExpandTimer();
+        clearDropMarks();
+    }
+});
 
 function handleFileDragStart(event, fileId) {
-    draggedFileId = fileId;
-    draggedFolderId = null;
-    event.dataTransfer.effectAllowed = 'move';
-    event.dataTransfer.setData('text/plain', 'file:' + fileId);
-    event.target.style.opacity = '0.5';
-    // Ryd op hvis trækket annulleres (drop udenfor)
-    event.target.addEventListener('dragend', function () {
-        event.target.style.opacity = '';
-        draggedFileId = null;
-        draggedFolderId = null;
-    }, { once: true });
+    const checked = getCheckedFileIds();
+    draggedIds = checked.indexOf(Number(fileId)) !== -1 ? checked : [Number(fileId)];
+    draggedKind = 'files';
+    dragIsCopy = !!(event.ctrlKey || event.metaKey);
+    dragCancelled = false;
+    event.dataTransfer.effectAllowed = 'copyMove';
+    event.dataTransfer.setData('text/plain', 'files:' + draggedIds.join(','));
+    const n = draggedIds.length;
+    try { event.dataTransfer.setDragImage(makeDragGhost(n > 1 ? n + ' filer' : '1 fil'), 10, 10); } catch (e) { /* ignore */ }
+    event.target.style.opacity = '0.6';
+    event.target.addEventListener('dragend', resetDragState, { once: true });
 }
 
-// Mapper kan trækkes for at ændre rækkefølgen i træet
+// Mapper kan trækkes (træ, filliste, gitter) for rækkefølge og placering
 function handleFolderDragStart(event, folderId) {
-    draggedFolderId = folderId;
-    draggedFileId = null;
+    draggedIds = [folderId];
+    draggedKind = 'folder';
+    dragIsCopy = false; // mapper kopieres ikke, kun flyt
+    dragCancelled = false;
     event.dataTransfer.effectAllowed = 'move';
     event.dataTransfer.setData('text/plain', 'folder:' + folderId);
-    event.target.style.opacity = '0.5';
-    event.target.addEventListener('dragend', function () {
-        event.target.style.opacity = '';
-        draggedFileId = null;
-        draggedFolderId = null;
-    }, { once: true });
+    const f = allFolders.find(function (x) { return x.id === folderId; });
+    try { event.dataTransfer.setDragImage(makeDragGhost((f && f.name) || 'Mappe'), 10, 10); } catch (e) { /* ignore */ }
+    event.target.style.opacity = '0.6';
+    event.target.addEventListener('dragend', resetDragState, { once: true });
 }
 
-// Drop på "Mine filer" = flyt filen til roden (uden for mapper)
-async function handleRootDrop(event) {
+// Fælles dragover for alle slip-mål (træ, rækker, kort, brødkrumme, rod).
+// Ugyldigt mål: ingen preventDefault → browserens forbudt-markør og ingen gul ramme.
+function handleFolderDragOver(event, folderId, opts) {
+    folderId = (folderId === undefined) ? null : folderId;
+    if (!draggedKind || draggedIds.length === 0) return;
+    if (!validateDrop(folderId)) {
+        if (event.dataTransfer) event.dataTransfer.dropEffect = 'none';
+        return;
+    }
     event.preventDefault();
     event.stopPropagation();
-    const node = document.getElementById('mineFilerNode');
-    if (node) node.classList.remove('drag-over');
 
-    if (!draggedFileId) { draggedFolderId = null; return; }
+    let zone = 'inside';
+    if (draggedKind === 'folder' && folderId !== null) {
+        const rect = event.currentTarget.getBoundingClientRect();
+        const rel = rect.height > 0 ? (event.clientY - rect.top) / rect.height : 0.5;
+        const isCompanyTop = !!(opts && opts.companyTop);
+        if (!isCompanyTop) zone = rel < 0.25 ? 'before' : (rel > 0.75 ? 'after' : 'inside');
+    }
+    if (event.dataTransfer) event.dataTransfer.dropEffect = dragIsCopy ? 'copy' : 'move';
+    markDropZone(event.currentTarget, zone);
+    if (zone === 'inside' && folderId !== null) scheduleExpand(folderId);
+    else cancelExpandTimer();
+}
 
-    const file = allFiles.find(f => f.id === draggedFileId);
-    if (!file) { draggedFileId = null; return; }
-    if (!file.folder_id) { draggedFileId = null; return; } // allerede i roden
+function handleFolderDragLeave(event) {
+    event.stopPropagation();
+    if (event.currentTarget && event.currentTarget.classList) {
+        event.currentTarget.classList.remove('drop-target', 'drop-above', 'drop-below');
+    }
+    cancelExpandTimer();
+}
 
-    try {
-        const token = sessionStorage.getItem('token');
-        const response = await fetch(`/api/files/${draggedFileId}/move`, {
+async function handleFolderDrop(event, folderId, opts) {
+    folderId = (folderId === undefined) ? null : folderId;
+    cancelExpandTimer();
+    clearDropMarks();
+    event.preventDefault();
+    event.stopPropagation();
+
+    if (dragCancelled || !draggedKind || draggedIds.length === 0) { resetDragState(); return; }
+
+    const kind = draggedKind;
+    const ids = draggedIds.slice();
+    const isCopy = dragIsCopy;
+    resetDragState();
+
+    if (kind === 'folder') {
+        await applyFolderDrop(event, ids[0], folderId, opts);
+        return;
+    }
+
+    // Filer/mapper trukket ind fra computeren håndteres i trin B (upload) - ignorér her
+    if (event.dataTransfer && event.dataTransfer.files && event.dataTransfer.files.length > 0) return;
+
+    await moveOrCopyFilesToFolder(ids, folderId, isCopy);
+}
+
+// Drop på "Mine filer" (roden)
+function handleRootDragOver(event) {
+    handleFolderDragOver(event, null);
+}
+async function handleRootDrop(event) {
+    await handleFolderDrop(event, null);
+}
+
+// Fælles filer-advarsel med "Spørg ikke igen"
+async function confirmCompanyNoticeIfNeeded(targetFolder) {
+    if (!targetFolder || !isInCompanyTreeClient(targetFolder)) return true;
+    if (localStorage.getItem('skipCompanyNotice') === '1') return true;
+    const choice = await showWindowsDialog('Fælles filer',
+        'Filen bliver synlig for alle med adgang til Fælles filer.', '?', [
+            { text: 'Fortsæt', value: 'ok' },
+            { text: 'Fortsæt - spørg ikke igen', value: 'dontask' },
+            { text: 'Annuller', value: null }
+        ]);
+    if (choice === 'dontask') localStorage.setItem('skipCompanyNotice', '1');
+    return choice !== null;
+}
+
+// Flyt/kopiér én eller flere filer med fælles fejlrapport.
+// Rettigheder tjekkes stadig på serveren pr. kald (move/copy).
+async function moveOrCopyFilesToFolder(ids, folderId, isCopy) {
+    if (!ids || ids.length === 0) return;
+    const target = folderId ? allFolders.find(function (f) { return f.id === folderId; }) : null;
+    if (target && !(await confirmCompanyNoticeIfNeeded(target))) return;
+
+    const token = sessionStorage.getItem('token');
+    let ok = 0;
+    const failed = [];
+    for (const id of ids) {
+        const file = allFiles.find(function (f) { return f.id === id; }) || (typeof findFileAnywhere === 'function' ? findFileAnywhere(id) : null);
+        if (!file) { failed.push('Ukendt fil #' + id + ': findes ikke længere'); continue; }
+        if (!isCopy && file.folder_id === folderId) { ok++; continue; }
+        try {
+            const resp = await fetch(isCopy ? '/api/files/' + id + '/copy' : '/api/files/' + id + '/move', {
+                method: isCopy ? 'POST' : 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer ' + token
+                },
+                body: JSON.stringify({ folder_id: folderId })
+            });
+            if (!resp.ok) {
+                const e = await resp.json().catch(function () { return {}; });
+                throw new Error(e.error || ('Serverafvisning (' + resp.status + ')'));
+            }
+            ok++;
+        } catch (err) {
+            failed.push((file.original_name || 'Fil #' + id) + ': ' + err.message);
+        }
+    }
+
+    await loadRealFiles();
+
+    const verb = isCopy ? 'kopieret' : 'flyttet';
+    let msg = ok + ' af ' + ids.length + ' filer ' + verb + '.';
+    if (failed.length > 0) msg += '\n\nFejlede:\n' + failed.join('\n');
+    if (ids.length > 1 || failed.length > 0) {
+        await winAlert(msg, ok === ids.length ? (isCopy ? 'Kopieret' : 'Flyttet') : 'Delvist gennemført');
+    }
+}
+
+// Mappe trukket på anden mappe: kant (25%) = rækkefølge, midt = ind i mappen, rod = rodniveau
+async function applyFolderDrop(event, draggedId, folderId, opts) {
+    const token = sessionStorage.getItem('token');
+    const callPosition = async function (body) {
+        const resp = await fetch('/api/folders/' + draggedId + '/position', {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
+                'Authorization': 'Bearer ' + token
             },
-            body: JSON.stringify({ folder_id: null })
+            body: JSON.stringify(body)
         });
+        if (!resp.ok) {
+            const e = await resp.json().catch(function () { return {}; });
+            throw new Error(e.error || 'Kunne ikke flytte mappen');
+        }
+        await loadFolders();
+        renderFolderTree();
+        if (currentFilter === 'folder' && currentFolderId) renderRealFiles();
+    };
 
-        if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.error || 'Move failed');
+    try {
+        // Rod ("Mine filer" eller brødkrummens "Alle filer") = flyt til rodniveau
+        if (folderId === null) {
+            const node = allFolders.find(function (f) { return f.id === draggedId; });
+            if (!node || isTopCompanyFolder(node) || !node.parent_id) return;
+            await callPosition({ parent_id: null });
+            return;
         }
 
-        const wasViewingFolder = currentFilter === 'folder' && currentFolderId;
-        await loadRealFiles();
-        if (wasViewingFolder) {
-            renderFolderTree();
-            renderRealFiles();
+        const target = allFolders.find(function (f) { return f.id === folderId; });
+        if (!target || draggedId === folderId) return;
+
+        const isCompanyTop = !!(opts && opts.companyTop);
+        let zone = 'inside';
+        if (!isCompanyTop) {
+            const rect = event.currentTarget.getBoundingClientRect();
+            const rel = rect.height > 0 ? (event.clientY - rect.top) / rect.height : 0.5;
+            zone = rel < 0.25 ? 'before' : (rel > 0.75 ? 'after' : 'inside');
         }
-    } catch (error) {
-        console.error('Move file error:', error);
-        await winAlert(friendlyFileError(error.message), 'Fejl');
-    }
 
-    draggedFileId = null;
-    draggedFolderId = null;
-}
+        if (zone === 'inside') {
+            // Midt: læg mappen IND i mål-mappen (serveren tjekker rettigheder + løkker)
+            if (isDescendantFolder(folderId, draggedId)) return;
+            await callPosition({ parent_id: folderId });
+            return;
+        }
 
-function handleRootDragOver(event) {
-    if (!draggedFileId) return; // kun filer kan lægges i "Mine filer"
-    event.preventDefault();
-    event.stopPropagation();
-    event.dataTransfer.dropEffect = 'move';
-    const node = document.getElementById('mineFilerNode');
-    if (node) node.classList.add('drag-over');
-}
-
-async function handleFolderDrop(event, folderId) {
-    event.preventDefault();
-    event.stopPropagation();
-    event.currentTarget.classList.remove('drag-over');
-
-    // Træk af MAPPE på anden mappe = skift rækkefølge (øverste halvdel: før, nederste: efter)
-    if (draggedFolderId) {
-        const draggedId = draggedFolderId;
-        draggedFolderId = null;
-        draggedFileId = null;
-        if (draggedId === folderId) return;
-
-        const target = allFolders.find(f => f.id === folderId);
-        if (!target) return;
+        // Rækkefølge blandt søskende (eksisterende logik)
         if (isTopCompanyFolder(target)) return; // top-"Fælles filer" holder sin plads
-
-        const rect = event.currentTarget.getBoundingClientRect();
-        const inTopHalf = (event.clientY - rect.top) < rect.height / 2;
-
-        // Nuværende søskende (uden den trukkede) til at beregne before_id
         const siblings = allFolders
-            .filter(f => f.parent_id === target.parent_id && f.id !== draggedId)
-            .sort((a, b) => {
+            .filter(function (f) { return f.parent_id === target.parent_id && f.id !== draggedId; })
+            .sort(function (a, b) {
                 const sa = (a.sort_order === null || a.sort_order === undefined) ? 2147483647 : a.sort_order;
                 const sb = (b.sort_order === null || b.sort_order === undefined) ? 2147483647 : b.sort_order;
                 if (sa !== sb) return sa - sb;
                 return (a.name || '').localeCompare(b.name || '');
             });
-        const tIdx = siblings.findIndex(f => f.id === folderId);
-        const beforeId = inTopHalf ? folderId : (siblings[tIdx + 1] ? siblings[tIdx + 1].id : null);
-
-        try {
-            const token = sessionStorage.getItem('token');
-            const response = await fetch(`/api/folders/${draggedId}/position`, {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
-                body: JSON.stringify({ before_id: beforeId })
-            });
-            if (!response.ok) {
-                const error = await response.json();
-                throw new Error(error.error || 'Kunne ikke flytte mappen');
-            }
-            await loadFolders();
-            renderFolderTree();
-        } catch (error) {
-            console.error('Folder reorder error:', error);
-            await winAlert(error.message, 'Fejl');
-        }
-        return;
-    }
-
-    if (!draggedFileId) return;
-    
-    const file = allFiles.find(f => f.id === draggedFileId);
-    if (!file) return;
-    
-    const folder = allFolders.find(f => f.id === folderId);
-    if (!folder) return;
-    
-    // Don't move if already in this folder
-    if (file.folder_id === folderId) {
-        draggedFileId = null;
-        return;
-    }
-    
-    try {
-        const token = sessionStorage.getItem('token');
-        const response = await fetch(`/api/files/${draggedFileId}/move`, {
-            method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
-            },
-            body: JSON.stringify({ folder_id: folderId })
-        });
-        
-        if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.error || 'Move failed');
-        }
-        
-        await loadRealFiles();
-        
-        // If viewing this folder, refresh view
-        if (currentFolderId === folderId) {
-            openFolder(folderId, folder.name);
-        }
-        
+        const tIdx = siblings.findIndex(function (f) { return f.id === folderId; });
+        const beforeId = zone === 'before' ? folderId : (siblings[tIdx + 1] ? siblings[tIdx + 1].id : null);
+        await callPosition({ before_id: beforeId });
     } catch (error) {
-        console.error('Move file error:', error);
-        await winAlert('Kunne ikke flytte fil: ' + error.message, 'Fejl');
+        console.error('Folder drop error:', error);
+        await winAlert(error.message, 'Fejl');
     }
-    
-    draggedFileId = null;
 }
 
-function handleFolderDragOver(event) {
-    event.preventDefault();
-    event.stopPropagation();
-    event.dataTransfer.dropEffect = 'move';
-    event.currentTarget.classList.add('drag-over');
-}
-
-function handleFolderDragLeave(event) {
-    event.stopPropagation();
-    event.currentTarget.classList.remove('drag-over');
-}
 
 window.loadRealFiles = loadRealFiles;
 

@@ -1751,6 +1751,23 @@ svg.lucide-building-2 { color: var(--company-stroke); fill: var(--company-fill);
 .tree-chevron { display: inline-flex; width: 16px; justify-content: center; flex: 0 0 auto; }
 .tree-chevron .lucide { width: 13px; height: 13px; }
 .tree-chevron svg.lucide-folder, .tree-chevron svg.lucide-building-2 { color: var(--text-muted); fill: none; }
+
+/* Træk og slip: gul ramme = gyldigt slip-mål (ind i mappen),
+   gul streg over/under = ny rækkefølge-placering */
+.tree-node.drop-target,
+.folder-row.drop-target,
+.grid-card.drop-target,
+.crumb-item.drop-target,
+.crumb-root.drop-target {
+    outline: 2px solid var(--color-accent);
+    outline-offset: -2px;
+    background: var(--color-accent-soft);
+    border-radius: 4px;
+}
+.folder-row.drop-above, .grid-card.drop-above, .tree-node.drop-above { box-shadow: inset 0 3px 0 var(--color-accent); }
+.folder-row.drop-below, .grid-card.drop-below, .tree-node.drop-below { box-shadow: inset 0 -3px 0 var(--color-accent); }
+.folder-row, .grid-card { cursor: default; }
+.folder-row[draggable="true"], .grid-card[draggable="true"] { cursor: grab; }
 .tree-section-label {
     font-size: 11px;
     font-weight: 700;
