@@ -73,10 +73,10 @@ async function loadPendingUsers() {
                         <p style="margin: 5px 0; color: var(--text-muted); font-size: 12px;">Anmodet: ${new Date(user.created_at).toLocaleString('da-DK')}</p>
                     </div>
                     <div style="display: flex; gap: 10px;">
-                        <button onclick="approveUser(${user.id})" style="padding: 8px 16px; background: var(--color-green); color: white; border: none; border-radius: 5px; cursor: pointer;">
+                        <button onclick="approveUser(${user.id})" class="btn btn-primary">
                              Godkend
                         </button>
-                        <button onclick="rejectUser(${user.id})" style="padding: 8px 16px; background: var(--color-red); color: white; border: none; border-radius: 5px; cursor: pointer;">
+                        <button onclick="rejectUser(${user.id})" class="btn btn-danger">
                              Afvis
                         </button>
                     </div>
@@ -223,7 +223,7 @@ async function loadInviteCodes() {
                             ${isUsed ? `<p style="margin: 5px 0; color: var(--text-muted);">Brugt af: ${code.used_by_name}</p>` : ''}
                         </div>
                         ${!isUsed ? `
-                            <button onclick="deleteInviteCode(${code.id})" style="padding: 8px 16px; background: var(--color-red); color: white; border: none; border-radius: 5px; cursor: pointer;">
+                            <button onclick="deleteInviteCode(${code.id})" class="btn btn-danger">
                                  Slet
                             </button>
                         ` : ''}
@@ -289,15 +289,15 @@ async function loadAllUsers() {
                                 ${user.id !== window.currentUser.id ? `
                                     <div style="display: flex; gap: 5px; justify-content: center;">
                                         ${!user.is_admin ? `
-                                            <button onclick="makeAdmin(${user.id})" style="padding: 5px 10px; background: var(--color-accent-hover); color: white; border: none; border-radius: 3px; cursor: pointer; font-size: 12px;">
+                                            <button onclick="makeAdmin(${user.id})" class="btn btn-secondary" style="padding: 5px 10px; font-size: 12px;">
                                                 Gør til admin
                                             </button>
                                         ` : `
-                                            <button onclick="removeAdmin(${user.id})" style="padding: 5px 10px; background: var(--color-red); color: white; border: none; border-radius: 3px; cursor: pointer; font-size: 12px;">
+                                            <button onclick="removeAdmin(${user.id})" class="btn btn-secondary" style="padding: 5px 10px; font-size: 12px;">
                                                 Fjern admin
                                             </button>
                                         `}
-                                        <button onclick="deleteUser(${user.id}, '${user.name.replace(/'/g, "\\'")}', '${user.email}')" style="padding: 5px 10px; background: var(--danger); color: white; border: none; border-radius: 3px; cursor: pointer; font-size: 12px;">
+                                        <button onclick="deleteUser(${user.id}, '${user.name.replace(/'/g, "\\'")}', '${user.email}')" class="btn btn-danger" style="padding: 5px 10px; font-size: 12px;">
                                              Slet
                                         </button>
                                     </div>

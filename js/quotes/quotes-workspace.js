@@ -1123,8 +1123,8 @@ async function uploadDocument() {
         
         if (!response.ok) throw new Error('Failed to upload document');
         
-        const document = await response.json();
-        workspaceDocuments.unshift(document);
+        const uploadedDoc = await response.json();
+        workspaceDocuments.unshift(uploadedDoc);
         
         closeDocumentModal();
         alert('Dokument uploadet!');

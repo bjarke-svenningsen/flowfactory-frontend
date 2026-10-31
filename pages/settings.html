@@ -1,7 +1,16 @@
-<h2 style="margin-bottom: 20px;"> Indstillinger</h2>
+<!-- Sidehoved -->
+<div class="page-header">
+    <div class="page-header-title">
+        <span class="icon-box"><i data-lucide="settings"></i></span>
+        <div>
+            <h1>Indstillinger</h1>
+            <p class="page-header-sub">Notifikationer, udseende og konto</p>
+        </div>
+    </div>
+</div>
 
 <div class="info-card">
-    <h3> Notifikationer</h3>
+    <h3>Notifikationer</h3>
     <div style="padding: 15px 0;">
         <label style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px; cursor: pointer;">
             <input type="checkbox" id="notifPosts" checked style="width: 18px; height: 18px;">
@@ -19,19 +28,19 @@
 </div>
 
 <div class="info-card">
-    <h3> Udseende</h3>
+    <h3>Udseende</h3>
     <div style="padding: 15px 0;">
         <label style="display: block; margin-bottom: 10px; font-weight: 600;">Vælg tema:</label>
-        <select id="themeSelect" onchange="changeTheme(this.value)" style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 5px; font-size: 14px;">
-            <option value="light" selected> Lyst tema</option>
-            <option value="dark"> Mørkt tema</option>
-            <option value="auto"> Automatisk (følg system)</option>
+        <select id="themeSelect" onchange="changeTheme(this.value)" class="field-input" style="width: 100%;">
+            <option value="light" selected>Lyst tema</option>
+            <option value="dark">Mørkt tema</option>
+            <option value="auto">Automatisk (følg system)</option>
         </select>
     </div>
 </div>
 
 <div class="info-card">
-    <h3> Privatliv & Sikkerhed</h3>
+    <h3>Privatliv &amp; Sikkerhed</h3>
     <div style="padding: 15px 0;">
         <label style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px; cursor: pointer;">
             <input type="checkbox" id="showOnlineStatus" checked style="width: 18px; height: 18px;">
@@ -41,14 +50,14 @@
             <input type="checkbox" id="showEmail" checked style="width: 18px; height: 18px;">
             <span>Vis min email til kolleger</span>
         </label>
-        <button onclick="changePassword()" style="padding: 10px 20px; background: var(--color-accent-hover); color: white; border: none; border-radius: 5px; cursor: pointer; margin-top: 10px;">
-             Skift adgangskode
+        <button onclick="changePassword()" class="btn btn-primary">
+            <i data-lucide="key-round"></i> Skift adgangskode
         </button>
     </div>
 </div>
 
 <div class="info-card">
-    <h3> Applikation</h3>
+    <h3>Applikation</h3>
     <div style="padding: 15px 0;">
         <div style="margin-bottom: 15px;">
             <strong>Version:</strong> 1.0.0
@@ -56,24 +65,26 @@
         <div style="margin-bottom: 15px;">
             <strong>Sidst opdateret:</strong> 09/10/2025
         </div>
-        <button onclick="clearCache()" style="padding: 10px 20px; background: var(--color-red); color: white; border: none; border-radius: 5px; cursor: pointer; margin-right: 10px;">
-             Ryd cache
-        </button>
-        <button onclick="exportData()" style="padding: 10px 20px; background: var(--color-green); color: white; border: none; border-radius: 5px; cursor: pointer;">
-             Eksporter mine data
-        </button>
+        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+            <button onclick="clearCache()" class="btn btn-danger">
+                <i data-lucide="trash-2"></i> Ryd cache
+            </button>
+            <button onclick="exportData()" class="btn btn-secondary">
+                <i data-lucide="download"></i> Eksporter mine data
+            </button>
+        </div>
     </div>
 </div>
 
 <div class="info-card">
-    <h3>ℹ Om SG Seest Gulvteknik Portal</h3>
+    <h3>Om SG Seest Gulvteknik Portal</h3>
     <div style="padding: 15px 0; line-height: 1.8;">
         <p>SG Seest Gulvteknik Portalen er udviklet til at forbinde medarbejdere og forbedre samarbejdet.</p>
         <p style="margin-top: 10px;">
-            <strong>Support:</strong> <a href="mailto:kontakt@seestgulvteknik.dk" style="color: var(--color-accent-hover);">kontakt@seestgulvteknik.dk</a>
+            <strong>Support:</strong> <a href="mailto:kontakt@seestgulvteknik.dk" style="color: var(--accent);">kontakt@seestgulvteknik.dk</a>
         </p>
         <p style="margin-top: 5px;">
-            <strong>Dokumentation:</strong> <a href="#" style="color: var(--color-accent-hover);">Læs brugervejledningen</a>
+            <strong>Dokumentation:</strong> <a href="#" style="color: var(--accent);">Læs brugervejledningen</a>
         </p>
     </div>
 </div>
