@@ -1633,7 +1633,7 @@ body {
     border-bottom: 1px solid var(--border);
 }
 .files-addressbar { display: flex; align-items: center; gap: 8px; min-width: 0; }
-.files-actionsbar { display: flex; align-items: center; gap: 12px; flex-wrap: nowrap; }
+.files-actionsbar { display: flex; align-items: center; justify-content: flex-end; gap: 12px; flex-wrap: nowrap; }
 .files-actionsbar .btn { flex-shrink: 0; height: 36px; gap: 6px; }
 .files-toolbar .btn .lucide { width: 16px; height: 16px; }
 .files-actionsbar .files-search { width: 240px; min-width: 160px; flex-shrink: 1; }
@@ -1649,6 +1649,14 @@ body {
     min-width: 0;
     overflow: hidden;
     white-space: nowrap;
+    /* Indrammet adressefelt: svagt moerkere baggrund + tynd kant, som et inputfelt.
+       hover paa led bruger --ghost-hover, som er en anelse mørkere end --hover-fill */
+    background: var(--hover-fill);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-btn);
+    height: 36px;
+    padding: 0 8px;
+    box-sizing: border-box;
 }
 .files-crumb .crumb-root { color: var(--text-muted); font-weight: 600; flex-shrink: 0; }
 .files-crumb .crumb-sep { color: var(--text-muted); flex-shrink: 0; }
