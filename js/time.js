@@ -45,6 +45,8 @@ function getTimeType(entry) {
 // Visuel blok-type: udledes af materiale-navnet (case-insensitive),
 // fallback til materiale-nummeret
 function getEntryType(entry) {
+    // Gemt entry_type (efter migreringen) slaar igennem foerst - fallback udledes af ordre/materiale
+    if (entry.entry_type === 'sick') return 'sick';
     const nm = (entry.material_name || '').toLowerCase();
     if (nm.includes('sygdom')) return 'sick';
     if (nm.includes('weekend') || nm.includes('overarbejde') || nm.includes('overtid')) return 'overtime';
@@ -54,6 +56,15 @@ function getEntryType(entry) {
     return 'regular';
 }
 
+// Blok-klasse for tidsaksen: skeln mellem ordre og vaerksted samt alm./overtid.
+// (naar entry_type findes i DB slaar den igennem via getEntryType; indtil migreringen udledes af ordre/materiale)
+function getBlockType(entry) {
+    const t = getEntryType(entry);
+    if (t === 'sick') return 'time-sick';
+    const isOvertime = t === 'overtime';
+    if (entry.order_id) return isOvertime ? 'time-overtime' : 'time-regular';
+    return isOvertime ? 'time-workshop-overtime' : 'time-workshop';
+}
 function hoursOf(entry) {
     return parseFloat(entry.duration_hours) || 0;
 }
@@ -244,6 +255,24 @@ const timePage = {
             head += `<div class="timegrid-day${isToday ? ' today-col' : ''}">${DAY_NAMES[day.date.getDay()]}<span class="day-num">${day.date.getDate()}. ${MONTH_NAMES[day.date.getMonth()]}</span></div>`;
         });
         head += '</div>';
+        // Sticky sumraekke lige under dagsnavnene: Timer pr. dag + ugetotal i hjornet (med Overtid/Sygdom-chips)
+        const allEntries = days.flatMap(d => d.entries || []);
+        const totalHours = allEntries.reduce((s, e) => s + hoursOf(e), 0);
+        const overtimeHours = allEntries.filter(e => getEntryType(e) === 'overtime').reduce((s, e) => s + hoursOf(e), 0);
+        const sickHours = allEntries.filter(e => getEntryType(e) === 'sick').reduce((s, e) => s + hoursOf(e), 0);
+        const chips =
+            (overtimeHours > 0 ? `<span class="legend-chip time-overtime">Overtid ${overtimeHours.toFixed(1).replace('.', ',')} t</span>` : '') +
+            (sickHours > 0 ? `<span class="legend-chip time-sick">Sygdom ${sickHours.toFixed(1).replace('.', ',')} t</span>` : '');
+        const cornerLabel = cols > 1
+            ? `Uge ${getWeekNumber(days[0].date)}: ${totalHours.toFixed(1).replace('.', ',')} t`
+            : `I alt: ${totalHours.toFixed(1).replace('.', ',')} t`;
+        let sumRow = `<div class="timegrid-sumrow" style="display:grid;grid-template-columns:var(--axis-w) repeat(${cols}, 1fr);">` +
+            `<div class="timegrid-sumcorner"><span>${cornerLabel}</span>${chips}</div>`;
+        days.forEach(day => {
+            const h = (day.entries || []).reduce((s, e) => s + hoursOf(e), 0);
+            sumRow += `<div class="timegrid-sumcell">Timer: <strong${h > 0 ? ' style="color:var(--success)"' : ''}>${h > 0 ? h.toFixed(1).replace('.', ',') + ' t' : '\u2013'}</strong></div>`;
+        });
+        sumRow += '</div>';
 
         let body = '';
         days.forEach(day => {
@@ -276,13 +305,18 @@ const timePage = {
                 const timeStr = `${this.minToLabel(p.startMin)}-${this.minToLabel(p.endMin)}`;
                 const line1 = `(${hoursOf(e).toFixed(1).replace('.', ',')}) ${timeStr}`;
                 const label = e.order_number || e.quote_number || 'Værksted';
+                // Linje 2+: type, ordre/vaerksted, materiale - dubletter filtreres fra, ellipsis via CSS
+                const typeLabels = { 'time-regular': 'Alm. timer', 'time-overtime': 'Overtid', 'time-sick': 'Sygdom', 'time-workshop': 'V\u00E6rksted', 'time-workshop-overtime': 'V\u00E6rksted (overtid)' };
+                const detailLines = [typeLabels[getBlockType(e)] || '', label, e.material_name || '']
+                    .filter((v, i, a) => v && a.indexOf(v) === i)
+                    .map(v => `<div class="tg-line2">${v}</div>`).join('');
                 const tooltip = `${line1}\n${label}\n${e.material_name || ''}`;
-                col += `<div class="tg-block time-${getEntryType(e)}${e.is_locked ? ' locked' : ''}${compact ? ' compact' : ''}"` +
+                col += `<div class="tg-block ${getBlockType(e)}${e.is_locked ? ' locked' : ''}${compact ? ' compact' : ''}"` +
                     ` style="top:${top}px;height:${height}px;left:calc(${leftPct}% + 3px);width:calc(${widthPct}% - 6px);"` +
                     ` title="${tooltip.replace(/"/g, '&quot;')}"` +
                     ` onclick="timePage.editTimeEntryById(${e.id})">` +
                     `<div class="tg-line1">${line1}</div>` +
-                    (compact ? '' : `<div class="tg-line2">${label}</div><div class="tg-line2">${e.material_name || ''}</div>`) +
+                    (compact ? '' : detailLines) +
                     `</div>`;
             });
 
@@ -319,7 +353,7 @@ const timePage = {
         for (let h = 0; h < 24; h++) axis += `<div class="axis-label">${String(h).padStart(2, '0')}:00</div>`;
         axis += '</div>';
 
-        container.innerHTML = `<div class="timegrid-card">${head}${noTimeRow}` +
+        container.innerHTML = `<div class="timegrid-card"><div class="timegrid-topbar">${head}${sumRow}</div>${noTimeRow}` +
             `<div class="timegrid-scroll">` +
             `<div class="timegrid-canvas" style="display:grid;grid-template-columns:var(--axis-w) repeat(${cols}, 1fr);">${axis}${body}</div>` +
             `</div></div>`;
@@ -420,21 +454,7 @@ const timePage = {
         // Faelles tidsakse med absolute blokke
         this.buildTimeGrid(container, days);
 
-        // Dagtotaler + ugetotal i bunden
-        const dayTotals = days.map(day => {
-            const h = day.entries.reduce((s, e) => s + hoursOf(e), 0);
-            return `<span>${DAY_NAMES[day.date.getDay()].slice(0, 3)}: <strong style="color:${h > 0 ? 'var(--success)' : 'var(--border)'};">${h > 0 ? h.toFixed(1).replace('.', ',') + ' t' : '–'}</strong></span>`;
-        }).join('');
-        const weekHours = this.timeEntries.reduce((s, e) => s + hoursOf(e), 0);
-        const overtimeHours = this.timeEntries.filter(e => getEntryType(e) === 'overtime').reduce((s, e) => s + hoursOf(e), 0);
-        const sickHours = this.timeEntries.filter(e => getEntryType(e) === 'sick').reduce((s, e) => s + hoursOf(e), 0);
-        container.querySelector('.timegrid-card').insertAdjacentHTML('beforeend',
-            `<div class="timegrid-summary">` +
-            dayTotals +
-            `<span style="margin-left:auto;">Uge ${getWeekNumber(monday)} i alt: <strong>${weekHours.toFixed(1).replace('.', ',')} timer</strong></span>` +
-            (overtimeHours > 0 ? ` <span class="legend-chip time-overtime">Overtid ${overtimeHours.toFixed(1).replace('.', ',')} t</span>` : '') +
-            (sickHours > 0 ? ` <span class="legend-chip time-sick">Sygdom ${sickHours.toFixed(1).replace('.', ',')} t</span>` : '') +
-            `</div>`);
+        
 
         this.updateHeader();
     },

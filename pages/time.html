@@ -216,13 +216,48 @@
             margin-top: 15px;
         }
 
-        .timegrid-head {
+        /* Sticky topbar: dagsnavne + sumraekke folger med ved scroll */
+        .timegrid-topbar {
             position: sticky;
             top: 0;
             z-index: 5;
+            background: var(--surface);
+        }
+
+        .timegrid-head {
             display: grid;
             background: var(--surface-muted);
             border-bottom: 1px solid var(--border-soft);
+        }
+
+        .timegrid-sumrow {
+            background: var(--surface);
+            border-bottom: 1px solid var(--border-soft);
+        }
+
+        .timegrid-sumcorner {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 4px;
+            padding: 8px 12px 8px 4px;
+            font-weight: 700;
+            font-size: 13px;
+            color: var(--text-muted);
+        }
+
+        .timegrid-sumcorner .legend-chip {
+            font-size: 11px;
+        }
+
+        .timegrid-sumcell {
+            padding: 8px 6px;
+            text-align: center;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-muted);
+            border-left: 1px solid var(--border-soft);
+            font-variant-numeric: tabular-nums;
         }
 
         .timegrid-corner {
@@ -318,7 +353,7 @@
         .tg-block {
             position: absolute;
             border-radius: 8px;
-            border-left: 3px solid var(--border);
+            border: 1px solid var(--surface);
             padding: 4px 6px;
             font-size: 11px;
             line-height: 1.35;

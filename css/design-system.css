@@ -29,6 +29,7 @@
     --time-overtime-bg: #F5B800; --time-overtime-border: #92400E; --time-overtime-text: #451A03;
     --time-sick-bg: #FCE7F3;     --time-sick-border: #BE185D;  --time-sick-text: #831843;
     --time-workshop-bg: #DBEAFE; --time-workshop-border: #2563EB; --time-workshop-text: #1E3A8A;
+    --time-workshop-ot-bg: #60A5FA; --time-workshop-ot-border: #1E40AF; --time-workshop-ot-text: #0B1F4D;
     --time-other-bg: #DCFCE7;    --time-other-border: #16A34A; --time-other-text: #14532D;
 
     /* Radius */
@@ -599,6 +600,34 @@ body, .dashboard { background: var(--bg-page); }
 }
 .time-block.time-regular, .week-time-block.time-regular {
     border-left: 3px solid var(--time-alm-border);
+}
+
+
+/* Tidsakse-blokke (ugevisning, Min Tid) - farve efter type */
+.tg-block.time-regular {
+    background: var(--time-alm-bg);
+    border-left: 3px solid var(--time-alm-border);
+    color: var(--time-alm-text);
+}
+.tg-block.time-overtime {
+    background: var(--time-overtime-bg);
+    border-left: 3px solid var(--time-overtime-border);
+    color: var(--time-overtime-text);
+}
+.tg-block.time-sick {
+    background: var(--time-sick-bg);
+    border-left: 3px solid var(--time-sick-border);
+    color: var(--time-sick-text);
+}
+.tg-block.time-workshop {
+    background: var(--time-workshop-bg);
+    border-left: 3px solid var(--time-workshop-border);
+    color: var(--time-workshop-text);
+}
+.tg-block.time-workshop-overtime {
+    background: var(--time-workshop-ot-bg);
+    border-left: 3px solid var(--time-workshop-ot-border);
+    color: var(--time-workshop-ot-text);
 }
 
 /* Dagens kolonne: bldt gul + 3px gul topstreg i hele hjde */
