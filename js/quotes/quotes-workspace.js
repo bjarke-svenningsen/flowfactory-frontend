@@ -52,8 +52,8 @@ async function openOrderWorkspace(orderId, fromParentId = null) {
     console.log('Order ID from backend:', data.order.id);
     console.log('Order number from backend:', data.order.order_number);
     console.log('Is extra work?', data.order.is_extra_work);
-    console.log('📄 DOCUMENTS COUNT:', data.documents.length);
-    console.log('📄 DOCUMENTS DATA:', data.documents);
+    console.log('DOCUMENTS COUNT:', data.documents.length);
+    console.log('DOCUMENTS DATA:', data.documents);
         
         // If this is extra work being opened from parent, save parent ID
         if (data.order.is_extra_work && data.order.parent_order_id && fromParentId === null) {
@@ -230,16 +230,16 @@ function renderWorkspaceOverview(container) {
             <div style="display: flex; flex-direction: column; gap: 30px;">
                 ${hasExtraWork ? `
                     <!-- Split Statistics Cards -->
-                    <div style="background: white; padding: 25px; border-radius: 10px; border: 2px solid #e0e0e0; margin: 0 0 30px 0; min-height: 500px;">
-                        <h3 style="margin: 0 0 20px 0; color: #333;">📊 Opdelt Statistik</h3>
+                    <div style="background: var(--surface); padding: 25px; border-radius: 10px; border: 2px solid var(--border); margin: 0 0 30px 0; min-height: 500px;">
+                        <h3 style="margin: 0 0 20px 0; color: var(--text);">Opdelt Statistik</h3>
                         
                         <!-- Revenue -->
                         <div style="margin-bottom: 20px;">
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                                <div style="font-weight: 600; font-size: 16px;">💰 Omsætning</div>
+                                <div style="font-weight: 600; font-size: 16px;">Omsætning</div>
                                 <div style="font-size: 20px; font-weight: 600; color: var(--color-accent-hover);">${formatCurrency(workspaceFinancials.revenue)}</div>
                             </div>
-                            <div style="padding-left: 25px; font-size: 14px; color: #666;">
+                            <div style="padding-left: 25px; font-size: 14px; color: var(--text-muted);">
                                 <div style="display: flex; justify-content: space-between; padding: 5px 0;">
                                     <div>└─ Hovedordre:</div>
                                     <div style="font-weight: 600;">${formatCurrency(workspaceFinancials.revenue_main)}</div>
@@ -251,15 +251,15 @@ function renderWorkspaceOverview(container) {
                             </div>
                         </div>
                         
-                        <div style="border-top: 1px solid #e0e0e0; margin: 20px 0;"></div>
+                        <div style="border-top: 1px solid var(--border); margin: 20px 0;"></div>
                         
                         <!-- Expenses -->
                         <div style="margin-bottom: 20px;">
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                                <div style="font-weight: 600; font-size: 16px;">📊 Udgifter</div>
+                                <div style="font-weight: 600; font-size: 16px;">Udgifter</div>
                                 <div style="font-size: 20px; font-weight: 600; color: var(--color-red);">${formatCurrency(workspaceFinancials.expenses)}</div>
                             </div>
-                            <div style="padding-left: 25px; font-size: 14px; color: #666;">
+                            <div style="padding-left: 25px; font-size: 14px; color: var(--text-muted);">
                                 <div style="display: flex; justify-content: space-between; padding: 5px 0;">
                                     <div>└─ Hovedordre:</div>
                                     <div style="font-weight: 600;">${formatCurrency(workspaceFinancials.expenses_main || 0)}</div>
@@ -271,15 +271,15 @@ function renderWorkspaceOverview(container) {
                             </div>
                         </div>
                         
-                        <div style="border-top: 1px solid #e0e0e0; margin: 20px 0;"></div>
+                        <div style="border-top: 1px solid var(--border); margin: 20px 0;"></div>
                         
                         <!-- Profit -->
                         <div>
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                                <div style="font-weight: 600; font-size: 16px;">✅ Profit</div>
+                                <div style="font-weight: 600; font-size: 16px;">Profit</div>
                                 <div style="font-size: 20px; font-weight: 600; color: ${profit >= 0 ? 'var(--color-green)' : 'var(--color-red)'};">${formatCurrency(workspaceFinancials.profit)} (${profitMargin}%)</div>
                             </div>
-                            <div style="padding-left: 25px; font-size: 14px; color: #666;">
+                            <div style="padding-left: 25px; font-size: 14px; color: var(--text-muted);">
                                 <div style="display: flex; justify-content: space-between; padding: 5px 0;">
                                     <div>└─ Hovedordre:</div>
                                     <div style="font-weight: 600;">${formatCurrency(workspaceFinancials.profit_main || 0)}</div>
@@ -294,50 +294,50 @@ function renderWorkspaceOverview(container) {
                 ` : `
                     <!-- Simple Stats cards (no extra work) -->
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin: 0 0 30px 0;">
-                        <div style="background: white; padding: 20px; border-radius: 10px; border: 2px solid #e0e0e0;">
-                            <div style="color: #666; font-size: 14px; margin-bottom: 5px;">💰 Omsætning</div>
+                        <div style="background: var(--surface); padding: 20px; border-radius: 10px; border: 2px solid var(--border);">
+                            <div style="color: var(--text-muted); font-size: 14px; margin-bottom: 5px;">Omsætning</div>
                             <div style="font-size: 28px; font-weight: 600; color: var(--color-accent-hover);">${formatCurrency(revenue)}</div>
                         </div>
-                        <div style="background: white; padding: 20px; border-radius: 10px; border: 2px solid #e0e0e0;">
-                            <div style="color: #666; font-size: 14px; margin-bottom: 5px;">📊 Udgifter</div>
+                        <div style="background: var(--surface); padding: 20px; border-radius: 10px; border: 2px solid var(--border);">
+                            <div style="color: var(--text-muted); font-size: 14px; margin-bottom: 5px;">Udgifter</div>
                             <div style="font-size: 28px; font-weight: 600; color: var(--color-red);">${formatCurrency(totalExpenses)}</div>
                         </div>
-                        <div style="background: white; padding: 20px; border-radius: 10px; border: 2px solid #e0e0e0;">
-                            <div style="color: #666; font-size: 14px; margin-bottom: 5px;">✅ Profit</div>
+                        <div style="background: var(--surface); padding: 20px; border-radius: 10px; border: 2px solid var(--border);">
+                            <div style="color: var(--text-muted); font-size: 14px; margin-bottom: 5px;">Profit</div>
                             <div style="font-size: 28px; font-weight: 600; color: ${profit >= 0 ? 'var(--color-green)' : 'var(--color-red)'};">${formatCurrency(profit)}</div>
                         </div>
-                        <div style="background: white; padding: 20px; border-radius: 10px; border: 2px solid #e0e0e0;">
-                            <div style="color: #666; font-size: 14px; margin-bottom: 5px;">📈 Margin</div>
+                        <div style="background: var(--surface); padding: 20px; border-radius: 10px; border: 2px solid var(--border);">
+                            <div style="color: var(--text-muted); font-size: 14px; margin-bottom: 5px;">Margin</div>
                             <div style="font-size: 28px; font-weight: 600; color: ${profit >= 0 ? 'var(--color-green)' : 'var(--color-red)'};">${revenue > 0 ? ((profit / revenue) * 100).toFixed(1) : 0}%</div>
                         </div>
                     </div>
                 `}
                 
                 <!-- Ordre Detaljer (NEW - replaces Profit Chart) -->
-                <div style="background: white; padding: 20px; border-radius: 10px; border: 2px solid #e0e0e0; margin: 0; min-height: 250px;">
+                <div style="background: var(--surface); padding: 20px; border-radius: 10px; border: 2px solid var(--border); margin: 0; min-height: 250px;">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                        <h3 style="margin: 0;">📋 Ordre Detaljer</h3>
-                        <button id="orderDetailsEditBtn" onclick="toggleOrderDetailsEdit()" style="padding: 6px 12px; background: var(--color-accent-hover); color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 13px;">
-                            ✏️ Rediger
+                        <h3 style="margin: 0;">Ordre Detaljer</h3>
+                        <button id="orderDetailsEditBtn" onclick="toggleOrderDetailsEdit()" class="btn btn-primary btn-sm">
+                            Rediger
                         </button>
                     </div>
                     
                     <!-- Read Mode -->
                     <div id="orderDetailsReadMode" style="display: grid; gap: 15px;">
-                        <div style="padding-bottom: 15px; border-bottom: 1px solid #e0e0e0;">
-                            <div style="color: #666; font-size: 13px; margin-bottom: 5px;">Kontaktperson</div>
+                        <div style="padding-bottom: 15px; border-bottom: 1px solid var(--border);">
+                            <div style="color: var(--text-muted); font-size: 13px; margin-bottom: 5px;">Kontaktperson</div>
                             <div id="orderDetailsContactName" style="font-weight: 600; font-size: 16px;">${currentWorkspaceOrder.contact_person_name || currentWorkspaceOrder.contact_person || 'Ikke angivet'}</div>
                         </div>
-                        <div style="padding-bottom: 15px; border-bottom: 1px solid #e0e0e0;">
-                            <div style="color: #666; font-size: 13px; margin-bottom: 5px;">Telefon</div>
+                        <div style="padding-bottom: 15px; border-bottom: 1px solid var(--border);">
+                            <div style="color: var(--text-muted); font-size: 13px; margin-bottom: 5px;">Telefon</div>
                             <div id="orderDetailsPhone" style="font-weight: 600; font-size: 16px;">${currentWorkspaceOrder.contact_person_phone || currentWorkspaceOrder.customer_phone || 'Ikke angivet'}</div>
                         </div>
-                        <div style="padding-bottom: 15px; border-bottom: 1px solid #e0e0e0;">
-                            <div style="color: #666; font-size: 13px; margin-bottom: 5px;">Email</div>
+                        <div style="padding-bottom: 15px; border-bottom: 1px solid var(--border);">
+                            <div style="color: var(--text-muted); font-size: 13px; margin-bottom: 5px;">Email</div>
                             <div id="orderDetailsEmail" style="font-weight: 600; font-size: 16px;">${currentWorkspaceOrder.contact_person_email || currentWorkspaceOrder.customer_email || 'Ikke angivet'}</div>
                         </div>
                         <div>
-                            <div style="color: #666; font-size: 13px; margin-bottom: 5px;">Ordre Adresse</div>
+                            <div style="color: var(--text-muted); font-size: 13px; margin-bottom: 5px;">Ordre Adresse</div>
                             <div id="orderDetailsAddress" style="font-weight: 600; font-size: 16px;">
                                 ${currentWorkspaceOrder.order_address || currentWorkspaceOrder.address || 'Ikke angivet'}<br>
                                 ${currentWorkspaceOrder.order_postal_code || currentWorkspaceOrder.postal_code || ''} ${currentWorkspaceOrder.order_city || currentWorkspaceOrder.city || ''}
@@ -349,32 +349,32 @@ function renderWorkspaceOverview(container) {
                     <div id="orderDetailsEditMode" style="display: none;">
                         <div style="display: grid; gap: 15px;">
                             <div>
-                                <label style="display: block; color: #666; font-size: 13px; margin-bottom: 5px;">Kontaktperson</label>
-                                <select id="orderDetailsContactSelect" style="width: 100%; padding: 8px; border: 1px solid #e0e0e0; border-radius: 5px; font-size: 14px;">
+                                <label style="display: block; color: var(--text-muted); font-size: 13px; margin-bottom: 5px;">Kontaktperson</label>
+                                <select id="orderDetailsContactSelect" style="width: 100%; padding: 8px; border: 1px solid var(--border); border-radius: 5px; font-size: 14px;">
                                     <option value="">Vælg kontaktperson...</option>
                                 </select>
                             </div>
                             <div>
-                                <label style="display: block; color: #666; font-size: 13px; margin-bottom: 5px;">Ordre Adresse</label>
-                                <input type="text" id="orderDetailsAddressInput" value="${currentWorkspaceOrder.order_address || currentWorkspaceOrder.address || ''}" style="width: 100%; padding: 8px; border: 1px solid #e0e0e0; border-radius: 5px; font-size: 14px;">
+                                <label style="display: block; color: var(--text-muted); font-size: 13px; margin-bottom: 5px;">Ordre Adresse</label>
+                                <input type="text" id="orderDetailsAddressInput" value="${currentWorkspaceOrder.order_address || currentWorkspaceOrder.address || ''}" style="width: 100%; padding: 8px; border: 1px solid var(--border); border-radius: 5px; font-size: 14px;">
                             </div>
                             <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 10px;">
                                 <div>
-                                    <label style="display: block; color: #666; font-size: 13px; margin-bottom: 5px;">Postnummer</label>
-                                    <input type="text" id="orderDetailsPostalInput" value="${currentWorkspaceOrder.order_postal_code || currentWorkspaceOrder.postal_code || ''}" style="width: 100%; padding: 8px; border: 1px solid #e0e0e0; border-radius: 5px; font-size: 14px;">
+                                    <label style="display: block; color: var(--text-muted); font-size: 13px; margin-bottom: 5px;">Postnummer</label>
+                                    <input type="text" id="orderDetailsPostalInput" value="${currentWorkspaceOrder.order_postal_code || currentWorkspaceOrder.postal_code || ''}" style="width: 100%; padding: 8px; border: 1px solid var(--border); border-radius: 5px; font-size: 14px;">
                                 </div>
                                 <div>
-                                    <label style="display: block; color: #666; font-size: 13px; margin-bottom: 5px;">By</label>
-                                    <input type="text" id="orderDetailsCityInput" value="${currentWorkspaceOrder.order_city || currentWorkspaceOrder.city || ''}" style="width: 100%; padding: 8px; border: 1px solid #e0e0e0; border-radius: 5px; font-size: 14px;">
+                                    <label style="display: block; color: var(--text-muted); font-size: 13px; margin-bottom: 5px;">By</label>
+                                    <input type="text" id="orderDetailsCityInput" value="${currentWorkspaceOrder.order_city || currentWorkspaceOrder.city || ''}" style="width: 100%; padding: 8px; border: 1px solid var(--border); border-radius: 5px; font-size: 14px;">
                                 </div>
                             </div>
                         </div>
                         <div style="margin-top: 15px; display: flex; gap: 10px; justify-content: flex-end;">
-                            <button onclick="cancelOrderDetailsEdit()" style="padding: 8px 16px; background: #999; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 13px;">
+                            <button onclick="cancelOrderDetailsEdit()" class="btn btn-secondary btn-sm">
                                 Annuller
                             </button>
                             <button onclick="saveOrderDetails()" style="padding: 8px 16px; background: var(--color-green); color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 13px;">
-                                💾 Gem
+                                Gem
                             </button>
                         </div>
                     </div>
@@ -383,35 +383,35 @@ function renderWorkspaceOverview(container) {
             
             <!-- Right column: Quick info -->
             <div style="display: flex; flex-direction: column; gap: 30px;">
-                <div style="background: white; padding: 25px; border-radius: 10px; border: 2px solid #e0e0e0; flex: 1;">
-                    <h3 style="margin: 0 0 20px 0;">🏢 Kunde Information</h3>
+                <div style="background: var(--surface); padding: 25px; border-radius: 10px; border: 2px solid var(--border); flex: 1;">
+                    <h3 style="margin: 0 0 20px 0;">Kunde Information</h3>
                     <div style="display: grid; gap: 15px;">
-                        <div style="padding-bottom: 15px; border-bottom: 1px solid #e0e0e0;">
-                            <div style="color: #666; font-size: 13px; margin-bottom: 5px;">Ordre Nummer</div>
+                        <div style="padding-bottom: 15px; border-bottom: 1px solid var(--border);">
+                            <div style="color: var(--text-muted); font-size: 13px; margin-bottom: 5px;">Ordre Nummer</div>
                             <div style="font-weight: 600; font-size: 16px;">${currentWorkspaceOrder.order_number}</div>
                         </div>
-                        <div style="padding-bottom: 15px; border-bottom: 1px solid #e0e0e0;">
-                            <div style="color: #666; font-size: 13px; margin-bottom: 5px;">Firma</div>
+                        <div style="padding-bottom: 15px; border-bottom: 1px solid var(--border);">
+                            <div style="color: var(--text-muted); font-size: 13px; margin-bottom: 5px;">Firma</div>
                             <div style="font-weight: 600; font-size: 16px;">${currentWorkspaceOrder.company_name}</div>
                         </div>
                         ${currentWorkspaceOrder.cvr_number || currentWorkspaceOrder.customer_cvr ? `
-                        <div style="padding-bottom: 15px; border-bottom: 1px solid #e0e0e0;">
-                            <div style="color: #666; font-size: 13px; margin-bottom: 5px;">CVR Nummer</div>
+                        <div style="padding-bottom: 15px; border-bottom: 1px solid var(--border);">
+                            <div style="color: var(--text-muted); font-size: 13px; margin-bottom: 5px;">CVR Nummer</div>
                             <div style="font-weight: 600; font-size: 16px;">${currentWorkspaceOrder.cvr_number || currentWorkspaceOrder.customer_cvr}</div>
                         </div>
                         ` : ''}
-                        <div style="padding-bottom: 15px; border-bottom: 1px solid #e0e0e0;">
-                            <div style="color: #666; font-size: 13px; margin-bottom: 5px;">Status</div>
+                        <div style="padding-bottom: 15px; border-bottom: 1px solid var(--border);">
+                            <div style="color: var(--text-muted); font-size: 13px; margin-bottom: 5px;">Status</div>
                             ${getStatusBadge(currentWorkspaceOrder.status)}
                         </div>
                         ${currentWorkspaceOrder.accepted_at ? `
-                        <div style="padding-bottom: 15px; border-bottom: 1px solid #e0e0e0;">
-                            <div style="color: #666; font-size: 13px; margin-bottom: 5px;">Accepteret</div>
+                        <div style="padding-bottom: 15px; border-bottom: 1px solid var(--border);">
+                            <div style="color: var(--text-muted); font-size: 13px; margin-bottom: 5px;">Accepteret</div>
                             <div style="font-weight: 600; font-size: 16px;">${new Date(currentWorkspaceOrder.accepted_at).toLocaleDateString('da-DK')}</div>
                         </div>
                         ` : ''}
                         <div>
-                            <div style="color: #666; font-size: 13px; margin-bottom: 5px;">Oprettet af</div>
+                            <div style="color: var(--text-muted); font-size: 13px; margin-bottom: 5px;">Oprettet af</div>
                             <div style="font-weight: 600; font-size: 16px;">${currentWorkspaceOrder.created_by_name}</div>
                         </div>
                     </div>
@@ -443,7 +443,7 @@ function renderWorkspaceOverview(container) {
         </div>
         
         <!-- Arbejdsbeskrivelse Section (Full Width) -->
-        <div style="background: white; padding: 30px; border-radius: 10px; border: 2px solid #e0e0e0; margin-top: 30px;">
+        <div style="background: var(--surface); padding: 30px; border-radius: 10px; border: 2px solid var(--border); margin-top: 30px;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
                 <h3 style="margin: 0; display: flex; align-items: center; gap: 8px;"><i data-lucide="clipboard-list"></i> Arbejdsbeskrivelse</h3>
                 <button id="workDescEditBtn" onclick="toggleWorkDescriptionEdit()" class="btn-secondary">
@@ -453,20 +453,20 @@ function renderWorkspaceOverview(container) {
             
             <!-- Read Mode (default) -->
             <div id="workDescReadMode" style="display: block;">
-                <div id="workDescContent" style="min-height: 100px; padding: 15px; background: #f9f9f9; border-radius: 5px; border: 1px solid #e0e0e0;">
-                    ${currentWorkspaceOrder.work_description || '<em style="color: #999;">Ingen beskrivelse endnu...</em>'}
+                <div id="workDescContent" style="min-height: 100px; padding: 15px; background: var(--surface-muted); border-radius: 5px; border: 1px solid var(--border);">
+                    ${currentWorkspaceOrder.work_description || '<em style="color: var(--text-muted);">Ingen beskrivelse endnu...</em>'}
                 </div>
             </div>
             
             <!-- Edit Mode (hidden) -->
             <div id="workDescEditMode" style="display: none;">
-                <div id="workDescEditor" style="min-height: 200px; background: white;"></div>
+                <div id="workDescEditor" style="min-height: 200px; background: var(--surface);"></div>
                 <div style="margin-top: 15px; display: flex; gap: 10px; justify-content: flex-end;">
-                    <button onclick="cancelWorkDescriptionEdit()" style="padding: 10px 20px; background: #999; color: white; border: none; border-radius: 5px; cursor: pointer;">
+                    <button onclick="cancelWorkDescriptionEdit()" class="btn btn-secondary">
                         Annuller
                     </button>
                     <button onclick="saveWorkDescription()" style="padding: 10px 20px; background: var(--color-green); color: white; border: none; border-radius: 5px; cursor: pointer;">
-                        💾 Gem
+                        Gem
                     </button>
                 </div>
             </div>
@@ -475,20 +475,20 @@ function renderWorkspaceOverview(container) {
         <!-- Extra Work Orders Section -->
         ${workspaceExtraWorkOrders && workspaceExtraWorkOrders.length > 0 ? `
             <div style="margin-top: 30px;">
-                <div style="background: white; padding: 30px; border-radius: 10px; border: 2px solid var(--color-orange);">
-                    <h3 style="margin: 0 0 20px 0; color: var(--color-orange);">🔧 Ekstraarbejde (${workspaceExtraWorkOrders.length})</h3>
+                <div style="background: var(--surface); padding: 30px; border-radius: 10px; border: 2px solid var(--color-orange);">
+                    <h3 style="margin: 0 0 20px 0; color: var(--color-orange);">Ekstraarbejde (${workspaceExtraWorkOrders.length})</h3>
                     <div style="display: grid; gap: 15px;">
                         ${workspaceExtraWorkOrders.map(extraOrder => `
-                            <div style="background: #fff3e0; padding: 20px; border-radius: 8px; border: 1px solid var(--color-orange);">
+                            <div style="background: var(--accent-soft); padding: 20px; border-radius: 8px; border: 1px solid var(--color-orange);">
                                 <div style="display: flex; justify-content: space-between; align-items: start;">
                                     <div style="flex: 1;">
                                         <h4 style="margin: 0 0 10px 0; color: var(--color-orange);">Ordre ${extraOrder.full_order_number}</h4>
                                         <p style="margin: 5px 0;"><strong>Titel:</strong> ${extraOrder.title}</p>
                                         <p style="margin: 5px 0;"><strong>Total:</strong> ${formatCurrency(extraOrder.total)}</p>
-                                        <p style="margin: 5px 0; font-size: 12px; color: #666;">Oprettet: ${new Date(extraOrder.created_at).toLocaleDateString('da-DK')}</p>
+                                        <p style="margin: 5px 0; font-size: 12px; color: var(--text-muted);">Oprettet: ${new Date(extraOrder.created_at).toLocaleDateString('da-DK')}</p>
                                     </div>
                                     <button onclick="openOrderWorkspace(${extraOrder.id}, ${currentWorkspaceOrder.id})" style="padding: 10px 20px; background: var(--color-orange); color: white; border: none; border-radius: 5px; cursor: pointer; white-space: nowrap;">
-                                        👁️ Åbn
+                                        Åbn
                                     </button>
                                 </div>
                             </div>
@@ -507,14 +507,14 @@ function renderInvoiceButton() {
         // Invoice exists - show "See Invoice" button
         return `
             <button onclick=\"viewInvoiceFromWorkspace(${currentWorkspaceInvoice.id})\" style=\"padding: 12px 20px; background: var(--color-blue); color: white; border: none; border-radius: 5px; cursor: pointer; text-align: left;\">
-                👁️ Se Faktura ${currentWorkspaceInvoice.invoice_number}
+                Se Faktura ${currentWorkspaceInvoice.invoice_number}
             </button>
         `;
     } else {
         // No invoice - show "Create Invoice" button
         return `
             <button onclick=\"createInvoiceFromOrder(${currentWorkspaceOrder.id})\" style=\"padding: 12px 20px; background: var(--color-green); color: white; border: none; border-radius: 5px; cursor: pointer; text-align: left;\">
-                💰 Opret Faktura
+                Opret Faktura
             </button>
         `;
     }
@@ -541,14 +541,14 @@ function renderWorkspaceExpenses(container) {
     const totalExpenses = workspaceExpenses.reduce((sum, exp) => sum + exp.amount, 0);
     
     container.innerHTML = `
-        <div style="background: white; padding: 30px; border-radius: 10px; border: 2px solid #e0e0e0;">
+        <div style="background: var(--surface); padding: 30px; border-radius: 10px; border: 2px solid var(--border);">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
                 <div>
-                    <h3 style="margin: 0 0 10px 0;">💰 Udgifter</h3>
-                    <p style="margin: 0; color: #666;">Total udgifter: <strong>${formatCurrency(totalExpenses)}</strong></p>
+                    <h3 style="margin: 0 0 10px 0;">Udgifter</h3>
+                    <p style="margin: 0; color: var(--text-muted);">Total udgifter: <strong>${formatCurrency(totalExpenses)}</strong></p>
                 </div>
-                <button onclick="showAddExpense()" style="padding: 12px 24px; background: var(--color-accent-hover); color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: 600;">
-                    ➕ Tilføj Udgift
+                <button onclick="showAddExpense()" class="btn btn-primary">
+                    Tilføj Udgift
                 </button>
             </div>
             
@@ -565,8 +565,8 @@ function renderExpensesList() {
     
     if (workspaceExpenses.length === 0) {
         container.innerHTML = `
-            <div style="text-align: center; padding: 60px 20px; color: #999;">
-                <div style="font-size: 64px; margin-bottom: 20px;">💰</div>
+            <div style="text-align: center; padding: 60px 20px; color: var(--text-muted);">
+                <i data-lucide="coins" style="width:48px;height:48px;color:var(--text-muted);display:inline-block;margin-bottom:16px;"></i>
                 <h3>Ingen udgifter endnu</h3>
                 <p>Tilføj udgifter for at tracke projektets omkostninger</p>
             </div>
@@ -577,29 +577,29 @@ function renderExpensesList() {
     container.innerHTML = `
         <table style="width: 100%; border-collapse: collapse;">
             <thead>
-                <tr style="background: #f5f5f5;">
-                    <th style="padding: 15px; text-align: left; border-bottom: 2px solid #e0e0e0;">Dato</th>
-                    <th style="padding: 15px; text-align: left; border-bottom: 2px solid #e0e0e0;">Beskrivelse</th>
-                    <th style="padding: 15px; text-align: left; border-bottom: 2px solid #e0e0e0;">Kategori</th>
-                    <th style="padding: 15px; text-align: right; border-bottom: 2px solid #e0e0e0;">Beløb</th>
-                    <th style="padding: 15px; text-align: left; border-bottom: 2px solid #e0e0e0;">Tilføjet af</th>
-                    <th style="padding: 15px; text-align: center; border-bottom: 2px solid #e0e0e0;">Handlinger</th>
+                <tr style="background: var(--surface-muted);">
+                    <th style="padding: 15px; text-align: left; border-bottom: 2px solid var(--border);">Dato</th>
+                    <th style="padding: 15px; text-align: left; border-bottom: 2px solid var(--border);">Beskrivelse</th>
+                    <th style="padding: 15px; text-align: left; border-bottom: 2px solid var(--border);">Kategori</th>
+                    <th style="padding: 15px; text-align: right; border-bottom: 2px solid var(--border);">Beløb</th>
+                    <th style="padding: 15px; text-align: left; border-bottom: 2px solid var(--border);">Tilføjet af</th>
+                    <th style="padding: 15px; text-align: center; border-bottom: 2px solid var(--border);">Handlinger</th>
                 </tr>
             </thead>
             <tbody>
                 ${workspaceExpenses.map(exp => `
-                    <tr style="border-bottom: 1px solid #e0e0e0;">
+                    <tr style="border-bottom: 1px solid var(--border);">
                         <td style="padding: 15px;">${new Date(exp.expense_date).toLocaleDateString('da-DK')}</td>
                         <td style="padding: 15px;">${exp.description}</td>
                         <td style="padding: 15px;">${exp.category || '-'}</td>
                         <td style="padding: 15px; text-align: right; font-weight: 600; color: var(--color-red);">${formatCurrency(exp.amount)}</td>
                         <td style="padding: 15px;">${exp.created_by_name}</td>
                         <td style="padding: 15px; text-align: center;">
-                            <button onclick="editExpense(${exp.id})" style="padding: 6px 12px; margin-right: 5px; background: var(--color-accent-hover); color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">
-                                ✏️ Rediger
+                            <button onclick="editExpense(${exp.id})" class="btn btn-primary btn-sm">
+                                Rediger
                             </button>
                             <button onclick="deleteExpense(${exp.id})" style="padding: 6px 12px; background: var(--color-red); color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">
-                                🗑️ Slet
+                                Slet
                             </button>
                         </td>
                     </tr>
@@ -616,41 +616,41 @@ function showAddExpense() {
     modal.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 10000; display: flex; align-items: center; justify-content: center;';
     
     modal.innerHTML = `
-        <div style="background: white; border-radius: 10px; padding: 30px; max-width: 600px; width: 90%;">
-            <h2 style="margin: 0 0 20px 0;">➕ Tilføj Udgift</h2>
+        <div style="background: var(--surface); border-radius: 10px; padding: 30px; max-width: 600px; width: 90%;">
+            <h2 style="margin: 0 0 20px 0;">Tilføj Udgift</h2>
             
             <form id="expenseForm" onsubmit="event.preventDefault(); saveExpense();">
-                <div style="margin-bottom: 20px; padding: 15px; background: #f5f7ff; border: 1px solid #d0d7ff; border-radius: 8px;">
-                    <label style="display: block; margin-bottom: 8px; font-weight: 600;">🔍 Træk fra materiale-database <span style="font-weight: 400; color: #888;">(valgfrit — søg på nr. eller navn, fx "8000")</span></label>
-                    <input type="text" id="expenseMaterialSearch" autocomplete="off" placeholder="Søg materiale..." oninput="filterMaterialSearch(this.value)" onfocus="filterMaterialSearch(this.value)" style="width: 100%; padding: 10px; border: 1px solid #c5c5f0; border-radius: 5px; font-size: 14px; background: white;">
-                    <div id="expenseMaterialResults" style="display: none; max-height: 220px; overflow-y: auto; border: 1px solid #c5c5f0; border-radius: 5px; margin-top: 5px; background: white;"></div>
-                    <div id="expenseMaterialSelected" style="display: none; margin-top: 10px; padding: 10px; background: #e8f5e9; border-radius: 5px; font-size: 13px;"></div>
+                <div style="margin-bottom: 20px; padding: 15px; background: var(--surface-muted); border: 1px solid var(--border); border-radius: 8px;">
+                    <label style="display: block; margin-bottom: 8px; font-weight: 600;">Træk fra materiale-database <span style="font-weight: 400; color: var(--text-muted);">(valgfrit — søg på nr. eller navn, fx "8000")</span></label>
+                    <input type="text" id="expenseMaterialSearch" autocomplete="off" placeholder="Søg materiale..." oninput="filterMaterialSearch(this.value)" onfocus="filterMaterialSearch(this.value)" style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 5px; font-size: 14px; background: var(--surface);">
+                    <div id="expenseMaterialResults" style="display: none; max-height: 220px; overflow-y: auto; border: 1px solid var(--border); border-radius: 5px; margin-top: 5px; background: var(--surface);"></div>
+                    <div id="expenseMaterialSelected" style="display: none; margin-top: 10px; padding: 10px; background: var(--accent-soft); border-radius: 5px; font-size: 13px;"></div>
                 </div>
 
                 <div style="margin-bottom: 20px;">
                     <label style="display: block; margin-bottom: 8px; font-weight: 600;">Beskrivelse *</label>
-                    <textarea id="expenseDescription" required rows="3" style="width: 100%; padding: 10px; border: 1px solid #e0e0e0; border-radius: 5px; font-size: 14px; resize: vertical;"></textarea>
+                    <textarea id="expenseDescription" required rows="3" style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 5px; font-size: 14px; resize: vertical;"></textarea>
                 </div>
                 
                 <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; margin-bottom: 20px;">
                     <div>
                         <label style="display: block; margin-bottom: 8px; font-weight: 600;">Antal</label>
-                        <input type="number" id="expenseQuantity" min="0" step="0.01" value="1" oninput="recalcExpenseAmount()" style="width: 100%; padding: 10px; border: 1px solid #e0e0e0; border-radius: 5px; font-size: 14px;">
+                        <input type="number" id="expenseQuantity" min="0" step="0.01" value="1" oninput="recalcExpenseAmount()" style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 5px; font-size: 14px;">
                     </div>
                     <div>
                         <label style="display: block; margin-bottom: 8px; font-weight: 600;">Beløb (DKK) *</label>
-                        <input type="number" id="expenseAmount" required min="0" step="0.01" oninput="clearExpenseMaterialLink()" style="width: 100%; padding: 10px; border: 1px solid #e0e0e0; border-radius: 5px; font-size: 14px;">
+                        <input type="number" id="expenseAmount" required min="0" step="0.01" oninput="clearExpenseMaterialLink()" style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 5px; font-size: 14px;">
                     </div>
                     
                     <div>
                         <label style="display: block; margin-bottom: 8px; font-weight: 600;">Dato</label>
-                        <input type="date" id="expenseDate" value="${new Date().toISOString().split('T')[0]}" style="width: 100%; padding: 10px; border: 1px solid #e0e0e0; border-radius: 5px; font-size: 14px;">
+                        <input type="date" id="expenseDate" value="${new Date().toISOString().split('T')[0]}" style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 5px; font-size: 14px;">
                     </div>
                 </div>
                 
                 <div style="margin-bottom: 30px;">
                     <label style="display: block; margin-bottom: 8px; font-weight: 600;">Kategori</label>
-                    <select id="expenseCategory" style="width: 100%; padding: 10px; border: 1px solid #e0e0e0; border-radius: 5px; font-size: 14px;">
+                    <select id="expenseCategory" style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 5px; font-size: 14px;">
                         <option value="">Vælg kategori...</option>
                         <option value="Materialer">Materialer</option>
                         <option value="Arbejdskraft">Arbejdskraft</option>
@@ -661,11 +661,11 @@ function showAddExpense() {
                 </div>
                 
                 <div style="display: flex; gap: 10px; justify-content: flex-end;">
-                    <button type="button" onclick="closeExpenseModal()" style="padding: 12px 24px; background: #999; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 14px;">
+                    <button type="button" onclick="closeExpenseModal()" class="btn btn-secondary">
                         Annuller
                     </button>
-                    <button type="submit" style="padding: 12px 24px; background: var(--color-accent-hover); color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 14px;">
-                        💾 Gem Udgift
+                    <button type="submit" class="btn btn-primary">
+                        Gem Udgift
                     </button>
                 </div>
             </form>
@@ -709,15 +709,15 @@ function filterMaterialSearch(query) {
     ).slice(0, 20);
     
     if (matches.length === 0) {
-        resultsDiv.innerHTML = '<div style="padding: 10px; color: #999; font-size: 13px;">Ingen materialer matcher</div>';
+        resultsDiv.innerHTML = '<div style="padding: 10px; color: var(--text-muted); font-size: 13px;">Ingen materialer matcher</div>';
         resultsDiv.style.display = 'block';
         return;
     }
     
     resultsDiv.innerHTML = matches.map(m => `
-        <div onclick="selectExpenseMaterial(${m.id})" style="padding: 10px; cursor: pointer; border-bottom: 1px solid #f0f0f0;" onmouseover="this.style.background='#f5f7ff'" onmouseout="this.style.background='white'">
+        <div onclick="selectExpenseMaterial(${m.id})" style="padding: 10px; cursor: pointer; border-bottom: 1px solid var(--border-soft);" onmouseover="this.style.background='var(--surface-muted)'" onmouseout="this.style.background='white'">
             <strong>${m.material_number}</strong> — ${m.name}
-            <span style="float: right; color: #666; font-size: 12px;">Kost: ${formatCurrency(m.cost_price)} | Salg: ${formatCurrency(m.sales_price)} / ${m.unit || 'stk'}</span>
+            <span style="float: right; color: var(--text-muted); font-size: 12px;">Kost: ${formatCurrency(m.cost_price)} | Salg: ${formatCurrency(m.sales_price)} / ${m.unit || 'stk'}</span>
         </div>
     `).join('');
     resultsDiv.style.display = 'block';
@@ -736,9 +736,9 @@ function selectExpenseMaterial(materialId) {
     
     // Show selected material info
     const selectedDiv = document.getElementById('expenseMaterialSelected');
-    selectedDiv.innerHTML = `✅ <strong>${material.material_number} — ${material.name}</strong><br>
+    selectedDiv.innerHTML = `<strong>${material.material_number} — ${material.name}</strong><br>
         Kostpris: ${formatCurrency(material.cost_price)} | Salgspris: ${formatCurrency(material.sales_price)} pr. ${material.unit || 'stk'} (beløb = antal × kostpris, kan redigeres)
-        <button type="button" onclick="clearExpenseMaterialLink()" style="float: right; padding: 2px 8px; background: #999; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">Fjern</button>`;
+        <button type="button" onclick="clearExpenseMaterialLink()" style="float: right; padding: 2px 8px; background: var(--text-muted); color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">Fjern</button>`;
     selectedDiv.style.display = 'block';
     
     // Hide search results
@@ -803,7 +803,7 @@ async function saveExpense() {
         workspaceExpenses.unshift(expense);
         
         closeExpenseModal();
-        alert('✅ Udgift tilføjet!');
+        alert('Udgift tilføjet!');
         
         // Refresh workspace
         await openOrderWorkspace(currentWorkspaceOrder.id);
@@ -825,30 +825,30 @@ function editExpense(expenseId) {
     modal.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 10000; display: flex; align-items: center; justify-content: center;';
     
     modal.innerHTML = `
-        <div style="background: white; border-radius: 10px; padding: 30px; max-width: 600px; width: 90%;">
-            <h2 style="margin: 0 0 20px 0;">✏️ Rediger Udgift</h2>
+        <div style="background: var(--surface); border-radius: 10px; padding: 30px; max-width: 600px; width: 90%;">
+            <h2 style="margin: 0 0 20px 0;">Rediger Udgift</h2>
             
             <form id="expenseForm" onsubmit="event.preventDefault(); updateExpense(${expenseId});">
                 <div style="margin-bottom: 20px;">
                     <label style="display: block; margin-bottom: 8px; font-weight: 600;">Beskrivelse *</label>
-                    <textarea id="expenseDescription" required rows="3" style="width: 100%; padding: 10px; border: 1px solid #e0e0e0; border-radius: 5px; font-size: 14px; resize: vertical;">${expense.description}</textarea>
+                    <textarea id="expenseDescription" required rows="3" style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 5px; font-size: 14px; resize: vertical;">${expense.description}</textarea>
                 </div>
                 
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
                     <div>
                         <label style="display: block; margin-bottom: 8px; font-weight: 600;">Beløb (DKK) *</label>
-                        <input type="number" id="expenseAmount" required min="0" step="0.01" value="${expense.amount}" style="width: 100%; padding: 10px; border: 1px solid #e0e0e0; border-radius: 5px; font-size: 14px;">
+                        <input type="number" id="expenseAmount" required min="0" step="0.01" value="${expense.amount}" style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 5px; font-size: 14px;">
                     </div>
                     
                     <div>
                         <label style="display: block; margin-bottom: 8px; font-weight: 600;">Dato</label>
-                        <input type="date" id="expenseDate" value="${expense.expense_date}" style="width: 100%; padding: 10px; border: 1px solid #e0e0e0; border-radius: 5px; font-size: 14px;">
+                        <input type="date" id="expenseDate" value="${expense.expense_date}" style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 5px; font-size: 14px;">
                     </div>
                 </div>
                 
                 <div style="margin-bottom: 30px;">
                     <label style="display: block; margin-bottom: 8px; font-weight: 600;">Kategori</label>
-                    <select id="expenseCategory" style="width: 100%; padding: 10px; border: 1px solid #e0e0e0; border-radius: 5px; font-size: 14px;">
+                    <select id="expenseCategory" style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 5px; font-size: 14px;">
                         <option value="">Vælg kategori...</option>
                         <option value="Materialer" ${expense.category === 'Materialer' ? 'selected' : ''}>Materialer</option>
                         <option value="Arbejdskraft" ${expense.category === 'Arbejdskraft' ? 'selected' : ''}>Arbejdskraft</option>
@@ -859,11 +859,11 @@ function editExpense(expenseId) {
                 </div>
                 
                 <div style="display: flex; gap: 10px; justify-content: flex-end;">
-                    <button type="button" onclick="closeExpenseModal()" style="padding: 12px 24px; background: #999; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 14px;">
+                    <button type="button" onclick="closeExpenseModal()" class="btn btn-secondary">
                         Annuller
                     </button>
-                    <button type="submit" style="padding: 12px 24px; background: var(--color-accent-hover); color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 14px;">
-                        💾 Gem Ændringer
+                    <button type="submit" class="btn btn-primary">
+                        Gem Ændringer
                     </button>
                 </div>
             </form>
@@ -899,7 +899,7 @@ async function updateExpense(expenseId) {
         if (!response.ok) throw new Error('Failed to update expense');
         
         closeExpenseModal();
-        alert('✅ Udgift opdateret!');
+        alert('Udgift opdateret!');
         
         // Refresh workspace
         await openOrderWorkspace(currentWorkspaceOrder.id);
@@ -924,7 +924,7 @@ async function deleteExpense(expenseId) {
         
         if (!response.ok) throw new Error('Failed to delete expense');
         
-        alert('✅ Udgift slettet!');
+        alert('Udgift slettet!');
         
         // Refresh
         await openOrderWorkspace(currentWorkspaceOrder.id);
@@ -939,14 +939,14 @@ async function deleteExpense(expenseId) {
 // Render documents tab
 function renderWorkspaceDocuments(container) {
     container.innerHTML = `
-        <div style="background: white; padding: 30px; border-radius: 10px; border: 2px solid #e0e0e0;">
+        <div style="background: var(--surface); padding: 30px; border-radius: 10px; border: 2px solid var(--border);">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
                 <div>
-                    <h3 style="margin: 0 0 10px 0;">📎 Dokumenter</h3>
-                    <p style="margin: 0; color: #666;">Dokumenter tilknyttet denne ordre (${workspaceDocuments.length})</p>
+                    <h3 style="margin: 0 0 10px 0;"> Dokumenter</h3>
+                    <p style="margin: 0; color: var(--text-muted);">Dokumenter tilknyttet denne ordre (${workspaceDocuments.length})</p>
                 </div>
-                <button onclick="showUploadDocument()" style="padding: 12px 24px; background: var(--color-accent-hover); color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: 600;">
-                    ➕ Upload Dokument
+                <button onclick="showUploadDocument()" class="btn btn-primary">
+                    Upload Dokument
                 </button>
             </div>
             
@@ -963,8 +963,8 @@ function renderDocumentsList() {
     
     if (workspaceDocuments.length === 0) {
         container.innerHTML = `
-            <div style="text-align: center; padding: 60px 20px; color: #999;">
-                <div style="font-size: 64px; margin-bottom: 20px;">📎</div>
+            <div style="text-align: center; padding: 60px 20px; color: var(--text-muted);">
+                <div style="font-size: 64px; margin-bottom: 20px;"></div>
                 <h3>Ingen dokumenter endnu</h3>
                 <p>Upload dokumenter for at dele dem med teamet</p>
             </div>
@@ -980,25 +980,25 @@ function renderDocumentsList() {
                 const date = new Date(doc.created_at).toLocaleDateString('da-DK');
                 
                 return `
-                    <div style="background: #f9f9f9; padding: 20px; border-radius: 8px; border: 2px solid #e0e0e0; display: flex; justify-content: space-between; align-items: center;">
+                    <div style="background: var(--surface-muted); padding: 20px; border-radius: 8px; border: 2px solid var(--border); display: flex; justify-content: space-between; align-items: center;">
                         <div style="display: flex; align-items: center; gap: 15px; flex: 1;">
                             <div style="font-size: 32px;">${icon}</div>
                             <div style="flex: 1;">
                                 <div style="font-weight: 600; margin-bottom: 5px;">${doc.original_name}</div>
-                                <div style="font-size: 13px; color: #666;">
+                                <div style="font-size: 13px; color: var(--text-muted);">
                                     ${size} • ${doc.document_type || 'Dokument'} • Uploadet af ${doc.uploaded_by_name} • ${date}
                                 </div>
                             </div>
                         </div>
                         <div style="display: flex; gap: 10px;">
                             <button onclick="previewDocument(${doc.id}, '${doc.original_name.replace(/'/g, "\\'")}')" style="padding: 8px 16px; background: var(--color-blue); color: white; border: none; border-radius: 5px; cursor: pointer;">
-                                👁️ Preview
+                                Preview
                             </button>
-                            <button onclick="downloadDocument(${doc.id}, '${doc.original_name.replace(/'/g, "\\'")}')" style="padding: 8px 16px; background: var(--color-accent-hover); color: white; border: none; border-radius: 5px; cursor: pointer;">
-                                💾 Download
+                            <button onclick="downloadDocument(${doc.id}, '${doc.original_name.replace(/'/g, "\\'")}')" class="btn btn-primary btn-sm">
+                                Download
                             </button>
                             <button onclick="deleteDocument(${doc.id})" style="padding: 8px 16px; background: var(--color-red); color: white; border: none; border-radius: 5px; cursor: pointer;">
-                                🗑️ Slet
+                                Slet
                             </button>
                         </div>
                     </div>
@@ -1012,15 +1012,15 @@ function renderDocumentsList() {
 function getDocumentIcon(filename) {
     const ext = filename.split('.').pop().toLowerCase();
     const icons = {
-        'pdf': '📄',
-        'doc': '📝', 'docx': '📝',
-        'xls': '📊', 'xlsx': '📊',
-        'ppt': '📊', 'pptx': '📊',
-        'jpg': '🖼️', 'jpeg': '🖼️', 'png': '🖼️', 'gif': '🖼️',
-        'zip': '📦', 'rar': '📦',
-        'txt': '📃'
+        'pdf': '',
+        'doc': '', 'docx': '',
+        'xls': '', 'xlsx': '',
+        'ppt': '', 'pptx': '',
+        'jpg': '', 'jpeg': '', 'png': '', 'gif': '',
+        'zip': '', 'rar': '',
+        'txt': ''
     };
-    return icons[ext] || '📄';
+    return icons[ext] || '';
 }
 
 // Format file size
@@ -1038,18 +1038,18 @@ function showUploadDocument() {
     modal.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 10000; display: flex; align-items: center; justify-content: center;';
     
     modal.innerHTML = `
-        <div style="background: white; border-radius: 10px; padding: 30px; max-width: 500px; width: 90%;">
-            <h2 style="margin: 0 0 20px 0;">📎 Upload Dokument</h2>
+        <div style="background: var(--surface); border-radius: 10px; padding: 30px; max-width: 500px; width: 90%;">
+            <h2 style="margin: 0 0 20px 0;"> Upload Dokument</h2>
             
             <form id="documentForm" onsubmit="event.preventDefault(); uploadDocument();">
                 <div style="margin-bottom: 20px;">
                     <label style="display: block; margin-bottom: 8px; font-weight: 600;">Vælg fil *</label>
-                    <input type="file" id="documentFile" required style="width: 100%; padding: 10px; border: 1px solid #e0e0e0; border-radius: 5px; font-size: 14px;">
+                    <input type="file" id="documentFile" required style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 5px; font-size: 14px;">
                 </div>
                 
                 <div style="margin-bottom: 30px;">
                     <label style="display: block; margin-bottom: 8px; font-weight: 600;">Dokument Type</label>
-                    <select id="documentType" style="width: 100%; padding: 10px; border: 1px solid #e0e0e0; border-radius: 5px; font-size: 14px;">
+                    <select id="documentType" style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 5px; font-size: 14px;">
                         <option value="general">Generelt</option>
                         <option value="contract">Kontrakt</option>
                         <option value="invoice">Faktura</option>
@@ -1061,11 +1061,11 @@ function showUploadDocument() {
                 </div>
                 
                 <div style="display: flex; gap: 10px; justify-content: flex-end;">
-                    <button type="button" onclick="closeDocumentModal()" style="padding: 12px 24px; background: #999; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 14px;">
+                    <button type="button" onclick="closeDocumentModal()" class="btn btn-secondary">
                         Annuller
                     </button>
-                    <button type="submit" style="padding: 12px 24px; background: var(--color-accent-hover); color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 14px;">
-                        📤 Upload
+                    <button type="submit" class="btn btn-primary">
+                        Upload
                     </button>
                 </div>
             </form>
@@ -1125,7 +1125,7 @@ async function uploadDocument() {
         workspaceDocuments.unshift(document);
         
         closeDocumentModal();
-        alert('✅ Dokument uploadet!');
+        alert('Dokument uploadet!');
         
         // Refresh documents list
         renderDocumentsList();
@@ -1133,7 +1133,7 @@ async function uploadDocument() {
         // Update tab count
         const tab = document.getElementById('workspaceTabDocuments');
         if (tab) {
-            tab.textContent = `📎 Dokumenter (${workspaceDocuments.length})`;
+            tab.textContent = ` Dokumenter (${workspaceDocuments.length})`;
         }
         
     } catch (error) {
@@ -1173,8 +1173,8 @@ async function previewDocument(documentId, filename) {
             
             modal.innerHTML = `
                 <div style="position: relative; max-width: 90%; max-height: 90%; padding: 20px;">
-                    <div style="position: absolute; top: 10px; right: 10px; background: white; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-weight: 600;" onclick="closePreviewModal()">
-                        ✕ Luk
+                    <div style="position: absolute; top: 10px; right: 10px; background: var(--surface); padding: 10px 20px; border-radius: 5px; cursor: pointer; font-weight: 600;" onclick="closePreviewModal()">
+                        Luk
                     </div>
                     <img src="${fileUrl}" alt="${filename}" style="max-width: 100%; max-height: 85vh; border-radius: 8px; box-shadow: 0 10px 40px rgba(0,0,0,0.5);">
                     <div style="text-align: center; color: white; margin-top: 20px; font-size: 18px;">
@@ -1198,11 +1198,11 @@ async function previewDocument(documentId, filename) {
             modal.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.9); z-index: 10001; display: flex; align-items: center; justify-content: center;';
             
             modal.innerHTML = `
-                <div style="position: relative; width: 90%; height: 90%; background: white; border-radius: 10px; padding: 20px;">
+                <div style="position: relative; width: 90%; height: 90%; background: var(--surface); border-radius: 10px; padding: 20px;">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
                         <h3 style="margin: 0;">${filename}</h3>
                         <button onclick="closePreviewModal()" style="padding: 10px 20px; background: var(--color-red); color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: 600;">
-                            ✕ Luk
+                            Luk
                         </button>
                     </div>
                     <iframe src="${fileUrl}" style="width: 100%; height: calc(100% - 60px); border: none; border-radius: 5px;"></iframe>
@@ -1270,7 +1270,7 @@ async function deleteDocument(documentId) {
         
         if (!response.ok) throw new Error('Failed to delete document');
         
-        alert('✅ Dokument slettet!');
+        alert('Dokument slettet!');
         
         // Remove from array
         workspaceDocuments = workspaceDocuments.filter(d => d.id !== documentId);
@@ -1281,7 +1281,7 @@ async function deleteDocument(documentId) {
         // Update tab count
         const tab = document.getElementById('workspaceTabDocuments');
         if (tab) {
-            tab.textContent = `📎 Dokumenter (${workspaceDocuments.length})`;
+            tab.textContent = ` Dokumenter (${workspaceDocuments.length})`;
         }
         
     } catch (error) {
@@ -1296,9 +1296,9 @@ function renderWorkspaceMaterials(container) {
     
     if (lines.length === 0) {
         container.innerHTML = `
-            <div style="background: white; padding: 30px; border-radius: 10px; border: 2px solid #e0e0e0;">
+            <div style="background: var(--surface); padding: 30px; border-radius: 10px; border: 2px solid var(--border);">
                 <h3 style="margin: 0 0 20px 0;">⏱ Timer & Materialer</h3>
-                <p style="color: #666; text-align: center; padding: 40px;">Ingen timer eller materialer registreret på denne sag endnu.<br>
+                <p style="color: var(--text-muted); text-align: center; padding: 40px;">Ingen timer eller materialer registreret på denne sag endnu.<br>
                 <span style="font-size: 13px;">Timer registreret via "Min Tid" med denne sag valgt, dukker automatisk op her.</span></p>
             </div>
         `;
@@ -1319,48 +1319,48 @@ function renderWorkspaceMaterials(container) {
         
         const description = isTime
             ? `⏱ Timeregistrering (${line.material_number || '?'})`
-            : `📦 ${line.material_name || 'Materiale'} (${line.material_number || '?'})`;
+            : ` ${line.material_name || 'Materiale'} (${line.material_number || '?'})`;
         const date = line.time_entry_date || (line.added_at ? line.added_at.substring(0, 10) : '');
         
         return `
-            <tr style="border-bottom: 1px solid #eee;">
+            <tr style="border-bottom: 1px solid var(--border-soft);">
                 <td style="padding: 10px 12px; font-size: 13px; white-space: nowrap;">${date}</td>
                 <td style="padding: 10px 12px; font-size: 13px;">${description}</td>
                 <td style="padding: 10px 12px; font-size: 13px;">${line.added_by_name || '-'}</td>
                 <td style="padding: 10px 12px; font-size: 13px; text-align: right;">${line.quantity} ${isTime ? 't' : ''}</td>
                 <td style="padding: 10px 12px; font-size: 13px; text-align: right;">${cost.toFixed(2)} kr</td>
-                <td style="padding: 10px 12px; font-size: 13px; text-align: right; color: #2e7d32;">${sale.toFixed(2)} kr</td>
+                <td style="padding: 10px 12px; font-size: 13px; text-align: right; color: var(--success);">${sale.toFixed(2)} kr</td>
             </tr>
         `;
     }).join('');
     
     container.innerHTML = `
-        <div style="background: white; padding: 30px; border-radius: 10px; border: 2px solid #e0e0e0;">
+        <div style="background: var(--surface); padding: 30px; border-radius: 10px; border: 2px solid var(--border);">
             <h3 style="margin: 0 0 20px 0;">⏱ Timer & Materialer</h3>
             <div style="overflow-x: auto;">
                 <table style="width: 100%; border-collapse: collapse;">
                     <thead>
-                        <tr style="border-bottom: 2px solid #e0e0e0; text-align: left;">
-                            <th style="padding: 10px 12px; font-size: 12px; color: #666; text-transform: uppercase;">Dato</th>
-                            <th style="padding: 10px 12px; font-size: 12px; color: #666; text-transform: uppercase;">Beskrivelse</th>
-                            <th style="padding: 10px 12px; font-size: 12px; color: #666; text-transform: uppercase;">Registreret af</th>
-                            <th style="padding: 10px 12px; font-size: 12px; color: #666; text-transform: uppercase; text-align: right;">Antal</th>
-                            <th style="padding: 10px 12px; font-size: 12px; color: #666; text-transform: uppercase; text-align: right;">Udgift</th>
-                            <th style="padding: 10px 12px; font-size: 12px; color: #666; text-transform: uppercase; text-align: right;">Salg</th>
+                        <tr style="border-bottom: 2px solid var(--border); text-align: left;">
+                            <th style="padding: 10px 12px; font-size: 12px; color: var(--text-muted); text-transform: uppercase;">Dato</th>
+                            <th style="padding: 10px 12px; font-size: 12px; color: var(--text-muted); text-transform: uppercase;">Beskrivelse</th>
+                            <th style="padding: 10px 12px; font-size: 12px; color: var(--text-muted); text-transform: uppercase;">Registreret af</th>
+                            <th style="padding: 10px 12px; font-size: 12px; color: var(--text-muted); text-transform: uppercase; text-align: right;">Antal</th>
+                            <th style="padding: 10px 12px; font-size: 12px; color: var(--text-muted); text-transform: uppercase; text-align: right;">Udgift</th>
+                            <th style="padding: 10px 12px; font-size: 12px; color: var(--text-muted); text-transform: uppercase; text-align: right;">Salg</th>
                         </tr>
                     </thead>
                     <tbody>${rows}</tbody>
                     <tfoot>
-                        <tr style="border-top: 2px solid #e0e0e0; font-weight: 700;">
+                        <tr style="border-top: 2px solid var(--border); font-weight: 700;">
                             <td colspan="3" style="padding: 12px; font-size: 13px;">I alt${totalHours > 0 ? ` (${totalHours.toFixed(2)} timer)` : ''}</td>
                             <td></td>
-                            <td style="padding: 12px; font-size: 13px; text-align: right; color: #c62828;">${totalCost.toFixed(2)} kr</td>
-                            <td style="padding: 12px; font-size: 13px; text-align: right; color: #2e7d32;">${totalSale.toFixed(2)} kr</td>
+                            <td style="padding: 12px; font-size: 13px; text-align: right; color: var(--danger);">${totalCost.toFixed(2)} kr</td>
+                            <td style="padding: 12px; font-size: 13px; text-align: right; color: var(--success);">${totalSale.toFixed(2)} kr</td>
                         </tr>
                     </tfoot>
                 </table>
             </div>
-            <p style="font-size: 12px; color: #999; margin-top: 15px;">💡 Udgifterne er allerede trukket fra sagens overskud. Salgssøjlen viser linjernes fakturerbare værdi (relevant ved forbrugssager).</p>
+            <p style="font-size: 12px; color: var(--text-muted); margin-top: 15px;">Udgifterne er allerede trukket fra sagens overskud. Salgssøjlen viser linjernes fakturerbare værdi (relevant ved forbrugssager).</p>
         </div>
     `;
 }
@@ -1368,14 +1368,14 @@ function renderWorkspaceMaterials(container) {
 // Render timeline tab
 function renderWorkspaceTimeline(container) {
     container.innerHTML = `
-        <div style="background: white; padding: 30px; border-radius: 10px; border: 2px solid #e0e0e0;">
-            <h3 style="margin: 0 0 20px 0;">🕐 Timeline</h3>
+        <div style="background: var(--surface); padding: 30px; border-radius: 10px; border: 2px solid var(--border);">
+            <h3 style="margin: 0 0 20px 0;">Timeline</h3>
             ${workspaceTimeline.length === 0 ? 
-                '<p style="color: #666; text-align: center; padding: 40px;">Ingen aktiviteter endnu</p>' :
+                '<p style="color: var(--text-muted); text-align: center; padding: 40px;">Ingen aktiviteter endnu</p>' :
                 workspaceTimeline.map(entry => `
-                    <div style="padding: 15px; border-left: 3px solid var(--color-accent-hover); margin-bottom: 15px; background: #f9f9f9;">
+                    <div style="padding: 15px; border-left: 3px solid var(--color-accent-hover); margin-bottom: 15px; background: var(--surface-muted);">
                         <div style="font-weight: 600; margin-bottom: 5px;">${entry.description}</div>
-                        <div style="font-size: 12px; color: #666;">${entry.user_name} • ${convertUTCtoLocal(entry.created_at)}</div>
+                        <div style="font-size: 12px; color: var(--text-muted);">${entry.user_name} • ${convertUTCtoLocal(entry.created_at)}</div>
                     </div>
                 `).join('')
             }
@@ -1386,9 +1386,9 @@ function renderWorkspaceTimeline(container) {
 // Render notes tab (placeholder)
 function renderWorkspaceNotes(container) {
     container.innerHTML = `
-        <div style="background: white; padding: 30px; border-radius: 10px; border: 2px solid #e0e0e0;">
-            <h3 style="margin: 0 0 20px 0;">📝 Noter</h3>
-            <p style="color: #666;">Noter funktionalitet kommer snart...</p>
+        <div style="background: var(--surface); padding: 30px; border-radius: 10px; border: 2px solid var(--border);">
+            <h3 style="margin: 0 0 20px 0;"> Noter</h3>
+            <p style="color: var(--text-muted);">Noter funktionalitet kommer snart...</p>
         </div>
     `;
 }
@@ -1421,32 +1421,32 @@ async function createExtraWork(parentOrderId) {
     modal.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); z-index: 10001; display: flex; align-items: center; justify-content: center; overflow-y: auto;';
     
     modal.innerHTML = `
-        <div style="background: white; border-radius: 10px; padding: 30px; max-width: 1000px; width: 90%; max-height: 90vh; overflow-y: auto; margin: 20px;">
-            <h2 style="margin: 0 0 20px 0; color: var(--color-orange);">➕ Opret Ekstraarbejde</h2>
-            <p style="color: #666; margin-bottom: 30px;">Ekstraarbejde oprettes som en under-ordre knyttet til hoved-ordren.</p>
+        <div style="background: var(--surface); border-radius: 10px; padding: 30px; max-width: 1000px; width: 90%; max-height: 90vh; overflow-y: auto; margin: 20px;">
+            <h2 style="margin: 0 0 20px 0; color: var(--color-orange);">Opret Ekstraarbejde</h2>
+            <p style="color: var(--text-muted); margin-bottom: 30px;">Ekstraarbejde oprettes som en under-ordre knyttet til hoved-ordren.</p>
             
             <form id="extraWorkForm" onsubmit="event.preventDefault(); saveExtraWork(${parentOrderId});">
                 <div style="margin-bottom: 20px;">
                     <label style="display: block; margin-bottom: 8px; font-weight: 600;">Titel *</label>
-                    <input type="text" id="extraWorkTitle" required placeholder="F.eks. Ekstra gulvbelægning i gang" style="width: 100%; padding: 10px; border: 1px solid #e0e0e0; border-radius: 5px; font-size: 14px;">
+                    <input type="text" id="extraWorkTitle" required placeholder="F.eks. Ekstra gulvbelægning i gang" style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 5px; font-size: 14px;">
                 </div>
                 
                 <div style="margin-bottom: 20px;">
                     <label style="display: block; margin-bottom: 8px; font-weight: 600;">Beskrivelse/Noter</label>
-                    <textarea id="extraWorkNotes" rows="3" placeholder="Interne noter om ekstraarbejdet..." style="width: 100%; padding: 10px; border: 1px solid #e0e0e0; border-radius: 5px; font-size: 14px; resize: vertical;"></textarea>
+                    <textarea id="extraWorkNotes" rows="3" placeholder="Interne noter om ekstraarbejdet..." style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 5px; font-size: 14px; resize: vertical;"></textarea>
                 </div>
                 
                 <div style="margin-bottom: 30px;">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
                         <h3 style="margin: 0;">Arbejdslinjer</h3>
                         <button type="button" onclick="addExtraWorkLine()" style="padding: 8px 16px; background: var(--color-orange); color: white; border: none; border-radius: 5px; cursor: pointer;">
-                            ➕ Tilføj Linje
+                            Tilføj Linje
                         </button>
                     </div>
                     <div id="extraWorkLinesContainer"></div>
                 </div>
                 
-                <div style="background: #fff3e0; padding: 20px; border-radius: 8px; margin-bottom: 30px; border: 2px solid var(--color-orange);">
+                <div style="background: var(--accent-soft); padding: 20px; border-radius: 8px; margin-bottom: 30px; border: 2px solid var(--color-orange);">
                     <div style="display: flex; justify-content: flex-end; gap: 15px; font-size: 16px;">
                         <div>
                             <strong>Subtotal:</strong> <span id="extraWorkSubtotal">0,00 kr.</span>
@@ -1461,11 +1461,11 @@ async function createExtraWork(parentOrderId) {
                 </div>
                 
                 <div style="display: flex; gap: 10px; justify-content: flex-end;">
-                    <button type="button" onclick="closeExtraWorkModal()" style="padding: 12px 24px; background: #999; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 14px;">
+                    <button type="button" onclick="closeExtraWorkModal()" class="btn btn-secondary">
                         Annuller
                     </button>
                     <button type="submit" style="padding: 12px 24px; background: var(--color-orange); color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 14px;">
-                        💾 Opret Ekstraarbejde
+                        Opret Ekstraarbejde
                     </button>
                 </div>
             </form>
@@ -1484,50 +1484,50 @@ function renderExtraWorkLines() {
     const container = document.getElementById('extraWorkLinesContainer');
     
     if (!extraWorkLines || extraWorkLines.length === 0) {
-        container.innerHTML = '<p style="text-align: center; color: #999; padding: 20px;">Ingen linjer endnu. Klik "➕ Tilføj Linje"</p>';
+        container.innerHTML = '<p style="text-align: center; color: var(--text-muted); padding: 20px;">Ingen linjer endnu. Klik "Tilføj Linje"</p>';
         return;
     }
     
     container.innerHTML = extraWorkLines.map((line, index) => `
-        <div style="background: #f9f9f9; padding: 15px; border-radius: 8px; margin-bottom: 15px; border: 2px solid #e0e0e0;">
+        <div style="background: var(--surface-muted); padding: 15px; border-radius: 8px; margin-bottom: 15px; border: 2px solid var(--border);">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
                 <strong>Linje ${index + 1}</strong>
                 <button type="button" onclick="removeExtraWorkLine(${index})" style="padding: 5px 10px; background: var(--color-red); color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">
-                    🗑️ Fjern
+                    Fjern
                 </button>
             </div>
             
             <div style="margin-bottom: 10px;">
                 <label style="display: block; margin-bottom: 5px; font-size: 13px; font-weight: 600;">Beskrivelse *</label>
-                <textarea id="extraLineDesc${index}" rows="2" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px; resize: vertical;" onchange="updateExtraWorkLine(${index})">${line.description || ''}</textarea>
+                <textarea id="extraLineDesc${index}" rows="2" style="width: 100%; padding: 8px; border: 1px solid var(--border); border-radius: 4px; font-size: 13px; resize: vertical;" onchange="updateExtraWorkLine(${index})">${line.description || ''}</textarea>
             </div>
             
             <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr 2fr; gap: 10px;">
                 <div>
                     <label style="display: block; margin-bottom: 5px; font-size: 13px; font-weight: 600;">Antal *</label>
-                    <input type="number" id="extraLineQty${index}" value="${line.quantity || 1}" min="0" step="0.01" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px;" onchange="updateExtraWorkLine(${index})">
+                    <input type="number" id="extraLineQty${index}" value="${line.quantity || 1}" min="0" step="0.01" style="width: 100%; padding: 8px; border: 1px solid var(--border); border-radius: 4px; font-size: 13px;" onchange="updateExtraWorkLine(${index})">
                 </div>
                 
                 <div>
                     <label style="display: block; margin-bottom: 5px; font-size: 13px; font-weight: 600;">Enhed *</label>
-                    <select id="extraLineUnit${index}" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px;" onchange="updateExtraWorkLine(${index})">
+                    <select id="extraLineUnit${index}" style="width: 100%; padding: 8px; border: 1px solid var(--border); border-radius: 4px; font-size: 13px;" onchange="updateExtraWorkLine(${index})">
                         ${UNITS.map(unit => `<option value="${unit}" ${line.unit === unit ? 'selected' : ''}>${unit}</option>`).join('')}
                     </select>
                 </div>
                 
                 <div>
                     <label style="display: block; margin-bottom: 5px; font-size: 13px; font-weight: 600;">E.pris *</label>
-                    <input type="number" id="extraLinePrice${index}" value="${line.unit_price || 0}" min="0" step="0.01" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px;" onchange="updateExtraWorkLine(${index})">
+                    <input type="number" id="extraLinePrice${index}" value="${line.unit_price || 0}" min="0" step="0.01" style="width: 100%; padding: 8px; border: 1px solid var(--border); border-radius: 4px; font-size: 13px;" onchange="updateExtraWorkLine(${index})">
                 </div>
                 
                 <div>
                     <label style="display: block; margin-bottom: 5px; font-size: 13px; font-weight: 600;">Rabat %</label>
-                    <input type="number" id="extraLineDiscount${index}" value="${line.discount_percent || 0}" min="0" max="100" step="0.1" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px;" onchange="updateExtraWorkLine(${index})">
+                    <input type="number" id="extraLineDiscount${index}" value="${line.discount_percent || 0}" min="0" max="100" step="0.1" style="width: 100%; padding: 8px; border: 1px solid var(--border); border-radius: 4px; font-size: 13px;" onchange="updateExtraWorkLine(${index})">
                 </div>
                 
                 <div>
                     <label style="display: block; margin-bottom: 5px; font-size: 13px; font-weight: 600;">Total</label>
-                    <div id="extraLineTotal${index}" style="padding: 8px; background: white; border: 1px solid #ddd; border-radius: 4px; font-size: 13px; font-weight: 600; color: var(--color-orange);">
+                    <div id="extraLineTotal${index}" style="padding: 8px; background: var(--surface); border: 1px solid var(--border); border-radius: 4px; font-size: 13px; font-weight: 600; color: var(--color-orange);">
                         ${formatCurrency(calculateLineTotal(line))}
                     </div>
                 </div>
@@ -1634,7 +1634,7 @@ async function saveExtraWork(parentOrderId) {
         const extraWork = await response.json();
         
         closeExtraWorkModal();
-        alert(`✅ Ekstraarbejde ${extraWork.full_order_number} oprettet!`);
+        alert(`Ekstraarbejde ${extraWork.full_order_number} oprettet!`);
         
         // Refresh parent workspace to show the new extra work
         await openOrderWorkspace(parentOrderId);
@@ -1709,12 +1709,12 @@ async function saveWorkDescription() {
         currentWorkspaceOrder.work_description = htmlContent;
         
         // Update read mode display
-        document.getElementById('workDescContent').innerHTML = htmlContent || '<em style="color: #999;">Ingen beskrivelse...</em>';
+        document.getElementById('workDescContent').innerHTML = htmlContent || '<em style="color: var(--text-muted);">Ingen beskrivelse...</em>';
         
         // Switch back to read mode
         cancelWorkDescriptionEdit();
         
-        alert('✅ Arbejdsbeskrivelse gemt!');
+        alert('Arbejdsbeskrivelse gemt!');
     } catch (error) {
         console.error('Save work description error:', error);
         alert('Kunne ikke gemme: ' + error.message);
@@ -1757,7 +1757,7 @@ async function loadOrderDetailsContactPersons() {
             option.setAttribute('data-phone', contact.phone || '');
             option.setAttribute('data-email', contact.email || '');
             if (contact.is_primary) {
-                option.textContent += ' ⭐';
+                option.textContent += '  (primær)';
             }
             contactSelect.appendChild(option);
         });
@@ -1805,7 +1805,7 @@ async function saveOrderDetails() {
         
         if (!response.ok) throw new Error('Failed to save');
         
-        alert('✅ Ordre detaljer opdateret!');
+        alert('Ordre detaljer opdateret!');
         
         // Refresh workspace to show updated data
         await openOrderWorkspace(currentWorkspaceOrder.id);
@@ -1855,10 +1855,10 @@ if (document.readyState === 'loading') {
 // Helper function to get status badge HTML
 function getStatusBadge(status) {
     const statusConfig = {
-        'draft': { icon: '📝', text: 'Udkast', color: '#999' },
-        'sent': { icon: '📧', text: 'Sendt', color: 'var(--color-blue)' },
-        'accepted': { icon: '✅', text: 'Accepteret', color: 'var(--color-green)' },
-        'rejected': { icon: '❌', text: 'Afvist', color: 'var(--color-red)' }
+        'draft': { icon: '', text: 'Udkast', color: 'var(--text-muted)' },
+        'sent': { icon: '', text: 'Sendt', color: 'var(--color-blue)' },
+        'accepted': { icon: '', text: 'Accepteret', color: 'var(--color-green)' },
+        'rejected': { icon: '', text: 'Afvist', color: 'var(--color-red)' }
     };
     
     const config = statusConfig[status] || statusConfig['draft'];

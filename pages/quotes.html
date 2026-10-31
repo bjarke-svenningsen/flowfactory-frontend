@@ -1,39 +1,40 @@
-<!-- Tab Navigation -->
-<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-    <h2 style="margin: 0; display: flex; align-items: center; gap: 10px;"><i data-lucide="clipboard-list"></i> Ordrestyring</h2>
+<!-- Sidehoved -->
+<div class="page-header">
+    <div class="page-header-title">
+        <span class="icon-box"><i data-lucide="clipboard-list"></i></span>
+        <div>
+            <h1>Ordrestyring</h1>
+            <p class="page-header-sub" id="quotesPageSub">Tilbud, ordrer, fakturaer og kunder</p>
+        </div>
+    </div>
 </div>
 
-<div class="tab-underline" style="margin-bottom: 20px;">
-    <button id="tabQuotes" onclick="switchOrderTab('quotes')" class="tab-underline-btn">Tilbud</button>
-    <button id="tabOrders" onclick="switchOrderTab('orders')" class="tab-underline-btn">Godkendte Ordre</button>
-    <button id="tabInvoiced" onclick="switchOrderTab('invoiced')" class="tab-underline-btn">Faktureret</button>
-    <button id="tabRejected" onclick="switchOrderTab('rejected')" class="tab-underline-btn">Afvist</button>
-    <button id="tabCustomers" onclick="switchOrderTab('customers')" class="tab-underline-btn">Kunder</button>
+<!-- Tab Navigation -->
+<div class="tabs" style="margin-bottom: 20px;">
+    <button id="tabQuotes" onclick="switchOrderTab('quotes')" class="tab">Tilbud</button>
+    <button id="tabOrders" onclick="switchOrderTab('orders')" class="tab">Godkendte Ordre</button>
+    <button id="tabInvoiced" onclick="switchOrderTab('invoiced')" class="tab">Faktureret</button>
+    <button id="tabRejected" onclick="switchOrderTab('rejected')" class="tab">Afvist</button>
+    <button id="tabCustomers" onclick="switchOrderTab('customers')" class="tab">Kunder</button>
 </div>
 
 <!-- TAB 1: TILBUD -->
 <div id="orderTabQuotes" class="order-tab-content" style="display: none;">
     <div id="quotesListView">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; gap: 10px; flex-wrap: wrap;">
-            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-                <button onclick="filterQuotesByStatus('all')" id="filterAll" class="filter-pill active">
-                    Alle
-                </button>
-                <button onclick="filterQuotesByStatus('draft')" id="filterDraft" class="filter-pill">
-                    Udkast
-                </button>
-                <button onclick="filterQuotesByStatus('sent')" id="filterSent" class="filter-pill">
-                    Sendt
-                </button>
-                <button onclick="filterQuotesByStatus('rejected')" id="filterRejected" class="filter-pill">
-                    Afvist
+        <div class="page-header">
+            <div class="page-header-actions">
+                <button onclick="filterQuotesByStatus('all')" id="filterAll" class="pill active">Alle</button>
+                <button onclick="filterQuotesByStatus('draft')" id="filterDraft" class="pill">Udkast</button>
+                <button onclick="filterQuotesByStatus('sent')" id="filterSent" class="pill">Sendt</button>
+                <button onclick="filterQuotesByStatus('rejected')" id="filterRejected" class="pill">Afvist</button>
+            </div>
+            <div class="page-header-actions">
+                <button onclick="showCreateQuote()" class="btn btn-primary">
+                    <i data-lucide="plus"></i> Nyt Tilbud
                 </button>
             </div>
-            <button onclick="showCreateQuote()" class="btn-primary">
-                <i data-lucide="plus"></i> Nyt Tilbud
-            </button>
         </div>
-        
+
         <div id="quotesListContainer"></div>
     </div>
 </div>
@@ -45,53 +46,47 @@
 
 <!-- TAB 3: FAKTURERET -->
 <div id="orderTabInvoiced" class="order-tab-content" style="display: none;">
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-        <p style="color: #666;">Fakturerede ordrer og fakturaer</p>
-    </div>
-    
     <div id="invoicingContainer"></div>
 </div>
 
 <!-- TAB 4: AFVIST -->
 <div id="orderTabRejected" class="order-tab-content" style="display: none;">
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-        <p style="color: #666;">Afviste tilbud</p>
-    </div>
-    
     <div id="rejectedContainer"></div>
 </div>
 
 <!-- TAB 5: KUNDER -->
 <div id="orderTabCustomers" class="order-tab-content" style="display: none;">
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+    <div class="page-header">
         <div></div>
-        <button onclick="showCreateCustomer()" class="btn-primary">
-            <i data-lucide="user-plus"></i> Opret Ny Kunde
-        </button>
+        <div class="page-header-actions">
+            <button onclick="showCreateCustomer()" class="btn btn-primary">
+                <i data-lucide="user-plus"></i> Opret Ny Kunde
+            </button>
+        </div>
     </div>
-    
+
     <div id="customersListContainer"></div>
 </div>
 
 <!-- Form View -->
 <div id="quotesFormView" style="display: none;">
     <div style="margin-bottom: 20px;">
-        <button onclick="backToQuotesList()" class="btn-secondary">
+        <button onclick="backToQuotesList()" class="btn btn-secondary">
             <i data-lucide="arrow-left"></i> Tilbage til oversigt
         </button>
     </div>
-    
+
     <div id="quotesFormContainer"></div>
 </div>
 
 <!-- Preview View -->
 <div id="quotesPreviewView" style="display: none;">
     <div style="margin-bottom: 20px;">
-        <button onclick="backToQuotesList()" class="btn-secondary">
+        <button onclick="backToQuotesList()" class="btn btn-secondary">
             <i data-lucide="arrow-left"></i> Tilbage til oversigt
         </button>
     </div>
-    
+
     <div id="quotesPreviewContainer"></div>
 </div>
 

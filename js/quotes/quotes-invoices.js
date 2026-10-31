@@ -30,8 +30,8 @@ function renderInvoicedContent(invoices) {
     
     if (invoices.length === 0) {
         container.innerHTML = `
-            <div style="text-align: center; padding: 60px 20px; color: #999;">
-                <div style="font-size: 64px; margin-bottom: 20px;">💰</div>
+            <div style="text-align: center; padding: 60px 20px; color: var(--text-muted);">
+                <i data-lucide="coins" style="width:48px;height:48px;color:var(--text-muted);display:inline-block;margin-bottom:16px;"></i>
                 <h3>Der er ingen fakturaer endnu</h3>
                 <p style="margin: 10px 0;">Opret en faktura fra en accepteret ordre</p>
             </div>
@@ -40,20 +40,20 @@ function renderInvoicedContent(invoices) {
     }
     
     const statusColors = {
-        'draft': '#999',
+        'draft': 'var(--text-muted)',
         'sent': 'var(--color-blue)',
         'paid': 'var(--color-green)'
     };
     const statusText = {
-        'draft': '📝 Udkast',
-        'sent': '📧 Sendt',
-        'paid': '✅ Betalt'
+        'draft': ' Udkast',
+        'sent': 'Sendt',
+        'paid': 'Betalt'
     };
     
     let html = '';
     invoices.forEach(invoice => {
         html += `
-            <div style="background: white; border: 1px solid #e0e0e0; border-radius: 8px; padding: 20px; margin-bottom: 15px;">
+            <div style="background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 20px; margin-bottom: 15px;">
                 <div style="display: flex; justify-content: space-between; align-items: start;">
                     <div style="flex: 1;">
                         <h4 style="margin: 0 0 10px 0;">Faktura ${invoice.invoice_number}</h4>
@@ -69,15 +69,15 @@ function renderInvoicedContent(invoices) {
                     </div>
                     <div style="display: flex; flex-direction: column; gap: 10px;">
                         <button onclick="viewInvoice(${invoice.id})" style="padding: 10px 20px; background: var(--color-blue); color: white; border: none; border-radius: 5px; cursor: pointer; white-space: nowrap;">
-                            👁️ Se Faktura
+                            Se Faktura
                         </button>
                         ${invoice.status === 'draft' ? `
                             <button onclick="sendInvoice(${invoice.id})" style="padding: 10px 20px; background: var(--color-green); color: white; border: none; border-radius: 5px; cursor: pointer; white-space: nowrap;">
-                                📧 Send
+                                Send
                             </button>
                         ` : ''}
                         <button onclick="deleteInvoice(${invoice.id})" style="padding: 10px 20px; background: var(--color-red); color: white; border: none; border-radius: 5px; cursor: pointer; white-space: nowrap;">
-                            🗑️ Slet Faktura
+                            Slet Faktura
                         </button>
                     </div>
                 </div>
@@ -126,7 +126,7 @@ async function createInvoiceFromOrder(orderId) {
         
         const invoice = await response.json();
         
-        alert(`✅ Faktura ${invoice.invoice_number} oprettet!`);
+        alert(`Faktura ${invoice.invoice_number} oprettet!`);
         
         // Refresh workspace if open, otherwise reload invoiced tab
         if (typeof currentWorkspaceOrder !== 'undefined' && currentWorkspaceOrder && currentWorkspaceOrder.id === orderId) {
@@ -178,50 +178,50 @@ function renderInvoicePreview(invoice) {
     container.innerHTML = `
         <div style="max-width: 900px; margin: 0 auto;">
             <div style="display: flex; gap: 15px; margin-bottom: 20px;">
-                <button onclick="switchOrderTab('invoiced'); loadInvoiced();" style="padding: 10px 20px; background: #999; color: white; border: none; border-radius: 5px; cursor: pointer;">
+                <button onclick="switchOrderTab('invoiced'); loadInvoiced();" class="btn btn-secondary">
                     ◀ Tilbage
                 </button>
                 ${invoice.status === 'draft' ? `
                     <button onclick="sendInvoice(${invoice.id})" style="padding: 10px 20px; background: var(--color-green); color: white; border: none; border-radius: 5px; cursor: pointer;">
-                        📧 Send til Kunde
+                        Send til Kunde
                     </button>
                 ` : ''}
                 <button onclick="window.print()" style="padding: 10px 20px; background: var(--color-blue); color: white; border: none; border-radius: 5px; cursor: pointer;">
-                    🖨️ Print / PDF
+                    Print / PDF
                 </button>
                 <button onclick="deleteInvoiceFromPreview(${invoice.id})" style="padding: 10px 20px; background: var(--color-red); color: white; border: none; border-radius: 5px; cursor: pointer;">
-                    🗑️ Slet Faktura
+                    Slet Faktura
                 </button>
             </div>
             
-            <div style="background: white; padding: 60px; padding-top: 30px;">
+            <div style="background: var(--surface); padding: 60px; padding-top: 30px;">
                 <!-- Minimal Header -->
-                <div style="display: flex; justify-content: space-between; align-items: start; padding-bottom: 30px; border-bottom: 1px solid #000; margin-bottom: 40px;">
+                <div style="display: flex; justify-content: space-between; align-items: start; padding-bottom: 30px; border-bottom: 1px solid var(--text); margin-bottom: 40px;">
                     <div style="background: transparent !important; margin-top: 0; padding: 0;">
                         <img src="seestlogo.png" alt="SG Seest Gulvteknik ApS" style="height: 80px; width: auto; display: block; background: transparent !important; background-color: transparent !important; margin: 0; padding: 0;">
                     </div>
                     <div style="text-align: right;">
-                        <h2 style="margin: 0 0 15px 0; font-size: 24px; font-weight: 700; color: #000;">FAKTURA</h2>
+                        <h2 style="margin: 0 0 15px 0; font-size: 24px; font-weight: 700; color: var(--text);">FAKTURA</h2>
                         <table style="border-collapse: collapse; margin-left: auto;">
                             <tr>
-                                <td style="padding: 3px 10px 3px 0; font-size: 12px; color: #666;">Kundenummer:</td>
-                                <td style="padding: 3px 0; font-size: 12px; color: #000; font-weight: 600;">${invoice.customer_id || 'N/A'}</td>
+                                <td style="padding: 3px 10px 3px 0; font-size: 12px; color: var(--text-muted);">Kundenummer:</td>
+                                <td style="padding: 3px 0; font-size: 12px; color: var(--text); font-weight: 600;">${invoice.customer_id || 'N/A'}</td>
                             </tr>
                             <tr>
-                                <td style="padding: 3px 10px 3px 0; font-size: 12px; color: #666;">Faktura nr.:</td>
-                                <td style="padding: 3px 0; font-size: 12px; color: #000; font-weight: 600;">${invoice.invoice_number}</td>
+                                <td style="padding: 3px 10px 3px 0; font-size: 12px; color: var(--text-muted);">Faktura nr.:</td>
+                                <td style="padding: 3px 0; font-size: 12px; color: var(--text); font-weight: 600;">${invoice.invoice_number}</td>
                             </tr>
                             <tr>
-                                <td style="padding: 3px 10px 3px 0; font-size: 12px; color: #666;">Ordre nr.:</td>
-                                <td style="padding: 3px 0; font-size: 12px; color: #000; font-weight: 600;">${invoice.full_order_number}</td>
+                                <td style="padding: 3px 10px 3px 0; font-size: 12px; color: var(--text-muted);">Ordre nr.:</td>
+                                <td style="padding: 3px 0; font-size: 12px; color: var(--text); font-weight: 600;">${invoice.full_order_number}</td>
                             </tr>
                             <tr>
-                                <td style="padding: 3px 10px 3px 0; font-size: 12px; color: #666;">Dato:</td>
-                                <td style="padding: 3px 0; font-size: 12px; color: #000;">${new Date(invoice.invoice_date).toLocaleDateString('da-DK')}</td>
+                                <td style="padding: 3px 10px 3px 0; font-size: 12px; color: var(--text-muted);">Dato:</td>
+                                <td style="padding: 3px 0; font-size: 12px; color: var(--text);">${new Date(invoice.invoice_date).toLocaleDateString('da-DK')}</td>
                             </tr>
                             <tr>
-                                <td style="padding: 3px 10px 3px 0; font-size: 12px; color: #666;">Forfaldsdato:</td>
-                                <td style="padding: 3px 0; font-size: 12px; color: #000;">${new Date(invoice.due_date).toLocaleDateString('da-DK')}</td>
+                                <td style="padding: 3px 10px 3px 0; font-size: 12px; color: var(--text-muted);">Forfaldsdato:</td>
+                                <td style="padding: 3px 0; font-size: 12px; color: var(--text);">${new Date(invoice.due_date).toLocaleDateString('da-DK')}</td>
                             </tr>
                         </table>
                     </div>
@@ -229,42 +229,42 @@ function renderInvoicePreview(invoice) {
                 
                 <!-- Customer Info -->
                 <div style="margin-bottom: 40px;">
-                    <h3 style="margin: 0 0 10px 0; color: #000; font-size: 13px; font-weight: 700;">KUNDE:</h3>
-                    <p style="margin: 0 0 3px 0; font-weight: 600; font-size: 13px; color: #000;">${invoice.company_name}</p>
-                    ${invoice.contact_person ? `<p style="margin: 0 0 3px 0; font-size: 12px; color: #666;">Att: ${invoice.contact_person}</p>` : ''}
-                    ${invoice.address ? `<p style="margin: 0 0 3px 0; font-size: 12px; color: #666;">${invoice.address}</p>` : ''}
-                    ${invoice.postal_code && invoice.city ? `<p style="margin: 0 0 3px 0; font-size: 12px; color: #666;">${invoice.postal_code} ${invoice.city}</p>` : ''}
-                    ${invoice.customer_email ? `<p style="margin: 0 0 3px 0; font-size: 12px; color: #666;">${invoice.customer_email}</p>` : ''}
-                    ${invoice.customer_phone ? `<p style="margin: 0; font-size: 12px; color: #666;">${invoice.customer_phone}</p>` : ''}
+                    <h3 style="margin: 0 0 10px 0; color: var(--text); font-size: 13px; font-weight: 700;">KUNDE:</h3>
+                    <p style="margin: 0 0 3px 0; font-weight: 600; font-size: 13px; color: var(--text);">${invoice.company_name}</p>
+                    ${invoice.contact_person ? `<p style="margin: 0 0 3px 0; font-size: 12px; color: var(--text-muted);">Att: ${invoice.contact_person}</p>` : ''}
+                    ${invoice.address ? `<p style="margin: 0 0 3px 0; font-size: 12px; color: var(--text-muted);">${invoice.address}</p>` : ''}
+                    ${invoice.postal_code && invoice.city ? `<p style="margin: 0 0 3px 0; font-size: 12px; color: var(--text-muted);">${invoice.postal_code} ${invoice.city}</p>` : ''}
+                    ${invoice.customer_email ? `<p style="margin: 0 0 3px 0; font-size: 12px; color: var(--text-muted);">${invoice.customer_email}</p>` : ''}
+                    ${invoice.customer_phone ? `<p style="margin: 0; font-size: 12px; color: var(--text-muted);">${invoice.customer_phone}</p>` : ''}
                 </div>
                 
                 ${invoice.requisition_number ? `
                     <div style="margin-bottom: 30px;">
-                        <p style="margin: 0; font-size: 12px; color: #666;"><strong>Rekvisitionsnummer:</strong> ${invoice.requisition_number}</p>
+                        <p style="margin: 0; font-size: 12px; color: var(--text-muted);"><strong>Rekvisitionsnummer:</strong> ${invoice.requisition_number}</p>
                     </div>
                 ` : ''}
                 
                 <!-- Lines Table -->
                 <table style="width: 100%; border-collapse: collapse; margin-bottom: 40px;">
                     <thead>
-                        <tr style="border-bottom: 2px solid #000;">
-                            <th style="padding: 12px 10px; text-align: left; font-weight: 700; font-size: 12px; color: #000;">Beskrivelse</th>
-                            <th style="padding: 12px 10px; text-align: center; font-weight: 700; font-size: 12px; color: #000; width: 80px;">Antal</th>
-                            <th style="padding: 12px 10px; text-align: center; font-weight: 700; font-size: 12px; color: #000; width: 80px;">Enhed</th>
-                            <th style="padding: 12px 10px; text-align: right; font-weight: 700; font-size: 12px; color: #000; width: 110px;">E.pris</th>
-                            <th style="padding: 12px 10px; text-align: right; font-weight: 700; font-size: 12px; color: #000; width: 70px;">Rabat</th>
-                            <th style="padding: 12px 10px; text-align: right; font-weight: 700; font-size: 12px; color: #000; width: 120px;">Total</th>
+                        <tr style="border-bottom: 2px solid var(--text);">
+                            <th style="padding: 12px 10px; text-align: left; font-weight: 700; font-size: 12px; color: var(--text);">Beskrivelse</th>
+                            <th style="padding: 12px 10px; text-align: center; font-weight: 700; font-size: 12px; color: var(--text); width: 80px;">Antal</th>
+                            <th style="padding: 12px 10px; text-align: center; font-weight: 700; font-size: 12px; color: var(--text); width: 80px;">Enhed</th>
+                            <th style="padding: 12px 10px; text-align: right; font-weight: 700; font-size: 12px; color: var(--text); width: 110px;">E.pris</th>
+                            <th style="padding: 12px 10px; text-align: right; font-weight: 700; font-size: 12px; color: var(--text); width: 70px;">Rabat</th>
+                            <th style="padding: 12px 10px; text-align: right; font-weight: 700; font-size: 12px; color: var(--text); width: 120px;">Total</th>
                         </tr>
                     </thead>
                     <tbody>
                         ${invoice.lines.map(line => `
-                            <tr style="border-bottom: 1px solid #ddd;">
-                                <td style="padding: 10px; vertical-align: top; color: #000; font-size: 12px;">${line.description}</td>
-                                <td style="padding: 10px; text-align: center; color: #000; font-size: 12px;">${line.quantity}</td>
-                                <td style="padding: 10px; text-align: center; color: #000; font-size: 12px;">${line.unit}</td>
-                                <td style="padding: 10px; text-align: right; color: #000; font-size: 12px;">${formatCurrency(line.unit_price)}</td>
-                                <td style="padding: 10px; text-align: right; color: #000; font-size: 12px;">${line.discount_percent}%</td>
-                                <td style="padding: 10px; text-align: right; font-weight: 600; color: #000; font-size: 12px;">${formatCurrency(line.line_total)}</td>
+                            <tr style="border-bottom: 1px solid var(--border);">
+                                <td style="padding: 10px; vertical-align: top; color: var(--text); font-size: 12px;">${line.description}</td>
+                                <td style="padding: 10px; text-align: center; color: var(--text); font-size: 12px;">${line.quantity}</td>
+                                <td style="padding: 10px; text-align: center; color: var(--text); font-size: 12px;">${line.unit}</td>
+                                <td style="padding: 10px; text-align: right; color: var(--text); font-size: 12px;">${formatCurrency(line.unit_price)}</td>
+                                <td style="padding: 10px; text-align: right; color: var(--text); font-size: 12px;">${line.discount_percent}%</td>
+                                <td style="padding: 10px; text-align: right; font-weight: 600; color: var(--text); font-size: 12px;">${formatCurrency(line.line_total)}</td>
                             </tr>
                         `).join('')}
                     </tbody>
@@ -273,37 +273,37 @@ function renderInvoicePreview(invoice) {
                 <!-- Totals -->
                 <div style="display: flex; justify-content: flex-end; margin-bottom: 40px;">
                     <div style="min-width: 320px;">
-                        <div style="display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #ddd;">
-                            <span style="font-size: 12px; color: #000;">Subtotal:</span>
-                            <strong style="font-size: 12px; color: #000;">${formatCurrency(invoice.subtotal)}</strong>
+                        <div style="display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--border);">
+                            <span style="font-size: 12px; color: var(--text);">Subtotal:</span>
+                            <strong style="font-size: 12px; color: var(--text);">${formatCurrency(invoice.subtotal)}</strong>
                         </div>
-                        <div style="display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #ddd;">
-                            <span style="font-size: 12px; color: #000;">Moms (25%):</span>
-                            <strong style="font-size: 12px; color: #000;">${formatCurrency(invoice.vat_amount)}</strong>
+                        <div style="display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--border);">
+                            <span style="font-size: 12px; color: var(--text);">Moms (25%):</span>
+                            <strong style="font-size: 12px; color: var(--text);">${formatCurrency(invoice.vat_amount)}</strong>
                         </div>
-                        <div style="display: flex; justify-content: space-between; padding: 15px 0; border-top: 2px solid #000; margin-top: 10px;">
-                            <span style="font-size: 14px; font-weight: 700; color: #000;">AT BETALE:</span>
-                            <strong style="font-size: 16px; font-weight: 700; color: #000;">${formatCurrency(invoice.total)}</strong>
+                        <div style="display: flex; justify-content: space-between; padding: 15px 0; border-top: 2px solid var(--text); margin-top: 10px;">
+                            <span style="font-size: 14px; font-weight: 700; color: var(--text);">AT BETALE:</span>
+                            <strong style="font-size: 16px; font-weight: 700; color: var(--text);">${formatCurrency(invoice.total)}</strong>
                         </div>
                     </div>
                 </div>
                 
                 <!-- Payment Terms -->
-                <div style="margin-bottom: 25px; padding: 15px 0; border-top: 1px solid #ddd; border-bottom: 1px solid #ddd;">
-                    <h3 style="margin: 0 0 8px 0; color: #000; font-size: 12px; font-weight: 700;">BETALINGSBETINGELSER:</h3>
-                    <p style="margin: 0; color: #000; font-size: 11px; line-height: 1.5;">${invoice.payment_terms}</p>
+                <div style="margin-bottom: 25px; padding: 15px 0; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);">
+                    <h3 style="margin: 0 0 8px 0; color: var(--text); font-size: 12px; font-weight: 700;">BETALINGSBETINGELSER:</h3>
+                    <p style="margin: 0; color: var(--text); font-size: 11px; line-height: 1.5;">${invoice.payment_terms}</p>
                 </div>
                 
                 ${invoice.notes ? `
-                    <div style="margin-bottom: 25px; padding: 15px 0; border-bottom: 1px solid #ddd;">
-                        <h3 style="margin: 0 0 8px 0; color: #000; font-size: 12px; font-weight: 700;">NOTER:</h3>
-                        <p style="margin: 0; color: #000; font-size: 11px; line-height: 1.5; white-space: pre-wrap;">${invoice.notes}</p>
+                    <div style="margin-bottom: 25px; padding: 15px 0; border-bottom: 1px solid var(--border);">
+                        <h3 style="margin: 0 0 8px 0; color: var(--text); font-size: 12px; font-weight: 700;">NOTER:</h3>
+                        <p style="margin: 0; color: var(--text); font-size: 11px; line-height: 1.5; white-space: pre-wrap;">${invoice.notes}</p>
                     </div>
                 ` : ''}
                 
                 <!-- Footer -->
-                <div style="border-top: 1px solid #000; padding-top: 20px; margin-top: 40px; text-align: center;">
-                    <p style="margin: 0; color: #666; font-size: 11px;">
+                <div style="border-top: 1px solid var(--text); padding-top: 20px; margin-top: 40px; text-align: center;">
+                    <p style="margin: 0; color: var(--text-muted); font-size: 11px;">
                         SG Seest Gulvteknik ApS • Tandholtvej 39, Seest • DK-6000 Kolding • CVR: 41435208<br>
                         Email: kontakt@seestgulvteknik.dk • Telefon: 75 52 10 54 • www.seestgulvteknik.dk
                     </p>
@@ -329,7 +329,7 @@ async function sendInvoice(invoiceId) {
             throw new Error(error.error || 'Failed to send invoice');
         }
         
-        alert('✅ Faktura sendt til kunde');
+        alert('Faktura sendt til kunde');
         loadInvoiced();
         
     } catch (error) {
@@ -354,7 +354,7 @@ async function deleteInvoice(invoiceId) {
             throw new Error(error.error || 'Failed to delete invoice');
         }
         
-        alert('✅ Faktura slettet!');
+        alert('Faktura slettet!');
         loadInvoiced();
         
     } catch (error) {
@@ -379,7 +379,7 @@ async function deleteInvoiceFromPreview(invoiceId) {
             throw new Error(error.error || 'Failed to delete invoice');
         }
         
-        alert('✅ Faktura slettet!');
+        alert('Faktura slettet!');
         switchOrderTab('invoiced');
         loadInvoiced();
         

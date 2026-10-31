@@ -43,22 +43,25 @@ function renderQuotesList() {
     
     if (filteredQuotes.length === 0) {
         container.innerHTML = `
-            <div style="text-align: center; padding: 60px 20px; color: #999;">
-                <h3>Ingen tilbud endnu</h3>
-                <p style="margin: 10px 0 20px 0;">Opret dit første tilbud for at komme i gang</p>
-                <button onclick="showCreateQuote()" class="btn-primary" style="min-height: 44px; font-size: 15px;">
-                    Opret Tilbud
-                </button>
+            <div class="card">
+                <div class="empty-state">
+                    <i data-lucide="file-text"></i>
+                    <h3 style="margin: 0;">Ingen tilbud endnu</h3>
+                    <span>Opret dit første tilbud for at komme i gang</span>
+                    <button onclick="showCreateQuote()" class="btn btn-primary" style="margin-top: 8px;">
+                        <i data-lucide="plus"></i> Opret Tilbud
+                    </button>
+                </div>
             </div>
         `;
         return;
     }
     
     const statusPillClass = {
-        'draft': 'status-pill--draft',
-        'sent': 'status-pill--sent',
-        'accepted': 'status-pill--accepted',
-        'rejected': 'status-pill--rejected'
+        'draft': 'badge--draft',
+        'sent': 'badge--sent',
+        'accepted': 'badge--accepted',
+        'rejected': 'badge--rejected'
     };
     
     const statusText = {
@@ -69,16 +72,17 @@ function renderQuotesList() {
     };
     
     container.innerHTML = `
-        <table style="width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden;">
+        <div class="card table-card">
+        <table class="table">
             <thead>
-                <tr style="background: #f5f5f5;">
-                    <th style="padding: 15px; text-align: left; border-bottom: 2px solid #e0e0e0; width: 120px;">Ordre Nr.</th>
-                    <th style="padding: 15px; text-align: left; border-bottom: 2px solid #e0e0e0;">Kunde</th>
-                    <th style="padding: 15px; text-align: left; border-bottom: 2px solid #e0e0e0;">Titel</th>
-                    <th style="padding: 15px; text-align: left; border-bottom: 2px solid #e0e0e0; width: 110px;">Dato</th>
-                    <th style="padding: 15px; text-align: right; border-bottom: 2px solid #e0e0e0; width: 130px;">Total</th>
-                    <th style="padding: 15px; text-align: center; border-bottom: 2px solid #e0e0e0; width: 150px;">Status</th>
-                    <th style="padding: 15px; text-align: center; border-bottom: 2px solid #e0e0e0; width: 180px;">Handlinger</th>
+                <tr>
+                    <th style="width: 120px;">Ordre Nr.</th>
+                    <th>Kunde</th>
+                    <th>Titel</th>
+                    <th style="width: 110px;">Dato</th>
+                    <th class="num" style="width: 130px;">Total</th>
+                    <th style="width: 150px;">Status</th>
+                    <th style="width: 180px;">Handlinger</th>
                 </tr>
             </thead>
             <tbody>
@@ -86,28 +90,27 @@ function renderQuotesList() {
                     // Display order number instead of quote number
                     const displayNumber = quote.order_number || quote.quote_number;
                     return `
-                    <tr style="border-bottom: 1px solid #e0e0e0; transition: background 0.2s;" onmouseover="this.style.background='#f9f9f9'" onmouseout="this.style.background='white'">
-                        <td style="padding: 15px; font-weight: 600;">${displayNumber}</td>
-                        <td style="padding: 15px;">${quote.customer_name}</td>
-                        <td style="padding: 15px;">
+                    <tr>
+                        <td class="cell-strong">${displayNumber}</td>
+                        <td class="truncate" style="max-width: 180px;" title="${quote.customer_name || ''}">${quote.customer_name}</td>
+                        <td class="truncate" style="max-width: 220px;" title="${quote.title || ''}">
                             ${quote.title}
-                            <div style="font-size: 0.85em; color: #888; font-style: italic; margin-top: 3px;">
-                                Oprettet af ${quote.created_by_name || 'Ukendt'}
-                            </div>
+                            <div class="cell-muted">Oprettet af ${quote.created_by_name || 'Ukendt'}</div>
                         </td>
-                        <td style="padding: 15px;">${new Date(quote.date).toLocaleDateString('da-DK')}</td>
-                        <td style="padding: 15px; text-align: right; font-weight: 600;">${formatCurrency(quote.total)}</td>
-                        <td style="padding: 15px; text-align: center;">
-                            <span class="status-pill ${statusPillClass[quote.status] || 'status-pill--draft'}">
+                        <td>${new Date(quote.date).toLocaleDateString('da-DK')}</td>
+                        <td class="num cell-strong">${formatCurrency(quote.total)}</td>
+                        <td style="text-align: center;">
+                            <span class="badge ${statusPillClass[quote.status] || 'badge--draft'}">
                                 ${statusText[quote.status] || quote.status}
                             </span>
                         </td>
-                        <td style="padding: 15px; text-align: center; white-space: nowrap;">
-                            <button onclick="viewQuote(${quote.id})" class="btn-secondary" style="min-height: 36px; padding: 6px 16px; font-size: 13px;">
-                                Se
-                            </button>
-                            <div class="row-menu">
-                                <button onclick="toggleRowMenu(event, ${quote.id})" class="btn-secondary row-menu-trigger" aria-label="Flere handlinger">⋯</button>
+                        <td style="text-align: center; white-space: nowrap;">
+                            <div style="display: inline-flex; gap: 6px; align-items: center;">
+                                <button onclick="viewQuote(${quote.id})" class="btn btn-secondary btn-sm">
+                                    <i data-lucide="eye"></i> Se
+                                </button>
+                                <div class="row-menu">
+                                    <button onclick="toggleRowMenu(event, ${quote.id})" class="btn btn-secondary btn-sm btn-icon" aria-label="Flere handlinger">⋯</button>
                                 <div id="rowMenu${quote.id}" class="row-menu-pop">
                                     <button onclick="closeRowMenus(); editQuote(${quote.id});">
                                         <i data-lucide="pencil"></i> Rediger
@@ -129,6 +132,7 @@ function renderQuotesList() {
                 }).join('')}
             </tbody>
         </table>
+        </div>
     `;
     if (window.lucide) {
         try { lucide.createIcons(); } catch (e) { /* ignore */ }
@@ -267,7 +271,7 @@ async function deleteQuote(quoteId) {
         
         if (!response.ok) throw new Error('Failed to delete quote');
         
-        alert('✅ Tilbud slettet');
+        alert('Tilbud slettet');
         await loadQuotes();
     } catch (error) {
         console.error('Error deleting quote:', error);
@@ -291,7 +295,7 @@ async function sendQuote(quoteId) {
             throw new Error(error.error || 'Failed to send quote');
         }
         
-        alert('✅ Tilbud sendt til kunde');
+        alert('Tilbud sendt til kunde');
         await loadQuotes();
     } catch (error) {
         console.error('Error sending quote:', error);
@@ -321,14 +325,14 @@ function renderQuoteForm() {
     const title = isEdit ? 'Rediger Tilbud' : 'Opret Nyt Tilbud';
     
     container.innerHTML = `
-        <div style="background: white; padding: 30px; border-radius: 10px; max-width: 1200px;">
+        <div style="background: var(--surface); padding: 30px; border-radius: 10px; max-width: 1200px;">
             <h2 style="margin-bottom: 30px;">${title}</h2>
             
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 30px;">
                 <div>
                     <label style="display: block; margin-bottom: 8px; font-weight: 600;">Kunde *</label>
                     <div style="display: flex; gap: 10px;">
-                        <select id="quoteCustomer" onchange="loadQuoteContactPersons()" style="flex: 1; padding: 10px; border: 1px solid #e0e0e0; border-radius: 5px; font-size: 14px;" ${isEdit && currentQuote.id ? 'disabled' : ''}>
+                        <select id="quoteCustomer" onchange="loadQuoteContactPersons()" style="flex: 1; padding: 10px; border: 1px solid var(--border); border-radius: 5px; font-size: 14px;" ${isEdit && currentQuote.id ? 'disabled' : ''}>
                             <option value="">Vælg kunde...</option>
                             ${allCustomers.map(c => `
                                 <option value="${c.id}" ${currentQuote.customer_id === c.id ? 'selected' : ''}>
@@ -337,40 +341,40 @@ function renderQuoteForm() {
                             `).join('')}
                         </select>
                         <button onclick="showQuickCreateCustomer()" style="padding: 10px 20px; background: var(--color-green); color: white; border: none; border-radius: 5px; cursor: pointer; white-space: nowrap;">
-                            ➕ Ny Kunde
+                            Ny Kunde
                         </button>
                     </div>
                 </div>
                 
                 <div>
                     <label style="display: block; margin-bottom: 8px; font-weight: 600;">Kontaktperson</label>
-                    <select id="quoteContactPerson" style="width: 100%; padding: 10px; border: 1px solid #e0e0e0; border-radius: 5px; font-size: 14px;">
+                    <select id="quoteContactPerson" style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 5px; font-size: 14px;">
                         <option value="">Vælg kontaktperson...</option>
                     </select>
-                    <small style="color: #666; display: block; margin-top: 5px;">Valgfrit - vælg specifik kontaktperson for dette tilbud</small>
+                    <small style="color: var(--text-muted); display: block; margin-top: 5px;">Valgfrit - vælg specifik kontaktperson for dette tilbud</small>
                 </div>
                 
                 <div style="grid-column: 1 / -1;">
                     <label style="display: block; margin-bottom: 8px; font-weight: 600;">Tilbud Titel *</label>
-                    <input type="text" id="quoteTitle" value="${currentQuote.title || ''}" placeholder="F.eks. Gulvlægning hovedkontor" style="width: 100%; padding: 10px; border: 1px solid #e0e0e0; border-radius: 5px; font-size: 14px;">
+                    <input type="text" id="quoteTitle" value="${currentQuote.title || ''}" placeholder="F.eks. Gulvlægning hovedkontor" style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 5px; font-size: 14px;">
                 </div>
                 
                 <div>
                     <label style="display: block; margin-bottom: 8px; font-weight: 600;">Gyldig til</label>
-                    <input type="date" id="quoteValidUntil" value="${currentQuote.valid_until || getDefaultValidUntil()}" style="width: 100%; padding: 10px; border: 1px solid #e0e0e0; border-radius: 5px; font-size: 14px;">
+                    <input type="date" id="quoteValidUntil" value="${currentQuote.valid_until || getDefaultValidUntil()}" style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 5px; font-size: 14px;">
                 </div>
                 
                 <div>
                     <label style="display: block; margin-bottom: 8px; font-weight: 600;">Rekvisitionsnummer</label>
-                    <input type="text" id="quoteReqNumber" value="${currentQuote.requisition_number || ''}" placeholder="Valgfrit" style="width: 100%; padding: 10px; border: 1px solid #e0e0e0; border-radius: 5px; font-size: 14px;">
+                    <input type="text" id="quoteReqNumber" value="${currentQuote.requisition_number || ''}" placeholder="Valgfrit" style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 5px; font-size: 14px;">
                 </div>
             </div>
             
             <div style="margin-bottom: 30px;">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
                     <h3 style="margin: 0;">Tilbudslinjer</h3>
-                    <button onclick="addQuoteLine()" style="padding: 8px 16px; background: var(--color-accent-hover); color: white; border: none; border-radius: 5px; cursor: pointer;">
-                        ➕ Tilføj Linje
+                    <button onclick="addQuoteLine()" class="btn btn-primary btn-sm">
+                        Tilføj Linje
                     </button>
                 </div>
                 
@@ -380,16 +384,16 @@ function renderQuoteForm() {
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 30px;">
                 <div>
                     <label style="display: block; margin-bottom: 8px; font-weight: 600;">Betalingsbetingelser</label>
-                    <textarea id="quoteTerms" rows="3" style="width: 100%; padding: 10px; border: 1px solid #e0e0e0; border-radius: 5px; font-size: 14px; resize: vertical;">${currentQuote.terms || 'Netto 14 dage'}</textarea>
+                    <textarea id="quoteTerms" rows="3" style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 5px; font-size: 14px; resize: vertical;">${currentQuote.terms || 'Netto 14 dage'}</textarea>
                 </div>
                 
                 <div>
                     <label style="display: block; margin-bottom: 8px; font-weight: 600;">Interne Noter</label>
-                    <textarea id="quoteNotes" rows="3" placeholder="Synlige kun for dig..." style="width: 100%; padding: 10px; border: 1px solid #e0e0e0; border-radius: 5px; font-size: 14px; resize: vertical;">${currentQuote.notes || ''}</textarea>
+                    <textarea id="quoteNotes" rows="3" placeholder="Synlige kun for dig..." style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 5px; font-size: 14px; resize: vertical;">${currentQuote.notes || ''}</textarea>
                 </div>
             </div>
             
-            <div style="background: #f5f5f5; padding: 20px; border-radius: 8px; margin-bottom: 30px;">
+            <div style="background: var(--surface-muted); padding: 20px; border-radius: 8px; margin-bottom: 30px;">
                 <div style="display: flex; justify-content: flex-end; gap: 15px; font-size: 16px;">
                     <div>
                         <strong>Subtotal:</strong> <span id="quoteSubtotal">0,00 kr.</span>
@@ -404,14 +408,14 @@ function renderQuoteForm() {
             </div>
             
             <div style="display: flex; gap: 10px; justify-content: flex-end;">
-                <button onclick="backToQuotesList()" style="padding: 12px 24px; background: #999; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 14px;">
+                <button onclick="backToQuotesList()" class="btn btn-secondary">
                     Annuller
                 </button>
-                <button onclick="saveQuote('draft')" style="padding: 12px 24px; background: var(--color-accent-hover); color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 14px;">
-                    💾 Gem som Udkast
+                <button onclick="saveQuote('draft')" class="btn btn-primary">
+                    Gem som Udkast
                 </button>
                 <button onclick="saveAndPreviewQuote()" style="padding: 12px 24px; background: var(--color-green); color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 14px;">
-                    👁️ Gem & Se Preview
+                    Gem & Se Preview
                 </button>
             </div>
         </div>
@@ -431,50 +435,50 @@ function renderQuoteLines() {
     const container = document.getElementById('quoteLinesContainer');
     
     if (!currentQuote.lines || currentQuote.lines.length === 0) {
-        container.innerHTML = '<p style="text-align: center; color: #999; padding: 20px;">Ingen linjer endnu. Klik "➕ Tilføj Linje" for at komme i gang.</p>';
+        container.innerHTML = '<p style="text-align: center; color: var(--text-muted); padding: 20px;">Ingen linjer endnu. Klik "Tilføj Linje" for at komme i gang.</p>';
         return;
     }
     
     container.innerHTML = currentQuote.lines.map((line, index) => `
-        <div style="background: #f9f9f9; padding: 15px; border-radius: 8px; margin-bottom: 15px; border: 2px solid #e0e0e0;">
+        <div style="background: var(--surface-muted); padding: 15px; border-radius: 8px; margin-bottom: 15px; border: 2px solid var(--border);">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
                 <strong>Linje ${index + 1}</strong>
-                <button onclick="removeLine(${index})" style="padding: 5px 10px; background: var(--color-red); color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">
-                    🗑️ Fjern
+                <button onclick="removeLine(${index})" class="btn btn-danger btn-sm" type="button">
+                    <i data-lucide="trash-2"></i> Fjern
                 </button>
             </div>
             
             <div style="margin-bottom: 10px;">
                 <label style="display: block; margin-bottom: 5px; font-size: 13px; font-weight: 600;">Beskrivelse *</label>
-                <textarea id="lineDesc${index}" rows="2" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px; resize: vertical;" onchange="updateLine(${index})">${line.description || ''}</textarea>
+                <textarea id="lineDesc${index}" rows="2" style="width: 100%; padding: 8px; border: 1px solid var(--border); border-radius: 4px; font-size: 13px; resize: vertical;" onchange="updateLine(${index})">${line.description || ''}</textarea>
             </div>
             
             <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr 2fr; gap: 10px;">
                 <div>
                     <label style="display: block; margin-bottom: 5px; font-size: 13px; font-weight: 600;">Antal *</label>
-                    <input type="number" id="lineQty${index}" value="${line.quantity || 1}" min="0" step="0.01" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px;" onchange="updateLine(${index})">
+                    <input type="number" id="lineQty${index}" value="${line.quantity || 1}" min="0" step="0.01" style="width: 100%; padding: 8px; border: 1px solid var(--border); border-radius: 4px; font-size: 13px;" onchange="updateLine(${index})">
                 </div>
                 
                 <div>
                     <label style="display: block; margin-bottom: 5px; font-size: 13px; font-weight: 600;">Enhed *</label>
-                    <select id="lineUnit${index}" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px;" onchange="updateLine(${index})">
+                    <select id="lineUnit${index}" style="width: 100%; padding: 8px; border: 1px solid var(--border); border-radius: 4px; font-size: 13px;" onchange="updateLine(${index})">
                         ${UNITS.map(unit => `<option value="${unit}" ${line.unit === unit ? 'selected' : ''}>${unit}</option>`).join('')}
                     </select>
                 </div>
                 
                 <div>
                     <label style="display: block; margin-bottom: 5px; font-size: 13px; font-weight: 600;">E.pris *</label>
-                    <input type="number" id="linePrice${index}" value="${line.unit_price || 0}" min="0" step="0.01" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px;" onchange="updateLine(${index})">
+                    <input type="number" id="linePrice${index}" value="${line.unit_price || 0}" min="0" step="0.01" style="width: 100%; padding: 8px; border: 1px solid var(--border); border-radius: 4px; font-size: 13px;" onchange="updateLine(${index})">
                 </div>
                 
                 <div>
                     <label style="display: block; margin-bottom: 5px; font-size: 13px; font-weight: 600;">Rabat %</label>
-                    <input type="number" id="lineDiscount${index}" value="${line.discount_percent || 0}" min="0" max="100" step="0.1" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px;" onchange="updateLine(${index})">
+                    <input type="number" id="lineDiscount${index}" value="${line.discount_percent || 0}" min="0" max="100" step="0.1" style="width: 100%; padding: 8px; border: 1px solid var(--border); border-radius: 4px; font-size: 13px;" onchange="updateLine(${index})">
                 </div>
                 
                 <div>
                     <label style="display: block; margin-bottom: 5px; font-size: 13px; font-weight: 600;">Total</label>
-                    <div id="lineTotal${index}" style="padding: 8px; background: white; border: 1px solid #ddd; border-radius: 4px; font-size: 13px; font-weight: 600; color: var(--color-accent-hover);">
+                    <div id="lineTotal${index}" style="padding: 8px; background: var(--surface); border: 1px solid var(--border); border-radius: 4px; font-size: 13px; font-weight: 600; color: var(--color-accent-hover);">
                         ${formatCurrency(calculateLineTotal(line))}
                     </div>
                 </div>
@@ -561,7 +565,7 @@ async function loadQuoteContactPersons() {
             option.value = contact.id;
             option.textContent = contact.name + (contact.title ? ` - ${contact.title}` : '');
             if (contact.is_primary) {
-                option.textContent += ' ⭐';
+                option.textContent += '  (primær)';
             }
             contactSelect.appendChild(option);
         });
@@ -660,7 +664,7 @@ async function saveQuote(status = 'draft') {
         
         const savedQuote = await response.json();
         
-        alert(`✅ Tilbud ${currentView === 'edit' ? 'opdateret' : 'oprettet'}!`);
+        alert(`Tilbud ${currentView === 'edit' ? 'opdateret' : 'oprettet'}!`);
         
         // Return quote ID for preview
         return savedQuote.id;
@@ -694,7 +698,7 @@ function renderQuotePreview() {
     // Ensure lines is an array
     if (!currentQuote.lines || !Array.isArray(currentQuote.lines)) {
         console.error('Invalid quote lines:', currentQuote.lines);
-        container.innerHTML = '<div style="padding: 40px; text-align: center; color: var(--color-red);">⚠️ Kunne ikke indlæse tilbudslinjer. Prøv at genindlæse siden.</div>';
+        container.innerHTML = '<div style="padding: 40px; text-align: center; color: var(--color-red);">Kunne ikke indlæse tilbudslinjer. Prøv at genindlæse siden.</div>';
         return;
     }
     
@@ -702,45 +706,45 @@ function renderQuotePreview() {
     container.innerHTML = `
         <div style="max-width: 900px; margin: 0 auto;">
             <div style="display: flex; gap: 15px; margin-bottom: 20px;">
-                <button onclick="editQuote(${currentQuote.id})" style="padding: 10px 20px; background: var(--color-accent-hover); color: white; border: none; border-radius: 5px; cursor: pointer;">
-                    ✏️ Rediger
+                <button onclick="editQuote(${currentQuote.id})" class="btn btn-primary">
+                    Rediger
                 </button>
                 <button onclick="sendQuote(${currentQuote.id})" style="padding: 10px 20px; background: var(--color-green); color: white; border: none; border-radius: 5px; cursor: pointer;">
-                    📧 Send til Kunde
+                    Send til Kunde
                 </button>
                 <button onclick="downloadQuotePDF(${currentQuote.id})" style="padding: 10px 20px; background: var(--color-blue); color: white; border: none; border-radius: 5px; cursor: pointer;">
-                    📄 Download PDF
+                    Download PDF
                 </button>
                 <button onclick="deleteQuote(${currentQuote.id})" style="padding: 10px 20px; background: var(--color-red); color: white; border: none; border-radius: 5px; cursor: pointer;">
-                    🗑️ Slet
+                    Slet
                 </button>
             </div>
             
-            <div style="background: white; padding: 60px; padding-top: 30px;">
+            <div style="background: var(--surface); padding: 60px; padding-top: 30px;">
                 <!-- Minimal Header -->
-                <div style="display: flex; justify-content: space-between; align-items: start; padding-bottom: 30px; border-bottom: 1px solid #000; margin-bottom: 40px;">
+                <div style="display: flex; justify-content: space-between; align-items: start; padding-bottom: 30px; border-bottom: 1px solid var(--text); margin-bottom: 40px;">
                     <div style="background: transparent !important; margin-top: 0; padding: 0;">
                         <img src="seestlogo.png" alt="SG Seest Gulvteknik ApS" style="height: 80px; width: auto; display: block; background: transparent !important; background-color: transparent !important; margin: 0; padding: 0;">
                     </div>
                     <div style="text-align: right;">
-                        <h2 style="margin: 0 0 15px 0; font-size: 24px; font-weight: 700; color: #000;">TILBUD</h2>
+                        <h2 style="margin: 0 0 15px 0; font-size: 24px; font-weight: 700; color: var(--text);">TILBUD</h2>
                         <table style="border-collapse: collapse; margin-left: auto;">
                             <tr>
-                                <td style="padding: 3px 10px 3px 0; font-size: 12px; color: #666;">Kundenummer:</td>
-                                <td style="padding: 3px 0; font-size: 12px; color: #000; font-weight: 600;">${currentQuote.customer_id || 'N/A'}</td>
+                                <td style="padding: 3px 10px 3px 0; font-size: 12px; color: var(--text-muted);">Kundenummer:</td>
+                                <td style="padding: 3px 0; font-size: 12px; color: var(--text); font-weight: 600;">${currentQuote.customer_id || 'N/A'}</td>
                             </tr>
                             <tr>
-                                <td style="padding: 3px 10px 3px 0; font-size: 12px; color: #666;">Tilbud nr.:</td>
-                                <td style="padding: 3px 0; font-size: 12px; color: #000; font-weight: 600;">${currentQuote.quote_number}</td>
+                                <td style="padding: 3px 10px 3px 0; font-size: 12px; color: var(--text-muted);">Tilbud nr.:</td>
+                                <td style="padding: 3px 0; font-size: 12px; color: var(--text); font-weight: 600;">${currentQuote.quote_number}</td>
                             </tr>
                             <tr>
-                                <td style="padding: 3px 10px 3px 0; font-size: 12px; color: #666;">Dato:</td>
-                                <td style="padding: 3px 0; font-size: 12px; color: #000;">${new Date(currentQuote.date).toLocaleDateString('da-DK')}</td>
+                                <td style="padding: 3px 10px 3px 0; font-size: 12px; color: var(--text-muted);">Dato:</td>
+                                <td style="padding: 3px 0; font-size: 12px; color: var(--text);">${new Date(currentQuote.date).toLocaleDateString('da-DK')}</td>
                             </tr>
                             ${currentQuote.valid_until ? `
                             <tr>
-                                <td style="padding: 3px 10px 3px 0; font-size: 12px; color: #666;">Gyldig til:</td>
-                                <td style="padding: 3px 0; font-size: 12px; color: #000;">${new Date(currentQuote.valid_until).toLocaleDateString('da-DK')}</td>
+                                <td style="padding: 3px 10px 3px 0; font-size: 12px; color: var(--text-muted);">Gyldig til:</td>
+                                <td style="padding: 3px 0; font-size: 12px; color: var(--text);">${new Date(currentQuote.valid_until).toLocaleDateString('da-DK')}</td>
                             </tr>
                             ` : ''}
                         </table>
@@ -749,48 +753,48 @@ function renderQuotePreview() {
                 
                 <!-- Customer Info -->
                 <div style="margin-bottom: 40px;">
-                    <h3 style="margin: 0 0 10px 0; color: #000; font-size: 13px; font-weight: 700;">KUNDE:</h3>
-                    <p style="margin: 0 0 3px 0; font-weight: 600; font-size: 13px; color: #000;">${currentQuote.company_name}</p>
-                    ${currentQuote.contact_person_name ? `<p style="margin: 0 0 3px 0; font-size: 12px; color: #666;">Att: ${currentQuote.contact_person_name}${currentQuote.contact_person_title ? ` - ${currentQuote.contact_person_title}` : ''}</p>` : 
-                      currentQuote.contact_person ? `<p style="margin: 0 0 3px 0; font-size: 12px; color: #666;">Att: ${currentQuote.contact_person}</p>` : ''}
-                    ${currentQuote.att_person && !currentQuote.contact_person_name ? `<p style="margin: 0 0 3px 0; font-size: 12px; color: #666;">Att: ${currentQuote.att_person}</p>` : ''}
-                    ${currentQuote.address ? `<p style="margin: 0 0 3px 0; font-size: 12px; color: #666;">${currentQuote.address}</p>` : ''}
-                    ${currentQuote.postal_code && currentQuote.city ? `<p style="margin: 0 0 3px 0; font-size: 12px; color: #666;">${currentQuote.postal_code} ${currentQuote.city}</p>` : ''}
-                    ${currentQuote.contact_person_email ? `<p style="margin: 0 0 3px 0; font-size: 12px; color: #666;">${currentQuote.contact_person_email}</p>` : 
-                      currentQuote.customer_email ? `<p style="margin: 0 0 3px 0; font-size: 12px; color: #666;">${currentQuote.customer_email}</p>` : ''}
-                    ${currentQuote.contact_person_phone ? `<p style="margin: 0; font-size: 12px; color: #666;">${currentQuote.contact_person_phone}</p>` : 
-                      currentQuote.customer_phone ? `<p style="margin: 0; font-size: 12px; color: #666;">${currentQuote.customer_phone}</p>` : ''}
+                    <h3 style="margin: 0 0 10px 0; color: var(--text); font-size: 13px; font-weight: 700;">KUNDE:</h3>
+                    <p style="margin: 0 0 3px 0; font-weight: 600; font-size: 13px; color: var(--text);">${currentQuote.company_name}</p>
+                    ${currentQuote.contact_person_name ? `<p style="margin: 0 0 3px 0; font-size: 12px; color: var(--text-muted);">Att: ${currentQuote.contact_person_name}${currentQuote.contact_person_title ? ` - ${currentQuote.contact_person_title}` : ''}</p>` : 
+                      currentQuote.contact_person ? `<p style="margin: 0 0 3px 0; font-size: 12px; color: var(--text-muted);">Att: ${currentQuote.contact_person}</p>` : ''}
+                    ${currentQuote.att_person && !currentQuote.contact_person_name ? `<p style="margin: 0 0 3px 0; font-size: 12px; color: var(--text-muted);">Att: ${currentQuote.att_person}</p>` : ''}
+                    ${currentQuote.address ? `<p style="margin: 0 0 3px 0; font-size: 12px; color: var(--text-muted);">${currentQuote.address}</p>` : ''}
+                    ${currentQuote.postal_code && currentQuote.city ? `<p style="margin: 0 0 3px 0; font-size: 12px; color: var(--text-muted);">${currentQuote.postal_code} ${currentQuote.city}</p>` : ''}
+                    ${currentQuote.contact_person_email ? `<p style="margin: 0 0 3px 0; font-size: 12px; color: var(--text-muted);">${currentQuote.contact_person_email}</p>` : 
+                      currentQuote.customer_email ? `<p style="margin: 0 0 3px 0; font-size: 12px; color: var(--text-muted);">${currentQuote.customer_email}</p>` : ''}
+                    ${currentQuote.contact_person_phone ? `<p style="margin: 0; font-size: 12px; color: var(--text-muted);">${currentQuote.contact_person_phone}</p>` : 
+                      currentQuote.customer_phone ? `<p style="margin: 0; font-size: 12px; color: var(--text-muted);">${currentQuote.customer_phone}</p>` : ''}
                 </div>
                 
                 <!-- Title/Description -->
                 <div style="margin-bottom: 30px;">
-                    <h3 style="margin: 0; font-size: 14px; color: #000; font-weight: 700;">Tilbud på: ${currentQuote.title}</h3>
-                    ${currentQuote.requisition_number ? `<p style="margin: 5px 0 0 0; font-size: 12px; color: #666;">Rekvisitionsnummer: ${currentQuote.requisition_number}</p>` : ''}
+                    <h3 style="margin: 0; font-size: 14px; color: var(--text); font-weight: 700;">Tilbud på: ${currentQuote.title}</h3>
+                    ${currentQuote.requisition_number ? `<p style="margin: 5px 0 0 0; font-size: 12px; color: var(--text-muted);">Rekvisitionsnummer: ${currentQuote.requisition_number}</p>` : ''}
                 </div>
                 
                 <!-- Lines Table -->
                 <table style="width: 100%; border-collapse: collapse; margin-bottom: 40px;">
                     <thead>
-                        <tr style="border-bottom: 2px solid #000;">
-                            <th style="padding: 12px 10px; text-align: left; font-weight: 700; font-size: 12px; color: #000;">Beskrivelse</th>
-                            <th style="padding: 12px 10px; text-align: center; font-weight: 700; font-size: 12px; color: #000; width: 80px;">Antal</th>
-                            <th style="padding: 12px 10px; text-align: center; font-weight: 700; font-size: 12px; color: #000; width: 80px;">Enhed</th>
-                            <th style="padding: 12px 10px; text-align: right; font-weight: 700; font-size: 12px; color: #000; width: 110px;">E.pris</th>
-                            <th style="padding: 12px 10px; text-align: right; font-weight: 700; font-size: 12px; color: #000; width: 70px;">Rabat</th>
-                            <th style="padding: 12px 10px; text-align: right; font-weight: 700; font-size: 12px; color: #000; width: 120px;">Total</th>
+                        <tr style="border-bottom: 2px solid var(--text);">
+                            <th style="padding: 12px 10px; text-align: left; font-weight: 700; font-size: 12px; color: var(--text);">Beskrivelse</th>
+                            <th style="padding: 12px 10px; text-align: center; font-weight: 700; font-size: 12px; color: var(--text); width: 80px;">Antal</th>
+                            <th style="padding: 12px 10px; text-align: center; font-weight: 700; font-size: 12px; color: var(--text); width: 80px;">Enhed</th>
+                            <th style="padding: 12px 10px; text-align: right; font-weight: 700; font-size: 12px; color: var(--text); width: 110px;">E.pris</th>
+                            <th style="padding: 12px 10px; text-align: right; font-weight: 700; font-size: 12px; color: var(--text); width: 70px;">Rabat</th>
+                            <th style="padding: 12px 10px; text-align: right; font-weight: 700; font-size: 12px; color: var(--text); width: 120px;">Total</th>
                         </tr>
                     </thead>
                     <tbody>
                         ${currentQuote.lines.map(line => {
                             const lineTotal = calculateLineTotal(line);
                             return `
-                                <tr style="border-bottom: 1px solid #ddd;">
-                                    <td style="padding: 10px; vertical-align: top; color: #000; font-size: 12px;">${line.description}</td>
-                                    <td style="padding: 10px; text-align: center; color: #000; font-size: 12px;">${line.quantity}</td>
-                                    <td style="padding: 10px; text-align: center; color: #000; font-size: 12px;">${line.unit}</td>
-                                    <td style="padding: 10px; text-align: right; color: #000; font-size: 12px;">${formatCurrency(line.unit_price)}</td>
-                                    <td style="padding: 10px; text-align: right; color: #000; font-size: 12px;">${line.discount_percent}%</td>
-                                    <td style="padding: 10px; text-align: right; font-weight: 600; color: #000; font-size: 12px;">${formatCurrency(lineTotal)}</td>
+                                <tr style="border-bottom: 1px solid var(--border);">
+                                    <td style="padding: 10px; vertical-align: top; color: var(--text); font-size: 12px;">${line.description}</td>
+                                    <td style="padding: 10px; text-align: center; color: var(--text); font-size: 12px;">${line.quantity}</td>
+                                    <td style="padding: 10px; text-align: center; color: var(--text); font-size: 12px;">${line.unit}</td>
+                                    <td style="padding: 10px; text-align: right; color: var(--text); font-size: 12px;">${formatCurrency(line.unit_price)}</td>
+                                    <td style="padding: 10px; text-align: right; color: var(--text); font-size: 12px;">${line.discount_percent}%</td>
+                                    <td style="padding: 10px; text-align: right; font-weight: 600; color: var(--text); font-size: 12px;">${formatCurrency(lineTotal)}</td>
                                 </tr>
                             `;
                         }).join('')}
@@ -800,41 +804,41 @@ function renderQuotePreview() {
                 <!-- Totals -->
                 <div style="display: flex; justify-content: flex-end; margin-bottom: 40px;">
                     <div style="min-width: 320px;">
-                        <div style="display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #ddd;">
-                            <span style="font-size: 12px; color: #000;">Subtotal:</span>
-                            <strong style="font-size: 12px; color: #000;">${formatCurrency(currentQuote.subtotal)}</strong>
+                        <div style="display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--border);">
+                            <span style="font-size: 12px; color: var(--text);">Subtotal:</span>
+                            <strong style="font-size: 12px; color: var(--text);">${formatCurrency(currentQuote.subtotal)}</strong>
                         </div>
-                        <div style="display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #ddd;">
-                            <span style="font-size: 12px; color: #000;">Moms (25%):</span>
-                            <strong style="font-size: 12px; color: #000;">${formatCurrency(currentQuote.vat_amount)}</strong>
+                        <div style="display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--border);">
+                            <span style="font-size: 12px; color: var(--text);">Moms (25%):</span>
+                            <strong style="font-size: 12px; color: var(--text);">${formatCurrency(currentQuote.vat_amount)}</strong>
                         </div>
-                        <div style="display: flex; justify-content: space-between; padding: 15px 0; border-top: 2px solid #000; margin-top: 10px;">
-                            <span style="font-size: 14px; font-weight: 700; color: #000;">TOTAL:</span>
-                            <strong style="font-size: 16px; font-weight: 700; color: #000;">${formatCurrency(currentQuote.total)}</strong>
+                        <div style="display: flex; justify-content: space-between; padding: 15px 0; border-top: 2px solid var(--text); margin-top: 10px;">
+                            <span style="font-size: 14px; font-weight: 700; color: var(--text);">TOTAL:</span>
+                            <strong style="font-size: 16px; font-weight: 700; color: var(--text);">${formatCurrency(currentQuote.total)}</strong>
                         </div>
                     </div>
                 </div>
                 
                 <!-- Payment Terms -->
                 ${currentQuote.terms ? `
-                    <div style="margin-bottom: 25px; padding: 15px 0; border-top: 1px solid #ddd; border-bottom: 1px solid #ddd;">
-                        <h3 style="margin: 0 0 8px 0; color: #000; font-size: 12px; font-weight: 700;">BETALINGSBETINGELSER:</h3>
-                        <p style="margin: 0; color: #000; font-size: 11px; line-height: 1.5; white-space: pre-wrap;">${currentQuote.terms}</p>
+                    <div style="margin-bottom: 25px; padding: 15px 0; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);">
+                        <h3 style="margin: 0 0 8px 0; color: var(--text); font-size: 12px; font-weight: 700;">BETALINGSBETINGELSER:</h3>
+                        <p style="margin: 0; color: var(--text); font-size: 11px; line-height: 1.5; white-space: pre-wrap;">${currentQuote.terms}</p>
                     </div>
                 ` : ''}
                 
                 ${currentQuote.attachments && currentQuote.attachments.length > 0 ? `
-                    <div style="margin-bottom: 25px; padding: 15px 0; border-bottom: 1px solid #ddd;">
-                        <h3 style="margin: 0 0 8px 0; color: #000; font-size: 12px; font-weight: 700;">VEDHÆFTEDE DOKUMENTER:</h3>
+                    <div style="margin-bottom: 25px; padding: 15px 0; border-bottom: 1px solid var(--border);">
+                        <h3 style="margin: 0 0 8px 0; color: var(--text); font-size: 12px; font-weight: 700;">VEDHÆFTEDE DOKUMENTER:</h3>
                         ${currentQuote.attachments.map(att => `
-                            <div style="margin: 5px 0; color: #000; font-size: 11px;">${att.original_name}</div>
+                            <div style="margin: 5px 0; color: var(--text); font-size: 11px;">${att.original_name}</div>
                         `).join('')}
                     </div>
                 ` : ''}
                 
                 <!-- Footer -->
-                <div style="border-top: 1px solid #000; padding-top: 20px; margin-top: 40px; text-align: center;">
-                    <p style="margin: 0; color: #666; font-size: 11px;">
+                <div style="border-top: 1px solid var(--text); padding-top: 20px; margin-top: 40px; text-align: center;">
+                    <p style="margin: 0; color: var(--text-muted); font-size: 11px;">
                         SG Seest Gulvteknik ApS • Tandholtvej 39, Seest • DK-6000 Kolding • CVR: 41435208<br>
                         Email: kontakt@seestgulvteknik.dk • Telefon: 75 52 10 54 • www.seestgulvteknik.dk
                     </p>
@@ -868,7 +872,7 @@ async function acceptQuote(quoteId) {
         
         const order = await response.json();
         
-        alert(`✅ Tilbud accepteret som ordre ${order.order_number}!`);
+        alert(`Tilbud accepteret som ordre ${order.order_number}!`);
         await loadQuotes();
         
     } catch (error) {
@@ -893,7 +897,7 @@ async function rejectQuote(quoteId) {
             throw new Error(error.error || 'Failed to reject quote');
         }
         
-        alert('❌ Tilbud afvist');
+        alert('Tilbud afvist');
         await loadQuotes();
         
     } catch (error) {
@@ -999,7 +1003,7 @@ function renderOrdersContent(orders) {
     
     if (orders.length === 0) {
         container.innerHTML = `
-            <div style="text-align: center; padding: 60px 20px; color: #999;">
+            <div style="text-align: center; padding: 60px 20px; color: var(--text-muted);">
                 <div style="font-size: 44px; margin-bottom: 20px; color: var(--color-text-muted); display: flex; justify-content: center;"><i data-lucide="package" style="width:48px;height:48px;"></i></div>
                 <h3>Ingen ordrer endnu</h3>
                 <p style="margin: 10px 0;">Acceptér et tilbud for at se det her</p>
@@ -1023,7 +1027,7 @@ function renderOrdersContent(orders) {
                         <h4 style="margin: 0 0 10px 0;">Ordre ${fullOrderNumber}</h4>
                         <p style="margin: 5px 0;"><strong>Kunde:</strong> ${order.customer_name}</p>
                         <p style="margin: 5px 0;"><strong>Titel:</strong> ${order.title}</p>
-                        <p style="margin: 3px 0 5px 0; font-size: 0.85em; color: #888; font-style: italic;">Oprettet af ${order.created_by_name || 'Ukendt'}</p>
+                        <p style="margin: 3px 0 5px 0; font-size: 0.85em; color: var(--text-muted); font-style: italic;">Oprettet af ${order.created_by_name || 'Ukendt'}</p>
                         <p style="margin: 5px 0;"><strong>Total:</strong> ${formatCurrency(order.total)}</p>
                         <p style="margin: 5px 0;"><span class="status-pill status-pill--accepted">Accepteret</span> <span style="color: var(--color-text-muted);">${new Date(order.accepted_at).toLocaleDateString('da-DK')}</span></p>
                     </div>
@@ -1069,7 +1073,7 @@ function renderRejectedContent(quotes) {
     
     if (quotes.length === 0) {
         container.innerHTML = `
-            <div style="text-align: center; padding: 60px 20px; color: #999;">
+            <div style="text-align: center; padding: 60px 20px; color: var(--text-muted);">
                 <div style="font-size: 44px; margin-bottom: 20px; color: var(--color-red); display: flex; justify-content: center;"><i data-lucide="x-circle" style="width:48px;height:48px;"></i></div>
                 <h3>Ingen afviste tilbud</h3>
                 <p style="margin: 10px 0;">Afviste tilbud vises her</p>
@@ -1087,19 +1091,19 @@ function renderRejectedContent(quotes) {
                         <h4 style="margin: 0 0 10px 0;">Tilbud ${quote.quote_number}</h4>
                         <p style="margin: 5px 0;"><strong>Kunde:</strong> ${quote.customer_name}</p>
                         <p style="margin: 5px 0;"><strong>Titel:</strong> ${quote.title}</p>
-                        <p style="margin: 3px 0 5px 0; font-size: 0.85em; color: #888; font-style: italic;">Oprettet af ${quote.created_by_name || 'Ukendt'}</p>
+                        <p style="margin: 3px 0 5px 0; font-size: 0.85em; color: var(--text-muted); font-style: italic;">Oprettet af ${quote.created_by_name || 'Ukendt'}</p>
                         <p style="margin: 5px 0;"><strong>Total:</strong> ${formatCurrency(quote.total)}</p>
-                        <p style="margin: 5px 0; color: var(--color-red); font-weight: 600;">❌ Afvist: ${new Date(quote.date).toLocaleDateString('da-DK')}</p>
+                        <p style="margin: 5px 0; color: var(--color-red); font-weight: 600;">Afvist: ${new Date(quote.date).toLocaleDateString('da-DK')}</p>
                     </div>
                     <div style="display: flex; flex-direction: column; gap: 10px;">
                         <button onclick="viewQuote(${quote.id})" style="padding: 10px 20px; background: var(--color-blue); color: white; border: none; border-radius: 5px; cursor: pointer; white-space: nowrap;">
-                            👁️ Se Tilbud
+                            Se Tilbud
                         </button>
-                        <button onclick="moveRejectedBackToQuote(${quote.id})" style="padding: 10px 20px; background: #9e9e9e; color: white; border: none; border-radius: 5px; cursor: pointer; white-space: nowrap;">
+                        <button onclick="moveRejectedBackToQuote(${quote.id})" class="btn btn-secondary">
                             ◀ Rykke til Tilbud
                         </button>
                         <button onclick="deleteQuote(${quote.id})" style="padding: 10px 20px; background: var(--color-red); color: white; border: none; border-radius: 5px; cursor: pointer; white-space: nowrap;">
-                            🗑️ Slet
+                            Slet
                         </button>
                     </div>
                 </div>
@@ -1128,7 +1132,7 @@ async function moveOrderBackToQuote(quoteId) {
         
         await response.json(); // Wait for response
         
-        alert('✅ Ordre rykket tilbage til tilbud!');
+        alert('Ordre rykket tilbage til tilbud!');
         await loadOrders(); // Reload orders tab
         
     } catch (error) {
@@ -1153,7 +1157,7 @@ async function moveRejectedBackToQuote(quoteId) {
             throw new Error(error.error || 'Failed to revert quote');
         }
         
-        alert('✅ Tilbud rykket tilbage til tilbudsfasen!');
+        alert('Tilbud rykket tilbage til tilbudsfasen!');
         await loadRejected();
         
     } catch (error) {
