@@ -855,6 +855,22 @@ async function collectEntry(entry, relPath, tree, depth, skipped) {
     if (isJunkFileName(entry.name)) { skipped.count++; return; }
     if (entry.isFile) {
         const file = await new Promise(function (resolve, reject) {
+
+
+            entry.file(resolve, reject);
+        });
+        if (file.size === 0 || file.size > MAX_UPLOAD_SIZE) { skipped.count++; return; }
+        tree.files.push({ file: file, relPath: relPath });
+    } else if (entry.isDirectory) {
+        const dirPath = relPath ? relPath + '/' + entry.name : entry.name;
+        tree.dirs.push(dirPath);
+        const children = await readAllEntries(entry.createReader());
+        for (const child of children) {
+            await collectEntry(child, dirPath, tree, depth + 1, skipped);
+        }
+    }
+}
+
 // Fra webkitdirectory-input: brug webkitRelativePath til at bygge samme træ
 async function ingestIncomingFiles(files, folderId, hasRelPaths) {
     const tree = { dirs: [], files: [] };
@@ -871,8 +887,8 @@ async function ingestIncomingFiles(files, folderId, hasRelPaths) {
         if (rel) {
             const segs = rel.split('/');
             for (let i = 1; i <= segs.length; i++) {
-                const p = segs.slice(0, i).join('/');
-                if (p && tree.dirs.indexOf(p) === -1) tree.dirs.push(p);
+                const p2 = segs.slice(0, i).join('/');
+                if (p2 && tree.dirs.indexOf(p2) === -1) tree.dirs.push(p2);
             }
         }
         tree.files.push({ file: f, relPath: rel });
@@ -944,20 +960,6 @@ async function confirmAndUploadTree(tree, folderId, skippedCount) {
     enqueueUploads(jobs);
 }
 
-
-            entry.file(resolve, reject);
-        });
-        if (file.size === 0 || file.size > MAX_UPLOAD_SIZE) { skipped.count++; return; }
-        tree.files.push({ file: file, relPath: relPath });
-    } else if (entry.isDirectory) {
-        const dirPath = relPath ? relPath + '/' + entry.name : entry.name;
-        tree.dirs.push(dirPath);
-        const children = await readAllEntries(entry.createReader());
-        for (const child of children) {
-            await collectEntry(child, dirPath, tree, depth + 1, skipped);
-        }
-    }
-}
 
 
 function xhrUploadFile(file, folderId, onProgress) {
