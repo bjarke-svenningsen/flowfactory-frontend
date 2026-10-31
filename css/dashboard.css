@@ -2031,3 +2031,10 @@ body {
   padding: 6px;
 }
 .move-cancel:hover { color: #1d2126; }
+
+/* Trin a3: fil under klip (venter på Sæt ind) */
+.file-row.cut-pending td,
+[data-file-id].cut-pending {
+    opacity: 0.45;
+}
+

@@ -537,7 +537,7 @@ function renderFileDetails() {
             '<button class="btn btn-secondary" onclick="selectedFileId = ' + file.id + '; downloadFile()"><i data-lucide="download"></i>Download</button>' +
             '<button class="btn btn-secondary" onclick="selectedFileId = ' + file.id + '; shareFile()"><i data-lucide="share-2"></i>Del</button>' +
             '<button class="btn btn-secondary" onclick="selectedFileId = ' + file.id + '; moveSelectedToFolder()"><i data-lucide="folder-input"></i>Flyt til...</button>' +
-            (inSharedList && !inOwnList ? '' : '<button class="btn btn-secondary" onclick="selectedFileId = ' + file.id + '; stopSharingSelected()"><i data-lucide="link-break"></i>Stop deling</button>') +
+            '<button class="btn btn-secondary" id="stopShareBtn" style="display:none" onclick="selectedFileId = ' + file.id + '; stopSharingSelected()"><i data-lucide="link-break"></i>Stop deling</button>' +
             '<button class="btn btn-secondary" style="color:#D93025" onclick="selectedFileId = ' + file.id + '; deleteSelected()"><i data-lucide="trash-2"></i>Slet</button>';
     }
     panel.innerHTML =
@@ -552,6 +552,16 @@ function renderFileDetails() {
         '<div class="details-actions">' + actions + '</div>';
     refreshIcons();
     if (isImg) loadDetailsPreview(file);
+    // Stop deling vises kun, når filen faktisk er delt med nogen
+    (async function () {
+        try {
+            const token2 = sessionStorage.getItem('token');
+            const res2 = await fetch('/api/files/' + file.id + '/shares', { headers: { 'Authorization': 'Bearer ' + token2 } });
+            const shares = res2.ok ? await res2.json() : [];
+            const btn = document.getElementById('stopShareBtn');
+            if (btn) btn.style.display = (Array.isArray(shares) && shares.length) ? '' : 'none';
+        } catch (e3) { /* knappen forbliver skjult */ }
+    })();
 }
 
 async function loadDetailsPreview(file) {
@@ -903,6 +913,13 @@ let selectedFolderName = '';
 function showContextMenu(event, fileId) {
     event.preventDefault();
     selectRealFile(fileId);
+    selectedFolderId = null; // Sæt ind fra fil-menu går til den aktuelle visning
+    const ctxCut = document.getElementById("ctxCut");
+    if (ctxCut) ctxCut.style.display = "";
+    const ctxCopy = document.getElementById("ctxCopy");
+    if (ctxCopy) ctxCopy.style.display = "";
+    const ctxPaste = document.getElementById("ctxPasteFile");
+    if (ctxPaste) ctxPaste.style.display = fileClipboard ? "" : "none";
     
     const contextMenu = document.getElementById('contextMenu');
     contextMenu.style.display = 'block';
@@ -916,6 +933,8 @@ function showContextMenu(event, fileId) {
 function showFolderContextMenu(event, folderId, folderName) {
     event.preventDefault();
     event.stopPropagation();
+    const fp = document.getElementById("ctxFolderPaste");
+    if (fp) fp.style.display = fileClipboard ? "" : "none";
     
     selectedFolderId = folderId;
     selectedFolderName = folderName;
@@ -1131,9 +1150,111 @@ function navigateUp() {
     navigateBack();
 }
 
-function cutSelected() {}
-function copySelected() {}
-function pasteClipboard() {}
+// --- Klip / Kopiér / Sæt ind (trin a3) ---
+let fileClipboard = null; // { mode: "copy" | "cut", fileId }
+
+function hideFileContextMenus() {
+    const cm = document.getElementById("contextMenu");
+    if (cm) cm.style.display = "none";
+    const fcm = document.getElementById("folderContextMenu");
+    if (fcm) fcm.style.display = "none";
+}
+
+function clearCutStyling() {
+    document.querySelectorAll(".cut-pending").forEach(function (el) { el.classList.remove("cut-pending"); });
+}
+
+function cutSelected() {
+    hideFileContextMenus();
+    if (!selectedFileId) { alert("Vælg en fil først"); return; }
+    fileClipboard = { mode: "cut", fileId: selectedFileId };
+    clearCutStyling();
+    document.querySelectorAll("[data-file-id=" + JSON.stringify(String(selectedFileId)) + "]").forEach(function (el) { el.classList.add("cut-pending"); });
+}
+
+function copySelected() {
+    hideFileContextMenus();
+    if (!selectedFileId) { alert("Vælg en fil først"); return; }
+    fileClipboard = { mode: "copy", fileId: selectedFileId };
+}
+
+function cancelCut() {
+    if (fileClipboard && fileClipboard.mode === "cut") {
+        fileClipboard = null;
+        clearCutStyling();
+    }
+}
+
+function currentPasteTarget() {
+    if (selectedFolderId !== null && selectedFolderId !== undefined) {
+        const f = allFolders.find(function (x) { return x.id === selectedFolderId; });
+        return { id: selectedFolderId, name: f ? (f.is_company_folder ? "Fælles filer" : f.name) : selectedFolderName, company: !!(f && f.is_company_folder) };
+    }
+    if (currentFilter === "folder" && currentFolderId) {
+        const f2 = allFolders.find(function (x) { return x.id === currentFolderId; });
+        return { id: currentFolderId, name: f2 ? (f2.is_company_folder ? "Fælles filer" : f2.name) : "mappen", company: !!(f2 && f2.is_company_folder) };
+    }
+    return { id: null, name: "Mine filer", company: false };
+}
+
+function friendlyFileError(msg) {
+    if (/Permission denied/i.test(msg || "")) return "Du har ikke tilladelse til det. Kun den, der uploadede filen (eller en administrator), kan gøre dette.";
+    return msg;
+}
+
+async function pasteClipboard() {
+    hideFileContextMenus();
+    if (!fileClipboard) { alert("Der er intet at indsætte"); return; }
+    const file = findFileAnywhere(fileClipboard.fileId);
+    if (!file) { fileClipboard = null; clearCutStyling(); alert("Filen findes ikke længere"); return; }
+    const target = currentPasteTarget();
+    const meId = getCurrentUserId();
+    if (fileClipboard.mode === "cut" && file.uploaded_by !== meId) {
+        alert("Du kan kun flytte filer, du selv har uploadet (eller er administrator).");
+        return;
+    }
+    if (target.company && fileClipboard.mode === "copy" && !confirm("Filen bliver synlig for alle med adgang til Fælles filer. Fortsæt?")) return;
+    const token = sessionStorage.getItem("token");
+    try {
+        let resp;
+        const isCopy = fileClipboard.mode === "copy";
+        if (isCopy) {
+            resp = await fetch("/api/files/" + file.id + "/copy", {
+                method: "POST",
+                headers: { "Content-Type": "application/json", "Authorization": "Bearer " + token },
+                body: JSON.stringify({ folder_id: target.id })
+            });
+        } else {
+            resp = await fetch("/api/files/" + file.id + "/move", {
+                method: "PUT",
+                headers: { "Content-Type": "application/json", "Authorization": "Bearer " + token },
+                body: JSON.stringify({ folder_id: target.id })
+            });
+        }
+        if (!resp.ok) {
+            const err = await resp.json().catch(function () { return {}; });
+            throw new Error(friendlyFileError(err.error || "Handlingen fejlede"));
+        }
+        let data = {};
+        try { data = await resp.json(); } catch (e2) { data = {}; }
+        fileClipboard = null;
+        clearCutStyling();
+        selectedFolderId = null;
+        await loadRealFiles();
+        if (isCopy) {
+            if (data.final_name && data.final_name !== file.original_name) {
+                alert("Kopieret som " + JSON.stringify(data.final_name));
+            } else {
+                alert("Kopieret til " + JSON.stringify(target.name));
+            }
+        } else {
+            alert("Flyttet til " + JSON.stringify(target.name));
+        }
+    } catch (error) {
+        console.error("Paste error:", error);
+        alert(error.message);
+    }
+}
 
 function openSelectedFile() { 
     const contextMenu = document.getElementById('contextMenu');
@@ -1527,7 +1648,7 @@ async function doMoveFile(fileId, folderId, isCompany) {
         });
         if (!response.ok) {
             const error = await response.json().catch(() => ({}));
-            throw new Error(error.error || 'Flyt fejlede');
+            throw new Error(friendlyFileError(error.error || 'Flyt fejlede'));
         }
         selectedFileId = null; // ryd markering efter flyt
         const dlg = document.getElementById('moveFileDialog');
@@ -1590,3 +1711,29 @@ async function doUnshare(fileId, userId, token) {
     alert('Delingen er stoppet');
     renderFileDetails();
 }
+
+// Tastatur: Ctrl+C / Ctrl+X / Ctrl+V / Esc - kun på Filer-siden, uden for tekstfelter og dialoger
+document.addEventListener("keydown", function (e) {
+    if (!document.getElementById("fileListBody")) return;
+    const ae = document.activeElement;
+    if (ae && (ae.tagName === "INPUT" || ae.tagName === "TEXTAREA" || ae.tagName === "SELECT" || ae.isContentEditable)) return;
+    if (document.getElementById("moveFileDialog")) return;
+    const imgModal = document.getElementById("imageModal");
+    if (imgModal && imgModal.style.display === "flex") return;
+    const key = (e.key || "").toLowerCase();
+    if ((e.ctrlKey || e.metaKey) && key === "c" && selectedFileId) { e.preventDefault(); copySelected(); }
+    else if ((e.ctrlKey || e.metaKey) && key === "x" && selectedFileId) { e.preventDefault(); cutSelected(); }
+    else if ((e.ctrlKey || e.metaKey) && key === "v" && fileClipboard) { e.preventDefault(); pasteClipboard(); }
+    else if (key === "escape") { cancelCut(); }
+});
+
+// Højreklik på tomt område i en mappe: Sæt ind her
+document.addEventListener("contextmenu", function (e) {
+    const list = document.getElementById("fileListBody");
+    if (!list || !list.contains(e.target)) return;
+    if (e.target.closest(".file-row") || e.target.closest(".folder-row")) return;
+    if (currentFilter !== "folder" || !currentFolderId) return;
+    const f3 = allFolders.find(function (x) { return x.id === currentFolderId; });
+    showFolderContextMenu(e, currentFolderId, f3 ? f3.name : "Mappe");
+});
+

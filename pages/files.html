@@ -58,9 +58,9 @@
 <div id="contextMenu" class="context-menu">
     <div class="context-menu-item" onclick="openSelectedFile()">Åbn</div>
     <div class="context-menu-separator"></div>
-    <div class="context-menu-item" onclick="cutSelected()">Klip</div>
-    <div class="context-menu-item" onclick="copySelected()">Kopier</div>
-    <div class="context-menu-item" onclick="pasteClipboard()">Sæt ind</div>
+    <div class="context-menu-item" id="ctxCut" onclick="cutSelected()">Klip</div>
+    <div class="context-menu-item" id="ctxCopy" onclick="copySelected()">Kopier</div>
+    <div class="context-menu-item" id="ctxPasteFile" style="display:none" onclick="pasteClipboard()">Sæt ind</div>
     <div class="context-menu-separator"></div>
     <div class="context-menu-item" onclick="downloadFile()"> Download</div>
     <div class="context-menu-item" onclick="shareFile()"> Del med kolleger</div>
@@ -75,6 +75,7 @@
 
 <div id="folderContextMenu" class="context-menu">
     <div class="context-menu-item" onclick="createSubfolder()"> Ny undermappe</div>
+<div class="context-menu-item" id="ctxFolderPaste" style="display:none" onclick="pasteClipboard()">Sæt ind</div>
     <div class="context-menu-separator"></div>
     <div class="context-menu-item" onclick="renameFolderSelected()"> Omdøb mappe</div>
     <div class="context-menu-item" onclick="deleteFolderSelected()"> Slet mappe</div>

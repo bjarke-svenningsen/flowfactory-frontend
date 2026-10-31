@@ -147,6 +147,11 @@ function setContentDisposition(res, filename, disposition) {
   res.setHeader('Content-Disposition',
     `${disposition}; filename="${asciiName}"; filename*=UTF-8''${encodeURIComponent(filename || 'fil')}`);
 }
+// Multer 1.x læser filnavnet som latin1 - dekod til UTF-8 (æ, ø, å, emoji m.m.)
+function decodeUploadName(name) {
+  try { return Buffer.from(String(name || ""), "latin1").toString("utf8"); }
+  catch (e) { return String(name || ""); }
+}
 
 // Sender en fil (fra R2 hvis rækkens storage_provider='r2', ellers fra disk som i dag).
 // Læsningen styres AF RÆKKENS storage_provider - ikke af USE_R2-flaget. USE_R2 styrer kun,
@@ -179,7 +184,8 @@ async function sendFileContent(file, res, disposition = 'inline') {
     return res.status(404).json({ error: 'File not found on disk' });
   }
   if (disposition === 'attachment') {
-    res.download(filePath, file.original_name || file.filename);
+    setContentDisposition(res, file.original_name || file.filename, "attachment");
+    res.sendFile(filePath);
   } else {
     res.setHeader('Content-Type', contentType);
     setContentDisposition(res, file.original_name || file.filename, 'inline');
@@ -733,7 +739,7 @@ app.post('/api/files/upload', auth, upload.single('file'), async (req, res) => {
 
     const fileInfo = {
       filename: req.file.filename,
-      original_name: req.file.originalname,
+      original_name: decodeUploadName(req.file.originalname),
       file_path: `/uploads/${req.file.filename}`,
       file_size: req.file.size,
       mime_type: req.file.mimetype,
@@ -963,9 +969,13 @@ app.delete('/api/files/:id', auth, async (req, res) => {
     return res.status(403).json({ error: 'Permission denied' });
   }
   
-  // Delete physical file (R2-filer har ingen disk-kopi - findes ikke, ignoreres)
+  // Slet kun den fysiske fil, hvis ingen anden række (fx en kopi) bruger samme disk-fil
   const filePath = path.join(UPLOADS_DIR, file.filename);
-  if (fs.existsSync(filePath)) {
+  const otherDiskUser = await db.get(
+    "SELECT id FROM files WHERE filename = ? AND id != ? AND (storage_provider IS NULL OR storage_provider != ?) LIMIT 1",
+    [file.filename, fileId, "r2"]
+  );
+  if (!otherDiskUser && fs.existsSync(filePath)) {
     fs.unlinkSync(filePath);
   }
   
@@ -1053,6 +1063,74 @@ app.put('/api/files/:id/move', auth, async (req, res) => {
   `, [fileId]);
   
   res.json(updatedFile);
+});
+
+// --- FILE COPY (trin a3) ---
+// Kopiér fil: ny selvstændig række (ejer = den, der kopierer, dato nu).
+// R2-filer deler samme storage_key (slet fjerner kun objektet, når ingen række bruger det);
+// disk-filer får en fysisk kopi, så sletning af den ene ikke rammer den anden.
+app.post("/api/files/:id/copy", auth, async (req, res) => {
+  const fileId = Number(req.params.id);
+  const targetFolderId = req.body.folder_id || null;
+  const me = req.user.id;
+  try {
+    const user = await db.get("SELECT is_admin FROM users WHERE id = ?", [me]);
+    const file = await db.get("SELECT * FROM files WHERE id = ?", [fileId]);
+    if (!file) return res.status(404).json({ error: "File not found" });
+
+    // Læseadgang: egen fil, delt med mig, fil i firmamappen eller admin
+    const sharedWithMe = await db.get("SELECT id FROM file_shares WHERE file_id = ? AND shared_with_user_id = ?", [fileId, me]);
+    const srcFolder = file.folder_id ? await db.get("SELECT * FROM folders WHERE id = ?", [file.folder_id]) : null;
+    const fromCompany = !!(srcFolder && srcFolder.is_company_folder);
+    const canRead = file.uploaded_by === me || file.owner_id === me || user.is_admin || !!sharedWithMe || (fromCompany && canAccessCompanyFolder(user));
+    if (!canRead) return res.status(403).json({ error: "Permission denied" });
+
+    // Skriveadgang til målmappen: egen mappe, Mine filer (ingen mappe) eller firmamappen
+    if (targetFolderId) {
+      const targetFolder = await db.get("SELECT * FROM folders WHERE id = ?", [targetFolderId]);
+      if (!targetFolder) return res.status(404).json({ error: "Folder not found" });
+      const canWrite = targetFolder.created_by === me || (targetFolder.is_company_folder && canAccessCompanyFolder(user)) || user.is_admin;
+      if (!canWrite) return res.status(403).json({ error: "Permission denied - folder access" });
+    }
+
+    // Unikt navn i målmappen: navn (2).ext som i Windows
+    const baseName = file.original_name || file.filename;
+    const dot = baseName.lastIndexOf(".");
+    const stem = dot > 0 ? baseName.slice(0, dot) : baseName;
+    const extPart = dot > 0 ? baseName.slice(dot) : "";
+    let finalName = baseName;
+    let n = 2;
+    for (;;) {
+      const clash = await db.get("SELECT id FROM files WHERE original_name = ? AND ((? IS NULL AND folder_id IS NULL) OR folder_id = ?) LIMIT 1", [finalName, targetFolderId, targetFolderId]);
+      if (!clash) break;
+      finalName = stem + " (" + n + ")" + extPart;
+      n++;
+    }
+
+    let storageProvider = file.storage_provider || "disk";
+    let storageKey = file.storage_key || null;
+    let diskName = file.filename;
+    let filePathValue = file.file_path;
+    if (storageProvider !== "r2") {
+      // Disk-fil: lav en fysisk kopi med nyt tilfældigt navn
+      const src = path.join(UPLOADS_DIR, file.filename);
+      if (!fs.existsSync(src)) return res.status(500).json({ error: "Kildefilen findes ikke længere på serveren" });
+      diskName = Date.now() + "-" + Math.round(Math.random() * 1e9) + path.extname(file.filename || baseName);
+      fs.copyFileSync(src, path.join(UPLOADS_DIR, diskName));
+      filePathValue = "/uploads/" + diskName;
+      storageProvider = "disk";
+      storageKey = null;
+    }
+
+    const info = await db.run("INSERT INTO files (filename, original_name, file_path, file_size, mime_type, folder_id, uploaded_by, owner_id, storage_provider, storage_key) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", [diskName, finalName, filePathValue, file.file_size, file.mime_type, targetFolderId, me, me, storageProvider, storageKey]);
+
+    const newFile = await db.get("SELECT f.*, u.name as uploader_name, o.name as owner_name FROM files f JOIN users u ON f.uploaded_by = u.id LEFT JOIN users o ON f.owner_id = o.id WHERE f.id = ?", [info.lastInsertRowid]);
+    console.log("Fil kopieret: " + finalName + " (bruger " + me + ")");
+    res.json({ success: true, file: newFile, final_name: finalName });
+  } catch (error) {
+    console.error("Copy error:", error);
+    res.status(500).json({ error: "Kunne ikke kopiere filen" });
+  }
 });
 
 // Download file (Server Storage) - fungerer for både disk- og R2-filer
