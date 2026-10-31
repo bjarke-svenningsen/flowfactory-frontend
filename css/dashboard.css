@@ -1681,15 +1681,20 @@ body {
 .files-chips {
     display: flex;
     gap: 8px;
-    padding: 10px 14px 0 14px;
-    flex-wrap: wrap;
+    padding: 12px 20px;
+    border-bottom: 1px solid var(--border);
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
 }
+.files-chips::-webkit-scrollbar { display: none; }
 .files-chip {
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    height: 30px;
-    padding: 0 12px;
+    height: 32px;
+    padding: 0 14px;
+    flex-shrink: 0;
     border-radius: var(--radius-pill);
     border: 1px solid var(--border);
     background: var(--surface);

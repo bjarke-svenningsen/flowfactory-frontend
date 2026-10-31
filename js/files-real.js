@@ -21,6 +21,8 @@ async function loadRealFiles() {
         if (!response.ok) throw new Error('Failed to load files');
         
         allFiles = await response.json();
+        // Haent filer delt med mig saa "Delt med mig"-sektionen i traet kan vise antal
+        sharedFilesCache = await loadSharedFiles();
         renderFolderTree();
         renderRealFiles();
         
@@ -183,6 +185,15 @@ function renderFolderTree() {
         '<span class="tree-chevron"></span><i data-lucide="folder"></i>' +
         '<span class="tree-label">Mine filer</span>' +
         '<span class="tree-count">' + rootCount + '</span></div>';
+
+    // Delt med mig - visningsnode (ikke en rigtig mappe); kun naar der findes delte filer
+    if (sharedFilesCache.length > 0) {
+        html += '<div class="tree-section-label">Delt med mig</div>';
+        html += '<div class="tree-node ' + (currentFilter === 'shared' ? 'active' : '') + '" onclick="filterFiles(\'shared\')" id="deltMedMigNode">' +
+            '<span class="tree-chevron"></span><i data-lucide="users"></i>' +
+            '<span class="tree-label">Delt med mig</span>' +
+            '<span class="tree-count">' + sharedFilesCache.length + '</span></div>';
+    }
 
     // Mine mapper
     const personalFolders = allFolders.filter(f => !f.is_company_folder && !f.parent_id).sort(bySortOrder);
@@ -386,8 +397,7 @@ function renderFilesChips() {
     const defs = [
         { id: 'all', label: 'Alle', count: allFiles.length },
         { id: 'documents', label: 'Dokumenter', count: docCount },
-        { id: 'images', label: 'Billeder', count: imgCount },
-        { id: 'shared', label: 'Delte', count: null }
+        { id: 'images', label: 'Billeder', count: imgCount }
     ];
     chips.innerHTML = defs.map(d => {
         const active = currentFilter === d.id;
@@ -410,7 +420,7 @@ function getFolderPath(folderId) {
 function renderBreadcrumb() {
     const crumb = document.getElementById('filesCrumb');
     if (!crumb) return;
-    const names = { all: 'Alle filer', root: 'Mine filer', documents: 'Dokumenter', images: 'Billeder', shared: 'Delte filer' };
+    const names = { all: 'Alle filer', root: 'Mine filer', documents: 'Dokumenter', images: 'Billeder', shared: 'Delt med mig' };
     let html = '<span class="crumb-root" ondragover="handleFolderDragOver(event, null)" ondrop="handleFolderDrop(event, null)" ondragleave="handleFolderDragLeave(event)">Alle filer</span>';
     if (currentFilter === 'folder' && currentFolderId) {
         const path = getFolderPath(currentFolderId);
@@ -620,6 +630,7 @@ function renderFileDetails() {
             '<div class="meta-row"><span class="meta-key">Type</span><span class="meta-val">' + getFileType(file.original_name) + '</span></div>' +
             '<div class="meta-row"><span class="meta-key">Ændret</span><span class="meta-val">' + date + '</span></div>' +
             '<div class="meta-row"><span class="meta-key">Uploadet af</span><span class="meta-val">' + escapeFileName(file.uploader_name || file.owner_name || '') + '</span></div>' +
+            '<div id="sharedWithRow"></div>' +
         '</div>' +
         '<div class="details-actions">' + actions + '</div>';
     refreshIcons();
@@ -632,6 +643,14 @@ function renderFileDetails() {
             const shares = res2.ok ? await res2.json() : [];
             const btn = document.getElementById('stopShareBtn');
             if (btn) btn.style.display = (Array.isArray(shares) && shares.length) ? '' : 'none';
+            // "Delt med: navne" - kun for egne filer, ikke filer andre har delt med mig
+            const row = document.getElementById('sharedWithRow');
+            if (row && !sharedByOther && Array.isArray(shares) && shares.length) {
+                row.innerHTML =
+                    '<div class="meta-row"><span class="meta-key">Delt med</span><span class="meta-val">' +
+                    escapeFileName(shares.map(function (s) { return s.shared_with_name; }).join(', ')) +
+                    '</span></div>';
+            }
         } catch (e3) { /* knappen forbliver skjult */ }
     })();
 }
@@ -1851,6 +1870,8 @@ async function shareFile() {
         }
         
         await winAlert(`Fil "${file.original_name}" delt med ${targetUser.name}!`, 'Succes');
+        // Opdater detaljepanelet saa "Delt med:"-linjen og "Stop deling" vises med det samme
+        renderFileDetails();
         
     } catch (error) {
         console.error('Share error:', error);
