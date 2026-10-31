@@ -998,6 +998,11 @@ async function loadOrders() {
 
         setTabCount('Orders', orders.length);
         renderOrdersContent(orders);
+        // Sikkerhedsnet: sikr at fane-indholdet er synligt, hvis Igangværende er aktiv
+        if (currentOrderTab === 'orders') {
+            const wrap = document.getElementById('orderTabOrders');
+            if (wrap) wrap.style.display = 'block';
+        }
     } catch (error) {
         console.error('Error loading orders:', error);
         alert('Kunne ikke indlæse ordrer: ' + error.message);
@@ -1019,6 +1024,11 @@ async function loadInProgress() {
 
         setTabCount('InProgress', inProgress.length);
         renderInProgressContent(inProgress);
+        // Sikkerhedsnet: sikr at fane-indholdet er synligt, hvis Igangværende er aktiv
+        if (currentOrderTab === 'in_progress') {
+            const wrap = document.getElementById('orderTabInProgress');
+            if (wrap) wrap.style.display = 'block';
+        }
     } catch (error) {
         console.error('Error loading in-progress orders:', error);
         alert('Kunne ikke indlæse igangværende ordrer: ' + error.message);
