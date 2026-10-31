@@ -19,6 +19,7 @@ async function loadQuotes() {
         const allFetchedQuotes = await response.json();
         // Filter to only show draft and sent quotes (not accepted or rejected)
         allQuotes = allFetchedQuotes.filter(q => q.status === 'draft' || q.status === 'sent');
+        updateTabCountsFromQuotes(allFetchedQuotes);
         renderQuotesList();
     } catch (error) {
         console.error('Error loading quotes:', error);
@@ -946,6 +947,9 @@ function switchOrderTab(tab) {
         }
     });
     
+    // Opdater alle fanetællinger uanset hvilken fane der åbnes
+    loadOrderTabCounts();
+
     // Load content for active tab
     if (tab === 'quotes') {
         // Show list view for quotes tab
@@ -996,7 +1000,7 @@ async function loadOrders() {
         // Fallback: ordrer uden order_stage (gamle rækker) behandles som godkendte
         const orders = allQuotes.filter(q => q.status === 'accepted' && !q.is_extra_work && (q.order_stage !== 'in_progress'));
 
-        setTabCount('Orders', orders.length);
+        updateTabCountsFromQuotes(allQuotes);
         renderOrdersContent(orders);
         // Sikkerhedsnet: sikr at fane-indholdet er synligt, hvis Igangværende er aktiv
         if (currentOrderTab === 'orders') {
@@ -1022,7 +1026,7 @@ async function loadInProgress() {
         const allQuotes = await response.json();
         const inProgress = allQuotes.filter(q => q.status === 'accepted' && !q.is_extra_work && q.order_stage === 'in_progress');
 
-        setTabCount('InProgress', inProgress.length);
+        updateTabCountsFromQuotes(allQuotes);
         renderInProgressContent(inProgress);
         // Sikkerhedsnet: sikr at fane-indholdet er synligt, hvis Igangværende er aktiv
         if (currentOrderTab === 'in_progress') {
@@ -1035,10 +1039,77 @@ async function loadInProgress() {
     }
 }
 
-// Set antal-badge på en fane
+// Set antal-badge på en fane (viser altid et tal, også "0")
 function setTabCount(tabName, count) {
     const el = document.getElementById(`tabCount${tabName}`);
-    if (el) el.textContent = count > 0 ? String(count) : '';
+    if (el) {
+        el.classList.remove('skeleton', 'hidden');
+        el.textContent = String(count ?? 0);
+    }
+}
+
+// Skeleton-badge mens der hentes
+function setTabCountSkeleton(tabName) {
+    const el = document.getElementById(`tabCount${tabName}`);
+    if (el) { el.textContent = ''; el.classList.remove('hidden'); el.classList.add('skeleton'); }
+}
+
+// Skjul badge ved fejl (fejl logges i konsollen)
+function setTabCountHidden(tabName) {
+    const el = document.getElementById(`tabCount${tabName}`);
+    if (el) { el.classList.add('hidden'); el.classList.remove('skeleton'); }
+}
+
+// Beregn alle fanetællinger ud fra ét /api/quotes-svar (uafhængigt af aktiv fane)
+function updateTabCountsFromQuotes(allQuotes) {
+    const isOrder = q => q.status === 'accepted' && !q.is_extra_work;
+    setTabCount('Quotes', allQuotes.filter(q => q.status === 'draft' || q.status === 'sent').length);
+    setTabCount('Orders', allQuotes.filter(q => isOrder(q) && q.order_stage !== 'in_progress').length);
+    setTabCount('InProgress', allQuotes.filter(q => isOrder(q) && q.order_stage === 'in_progress').length);
+    setTabCount('Rejected', allQuotes.filter(q => q.status === 'rejected').length);
+}
+
+// Hent ALLE fanernes antal på én gang når Ordrestyring åbnes / efter ændringer
+async function loadOrderTabCounts() {
+    ['Quotes', 'Orders', 'InProgress', 'Invoiced', 'Rejected', 'Customers'].forEach(setTabCountSkeleton);
+    try {
+        const token = sessionStorage.getItem('token');
+        const headers = { 'Authorization': `Bearer ${token}` };
+
+        const quotesRes = await fetch('/api/quotes', { headers });
+        if (!quotesRes.ok) throw new Error('Kunne ikke hente fanetællinger (quotes)');
+        const allQuotes = await quotesRes.json();
+        updateTabCountsFromQuotes(allQuotes);
+
+        // Faktureret tælles fra samme kilde som fanens liste
+        try {
+            const invoicesRes = await fetch('/api/invoices', { headers });
+            if (!invoicesRes.ok) throw new Error('Kunne ikke hente fakturaer');
+            const invoicesData = await invoicesRes.json();
+            const invoices = Array.isArray(invoicesData) ? invoicesData : (invoicesData.invoices || []);
+            setTabCount('Invoiced', invoices.length);
+        } catch (err) {
+            console.error('Fanetælling (Faktureret):', err);
+            setTabCountHidden('Invoiced');
+        }
+
+        // Kunder tælles fra samme kilde som kundelisten
+        try {
+            const customersRes = await fetch('/api/customers', { headers });
+            if (!customersRes.ok) throw new Error('Kunne ikke hente kunder');
+            const customersData = await customersRes.json();
+            const customers = Array.isArray(customersData) ? customersData : (customersData.customers || []);
+            setTabCount('Customers', customers.length);
+        } catch (err) {
+            console.error('Fanetælling (Kunder):', err);
+            setTabCountHidden('Customers');
+        }
+    } catch (err) {
+        console.error('Fanetælling:', err);
+        ['Quotes', 'Orders', 'InProgress', 'Rejected'].forEach(setTabCountHidden);
+        setTabCountHidden('Invoiced');
+        setTabCountHidden('Customers');
+    }
 }
 
 // Render orders content
@@ -1276,6 +1347,7 @@ async function loadRejected() {
         const allQuotes = await response.json();
         const rejected = allQuotes.filter(q => q.status === 'rejected');
         
+        updateTabCountsFromQuotes(allQuotes);
         renderRejectedContent(rejected);
     } catch (error) {
         console.error('Error loading rejected:', error);
