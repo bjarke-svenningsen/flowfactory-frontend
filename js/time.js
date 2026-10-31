@@ -237,7 +237,7 @@ const timePage = {
         const todayIso = fmtDate(new Date());
         const cols = days.length;
 
-        let head = `<div class="timegrid-head" style="--cols:${cols};">`;
+        let head = `<div class="timegrid-head" style="display:grid;grid-template-columns:var(--axis-w) repeat(${cols}, 1fr);">`;
         head += `<div class="timegrid-corner">Uge ${getWeekNumber(days[0].date)}</div>`;
         days.forEach(day => {
             const isToday = day.iso === todayIso;
@@ -319,10 +319,10 @@ const timePage = {
         for (let h = 0; h < 24; h++) axis += `<div class="axis-label">${String(h).padStart(2, '0')}:00</div>`;
         axis += '</div>';
 
-        container.innerHTML = `${head}${noTimeRow}` +
+        container.innerHTML = `<div class="timegrid-card">${head}${noTimeRow}` +
             `<div class="timegrid-scroll">` +
-            `<div class="timegrid-canvas" style="--cols:${cols};">${axis}${body}</div>` +
-            `</div>`;
+            `<div class="timegrid-canvas" style="display:grid;grid-template-columns:var(--axis-w) repeat(${cols}, 1fr);">${axis}${body}</div>` +
+            `</div></div>`;
 
         // Scroll til kl. 06:00 (eller en time for foerste registrering)
         const scroller = container.querySelector('.timegrid-scroll');
@@ -428,7 +428,7 @@ const timePage = {
         const weekHours = this.timeEntries.reduce((s, e) => s + hoursOf(e), 0);
         const overtimeHours = this.timeEntries.filter(e => getEntryType(e) === 'overtime').reduce((s, e) => s + hoursOf(e), 0);
         const sickHours = this.timeEntries.filter(e => getEntryType(e) === 'sick').reduce((s, e) => s + hoursOf(e), 0);
-        container.insertAdjacentHTML('beforeend',
+        container.querySelector('.timegrid-card').insertAdjacentHTML('beforeend',
             `<div class="timegrid-summary">` +
             dayTotals +
             `<span style="margin-left:auto;">Uge ${getWeekNumber(monday)} i alt: <strong>${weekHours.toFixed(1).replace('.', ',')} timer</strong></span>` +
