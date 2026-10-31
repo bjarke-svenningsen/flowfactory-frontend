@@ -1,45 +1,62 @@
-// Chat variabler
-let users = []; // Will be loaded from backend
-
+// Chat - REST + SSE (Socket.IO er fjernet fra portalen)
+let users = []; // Indlaeses fra /api/chat/presence
 let currentChatUser = null;
-let chatMessages = {};
-let socket = null;
-let socketInitialized = false; // BUG FIX: Track if socket is already initialized
+let currentConversationId = null;
+const chatStore = {};            // conversationId -> [beskeder]
+const conversationByPeer = {};   // peerUserId -> conversationId
+let sse = null;
+let myId = null;
+
+function chatAuthHeaders() {
+    return {
+        'Authorization': 'Bearer ' + (sessionStorage.getItem('token') || ''),
+        'Content-Type': 'application/json'
+    };
+}
+
+function escapeHtml(str) {
+    return String(str == null ? '' : str)
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
 
 // Initialiser chat
 async function initChat() {
-    // BUG FIX: Load real users from backend instead of dummy data
-    await loadUsers();
-    renderUserList();
-    
-    // BUG FIX: Only initialize socket once to avoid duplicate event listeners
-    if (!socketInitialized) {
-        initializeSocket();
+    await loadPresence();
+    connectChatSse();
+    // Opdater presence-listen jævnligt (fallback hvis SSE er nede)
+    if (!window._chatPresenceTimer) {
+        window._chatPresenceTimer = setInterval(loadPresence, 30000);
     }
 }
 
-// Load users from backend
-async function loadUsers() {
+// Presence: kolleger + online-status + sidst set
+async function loadPresence() {
     try {
-        const token = sessionStorage.getItem('token');
-        const response = await fetch('/api/users', {
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
-        
-        if (response.ok) {
-            const backendUsers = await response.json();
-            // Convert to chat format and filter out current user
-            users = backendUsers
-                .filter(u => u.id !== window.currentUser?.id)
-                .map(u => ({
-                    id: u.id,
-                    name: u.name,
-                    status: 'offline', // Will be updated by presence:update
-                    initials: getInitials(u.name)
-                }));
+        const response = await fetch('/api/chat/presence', { headers: chatAuthHeaders() });
+        if (!response.ok) return;
+        const backendUsers = await response.json();
+        users = backendUsers
+            .filter(u => u.id !== (window.currentUser ? window.currentUser.id : null))
+            .map(u => ({
+                id: u.id,
+                name: u.name,
+                online: !!u.online,
+                last_seen_at: u.last_seen_at || '',
+                status: u.online ? 'online' : 'offline',
+                initials: getInitials(u.name)
+            }));
+        renderUserList();
+        if (currentChatUser) {
+            const fresh = users.find(u => u.id === currentChatUser.id);
+            if (fresh) {
+                currentChatUser.online = fresh.online;
+                currentChatUser.last_seen_at = fresh.last_seen_at;
+                updateChatHeaderStatus();
+            }
         }
     } catch (error) {
-        console.log('Could not load users from backend:', error);
+        console.log('Kunne ikke hente presence:', error);
     }
 }
 
@@ -53,73 +70,91 @@ function getInitials(name) {
     return name.substring(0, 2).toUpperCase();
 }
 
-// Initialize socket connection
-function initializeSocket() {
+// SSE-realtid: engangs-ticket og derefter EventSource
+async function connectChatSse() {
+    if (sse) return;
     try {
-        const token = sessionStorage.getItem('token');
-        if (token && typeof io !== 'undefined') {
-            socket = io('');
-            
-            socket.on('connect', () => {
-                console.log('Connected to chat server');
-                socket.emit('auth', token);
-            });
-            
-            socket.on('chat:message', (msg) => {
-                handleIncomingMessage(msg);
-            });
-            
-            socket.on('presence:update', (onlineUserIds) => {
-                updateUserPresence(onlineUserIds);
-            });
-            
-            socketInitialized = true;
+        const response = await fetch('/api/chat/events-ticket', {
+            method: 'POST',
+            headers: chatAuthHeaders()
+        });
+        if (!response.ok) {
+            setTimeout(connectChatSse, 5000);
+            return;
         }
+        const data = await response.json();
+        sse = new EventSource('/api/chat/events?ticket=' + encodeURIComponent(data.ticket));
+
+        sse.addEventListener('connected', (e) => {
+            const d = JSON.parse(e.data);
+            myId = d.userId;
+            loadPresence();
+        });
+
+        sse.addEventListener('chat_message', (e) => {
+            const m = JSON.parse(e.data);
+            storeMessage(m);
+            if (currentConversationId && m.conversation_id === currentConversationId) {
+                renderMessages();
+                markConversationRead();
+            } else {
+                loadPresence(); // holder liste og status opdateret
+            }
+        });
+
+        sse.addEventListener('chat_presence', () => {
+            loadPresence();
+        });
+
+        sse.onerror = () => {
+            // Ticket er engangs - genforbind med en ny
+            if (sse) { sse.close(); sse = null; }
+            setTimeout(connectChatSse, 3000);
+        };
     } catch (error) {
-        console.log('Socket.IO ikke tilgængelig, bruger lokal chat');
+        setTimeout(connectChatSse, 5000);
     }
 }
 
-// Håndter indkommende besked fra backend
-function handleIncomingMessage(msg) {
-    const otherUserId = msg.sender_id === window.currentUser.id ? msg.recipient_id : msg.sender_id;
-    
-    if (!chatMessages[otherUserId]) {
-        chatMessages[otherUserId] = [];
-    }
-    
-    const time = new Date(msg.created_at).toLocaleTimeString('da-DK', { hour: '2-digit', minute: '2-digit' });
-    
-    chatMessages[otherUserId].push({
-        from: msg.sender_id === window.currentUser.id ? 'me' : msg.sender_id,
-        text: msg.text,
-        time: time
+// Gem besked i lageret (med duplikat-beskyttelse)
+function storeMessage(m) {
+    if (!chatStore[m.conversation_id]) chatStore[m.conversation_id] = [];
+    const arr = chatStore[m.conversation_id];
+    if (arr.some(x => x.id === m.id)) return;
+    const me = myId || (window.currentUser ? window.currentUser.id : null);
+    arr.push({
+        id: m.id,
+        from: m.sender_id === me ? 'me' : m.sender_id,
+        sender_id: m.sender_id,
+        sender_name: m.sender_name || '',
+        text: m.body,
+        time: new Date(m.created_at).toLocaleTimeString('da-DK', { hour: '2-digit', minute: '2-digit' })
     });
-    
-    if (currentChatUser && currentChatUser.id === otherUserId) {
-        renderMessages();
-    }
+    arr.sort((a, b) => (a.id || 0) - (b.id || 0));
 }
 
-// Opdater bruger presence
-function updateUserPresence(onlineUserIds) {
-    users.forEach(user => {
-        user.status = onlineUserIds.includes(user.id) ? 'online' : 'offline';
-    });
-    renderUserList();
+// Markér samtalen som læst
+async function markConversationRead() {
+    if (!currentConversationId) return;
+    try {
+        await fetch('/api/chat/read', {
+            method: 'POST',
+            headers: chatAuthHeaders(),
+            body: JSON.stringify({ conversationId: currentConversationId })
+        });
+    } catch (error) { /* proeves igen naeste gang */ }
 }
 
 // Render bruger liste
 function renderUserList() {
     const userList = document.getElementById('userList');
-    // BUG FIX: Guard clause - only render if chat page is loaded
     if (!userList) return;
-    
+
     userList.innerHTML = users.map(user => {
         const statusClass = user.status;
         const isActive = currentChatUser && currentChatUser.id === user.id ? 'active' : '';
-        const isOnline = user.status === 'online';
-        
+        const isOnline = user.online;
+
         return `
             <div class="user-item ${isActive}">
                 <div class="user-avatar-small" onclick="openChatWith(${user.id})" style="cursor: pointer;">
@@ -127,14 +162,14 @@ function renderUserList() {
                     <div class="status-dot ${statusClass}"></div>
                 </div>
                 <div onclick="openChatWith(${user.id})" style="flex: 1; cursor: pointer;">
-                    <div style="font-weight: 500;">${user.name}</div>
-                    <div style="font-size: 12px; color: var(--text-muted);">${getStatusText(user.status)}</div>
+                    <div style="font-weight: 500;">${escapeHtml(user.name)}</div>
+                    <div style="font-size: 12px; color: var(--text-muted);">${getStatusText(user)}</div>
                 </div>
-                <button onclick="event.stopPropagation(); if(typeof startVideoCall !== 'undefined') startVideoCall(${user.id}, '${user.name.replace(/'/g, "\\'")}');" 
+                <button onclick="event.stopPropagation(); if(typeof startVideoCall !== 'undefined') startVideoCall(${user.id}, '${escapeHtml(user.name).replace(/'/g, '&#39;')}');"
                         style="padding: 6px 10px; background: ${isOnline ? 'var(--color-green)' : 'var(--border)'}; color: white; border: none; border-radius: 15px; cursor: ${isOnline ? 'pointer' : 'not-allowed'}; font-size: 12px;"
                         ${!isOnline ? 'disabled' : ''}
                         title="${isOnline ? 'Start videoopkald' : 'Bruger er offline'}">
-                    
+
                 </button>
             </div>
         `;
@@ -142,61 +177,72 @@ function renderUserList() {
 }
 
 // Få status tekst
-function getStatusText(status) {
-    const statusMap = {
-        online: 'Online',
-        busy: 'Optaget',
-        offline: 'Offline'
-    };
-    return statusMap[status] || 'Ukendt';
+function getStatusText(user) {
+    if (user.online) return 'Online';
+    if (user.last_seen_at) {
+        const d = new Date(user.last_seen_at.includes('T') ? user.last_seen_at : user.last_seen_at.replace(' ', 'T') + 'Z');
+        if (!isNaN(d)) return 'Sidst set ' + d.toLocaleString('da-DK', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+    }
+    return 'Offline';
+}
+
+function updateChatHeaderStatus() {
+    if (!currentChatUser) return;
+    const el = document.getElementById('chatUserStatus');
+    if (!el) return;
+    el.textContent = getStatusText(currentChatUser);
+    el.style.color = currentChatUser.online ? 'var(--color-green)' : 'var(--text-muted)';
 }
 
 // Åbn chat med bruger
 async function openChatWith(userId) {
     const user = users.find(u => u.id === userId);
     if (!user) return;
-    
+
     currentChatUser = user;
-    
+
     document.getElementById('noChatSelected').style.display = 'none';
     document.getElementById('chatActive').style.display = 'flex';
-    
+
     document.getElementById('chatUserAvatar').textContent = user.initials;
     document.getElementById('chatUserName').textContent = user.name;
-    document.getElementById('chatUserStatus').textContent = getStatusText(user.status);
-    document.getElementById('chatUserStatus').style.color = 
-        user.status === 'online' ? 'var(--color-green)' : 
-        user.status === 'busy' ? 'var(--color-red)' : 'var(--text-muted)';
-    
+    updateChatHeaderStatus();
+
     renderUserList();
-    
-    // Hent chat historik fra backend
+
+    // Få eller opret 1-til-1-samtalen
     try {
-        const token = sessionStorage.getItem('token');
-        const response = await fetch(`/api/messages/${userId}`, {
-            headers: {
-                'Authorization': `Bearer ${token}`
-            }
+        const response = await fetch('/api/chat/conversations', {
+            method: 'POST',
+            headers: chatAuthHeaders(),
+            body: JSON.stringify({ peerId: userId })
         });
-        
-        if (response.ok) {
-            const messages = await response.json();
-            chatMessages[userId] = messages.map(m => ({
-                from: m.sender_id === window.currentUser.id ? 'me' : m.sender_id,
-                text: m.text,
-                time: new Date(m.created_at).toLocaleTimeString('da-DK', { hour: '2-digit', minute: '2-digit' })
-            }));
+        if (!response.ok) throw new Error('kunne ikke oprette samtale');
+        const data = await response.json();
+        currentConversationId = data.conversationId;
+        conversationByPeer[userId] = currentConversationId;
+
+        // Hent hele historikken
+        const msgResponse = await fetch('/api/chat/conversations/' + currentConversationId + '/messages?after=0', {
+            headers: chatAuthHeaders()
+        });
+        if (msgResponse.ok) {
+            const messages = await msgResponse.json();
+            chatStore[currentConversationId] = [];
+            messages.forEach(storeMessage);
         }
+        markConversationRead();
     } catch (error) {
-        console.log('Kunne ikke hente chat historik fra backend');
+        console.log('Kunne ikke hente chat:', error);
     }
-    
+
     renderMessages();
 }
 
 // Luk chat
 function closeChat() {
     currentChatUser = null;
+    currentConversationId = null;
     document.getElementById('noChatSelected').style.display = 'flex';
     document.getElementById('chatActive').style.display = 'none';
     renderUserList();
@@ -204,28 +250,28 @@ function closeChat() {
 
 // Render beskeder
 function renderMessages() {
-    if (!currentChatUser) return;
-    
-    const messages = chatMessages[currentChatUser.id] || [];
+    if (!currentChatUser || !currentConversationId) return;
+
+    const messages = chatStore[currentConversationId] || [];
     const container = document.getElementById('chatMessages');
-    
+
     if (messages.length === 0) {
         container.innerHTML = '<div style="text-align: center; color: var(--text-muted); padding: 40px;">Ingen beskeder endnu. Send den første!</div>';
         return;
     }
-    
+
     container.innerHTML = messages.map(msg => {
         const isOwn = msg.from === 'me';
         return `
             <div class="message ${isOwn ? 'own' : ''}">
                 <div class="message-bubble">
-                    <div>${msg.text}</div>
+                    <div>${escapeHtml(msg.text)}</div>
                     <div class="message-time">${msg.time}</div>
                 </div>
             </div>
         `;
     }).join('');
-    
+
     container.scrollTop = container.scrollHeight;
 }
 
@@ -233,82 +279,42 @@ function renderMessages() {
 function autoGrowTextarea() {
     const textarea = document.getElementById('chatInput');
     if (!textarea) return;
-    
+
     textarea.style.height = 'auto';
     textarea.style.height = Math.min(textarea.scrollHeight, 120) + 'px';
 }
 
-// Send besked
-function sendMessage() {
-    if (!currentChatUser) return;
-    
+// Send besked via REST
+async function sendMessage() {
+    if (!currentChatUser || !currentConversationId) return;
+
     const input = document.getElementById('chatInput');
     const text = input.value.trim();
-    
-    if (!text) return;
-    
-    const time = new Date().toLocaleTimeString('da-DK', { hour: '2-digit', minute: '2-digit' });
-    
-    if (!chatMessages[currentChatUser.id]) {
-        chatMessages[currentChatUser.id] = [];
-    }
-    
-    // BUG FIX: Only add message locally if socket is NOT connected
-    // If socket is connected, wait for backend to send it back via handleIncomingMessage
-    const shouldAddLocally = !socket || !socket.connected;
-    
-    if (shouldAddLocally) {
-        chatMessages[currentChatUser.id].push({
-            from: 'me',
-            text: text,
-            time: time
-        });
-    }
-    
-    input.value = '';
-    
-    // Reset textarea height
-    input.style.height = 'auto';
-    
-    if (shouldAddLocally) {
-        renderMessages();
-    }
-    
-    // Send via Socket.IO hvis tilgængelig
-    if (socket && socket.connected) {
-        socket.emit('chat:send', {
-            toUserId: currentChatUser.id,
-            text: text
-        });
-        // Backend vil sende beskeden tilbage via chat:message event
-    } else {
-        // Fallback: Simuler svar efter 2 sekunder
-        setTimeout(() => {
-            if (currentChatUser) {
-                chatMessages[currentChatUser.id].push({
-                    from: currentChatUser.id,
-                    text: getRandomReply(),
-                    time: new Date().toLocaleTimeString('da-DK', { hour: '2-digit', minute: '2-digit' })
-                });
-                renderMessages();
-            }
-        }, 2000);
-    }
-}
 
-// Tilfældig svar
-function getRandomReply() {
-    const replies = [
-        'Det lyder godt! 👍',
-        'Tak for info!',
-        'Forstået ',
-        'Super, så gør vi det!',
-        'Perfekt! ',
-        'Okay, jeg vender tilbage snart',
-        'Tak!',
-        'Sounds good!'
-    ];
-    return replies[Math.floor(Math.random() * replies.length)];
+    if (!text) return;
+
+    input.value = '';
+    input.style.height = 'auto';
+
+    try {
+        const response = await fetch('/api/chat/messages', {
+            method: 'POST',
+            headers: chatAuthHeaders(),
+            body: JSON.stringify({ conversationId: currentConversationId, body: text })
+        });
+        if (!response.ok) {
+            const err = await response.json().catch(() => ({}));
+            alert(err.error || 'Beskeden kunne ikke sendes');
+            input.value = text; // giv brugeren teksten tilbage
+            return;
+        }
+        const msg = await response.json();
+        storeMessage(msg);
+        renderMessages();
+    } catch (error) {
+        alert('Beskeden kunne ikke sendes - er du online?');
+        input.value = text;
+    }
 }
 
 // Toggle emoji picker
@@ -329,7 +335,7 @@ function insertEmoji(emoji) {
 function filterUsers() {
     const query = document.getElementById('userSearch').value.toLowerCase();
     const items = document.querySelectorAll('.user-item');
-    
+
     items.forEach(item => {
         const name = item.textContent.toLowerCase();
         item.style.display = name.includes(query) ? 'flex' : 'none';
