@@ -108,6 +108,7 @@ async function loadPresence() {
                 online: !!u.online,
                 last_seen_at: u.last_seen_at || '',
                 status: u.online ? 'online' : 'offline',
+                avatar: u.avatar_url || '',
                 initials: getInitials(u.name)
             }));
         renderUserList();
@@ -122,6 +123,23 @@ async function loadPresence() {
     } catch (error) {
         console.log('Kunne ikke hente presence:', error);
     }
+}
+
+// Avatar HTML: profilbillede hvis det findes, ellers initialer i stabil personlig farve
+const AVATAR_COLORS = ['#7fc4f0', '#7ddc9a', '#f2938c', '#b7a3f5', '#5ecfc2', '#f2a3c0', '#f5c26b'];
+
+function avatarColor(id) {
+    return AVATAR_COLORS[Math.abs(Number(id) || 0) % AVATAR_COLORS.length];
+}
+
+function avatarHtml(user, extraClass) {
+    const cls = extraClass || '';
+    if (user && user.avatar) {
+        return `<div class="user-avatar-small ${cls}"><img class="avatar-img" src="${escapeHtml(user.avatar)}" alt=""><div class="status-dot ${user.status || ''}"></div></div>`;
+    }
+    const color = user ? avatarColor(user.id) : '#c9ccd1';
+    const init = user && user.initials ? user.initials : '?';
+    return `<div class="user-avatar-small ${cls}" style="background:${color};"><span class="avatar-init">${init}</span><div class="status-dot ${user && user.status ? user.status : ''}"></div></div>`;
 }
 
 // Get initials from name
@@ -311,6 +329,7 @@ function renderUserList() {
             peerId: c.peer.id,
             name: name,
             initials: user ? user.initials : getInitials(name),
+            avatar: user ? user.avatar : '',
             status: user ? user.status : 'offline',
             online: c.peer_online,
             lastSeenAt: c.peer.last_seen_at || '',
@@ -328,6 +347,7 @@ function renderUserList() {
             peerId: user.id,
             name: user.name,
             initials: user.initials,
+            avatar: user.avatar,
             status: user.status,
             online: user.online,
             lastSeenAt: user.last_seen_at,
@@ -342,10 +362,7 @@ function renderUserList() {
         const unreadBadge = it.unread > 0 ? `<span class="chat-unread-badge">${it.unread > 9 ? '9+' : it.unread}</span>` : '';
         return `
             <div class="conv-item ${isActive}" onclick="openChatWith(${it.peerId})">
-                <div class="user-avatar-small">
-                    ${it.initials}
-                    <div class="status-dot ${it.status}"></div>
-                </div>
+                ${avatarHtml(it)}
                 <div class="conv-mid">
                     <div class="conv-name">${escapeHtml(it.name)}</div>
                     <div class="conv-preview">${escapeHtml(it.preview || '')}</div>
@@ -367,10 +384,7 @@ function renderContactsStrip() {
     if (!strip) return;
     strip.innerHTML = users.map(user => `
         <div class="contact-chip" onclick="openChatWith(${user.id})" title="${escapeHtml(user.name)}">
-            <div class="user-avatar-small">
-                ${user.initials}
-                <div class="status-dot ${user.status}"></div>
-            </div>
+            ${avatarHtml(user)}
             <div class="contact-name">${escapeHtml(user.name.split(' ')[0])}</div>
         </div>
     `).join('');
@@ -389,10 +403,11 @@ function showChatToast(peerName, text, peerId) {
         wrap.id = 'chatToastWrap';
         document.body.appendChild(wrap);
     }
+    const peer = users.find(u => u.id === peerId) || null;
     const toast = document.createElement('div');
     toast.className = 'chat-toast';
     toast.innerHTML = `
-        <div class="chat-toast-avatar">${getInitials(peerName)}</div>
+        ${peer ? avatarHtml(peer, 'chat-toast-avatar-wrap') : `<div class="chat-toast-avatar">${getInitials(peerName)}</div>`}
         <div class="chat-toast-mid">
             <div class="chat-toast-name">${escapeHtml(peerName)}</div>
             <div class="chat-toast-text">${escapeHtml(text)}</div>
@@ -441,7 +456,10 @@ async function openChatWith(userId) {
     document.getElementById('noChatSelected').style.display = 'none';
     document.getElementById('chatActive').style.display = 'flex';
 
-    document.getElementById('chatUserAvatar').textContent = user.initials;
+    document.getElementById('chatUserAvatar').innerHTML = user.avatar
+        ? `<img class="avatar-img" src="${escapeHtml(user.avatar)}" alt="">`
+        : `<span class="avatar-init">${user.initials}</span>`;
+    document.getElementById('chatUserAvatar').style.background = user.avatar ? '' : avatarColor(user.id);
     document.getElementById('chatUserName').textContent = user.name;
     updateChatHeaderStatus();
     const typingBubble = document.getElementById('chatTypingBubble');

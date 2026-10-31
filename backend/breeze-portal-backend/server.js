@@ -2000,9 +2000,9 @@ app.post('/api/chat/typing', auth, async (req, res) => {
 // --- Presence: kolleger med online-status og "sidst set" ---
 app.get('/api/chat/presence', auth, async (req, res) => {
   try {
-    const users = await db.all('SELECT id, name, position, last_seen_at FROM users');
+    const users = await db.all('SELECT id, name, position, last_seen_at, avatar_url FROM users');
     res.json(users.map(function (u) {
-      return { id: u.id, name: u.name, position: u.position, last_seen_at: u.last_seen_at || '', online: chatOnline(u.id) };
+      return { id: u.id, name: u.name, position: u.position, last_seen_at: u.last_seen_at || '', online: chatOnline(u.id), avatar_url: u.avatar_url || '' };
     }));
   } catch (err) {
     res.status(500).json({ error: 'Kunne ikke hente presence' });
