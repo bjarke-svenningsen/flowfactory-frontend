@@ -6,6 +6,7 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { db } from './database-config.js';
+import { r2Enabled, r2Put } from './r2-client.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -128,17 +129,34 @@ export async function syncEmails(accountId) {
               
               fs.writeFileSync(filePath, attachment.content);
 
+              // Upload til R2 hvis aktiveret (USE_R2=true) - disk-fil beholdes altid som kopi
+              let storageProvider = 'disk';
+              let storageKey = null;
+              if (r2Enabled()) {
+                try {
+                  storageKey = `email-attachments/${filename}`;
+                  await r2Put(attachment.content, storageKey, attachment.contentType);
+                  storageProvider = 'r2';
+                  console.log(`☁️  R2 upload OK: ${storageKey}`);
+                } catch (r2Err) {
+                  console.error('R2 upload fejlede, fil forbliver på disk:', r2Err.message);
+                  storageProvider = 'disk'; storageKey = null;
+                }
+              }
+
               await db.run(`
                 INSERT INTO email_attachments (
-                  email_id, filename, original_name, file_path, file_size, mime_type
-                ) VALUES (?, ?, ?, ?, ?, ?)
+                  email_id, filename, original_name, file_path, file_size, mime_type, storage_provider, storage_key
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
               `, [
                 emailId,
                 filename,
                 attachment.filename,
                 `/uploads/email-attachments/${filename}`,
                 attachment.size,
-                attachment.contentType
+                attachment.contentType,
+                storageProvider,
+                storageKey
               ]);
             }
           }
@@ -381,17 +399,34 @@ export async function syncNewEmails(accountId) {
               
               fs.writeFileSync(filePath, attachment.content);
 
+              // Upload til R2 hvis aktiveret (USE_R2=true) - disk-fil beholdes altid som kopi
+              let storageProvider = 'disk';
+              let storageKey = null;
+              if (r2Enabled()) {
+                try {
+                  storageKey = `email-attachments/${filename}`;
+                  await r2Put(attachment.content, storageKey, attachment.contentType);
+                  storageProvider = 'r2';
+                  console.log(`☁️  R2 upload OK: ${storageKey}`);
+                } catch (r2Err) {
+                  console.error('R2 upload fejlede, fil forbliver på disk:', r2Err.message);
+                  storageProvider = 'disk'; storageKey = null;
+                }
+              }
+
               await db.run(`
                 INSERT INTO email_attachments (
-                  email_id, filename, original_name, file_path, file_size, mime_type
-                ) VALUES (?, ?, ?, ?, ?, ?)
+                  email_id, filename, original_name, file_path, file_size, mime_type, storage_provider, storage_key
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
               `, [
                 emailId,
                 filename,
                 attachment.filename,
                 `/uploads/email-attachments/${filename}`,
                 attachment.size,
-                attachment.contentType
+                attachment.contentType,
+                storageProvider,
+                storageKey
               ]);
             }
           }
@@ -563,17 +598,34 @@ export async function syncEmailsPaginated(accountId, offset = 0, limit = 10) {
               
               fs.writeFileSync(filePath, attachment.content);
 
+              // Upload til R2 hvis aktiveret (USE_R2=true) - disk-fil beholdes altid som kopi
+              let storageProvider = 'disk';
+              let storageKey = null;
+              if (r2Enabled()) {
+                try {
+                  storageKey = `email-attachments/${filename}`;
+                  await r2Put(attachment.content, storageKey, attachment.contentType);
+                  storageProvider = 'r2';
+                  console.log(`☁️  R2 upload OK: ${storageKey}`);
+                } catch (r2Err) {
+                  console.error('R2 upload fejlede, fil forbliver på disk:', r2Err.message);
+                  storageProvider = 'disk'; storageKey = null;
+                }
+              }
+
               await db.run(`
                 INSERT INTO email_attachments (
-                  email_id, filename, original_name, file_path, file_size, mime_type
-                ) VALUES (?, ?, ?, ?, ?, ?)
+                  email_id, filename, original_name, file_path, file_size, mime_type, storage_provider, storage_key
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
               `, [
                 emailId,
                 filename,
                 attachment.filename,
                 `/uploads/email-attachments/${filename}`,
                 attachment.size,
-                attachment.contentType
+                attachment.contentType,
+                storageProvider,
+                storageKey
               ]);
             }
           }

@@ -14,6 +14,7 @@ import nodemailer from 'nodemailer';
 import ogs from 'open-graph-scraper';
 import { db } from './database-config.js';
 import { initializeDatabase } from './init-database.js';
+import { r2Enabled, r2Put, r2GetStream, pipeR2ToRes } from './r2-client.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -77,6 +78,84 @@ if (!fs.existsSync(UPLOADS_DIR)) {
 
 // Serve static files from uploads directory
 app.use('/uploads', express.static(UPLOADS_DIR));
+
+// ===== R2-lagerhjælpere (Trin A) =====
+// Nye kolonner storage_provider ('disk'|'r2') og storage_key tilføjes somALTER TABLE ADD COLUMN.
+// Ingen gamle værdier røres: eksisterende filer forbliver 'disk' og virker som i dag.
+async function ensureStorageColumns() {
+  const tables = ['files', 'order_documents', 'email_attachments', 'quote_attachments'];
+  for (const table of tables) {
+    let hasProvider = true;
+    try { await db.get(`SELECT storage_provider FROM ${table} LIMIT 1`); } catch { hasProvider = false; }
+    if (!hasProvider) {
+      await db.run(`ALTER TABLE ${table} ADD COLUMN storage_provider TEXT DEFAULT 'disk'`);
+      console.log(`🗂  Kolonne storage_provider tilføjet til ${table}`);
+    }
+    let hasKey = true;
+    try { await db.get(`SELECT storage_key FROM ${table} LIMIT 1`); } catch { hasKey = false; }
+    if (!hasKey) {
+      await db.run(`ALTER TABLE ${table} ADD COLUMN storage_key TEXT`);
+      console.log(`🗂  Kolonne storage_key tilføjet til ${table}`);
+    }
+  }
+}
+ensureStorageColumns().catch(err => console.error('Fejl ved tilføjelse af storage-kolonner:', err));
+
+// MIME-fallback: kendte filtyper browsers ellers fejlfortolker
+const MIME_FALLBACKS = { jfif: 'image/jpeg', pjpeg: 'image/jpeg', pjp: 'image/jpeg' };
+function resolveContentType(file) {
+  if (file.mime_type && file.mime_type !== 'application/octet-stream') return file.mime_type;
+  const ext = (file.original_name || file.filename || '').split('.').pop().toLowerCase();
+  return MIME_FALLBACKS[ext] || 'application/octet-stream';
+}
+
+// ASCII-fallback + UTF-8 filnavn i Content-Disposition
+function setContentDisposition(res, filename, disposition) {
+  const asciiName = (filename || 'fil').replace(/[^\x20-\x7E]/g, '_').replace(/"/g, "'");
+  res.setHeader('Content-Disposition',
+    `${disposition}; filename="${asciiName}"; filename*=UTF-8''${encodeURIComponent(filename || 'fil')}`);
+}
+
+// Sender en fil (fra R2 hvis storage_provider='r2', ellers fra disk som i dag)
+async function sendFileContent(file, res, disposition = 'inline') {
+  const contentType = resolveContentType(file);
+
+  if (file.storage_provider === 'r2' && file.storage_key && r2Enabled()) {
+    try {
+      const body = await r2GetStream(file.storage_key);
+      res.setHeader('Content-Type', contentType);
+      setContentDisposition(res, file.original_name || file.filename, disposition);
+      await pipeR2ToRes(body, res);
+      return;
+    } catch (err) {
+      console.error('R2-læsning fejlede, forsøger disk i stedet:', err.message);
+    }
+  }
+
+  const filePath = path.join(UPLOADS_DIR, file.filename);
+  if (!fs.existsSync(filePath)) {
+    return res.status(404).json({ error: 'File not found on disk' });
+  }
+  if (disposition === 'attachment') {
+    res.download(filePath, file.original_name);
+  } else {
+    res.setHeader('Content-Type', contentType);
+    setContentDisposition(res, file.original_name || file.filename, 'inline');
+    res.sendFile(filePath);
+  }
+}
+
+// Upload req.file til R2 hvis aktiveret - returnerer { storage_provider, storage_key }
+// Disk-filen skrives ALTID først som sikkerhedskopi og slettes aldrig.
+async function maybeStoreInR2(file, folder = 'files') {
+  if (!r2Enabled()) return { storage_provider: 'disk', storage_key: null };
+  const key = `${folder}/${file.filename}`;
+  const buffer = fs.readFileSync(file.path);
+  await r2Put(buffer, key, file.mimetype);
+  console.log(`☁️  R2 upload OK: ${key} (${file.size} bytes)`);
+  return { storage_provider: 'r2', storage_key: key };
+}
+
 
 // Serve the frontend (portal) directly from this server - one service for everything
 const FRONTEND_DIR = path.join(__dirname, '..', '..');
@@ -553,6 +632,9 @@ app.post('/api/files/upload', auth, upload.single('file'), async (req, res) => {
 
     const folder_id = req.body.folder_id ? Number(req.body.folder_id) : null;
 
+    // Upload til R2 hvis aktiveret (USE_R2=true) - ellers disk som hidtil
+    const storage = await maybeStoreInR2(req.file, 'files');
+
     const fileInfo = {
       filename: req.file.filename,
       original_name: req.file.originalname,
@@ -565,8 +647,8 @@ app.post('/api/files/upload', auth, upload.single('file'), async (req, res) => {
     };
 
     const info = await db.run(`
-      INSERT INTO files (filename, original_name, file_path, file_size, mime_type, folder_id, uploaded_by, owner_id)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO files (filename, original_name, file_path, file_size, mime_type, folder_id, uploaded_by, owner_id, storage_provider, storage_key)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [
       fileInfo.filename,
       fileInfo.original_name,
@@ -575,7 +657,9 @@ app.post('/api/files/upload', auth, upload.single('file'), async (req, res) => {
       fileInfo.mime_type,
       fileInfo.folder_id,
       fileInfo.uploaded_by,
-      fileInfo.owner_id
+      fileInfo.owner_id,
+      storage.storage_provider,
+      storage.storage_key
     ]);
 
     const file = await db.get(`
@@ -872,23 +956,30 @@ app.put('/api/files/:id/move', auth, async (req, res) => {
   res.json(updatedFile);
 });
 
-// Download file (Server Storage)
+// Download file (Server Storage) - fungerer for både disk- og R2-filer
 app.get('/api/files/download/:id', auth, async (req, res) => {
   const fileId = Number(req.params.id);
   const file = await db.get('SELECT * FROM files WHERE id = ?', [fileId]);
-  
+
   if (!file) {
     return res.status(404).json({ error: 'File not found' });
   }
-  
-  // BUG FIX: Use UPLOADS_DIR instead of hardcoded path
-  const filePath = path.join(UPLOADS_DIR, file.filename);
-  
-  if (!fs.existsSync(filePath)) {
-    return res.status(404).json({ error: 'File not found on disk' });
+
+  await sendFileContent(file, res, 'attachment');
+});
+
+// Filindhold med valgfri disposition (inline til preview, attachment til download).
+// Samme login-krav som resten af API'et - ingen offentlig adgang.
+app.get('/api/files/:id/content', auth, async (req, res) => {
+  const fileId = Number(req.params.id);
+  const file = await db.get('SELECT * FROM files WHERE id = ?', [fileId]);
+
+  if (!file) {
+    return res.status(404).json({ error: 'File not found' });
   }
-  
-  res.download(filePath, file.original_name);
+
+  const disposition = req.query.disposition === 'attachment' ? 'attachment' : 'inline';
+  await sendFileContent(file, res, disposition);
 });
 
 // --- FILE SHARING ENDPOINTS ---
@@ -1913,10 +2004,12 @@ app.post('/api/quotes/:id/attachments', auth, upload.single('file'), async (req,
     return res.status(400).json({ error: 'No file uploaded' });
   }
   
+  const quoteStorage = await maybeStoreInR2(req.file, 'quotes');
+
   const info = await db.run(`
-    INSERT INTO quote_attachments (quote_id, filename, original_name, file_path, file_size, uploaded_by)
-    VALUES (?, ?, ?, ?, ?, ?)
-  `, [quoteId, req.file.filename, req.file.originalname, `/uploads/${req.file.filename}`, req.file.size, req.user.id]);
+    INSERT INTO quote_attachments (quote_id, filename, original_name, file_path, file_size, uploaded_by, storage_provider, storage_key)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+  `, [quoteId, req.file.filename, req.file.originalname, `/uploads/${req.file.filename}`, req.file.size, req.user.id, quoteStorage.storage_provider, quoteStorage.storage_key]);
   
   const attachment = await db.get(`
     SELECT qa.*, u.name as uploaded_by_name
@@ -2612,11 +2705,14 @@ app.post('/api/orders/:orderId/documents', auth, upload.single('file'), async (r
   }
   
   const { document_type } = req.body;
-  
+
+  // Upload til R2 hvis aktiveret - ellers disk som hidtil
+  const storage = await maybeStoreInR2(req.file, 'orders');
+
   const info = await db.run(`
-    INSERT INTO order_documents (order_id, filename, original_name, file_path, file_size, document_type, uploaded_by)
-    VALUES (?, ?, ?, ?, ?, ?, ?)
-  `, [orderId, req.file.filename, req.file.originalname, `/uploads/${req.file.filename}`, req.file.size, document_type || 'general', req.user.id]);
+    INSERT INTO order_documents (order_id, filename, original_name, file_path, file_size, document_type, uploaded_by, storage_provider, storage_key)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `, [orderId, req.file.filename, req.file.originalname, `/uploads/${req.file.filename}`, req.file.size, document_type || 'general', req.user.id, storage.storage_provider, storage.storage_key]);
   
   // Log activity
   await db.run(`
@@ -2651,6 +2747,19 @@ app.delete('/api/orders/:orderId/documents/:documentId', auth, async (req, res) 
   
   await db.run('DELETE FROM order_documents WHERE id = ?', [documentId]);
   res.json({ success: true });
+});
+
+// Ordre-dokumentindhold (inline til preview, attachment til download) - disk eller R2
+app.get('/api/orders/:orderId/documents/:documentId/content', auth, async (req, res) => {
+  const documentId = Number(req.params.documentId);
+  const document = await db.get('SELECT * FROM order_documents WHERE id = ?', [documentId]);
+
+  if (!document) {
+    return res.status(404).json({ error: 'Document not found' });
+  }
+
+  const disposition = req.query.disposition === 'attachment' ? 'attachment' : 'inline';
+  await sendFileContent(document, res, disposition);
 });
 
 // Transfer file from files system to order documents
@@ -2703,11 +2812,11 @@ app.post('/api/files/:fileId/transfer-to-order', auth, async (req, res) => {
     return res.status(400).json({ error: 'Denne fil findes allerede i ordren' });
   }
   
-  // Copy file to order documents
+  // Copy file to order documents (genbruger samme lagerplacering - R2-filer kopieres ikke fysisk)
   const info = await db.run(`
-    INSERT INTO order_documents (order_id, filename, original_name, file_path, file_size, document_type, uploaded_by)
-    VALUES (?, ?, ?, ?, ?, 'transferred', ?)
-  `, [order.id, file.filename, file.original_name, file.file_path, file.file_size, req.user.id]);
+    INSERT INTO order_documents (order_id, filename, original_name, file_path, file_size, document_type, uploaded_by, storage_provider, storage_key)
+    VALUES (?, ?, ?, ?, ?, 'transferred', ?, ?, ?)
+  `, [order.id, file.filename, file.original_name, file.file_path, file.file_size, req.user.id, file.storage_provider || 'disk', file.storage_key || null]);
   
   // Log activity
   await db.run(`

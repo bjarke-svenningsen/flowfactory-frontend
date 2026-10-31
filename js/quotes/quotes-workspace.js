@@ -1243,7 +1243,8 @@ async function previewDocument(documentId, filename) {
         return;
     }
 
-    const filePath = doc.file_path.startsWith('/') ? doc.file_path : '/' + doc.file_path;
+    // Hent via API med login (virker for både disk- og R2-filer)
+    const contentUrl = `/api/orders/${doc.order_id}/documents/${documentId}/content?disposition=inline`;
     const ext = (filename || '').split('.').pop().toLowerCase();
     const imageExtensions = ['jpg', 'jpeg', 'jfif', 'pjpeg', 'pjp', 'png', 'gif', 'bmp', 'webp', 'svg'];
     const pdfExtensions = ['pdf'];
@@ -1255,7 +1256,7 @@ async function previewDocument(documentId, filename) {
     openDocLoadingModal();
 
     try {
-        const blobUrl = await fetchDocBlobUrl(filePath, filename, true);
+        const blobUrl = await fetchDocBlobUrl(contentUrl, filename, true);
 
         if (imageExtensions.includes(ext)) {
             openDocImageLightbox(filename, blobUrl);
@@ -1322,25 +1323,30 @@ function closePreviewModal() {
 async function downloadDocument(documentId, filename) {
     try {
         const token = sessionStorage.getItem('token');
-        
-        // Find document to get file path
+
+        // Find document (tjek at den findes)
         const doc = workspaceDocuments.find(d => d.id === documentId);
         if (!doc) {
             alert('Dokument ikke fundet');
             return;
         }
-        
-        // Construct download URL
-        const downloadUrl = `${doc.file_path}`;
-        
-        // Create temporary link and trigger download
+
+        // Hent via API med login (virker for både disk- og R2-filer)
+        const response = await fetch(`/api/orders/${doc.order_id}/documents/${documentId}/content?disposition=attachment`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (!response.ok) throw new Error('Download fejlede');
+
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
-        a.href = downloadUrl;
+        a.href = url;
         a.download = filename;
         document.body.appendChild(a);
         a.click();
+        window.URL.revokeObjectURL(url);
         document.body.removeChild(a);
-        
+
     } catch (error) {
         console.error('Download error:', error);
         alert('Kunne ikke downloade dokument: ' + error.message);
