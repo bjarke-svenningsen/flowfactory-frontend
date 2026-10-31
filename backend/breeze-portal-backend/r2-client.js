@@ -43,6 +43,27 @@ export async function r2Put(buffer, key, contentType) {
   return key;
 }
 
+// Stream en fillæsestrøm til R2 i dele (multipart) så store filer aldrig
+// læses helt ind i hukommelsen (Render har kun 512 MB RAM).
+import { Upload } from '@aws-sdk/lib-storage';
+import { createReadStream } from 'fs';
+export async function r2PutStream(readStream, key, contentType, contentLength) {
+  const upload = new Upload({
+    client: getClient(),
+    params: {
+      Bucket: R2_BUCKET,
+      Key: key,
+      Body: readStream,
+      ContentType: contentType || 'application/octet-stream',
+      ...(contentLength ? { ContentLength: contentLength } : {})
+    },
+    queueSize: 4,
+    partSize: 8 * 1024 * 1024 // 8 MB pr. del
+  });
+  await upload.done();
+  return key;
+}
+
 // Hent et objekt som en Node-læsestrøm (kan pipes direkte til res)
 export async function r2GetStream(key) {
   const result = await getClient().send(new GetObjectCommand({ Bucket: R2_BUCKET, Key: key }));

@@ -17,7 +17,9 @@
             <button class="btn btn-secondary" onclick="showNewFolderDialog()"><i data-lucide="folder-plus"></i>Ny mappe</button>
             <button class="btn btn-secondary btn-icon" onclick="refreshExplorer()" title="Opdater" aria-label="Opdater"><i data-lucide="refresh-cw"></i></button>
             <button class="btn btn-primary" onclick="document.getElementById('fileExplorerUpload').click()"><i data-lucide="upload"></i>Upload</button>
+            <button class="btn btn-secondary" id="uploadFolderBtn" onclick="onUploadFolderClick()" title="Upload en hel mappe"><i data-lucide="folder-up"></i>Upload mappe</button>
             <input type="file" id="fileExplorerUpload" style="display: none;" onchange="uploadFileToExplorer(event)" multiple>
+            <input type="file" id="fileExplorerFolderUpload" style="display: none;" onchange="uploadFolderFromExplorer(event)" webkitdirectory multiple>
         </div>
     </div>
 

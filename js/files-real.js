@@ -677,62 +677,404 @@ async function uploadFileToExplorer(event) {
     if (files.length === 0) return;
 
     // Størrelsestjek på alle filer først
-    const tooBig = files.filter(f => f.size > 100 * 1024 * 1024);
-    const uploadList = files.filter(f => f.size <= 100 * 1024 * 1024);
+    const tooBig = files.filter(f => f.size > MAX_UPLOAD_SIZE);
+    const uploadList = files.filter(f => f.size <= MAX_UPLOAD_SIZE);
     if (tooBig.length > 0) {
         await winAlert(`${tooBig.length} fil(er) sprunget over - for store (max 100MB):\n${tooBig.map(f => f.name).join('\n')}`, 'For store filer');
     }
     if (uploadList.length === 0) return;
 
-    const token = sessionStorage.getItem('token');
-    let ok = 0;
-    const failed = [];
+    enqueueUploads(uploadList.map(f => ({ file: f, folderId: currentFolderId })));
+}
 
-    for (const file of uploadList) {
-        try {
-            const formData = new FormData();
-            formData.append('file', file);
-            if (currentFolderId) formData.append('folder_id', currentFolderId);
+// ============================================================
+// Upload-kø med fremdriftspanel, konflikt-håndtering og
+// upload af hele mapper (trukket ind eller via "Upload mappe").
+// Regler: max 2 samtidige uploads; filer > 20 MB kører alene
+// (Render-serveren har kun 512 MB RAM).
+// ============================================================
+const MAX_UPLOAD_SIZE = 100 * 1024 * 1024; // matcher multer-grænsen
+const BIG_FILE_SIZE = 20 * 1024 * 1024;
+const MAX_UPLOAD_DEPTH = 12;
+const MAX_UPLOAD_FILES = 1000;
+let uploadQueue = [];
+let activeUploads = 0;
+let conflictChoiceAll = null; // husker "gælder alle" i en navnekonflikt
+let uploadBatchCounter = 0;
 
-            const response = await fetch('/api/files/upload', {
-                method: 'POST',
-                headers: { 'Authorization': `Bearer ${token}` },
-                body: formData
-            });
-
-            const contentType = response.headers.get('content-type');
-            if (!contentType || !contentType.includes('application/json')) {
-                throw new Error('Server returnerede ikke JSON');
-            }
-            const result = await response.json();
-            if (!response.ok) throw new Error(result.error || 'Upload failed');
-            if (result.warning) {
-                await winAlert(`${file.name}: advarsel - ${result.warning}`, 'Advarsel');
-            }
-            ok++;
-        } catch (error) {
-            console.error('Upload error:', file.name, error);
-            failed.push(`${file.name}: ${error.message}`);
-        }
+window.addEventListener('beforeunload', function (e) {
+    if (activeUploads > 0 || uploadQueue.length > 0) {
+        e.preventDefault();
+        e.returnValue = '';
     }
+});
 
-    await loadRealFiles();
+function ensureProgressPanel() {
+    let panel = document.getElementById('uploadProgressPanel');
+    if (!panel) {
+        panel = document.createElement('div');
+        panel.id = 'uploadProgressPanel';
+        document.body.appendChild(panel);
+    }
+    panel.style.display = 'block';
+    return panel;
+}
 
-    // Opsummering
-    if (uploadList.length === 1) {
-        if (ok === 1) {
-            await winAlert(`${uploadList[0].name} uploadet succesfuldt!`, 'Succes');
-        } else if (failed.length === 1) {
-            await winAlert('Upload fejlede: ' + failed[0].split(': ').slice(1).join(': '), 'Fejl');
-        }
-    } else {
-        let msg = `${ok} af ${uploadList.length} filer uploadet succesfuldt.`;
-        if (failed.length > 0) msg += '\n\nFejlede:\n' + failed.join('\n');
-        await winAlert(msg, ok === uploadList.length ? 'Succes' : 'Delvist gennemført');
+function addProgressRow(job) {
+    const panel = ensureProgressPanel();
+    const row = document.createElement('div');
+    row.className = 'upload-row';
+    row.id = 'uprow-' + job.rowId;
+    row.innerHTML =
+        '<div class="upload-row-name" title="' + escapeFileName(job.file.name) + '">' + escapeFileName(job.file.name) + '</div>' +
+        '<div class="upload-bar"><div class="upload-bar-fill" style="width:0%"></div></div>' +
+        '<button class="upload-row-close" title="Skjul">&times;</button>';
+    row.querySelector('.upload-row-close').onclick = function () { row.remove(); };
+    panel.appendChild(row);
+    return row;
+}
+
+function setProgress(job, pct) {
+    const row = document.getElementById('uprow-' + job.rowId);
+    if (row) {
+        const fill = row.querySelector('.upload-bar-fill');
+        if (fill) fill.style.width = Math.round(pct * 100) + '%';
     }
 }
 
+function finishProgressRow(job, ok) {
+    const row = document.getElementById('uprow-' + job.rowId);
+    if (row) {
+        const fill = row.querySelector('.upload-bar-fill');
+        if (fill) {
+            fill.style.width = '100%';
+            fill.style.background = ok ? 'var(--color-success, #16a34a)' : 'var(--color-danger, #dc2626)';
+        }
+        row.classList.add(ok ? 'upload-done' : 'upload-failed');
+        setTimeout(function () { row.remove(); }, ok ? 4000 : 12000);
+    }
+}
+
+// --- Upload af hele mapper (knap og træk-ind) ---
+
+function onUploadFolderClick() {
+    const input = document.getElementById('fileExplorerFolderUpload');
+    if (!input) return;
+    if (!input.webkitdirectory) {
+        // Fallback på mobil/netsider uden webkitdirectory: brug almindelig upload
+        winAlert('Din browser understøtter ikke upload af hele mapper. Vælg filerne enkeltvis i stedet.', 'Ikke understøttet');
+        document.getElementById('fileExplorerUpload').click();
+        return;
+    }
+    input.click();
+}
+
+async function uploadFolderFromExplorer(event) {
+    const files = Array.from(event.target.files || []);
+    event.target.value = '';
+    if (files.length === 0) return;
+    const baseFolder = currentFolderId || null;
+    await ingestIncomingFiles(files, baseFolder, true);
+}
+
+// Trukket ind fra computeren: kaldes fra handleFolderDrop når dataTransfer har filer
+async function handleExternalDrop(event, folderId) {
+    const items = event.dataTransfer.items;
+    if (items && items.length && items[0].webkitGetAsEntry) {
+        const entries = [];
+        for (let i = 0; i < items.length; i++) {
+            const entry = items[i].webkitGetAsEntry && items[i].webkitGetAsEntry();
+            if (entry) entries.push(entry);
+        }
+        if (entries.length > 0) {
+            const tree = { dirs: [], files: [] };
+            const skipped = { count: 0 };
+            for (const entry of entries) {
+                await collectEntry(entry, '', tree, 0, skipped);
+            }
+            if (tree.files.length === 0) {
+                await winAlert('Der var ingen gyldige filer at uploade.', 'Intet at uploade');
+                return;
+            }
+            await confirmAndUploadTree(tree, folderId, skipped.count);
+            return;
+        }
+    }
+    // Fallback: kun flade filer (ingen mappestruktur)
+    const files = Array.from(event.dataTransfer.files || []);
+    if (files.length === 0) return;
+    await ingestIncomingFiles(files, folderId, false);
+}
+
+function isJunkFileName(name) {
+    const lower = (name || '').toLowerCase();
+    if (lower === '.ds_store' || lower === 'thumbs.db' || lower === 'desktop.ini') return true;
+    if (lower.startsWith('.')) return true;
+    if (/~$/.test(lower)) return true;
+    return false;
+}
+
+// Rekursiv indlæsning af FileSystemEntry-træ (readEntries i batches af 100)
+function readAllEntries(reader) {
+    return new Promise(function (resolve, reject) {
+        const all = [];
+        (function readBatch() {
+            reader.readEntries(function (entries) {
+                if (entries.length === 0) return resolve(all);
+                all.push.apply(all, entries);
+                readBatch();
+            }, reject);
+        })();
+    });
+}
+
+async function collectEntry(entry, relPath, tree, depth, skipped) {
+    if (depth > MAX_UPLOAD_DEPTH) { skipped.count++; return; }
+    if (tree.files.length >= MAX_UPLOAD_FILES) { skipped.count++; return; }
+    if (isJunkFileName(entry.name)) { skipped.count++; return; }
+    if (entry.isFile) {
+        const file = await new Promise(function (resolve, reject) {
+// Fra webkitdirectory-input: brug webkitRelativePath til at bygge samme træ
+async function ingestIncomingFiles(files, folderId, hasRelPaths) {
+    const tree = { dirs: [], files: [] };
+    const skipped = { count: 0 };
+    for (const f of files) {
+        if (isJunkFileName(f.name)) { skipped.count++; continue; }
+        if (f.size === 0 || f.size > MAX_UPLOAD_SIZE) { skipped.count++; continue; }
+        let rel = '';
+        if (hasRelPaths && f.webkitRelativePath) {
+            const parts = f.webkitRelativePath.split('/');
+            parts.pop(); // selve filnavnet
+            rel = parts.join('/');
+        }
+        if (rel) {
+            const segs = rel.split('/');
+            for (let i = 1; i <= segs.length; i++) {
+                const p = segs.slice(0, i).join('/');
+                if (p && tree.dirs.indexOf(p) === -1) tree.dirs.push(p);
+            }
+        }
+        tree.files.push({ file: f, relPath: rel });
+    }
+    if (tree.files.length === 0) {
+        await winAlert('Der var ingen gyldige filer at uploade.', 'Intet at uploade');
+        return;
+    }
+    await confirmAndUploadTree(tree, folderId, skipped.count);
+}
+
+async function ensureFolderPath(relPath, baseFolderId) {
+    if (!relPath) return baseFolderId;
+    const segs = relPath.split('/');
+    let parentId = baseFolderId;
+    for (const seg of segs) {
+        if (!seg) continue;
+        const resp = await fetch('/api/folders', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer ' + sessionStorage.getItem('token')
+            },
+            body: JSON.stringify({ name: seg, parent_id: parentId, reuse_existing: true })
+        });
+        if (!resp.ok) {
+            const e = await resp.json().catch(function () { return {}; });
+            throw new Error(e.error || 'Kunne ikke oprette mappe "' + seg + '"');
+        }
+        const folder = await resp.json();
+        parentId = folder.id;
+    }
+    return parentId;
+}
+
+async function confirmAndUploadTree(tree, folderId, skippedCount) {
+    const targetFolder = folderId ? allFolders.find(function (f) { return f.id === folderId; }) : null;
+    const targetName = targetFolder ? ('"' + folderDisplayName(targetFolder) + '"') : '"Mine filer"';
+    let msg = 'Upload ' + tree.files.length + ' filer';
+    if (tree.dirs.length > 0) msg += ' og ' + tree.dirs.length + ' mapper';
+    msg += ' til ' + targetName + '?';
+    if (skippedCount > 0) msg += '\n\n' + skippedCount + ' element(er) springes over (tomme, for store eller systemfiler).';
+
+    const ok = await showWindowsDialog('Upload', msg, '?', [
+        { text: 'Upload', value: 'ok' },
+        { text: 'Annuller', value: null }
+    ]);
+    if (ok !== 'ok') return;
+
+    conflictChoiceAll = null; // nulstil "gælder alle" pr. session
+
+    // Opret mappestrukturen først (eksisterende mappenavne genbruges)
+    const jobs = [];
+    try {
+        const dirIds = {};
+        for (const dir of tree.dirs) {
+            dirIds[dir] = await ensureFolderPath(dir, folderId);
+        }
+        let seq = 0;
+        for (const item of tree.files) {
+            const target = item.relPath ? dirIds[item.relPath] : folderId;
+            jobs.push({ file: item.file, folderId: target, batchSeq: seq++ });
+        }
+    } catch (err) {
+        await winAlert('Kunne ikke oprette mapper: ' + err.message, 'Fejl');
+        return;
+    }
+
+    enqueueUploads(jobs);
+}
+
+
+            entry.file(resolve, reject);
+        });
+        if (file.size === 0 || file.size > MAX_UPLOAD_SIZE) { skipped.count++; return; }
+        tree.files.push({ file: file, relPath: relPath });
+    } else if (entry.isDirectory) {
+        const dirPath = relPath ? relPath + '/' + entry.name : entry.name;
+        tree.dirs.push(dirPath);
+        const children = await readAllEntries(entry.createReader());
+        for (const child of children) {
+            await collectEntry(child, dirPath, tree, depth + 1, skipped);
+        }
+    }
+}
+
+
+function xhrUploadFile(file, folderId, onProgress) {
+    return new Promise(function (resolve, reject) {
+        const xhr = new XMLHttpRequest();
+        xhr.open('POST', '/api/files/upload');
+        xhr.setRequestHeader('Authorization', 'Bearer ' + sessionStorage.getItem('token'));
+        xhr.upload.onprogress = function (e) {
+            if (e.lengthComputable) onProgress(e.loaded / e.total);
+        };
+        xhr.onload = function () {
+            let result = {};
+            try { result = JSON.parse(xhr.responseText); } catch (e) { /* ignore */ }
+            if (xhr.status >= 200 && xhr.status < 300) resolve(result);
+            else reject(new Error(result.error || 'Serverfejl (' + xhr.status + ')'));
+        };
+        xhr.onerror = function () { reject(new Error('Netværksfejl')); };
+        const fd = new FormData();
+        fd.append('file', file);
+        if (folderId) fd.append('folder_id', folderId);
+        xhr.send(fd);
+    });
+}
+
+// Løbende spørgsmål ved navnekonflikt i mål-mappen.
+// Svar "gælder alle" huskes resten af denne upload-session.
+async function resolveNameConflict(fileName, folderId) {
+    if (conflictChoiceAll) return conflictChoiceAll;
+    const existing = allFiles.find(function (f) {
+        return f.original_name === fileName && f.folder_id === folderId;
+    });
+    if (!existing) return null; // ingen konflikt
+
+    const choice = await showWindowsDialog('Navnekonflikt',
+        'Der findes allerede en fil ved navn "' + fileName + '" her.\nHvad vil du gøre?', '?', [
+            { text: 'Behold begge', value: 'both' },
+            { text: 'Spring over', value: 'skip' },
+            { text: 'Erstat', value: 'replace' },
+            { text: 'Behold begge (alle)', value: 'both-all' },
+            { text: 'Spring over (alle)', value: 'skip-all' },
+            { text: 'Erstat (alle)', value: 'replace-all' }
+        ]);
+    if (choice === null) return 'skip';
+    if (choice.endsWith('-all')) {
+        conflictChoiceAll = choice.slice(0, -4);
+        return conflictChoiceAll;
+    }
+    return choice;
+}
+
+async function deleteExistingFile(fileId) {
+    const resp = await fetch('/api/files/' + fileId, {
+        method: 'DELETE',
+        headers: { 'Authorization': 'Bearer ' + sessionStorage.getItem('token') }
+    });
+    if (!resp.ok) {
+        const e = await resp.json().catch(function () { return {}; });
+        throw new Error(e.error || 'Kunne ikke slette den eksisterende fil');
+    }
+}
+
+// Tilføj filer til køen og start arbejdet
+function enqueueUploads(jobs, batch) {
+    if (!jobs || jobs.length === 0) return;
+    if (!batch) {
+        batch = { id: ++uploadBatchCounter, total: jobs.length, done: 0, ok: 0, skipped: 0, failed: [] };
+    }
+    jobs.forEach(function (job, i) {
+        if (job.batchSeq === undefined) job.batchSeq = i;
+        job.batch = batch;
+        job.rowId = batch.id + '-' + job.batchSeq;
+        uploadQueue.push(job);
+    });
+    ensureProgressPanel();
+    pumpUploadQueue();
+}
+
+function pumpUploadQueue() {
+    while (activeUploads < 2 && uploadQueue.length > 0) {
+        // Filer > 20 MB kører kun alene (512 MB RAM på serveren)
+        const idx = uploadQueue.findIndex(function (j) {
+            return activeUploads === 0 || j.file.size <= BIG_FILE_SIZE;
+        });
+        if (idx === -1) break;
+        const job = uploadQueue.splice(idx, 1)[0];
+        activeUploads++;
+        runUploadJob(job).finally(function () {
+            activeUploads--;
+            pumpUploadQueue();
+        });
+    }
+}
+
+async function runUploadJob(job) {
+    addProgressRow(job);
+    setProgress(job, 0);
+    try {
+        const conflict = await resolveNameConflict(job.file.name, job.folderId);
+        if (conflict === 'skip') {
+            job.batch.skipped++;
+            finishProgressRow(job, true);
+        } else {
+            if (conflict === 'replace') {
+                const existing = allFiles.find(function (f) {
+                    return f.original_name === job.file.name && f.folder_id === job.folderId;
+                });
+                if (existing) await deleteExistingFile(existing.id);
+            }
+            await xhrUploadFile(job.file, job.folderId, function (pct) { setProgress(job, pct); });
+            job.batch.ok++;
+            finishProgressRow(job, true);
+        }
+    } catch (err) {
+        console.error('Upload error:', job.file.name, err);
+        job.batch.failed.push(job.file.name + ': ' + err.message);
+        finishProgressRow(job, false);
+    } finally {
+        job.batch.done++;
+        if (job.batch.done === job.batch.total) finishUploadBatch(job.batch);
+    }
+}
+
+async function finishUploadBatch(batch) {
+    await loadRealFiles();
+    let msg = batch.ok + ' af ' + batch.total + ' filer uploadet.';
+    if (batch.skipped > 0) msg += '\n' + batch.skipped + ' sprunget over.';
+    if (batch.failed.length > 0) msg += '\n\nFejlede:\n' + batch.failed.join('\n');
+    if (batch.total === 1 && batch.ok === 1) {
+        await winAlert('Filen blev uploadet succesfuldt!', 'Succes');
+    } else if (batch.failed.length > 0 || batch.skipped > 0 || batch.total > 1) {
+        await winAlert(msg, batch.failed.length === 0 ? 'Succes' : 'Delvist gennemført');
+    }
+}
+
+
 async function openRealFile(fileId) {
+
+
     const file = findFileAnywhere(fileId);
     if (!file) return;
     
@@ -1700,6 +2042,16 @@ async function handleFolderDrop(event, folderId, opts) {
     event.preventDefault();
     event.stopPropagation();
 
+    // Filer/mapper trukket ind fra computeren → upload (trin B).
+    // Tjekkes FØRST, da eksterne træk har ingen intern drag-state.
+    const dt = event.dataTransfer;
+    const hasExternalFiles = !!(dt && ((dt.files && dt.files.length > 0) ||
+        (dt.items && dt.items.length > 0 && typeof dt.items[0].webkitGetAsEntry === 'function')));
+    if (hasExternalFiles) {
+        await handleExternalDrop(event, folderId);
+        return;
+    }
+
     if (dragCancelled || !draggedKind || draggedIds.length === 0) { resetDragState(); return; }
 
     const kind = draggedKind;
@@ -1711,9 +2063,6 @@ async function handleFolderDrop(event, folderId, opts) {
         await applyFolderDrop(event, ids[0], folderId, opts);
         return;
     }
-
-    // Filer/mapper trukket ind fra computeren håndteres i trin B (upload) - ignorér her
-    if (event.dataTransfer && event.dataTransfer.files && event.dataTransfer.files.length > 0) return;
 
     await moveOrCopyFilesToFolder(ids, folderId, isCopy);
 }

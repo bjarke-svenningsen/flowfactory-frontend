@@ -1768,6 +1768,58 @@ svg.lucide-building-2 { color: var(--company-stroke); fill: var(--company-fill);
 .folder-row.drop-below, .grid-card.drop-below, .tree-node.drop-below { box-shadow: inset 0 -3px 0 var(--color-accent); }
 .folder-row, .grid-card { cursor: default; }
 .folder-row[draggable="true"], .grid-card[draggable="true"] { cursor: grab; }
+
+/* Fremdriftspanel for uploads (fast nederst til højre) */
+#uploadProgressPanel {
+    position: fixed;
+    right: 16px;
+    bottom: 16px;
+    z-index: 2000;
+    display: none;
+    width: 300px;
+    max-height: 45vh;
+    overflow-y: auto;
+    background: var(--color-surface, #fff);
+    border: 1px solid var(--color-border, #e5e7eb);
+    border-radius: 10px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+    padding: 8px;
+}
+#uploadProgressPanel .upload-row {
+    padding: 6px 8px;
+    border-radius: 6px;
+    margin-bottom: 4px;
+    background: var(--color-bg-soft, #f9fafb);
+}
+#uploadProgressPanel .upload-row-name {
+    font-size: 12px;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    padding-right: 18px;
+}
+#uploadProgressPanel .upload-bar {
+    height: 4px;
+    background: var(--color-border, #e5e7eb);
+    border-radius: 2px;
+    margin-top: 4px;
+    overflow: hidden;
+}
+#uploadProgressPanel .upload-bar-fill {
+    height: 100%;
+    background: var(--color-accent);
+    transition: width 0.15s ease;
+}
+#uploadProgressPanel .upload-row-close {
+    position: absolute;
+    border: none;
+    background: none;
+    cursor: pointer;
+    font-size: 14px;
+    color: var(--text-muted, #6b7280);
+}
+#uploadProgressPanel .upload-row { position: relative; }
 .tree-section-label {
     font-size: 11px;
     font-weight: 700;

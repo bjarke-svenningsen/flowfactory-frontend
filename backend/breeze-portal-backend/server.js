@@ -14,7 +14,7 @@ import nodemailer from 'nodemailer';
 import ogs from 'open-graph-scraper';
 import { db } from './database-config.js';
 import { initializeDatabase } from './init-database.js';
-import { r2Enabled, r2Put, r2GetStream, pipeR2ToRes, r2Delete } from './r2-client.js';
+import { r2Enabled, r2Put, r2PutStream, r2GetStream, pipeR2ToRes, r2Delete } from './r2-client.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -200,8 +200,9 @@ async function maybeStoreInR2(file, folder = 'files') {
   if (!r2Enabled()) return { storage_provider: 'disk', storage_key: null, warning: null };
   const key = `${folder}/${file.filename}`;
   try {
-    const buffer = fs.readFileSync(file.path);
-    await r2Put(buffer, key, file.mimetype);
+    // Stream filen fra disk i stedet for readFileSync (512 MB RAM-grænse på Render)
+    const stream = fs.createReadStream(file.path);
+    await r2PutStream(stream, key, file.mimetype, file.size);
     try {
       if (fs.existsSync(file.path)) fs.unlinkSync(file.path);
     } catch (delErr) {
@@ -806,8 +807,23 @@ app.post('/api/files/upload', auth, upload.single('file'), async (req, res) => {
 
 // Create folder
 app.post('/api/folders', auth, async (req, res) => {
-  const { name, parent_id, is_company_folder } = req.body;
+  const { name, parent_id, is_company_folder, reuse_existing } = req.body;
   if (!name) return res.status(400).json({ error: 'Folder name required' });
+
+  // Dublet-tjek: samme navn i samme mappe.
+  // - reuse_existing=true (upload af mapper): genbrug eksisterende mappe i stille ro
+  // - almindelig "Ny mappe": dansk fejl, så brugeren ikke får to ens mapper
+  const dupParams = parent_id ? [name, parent_id] : [name, null];
+  const existingFolder = await db.get(
+    'SELECT * FROM folders WHERE name = ? AND ' + (parent_id ? 'parent_id = ?' : 'parent_id IS NULL') + ' LIMIT 1',
+    dupParams
+  );
+  if (existingFolder) {
+    if (reuse_existing) {
+      return res.json(existingFolder);
+    }
+    return res.status(409).json({ error: 'Der findes allerede en mappe med det navn her.' });
+  }
   
   const actor = await db.get('SELECT is_admin FROM users WHERE id = ?', [req.user.id]);
 
