@@ -305,9 +305,12 @@ const timePage = {
                 const timeStr = `${this.minToLabel(p.startMin)}-${this.minToLabel(p.endMin)}`;
                 const line1 = `(${hoursOf(e).toFixed(1).replace('.', ',')}) ${timeStr}`;
                 const label = e.order_number || e.quote_number || 'Værksted';
-                // Linje 2+: type, ordre/vaerksted, materiale - dubletter filtreres fra, ellipsis via CSS
-                const typeLabels = { 'time-regular': 'Alm. timer', 'time-overtime': 'Overtid', 'time-sick': 'Sygdom', 'time-workshop': 'V\u00E6rksted', 'time-workshop-overtime': 'V\u00E6rksted (overtid)' };
-                const detailLines = [typeLabels[getBlockType(e)] || '', label, e.material_name || '']
+                // Linje 2: label med type flettet ind (farven viser allerede typen - ingen ekstra "boks"-linjer)
+                const bt = getBlockType(e);
+                const labelText = bt === 'time-sick' ? 'Sygdom'
+                    : (bt === 'time-overtime' || bt === 'time-workshop-overtime') ? `${label} · overtid`
+                    : label;
+                const detailLines = [labelText, e.material_name || '']
                     .filter((v, i, a) => v && a.indexOf(v) === i)
                     .map(v => `<div class="tg-line2">${v}</div>`).join('');
                 const tooltip = `${line1}\n${label}\n${e.material_name || ''}`;
