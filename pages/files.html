@@ -1,50 +1,57 @@
-<div class="file-explorer">
-    <div class="explorer-title-bar">
-        <span> Filhåndtering</span>
-    </div>
-
-    <div class="explorer-toolbar">
-        <div class="toolbar-left">
-            <button class="toolbar-btn" onclick="navigateBack()" title="Tilbage">◀ Tilbage</button>
-            <button class="toolbar-btn" onclick="navigateUp()" title="Op"></button>
+<div class="file-explorer files-shell">
+    <div class="files-toolbar">
+        <div class="files-toolbar-left">
+            <button class="btn btn-secondary btn-icon" onclick="navigateBack()" title="Tilbage" aria-label="Tilbage"><i data-lucide="arrow-left"></i></button>
+            <button class="btn btn-secondary btn-icon" onclick="navigateUp()" title="Op ét niveau" aria-label="Op ét niveau"><i data-lucide="arrow-up"></i></button>
+            <nav class="files-crumb" id="filesCrumb" aria-label="Placering"></nav>
         </div>
-        <div class="toolbar-center">
-            <span class="address-bar-label">Adresse:</span>
-            <div class="address-bar" id="addressBar">C:\Mine dokumenter</div>
-        </div>
-        <div class="toolbar-right">
-            <button class="toolbar-btn" onclick="showNewFolderDialog()"> Ny</button>
-            <button class="toolbar-btn admin-only" onclick="createCompanyFolder()"> Firma Mappe</button>
-            <button class="toolbar-btn" onclick="document.getElementById('fileExplorerUpload').click()"> Upload</button>
-            <button class="toolbar-btn" onclick="downloadFile()"> Download</button>
-            <button class="toolbar-btn" onclick="deleteSelected()"> Slet</button>
-            <button class="toolbar-btn" onclick="searchFiles()"> Søg</button>
-            <button class="toolbar-btn" onclick="refreshExplorer()"></button>
-            <input type="file" id="fileExplorerUpload" style="display: none;" onchange="uploadFileToExplorer(event)">
+        <div class="files-toolbar-right">
+            <div class="files-search">
+                <i data-lucide="search"></i>
+                <input type="search" id="filesSearch" placeholder="Søg filer..." oninput="onFilesSearchInput(event)">
+            </div>
+            <div class="files-view-toggle" role="group" aria-label="Visning">
+                <button class="btn btn-secondary btn-icon active" id="viewListBtn" onclick="setFilesView('list')" title="Listevisning" aria-label="Listevisning"><i data-lucide="list"></i></button>
+                <button class="btn btn-secondary btn-icon" id="viewGridBtn" onclick="setFilesView('images')" title="Billedvisning" aria-label="Billedvisning"><i data-lucide="layout-grid"></i></button>
+            </div>
+            <button class="btn btn-secondary" onclick="showNewFolderDialog()"><i data-lucide="folder-plus"></i>Ny mappe</button>
+            <button class="btn btn-secondary btn-icon" onclick="refreshExplorer()" title="Opdater" aria-label="Opdater"><i data-lucide="refresh-cw"></i></button>
+            <button class="btn btn-primary" onclick="document.getElementById('fileExplorerUpload').click()"><i data-lucide="upload"></i>Upload</button>
+            <input type="file" id="fileExplorerUpload" style="display: none;" onchange="uploadFileToExplorer(event)" multiple>
         </div>
     </div>
 
-    <div class="explorer-body">
-        <div class="explorer-tree" id="folderTree"></div>
+    <div class="files-chips" id="filesChips"></div>
 
-        <div class="explorer-content">
-            <table class="file-list-view" id="fileTable">
+    <div class="files-columns">
+        <aside class="files-tree" id="folderTree"></aside>
+
+        <div class="files-main">
+            <table class="files-table" id="fileTable">
                 <thead>
                     <tr>
-                        <th onclick="sortFiles('name')" data-default-width="auto">Navn<span class="resize-handle"></span></th>
-                        <th onclick="sortFiles('size')" data-default-width="100">Størrelse<span class="resize-handle"></span></th>
-                        <th onclick="sortFiles('type')" data-default-width="120">Type<span class="resize-handle"></span></th>
-                        <th onclick="sortFiles('date')" data-default-width="250">Ændret<span class="resize-handle"></span></th>
+                        <th class="col-check"><input type="checkbox" id="filesSelectAll" onchange="toggleSelectAllFiles(event)" title="Vælg alle"></th>
+                        <th class="col-name" onclick="sortFiles('name')">Navn</th>
+                        <th class="col-size" onclick="sortFiles('size')">Størrelse</th>
+                        <th class="col-type" onclick="sortFiles('type')">Type</th>
+                        <th class="col-date" onclick="sortFiles('date')">Ændret</th>
                     </tr>
                 </thead>
                 <tbody id="fileListBody"></tbody>
             </table>
+            <div class="files-grid" id="filesGridView" hidden></div>
+            <div class="files-statusbar">
+                <span id="fileCount">0 objekter</span>
+                <span id="selectedInfo"></span>
+            </div>
         </div>
-    </div>
 
-    <div class="explorer-statusbar">
-        <span class="status-section" id="fileCount">0 objekter</span>
-        <span class="status-section" id="selectedInfo"></span>
+        <aside class="files-details" id="filesDetails">
+            <div class="files-details-empty">
+                <i data-lucide="mouse-pointer-click"></i>
+                <p>Vælg en fil for at se detaljer og handlinger.</p>
+            </div>
+        </aside>
     </div>
 </div>
 

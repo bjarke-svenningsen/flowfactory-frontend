@@ -98,81 +98,91 @@ async function createCompanyFolder() {
 // Track expanded folders
 let expandedFolders = new Set();
 
-// Render folder tree with hierarchy
+// Render folder tree: "Fælles filer" fast øverst + "Mine mapper"
 function renderFolderTree() {
     const tree = document.getElementById('folderTree');
     if (!tree) {
         console.log('Folder tree element not found - not on files page');
         return;
     }
-    
-    const documentCount = allFiles.filter(f => isDocument(f.original_name)).length;
-    const imageCount = allFiles.filter(f => isImage(f.original_name)).length;
-    
-    let html = `
-        <div class="tree-item ${currentFilter === 'all' && !currentFolderId ? 'selected' : ''}" onclick="filterFiles('all')">
-            <span class="tree-expand"></span> Alle Filer (${allFiles.length})
-        </div>
-        <div class="tree-item ${currentFilter === 'documents' ? 'selected' : ''}" onclick="filterFiles('documents')">
-            <span class="tree-expand"></span> Dokumenter (${documentCount})
-        </div>
-        <div class="tree-item ${currentFilter === 'images' ? 'selected' : ''}" onclick="filterFiles('images')">
-            <span class="tree-expand"></span> Billeder (${imageCount})
-        </div>
-        <div class="tree-item ${currentFilter === 'shared' ? 'selected' : ''}" onclick="filterFiles('shared')">
-            <span class="tree-expand"></span> Delte Filer
+
+    let html = '';
+
+    // "Alle filer" rod-node
+    html += `
+        <div class="tree-node ${currentFilter === 'all' && !currentFolderId ? 'active' : ''}" onclick="filterFiles('all')">
+            <span class="tree-chevron"></span>
+            <i data-lucide="hard-drive"></i>
+            <span class="tree-label">Alle filer</span>
+            <span class="tree-count">${allFiles.length}</span>
         </div>
     `;
-    
-    // Show company folders first (firma)
+
+    // Delte filer
+    html += `
+        <div class="tree-node ${currentFilter === 'shared' ? 'active' : ''}" onclick="filterFiles('shared')">
+            <span class="tree-chevron"></span>
+            <i data-lucide="users"></i>
+            <span class="tree-label">Delte filer</span>
+        </div>
+    `;
+
+    // Fælles filer (firma-mapper) — fast øverst
     const companyFolders = allFolders.filter(f => f.is_company_folder && !f.parent_id);
+    html += '<div class="tree-section-label">Fælles filer</div>';
     if (companyFolders.length > 0) {
-        html += '<div style=\"margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border);\"></div>';
-        html += '<div style=\"padding: 5px 10px; font-size: 12px; color: var(--text-muted); font-weight: 600;\"> SG SEEST GULVTEKNIK</div>';
         html += renderFolderBranch(companyFolders, 0, true);
     }
-    
-    // Show user's personal folders
+    const adminUser = JSON.parse(sessionStorage.getItem('user') || 'null');
+    if (adminUser && adminUser.is_admin && companyFolders.length === 0) {
+        html += '<button class="btn-company-create" onclick="createCompanyFolder()"><i data-lucide="plus"></i>Opret fælles mappe</button>';
+    }
+
+    // Mine mapper
     const personalFolders = allFolders.filter(f => !f.is_company_folder && !f.parent_id);
+    html += '<div class="tree-section-label">Mine mapper</div>';
     if (personalFolders.length > 0) {
-        html += '<div style=\"margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border);\"></div>';
-        html += '<div style=\"padding: 5px 10px; font-size: 12px; color: var(--text-muted); font-weight: 600;\">DINE MAPPER</div>';
         html += renderFolderBranch(personalFolders, 0, false);
     }
-    
+
     tree.innerHTML = html;
+    refreshIcons();
 }
 
-// Render folder branch recursively
+// Render folder branch recursively (tree-node markup m. Lucide-ikoner)
 function renderFolderBranch(folders, level, isCompany = false) {
     let html = '';
-    
+
     folders.forEach(folder => {
         const fileCount = allFiles.filter(f => f.folder_id === folder.id).length;
         const childFolders = allFolders.filter(f => f.parent_id === folder.id);
         const hasChildren = childFolders.length > 0;
         const isExpanded = expandedFolders.has(folder.id);
         const isSelected = currentFolderId === folder.id;
-        
-        const indent = level * 15;
-        const expandIcon = hasChildren ? (isExpanded ? '▼' : '▶') : '　';
-        const folderIcon = ''; // All folders use same icon
-        
+        const safeName = folder.name.replace(/'/g, "\\'");
+        const indent = level * 16;
+
         html += `
-            <div class=\"tree-item ${isSelected ? 'selected' : ''}\" style=\"padding-left: ${indent + 10}px;\" data-folder-id=\"${folder.id}\" ondrop=\"handleFolderDrop(event, ${folder.id})\" ondragover=\"handleFolderDragOver(event)\" ondragleave=\"handleFolderDragLeave(event)\">
-                <span class=\"tree-expand-icon\" onclick=\"toggleFolder(event, ${folder.id})\" style=\"cursor: ${hasChildren ? 'pointer' : 'default'}; display: inline-block; width: 15px;\">${expandIcon}</span>
-                <span onclick=\"openFolder(${folder.id}, '${folder.name.replace(/'/g, "\\\\'")}')\";\" oncontextmenu=\"showFolderContextMenu(event, ${folder.id}, '${folder.name.replace(/'/g, "\\\\'")}')\"; return false;\" style=\"cursor: pointer;\">
-                    ${folderIcon} ${folder.name} ${fileCount > 0 ? `(${fileCount})` : ''}
-                </span>
+            <div class="tree-node ${isSelected ? 'active' : ''} ${isCompany ? 'company-node' : ''}" style="padding-left: ${indent}px;"
+                 onclick="openFolder(${folder.id}, '${safeName}')"
+                 oncontextmenu="showFolderContextMenu(event, ${folder.id}, '${safeName}'); return false;"
+                 data-folder-id="${folder.id}"
+                 ondrop="handleFolderDrop(event, ${folder.id})"
+                 ondragover="handleFolderDragOver(event)"
+                 ondragleave="handleFolderDragLeave(event)">
+                <span class="tree-chevron" onclick="toggleFolder(event, ${folder.id})">${hasChildren ? '<i data-lucide="' + (isExpanded ? 'chevron-down' : 'chevron-right') + '"></i>' : ''}</span>
+                <i data-lucide="${isCompany ? 'building-2' : 'folder'}"></i>
+                <span class="tree-label">${folder.name}</span>
+                ${fileCount > 0 ? '<span class="tree-count">' + fileCount + '</span>' : ''}
             </div>
         `;
-        
+
         // Render children if expanded
         if (hasChildren && isExpanded) {
             html += renderFolderBranch(childFolders, level + 1, isCompany);
         }
     });
-    
+
     return html;
 }
 
@@ -194,44 +204,12 @@ async function filterFiles(category) {
     currentFilter = category;
     currentFolderId = null;
     currentFolderName = '';
-    
-    // Load shared files if selecting "Delte Filer"
+
+    // Hent delte filer når "Delte filer" vælges
     if (category === 'shared') {
-        const tbody = document.getElementById('fileListBody');
-        tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; padding: 20px;"> Henter delte filer...</td></tr>';
-        
-        const sharedFiles = await loadSharedFiles();
-        
-        renderFolderTree();
-        
-        if (sharedFiles.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; padding: 40px; color: var(--text-muted);">Ingen delte filer endnu.</td></tr>';
-            document.getElementById('fileCount').textContent = '0 filer';
-            document.getElementById('addressBar').textContent = 'Delte Filer';
-            return;
-        }
-        
-        tbody.innerHTML = sharedFiles.map(file => {
-            const icon = getFileIcon(file.original_name);
-            const size = formatFileSize(file.file_size);
-            const type = getFileType(file.original_name);
-            const date = new Date(file.created_at).toLocaleDateString('da-DK');
-            
-            return `
-                <tr class="file-row" onclick="selectRealFile(${file.id}, event)" ondblclick="openRealFile(${file.id})" oncontextmenu="showContextMenu(event, ${file.id})">
-                    <td><span class="file-icon-small">${icon}</span>${file.original_name}</td>
-                    <td>${size}</td>
-                    <td>${type}</td>
-                    <td>${date} - ${file.owner_name || file.uploader_name}</td>
-                </tr>
-            `;
-        }).join('');
-        
-        document.getElementById('fileCount').textContent = `${sharedFiles.length} fil${sharedFiles.length !== 1 ? 'er' : ''}`;
-        document.getElementById('addressBar').textContent = 'Delte Filer';
-        return;
+        sharedFilesCache = await loadSharedFiles();
     }
-    
+
     renderFolderTree();
     renderRealFiles();
 }
@@ -268,140 +246,346 @@ async function loadSharedFiles() {
     }
 }
 
-function getFilteredFiles() {
-    if (currentFilter === 'folder' && currentFolderId) {
-        return allFiles.filter(f => f.folder_id === currentFolderId);
-    } else if (currentFilter === 'all') {
-        return allFiles;
-    } else if (currentFilter === 'documents') {
-        return allFiles.filter(f => isDocument(f.original_name));
-    } else if (currentFilter === 'images') {
-        return allFiles.filter(f => isImage(f.original_name));
-    } else if (currentFilter === 'shared') {
-        return []; // Will be loaded async
+let sharedFilesCache = [];
+let filesSearchQuery = '';
+let currentFilesView = 'list';
+
+// Enkelt indgangspunkt til at (gen)tegne Lucide-ikoner efter hver render
+function refreshIcons() {
+    if (typeof lucide !== 'undefined' && lucide.createIcons) {
+        lucide.createIcons();
     }
-    return allFiles;
+}
+
+function escapeFileName(name) {
+    return String(name).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+function fileTypeInfo(name) {
+    const ext = (name.split('.').pop() || '').toLowerCase();
+    if (['jpg', 'jpeg', 'jfif', 'pjpeg', 'pjp', 'png', 'gif', 'bmp', 'webp'].includes(ext)) {
+        return { cls: 'ti-image', label: ext === 'jpeg' ? 'JPG' : ext.toUpperCase().slice(0, 4) };
+    }
+    if (ext === 'pdf') return { cls: 'ti-pdf', label: 'PDF' };
+    if (['doc', 'docx', 'rtf', 'odt'].includes(ext)) return { cls: 'ti-word', label: ext === 'doc' ? 'DOC' : ext.toUpperCase().slice(0, 4) };
+    if (['xls', 'xlsx', 'csv', 'ods'].includes(ext)) return { cls: 'ti-excel', label: ext.toUpperCase().slice(0, 4) };
+    return { cls: 'ti-other', label: (ext || 'FIL').slice(0, 4).toUpperCase() };
+}
+
+function fileTypeIconHtml(name) {
+    const t = fileTypeInfo(name);
+    return '<span class="file-type-icon ' + t.cls + '">' + t.label + '</span>';
+}
+
+function folderIconHtml() {
+    return '<span class="file-type-icon ti-folder"><i data-lucide="folder"></i></span>';
+}
+
+function getFilteredFiles() {
+    let files;
+    if (currentFilter === 'folder' && currentFolderId) {
+        files = allFiles.filter(f => f.folder_id === currentFolderId);
+    } else if (currentFilter === 'documents') {
+        files = allFiles.filter(f => isDocument(f.original_name));
+    } else if (currentFilter === 'images') {
+        files = allFiles.filter(f => isImage(f.original_name));
+    } else if (currentFilter === 'shared') {
+        files = sharedFilesCache;
+    } else {
+        files = allFiles;
+    }
+
+    // Fritekst-søgning (toolbar)
+    if (filesSearchQuery) {
+        const q = filesSearchQuery.toLowerCase();
+        files = files.filter(f => f.original_name.toLowerCase().includes(q));
+    }
+
+    // Sortering
+    const dir = currentSortDirection === 'desc' ? -1 : 1;
+    files = [...files].sort((a, b) => {
+        switch (currentSortColumn) {
+            case 'size': return ((a.file_size || 0) - (b.file_size || 0)) * dir;
+            case 'type': return getFileType(a.original_name).localeCompare(getFileType(b.original_name), 'da') * dir;
+            case 'date': return (new Date(a.created_at) - new Date(b.created_at)) * dir;
+            default: return a.original_name.localeCompare(b.original_name, 'da') * dir;
+        }
+    });
+    return files;
+}
+
+// Filterchips med antal
+function renderFilesChips() {
+    const chips = document.getElementById('filesChips');
+    if (!chips) return;
+    const docCount = allFiles.filter(f => isDocument(f.original_name)).length;
+    const imgCount = allFiles.filter(f => isImage(f.original_name)).length;
+    const defs = [
+        { id: 'all', label: 'Alle', count: allFiles.length },
+        { id: 'documents', label: 'Dokumenter', count: docCount },
+        { id: 'images', label: 'Billeder', count: imgCount },
+        { id: 'shared', label: 'Delte', count: null }
+    ];
+    chips.innerHTML = defs.map(d => {
+        const active = currentFilter === d.id;
+        const countHtml = d.count === null ? '' : ' <span class="chip-count">' + d.count + '</span>';
+        return '<button class="files-chip' + (active ? ' active' : '') + '" onclick="filterFiles(\'' + d.id + '\')">' + d.label + countHtml + '</button>';
+    }).join('');
+}
+
+// Brødkrumme
+function getFolderPath(folderId) {
+    const path = [];
+    let f = allFolders.find(x => x.id === folderId);
+    while (f) {
+        path.unshift(f);
+        f = f.parent_id ? allFolders.find(x => x.id === f.parent_id) : null;
+    }
+    return path;
+}
+
+function renderBreadcrumb() {
+    const crumb = document.getElementById('filesCrumb');
+    if (!crumb) return;
+    const names = { all: 'Alle filer', documents: 'Dokumenter', images: 'Billeder', shared: 'Delte filer' };
+    let html = '<span class="crumb-root">Alle filer</span>';
+    if (currentFilter === 'folder' && currentFolderId) {
+        const path = getFolderPath(currentFolderId);
+        path.forEach((f, i) => {
+            const last = i === path.length - 1;
+            html += '<span class="crumb-sep">/</span>';
+            html += '<span class="crumb-item' + (last ? ' current' : '') + '" onclick="openFolder(' + f.id + ', \'' + f.name.replace(/'/g, "\\'") + '\')">' + escapeFileName(f.name) + '</span>';
+        });
+    } else {
+        html += '<span class="crumb-sep">/</span><span class="crumb-item current">' + (names[currentFilter] || 'Alle filer') + '</span>';
+    }
+    crumb.innerHTML = html;
+}
+
+function setFilesView(view) {
+    currentFilesView = view;
+    const lb = document.getElementById('viewListBtn');
+    const gb = document.getElementById('viewGridBtn');
+    if (lb) lb.classList.toggle('active', view === 'list');
+    if (gb) gb.classList.toggle('active', view === 'images');
+    renderRealFiles();
+}
+
+function onFilesSearchInput(event) {
+    filesSearchQuery = (event.target.value || '').trim();
+    renderRealFiles();
+}
+
+// Midlertidig stub — rigtigt flervalg kommer i trin (b)
+function toggleSelectAllFiles(event) {
+    const checked = event.target.checked;
+    document.querySelectorAll('#fileListBody input[type="checkbox"]').forEach(cb => { cb.checked = checked; });
+}
+
+function toggleFileCheckbox(event, fileId) {
+    event.stopPropagation();
+    selectRealFile(fileId, null);
 }
 
 function renderRealFiles() {
     const tbody = document.getElementById('fileListBody');
-    const addressBar = document.getElementById('addressBar');
     const fileCount = document.getElementById('fileCount');
-    
-    // Check if elements exist (they won't if we're not on the files page)
-    if (!tbody || !addressBar || !fileCount) {
+    const gridView = document.getElementById('filesGridView');
+    const table = document.getElementById('fileTable');
+
+    if (!tbody || !fileCount) {
         console.log('Files page elements not found - not on files page');
         return;
     }
-    
+
     const filteredFiles = getFilteredFiles();
-    
-    const filterNames = {
-        'all': 'Alle Filer',
-        'documents': 'Dokumenter',
-        'images': 'Billeder',
-        'shared': 'Delte Filer',
-        'folder': currentFolderName
-    };
-    addressBar.textContent = filterNames[currentFilter];
-    
-    // Get subfolders if we're viewing a specific folder
+
     let subfolders = [];
     if (currentFilter === 'folder' && currentFolderId) {
         subfolders = allFolders.filter(f => f.parent_id === currentFolderId);
     }
-    
-    if (filteredFiles.length === 0 && subfolders.length === 0) {
-        const emptyMessage = currentFilter === 'folder' 
-            ? 'Mappen er tom. Upload filer til denne mappe.'
-            : currentFilter === 'all' 
-            ? 'Ingen filer uploadet endnu. Klik " Upload" for at tilføje filer.'
-            : `Ingen ${filterNames[currentFilter].toLowerCase()} endnu.`;
-        tbody.innerHTML = `<tr><td colspan="4" style="text-align: center; padding: 40px; color: var(--text-muted);">${emptyMessage}</td></tr>`;
-        fileCount.textContent = '0 filer';
+
+    renderFilesChips();
+    renderBreadcrumb();
+
+    const totalItems = filteredFiles.length + subfolders.length;
+    fileCount.textContent = totalItems + (totalItems === 1 ? ' element' : ' elementer');
+    const selEl = document.getElementById('selectedInfo');
+    if (selEl) selEl.textContent = '';
+
+    // Billedvisning (gitter)
+    if (currentFilesView === 'images') {
+        if (table) table.style.display = 'none';
+        if (gridView) { gridView.hidden = false; }
+        renderFilesGrid(filteredFiles, subfolders);
         return;
     }
-    
+    if (table) table.style.display = '';
+    if (gridView) gridView.hidden = true;
+
+    if (totalItems === 0) {
+        const emptyMessage = currentFilter === 'folder'
+            ? 'Mappen er tom. Upload filer til denne mappe.'
+            : currentFilter === 'shared'
+            ? 'Ingen delte filer endnu.'
+            : currentFilter === 'documents'
+            ? 'Ingen dokumenter endnu.'
+            : currentFilter === 'images'
+            ? 'Ingen billeder endnu.'
+            : 'Ingen filer uploadet endnu. Klik "Upload" for at tilføje filer.';
+        tbody.innerHTML = '<tr><td colspan="5"><div class="files-empty"><i data-lucide="inbox"></i><span>' + emptyMessage + '</span></div></td></tr>';
+        refreshIcons();
+        renderFileDetails();
+        return;
+    }
+
     let html = '';
-    
-    // Render subfolders first (like Windows Explorer)
+
+    // Undermapper først (som Windows Stifinder)
     subfolders.forEach(folder => {
-        const fileCount = allFiles.filter(f => f.folder_id === folder.id).length;
-        const folderIcon = ''; // All folders use same icon
+        const fCount = allFiles.filter(f => f.folder_id === folder.id).length;
+        const safeName = folder.name.replace(/'/g, "\\'");
         const date = new Date(folder.created_at).toLocaleDateString('da-DK');
-        
         html += `
-            <tr class="file-row folder-row" onclick="selectFolder(${folder.id}, event)" ondblclick="openFolder(${folder.id}, '${folder.name.replace(/'/g, "\\\\'")}')" oncontextmenu="showFolderContextMenu(event, ${folder.id}, '${folder.name.replace(/'/g, "\\\\'")}'); return false;">
-                <td><span class="file-icon-small">${folderIcon}</span>${folder.name}</td>
-                <td>${fileCount} ${fileCount === 1 ? 'fil' : 'filer'}</td>
-                <td>Mappe</td>
-                <td>${date} - ${folder.creator_name || ''}</td>
-            </tr>
-        `;
+            <tr class="folder-row" onclick="selectFolder(${folder.id}, event)" ondblclick="openFolder(${folder.id}, '${safeName}')" oncontextmenu="showFolderContextMenu(event, ${folder.id}, '${safeName}'); return false;">
+                <td class="col-check"></td>
+                <td><div class="col-name-cell">${folderIconHtml()}<span class="file-name-text">${escapeFileName(folder.name)}</span></div></td>
+                <td class="col-size">${fCount} ${fCount === 1 ? 'fil' : 'filer'}</td>
+                <td class="col-type">Mappe</td>
+                <td class="col-date">${date}</td>
+            </tr>`;
     });
-    
-    // Render files
+
     html += filteredFiles.map(file => {
-        const icon = getFileIcon(file.original_name);
+        const icon = fileTypeIconHtml(file.original_name);
         const size = formatFileSize(file.file_size);
         const type = getFileType(file.original_name);
         const date = new Date(file.created_at).toLocaleDateString('da-DK');
-        
+        const selCls = selectedFileId === file.id ? ' row-selected' : '';
         return `
-            <tr class="file-row" draggable="true" data-file-id="${file.id}" onclick="selectRealFile(${file.id}, event)" ondblclick="openRealFile(${file.id})" oncontextmenu="showContextMenu(event, ${file.id})" ondragstart="handleFileDragStart(event, ${file.id})">
-                <td><span class="file-icon-small">${icon}</span>${file.original_name}</td>
-                <td>${size}</td>
-                <td>${type}</td>
-                <td>${date} - ${file.uploader_name}</td>
-            </tr>
-        `;
+            <tr class="file-row${selCls}" draggable="true" data-file-id="${file.id}" onclick="selectRealFile(${file.id}, event)" ondblclick="openRealFile(${file.id})" oncontextmenu="showContextMenu(event, ${file.id})" ondragstart="handleFileDragStart(event, ${file.id})">
+                <td class="col-check"><input type="checkbox" onclick="toggleFileCheckbox(event, ${file.id})"></td>
+                <td><div class="col-name-cell">${icon}<span class="file-name-text">${escapeFileName(file.original_name)}</span></div></td>
+                <td class="col-size">${size}</td>
+                <td class="col-type">${type}</td>
+                <td class="col-date">${date}</td>
+            </tr>`;
     }).join('');
-    
+
     tbody.innerHTML = html;
-    
-    const totalItems = filteredFiles.length + subfolders.length;
-    fileCount.textContent = `${totalItems} ${totalItems === 1 ? 'element' : 'elementer'}`;
+    refreshIcons();
+    renderFileDetails();
 }
 
-// Select folder (for highlighting)
+
+// Billedvisning (gitterkort med thumbnail til billeder)
+function renderFilesGrid(files, subfolders) {
+    const grid = document.getElementById('filesGridView');
+    if (!grid) return;
+    let html = '';
+    subfolders.forEach(folder => {
+        const safeName = folder.name.replace(/'/g, "\\'");
+        html += `
+            <div class="grid-card" onclick="openFolder(${folder.id}, '${safeName}')" oncontextmenu="showFolderContextMenu(event, ${folder.id}, '${safeName}'); return false;">
+                <div class="grid-thumb" style="display:flex;align-items:center;justify-content:center;">${folderIconHtml()}</div>
+                <div class="grid-name">${escapeFileName(folder.name)}</div>
+            </div>`;
+    });
+    files.forEach(file => {
+        const isImg = isImage(file.original_name);
+        const thumb = isImg
+            ? '<img class="grid-thumb" src="/api/files/download/' + file.id + '" alt="" loading="lazy" onerror="this.style.display=\'none\'">'
+            : '<div class="grid-thumb" style="display:flex;align-items:center;justify-content:center;">' + fileTypeIconHtml(file.original_name) + '</div>';
+        html += `
+            <div class="grid-card" data-file-id="${file.id}" onclick="selectRealFile(${file.id}, event)" ondblclick="openRealFile(${file.id})" oncontextmenu="showContextMenu(event, ${file.id})">
+                ${thumb}
+                <div class="grid-name">${escapeFileName(file.original_name)}</div>
+            </div>`;
+    });
+    grid.innerHTML = html;
+    refreshIcons();
+}
+
+
+// Detaljepanel til højre
+function renderFileDetails() {
+    const panel = document.getElementById('filesDetails');
+    if (!panel) return;
+    const file = allFiles.find(f => f.id === selectedFileId) || sharedFilesCache.find(f => f.id === selectedFileId);
+    if (!file) {
+        panel.innerHTML = '<div class="files-details-empty"><i data-lucide="mouse-pointer-click"></i><p>Vælg en fil for at se detaljer og handlinger.</p></div>';
+        refreshIcons();
+        return;
+    }
+    const isImg = isImage(file.original_name);
+    const t = fileTypeInfo(file.original_name);
+    const date = new Date(file.created_at).toLocaleString('da-DK');
+    const preview = isImg
+        ? '<div class="files-preview"><img id="detailsPreviewImg" alt=""></div>'
+        : '<div class="files-preview"><span class="file-type-icon ' + t.cls + '">' + t.label + '</span></div>';
+    panel.innerHTML = `
+        ${preview}
+        <h3>${escapeFileName(file.original_name)}</h3>
+        <div class="files-meta">
+            <div class="meta-row"><span class="meta-key">Størrelse</span><span class="meta-val">${formatFileSize(file.file_size)}</span></div>
+            <div class="meta-row"><span class="meta-key">Type</span><span class="meta-val">${getFileType(file.original_name)}</span></div>
+            <div class="meta-row"><span class="meta-key">Ændret</span><span class="meta-val">${date}</span></div>
+            <div class="meta-row"><span class="meta-key">Uploadet af</span><span class="meta-val">${escapeFileName(file.uploader_name || file.owner_name || '')}</span></div>
+        </div>
+        <div class="details-actions">
+            <button class="btn btn-primary" onclick="openRealFile(${file.id})"><i data-lucide="eye"></i>Åbn</button>
+            <button class="btn btn-secondary" onclick="selectedFileId = ${file.id}; downloadFile()"><i data-lucide="download"></i>Download</button>
+            <button class="btn btn-secondary" onclick="selectedFileId = ${file.id}; transferToOrder()"><i data-lucide="send"></i>Overfør til ordre</button>
+            <button class="btn btn-secondary" onclick="selectedFileId = ${file.id}; shareFile()"><i data-lucide="share-2"></i>Del</button>
+            <button class="btn btn-secondary" style="color:#D93025" onclick="selectedFileId = ${file.id}; deleteSelected()"><i data-lucide="trash-2"></i>Slet</button>
+        </div>`;
+    refreshIcons();
+    if (isImg) loadDetailsPreview(file);
+}
+
+async function loadDetailsPreview(file) {
+    const img = document.getElementById('detailsPreviewImg');
+    if (!img) return;
+    try {
+        const token = sessionStorage.getItem('token');
+        const res = await fetch(`/api/files/download/${file.id}`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (!res.ok) throw new Error('Kunne ikke hente preview');
+        const blob = await res.blob();
+        img.src = URL.createObjectURL(new Blob([blob], { type: getImageMime(file.original_name) || blob.type }));
+    } catch (e) {
+        console.error('Preview error:', e);
+    }
+}
+
+// Select folder (fremhæv + detaljer)
 function selectFolder(folderId, event) {
     selectedFileId = null;
-    document.querySelectorAll('.file-row').forEach(row => row.classList.remove('selected'));
-    
-    if (event && event.currentTarget) {
-        event.currentTarget.classList.add('selected');
-    }
-    
+    document.querySelectorAll('#fileListBody tr').forEach(row => row.classList.remove('row-selected'));
+    if (event && event.currentTarget) event.currentTarget.classList.add('row-selected');
     const folder = allFolders.find(f => f.id === folderId);
     if (folder) {
-        const fileCount = allFiles.filter(f => f.folder_id === folder.id).length;
-        document.getElementById('selectedInfo').textContent = `Valgt: ${folder.name} (${fileCount} filer)`;
+        const fCount = allFiles.filter(f => f.folder_id === folder.id).length;
+        const selEl = document.getElementById('selectedInfo');
+        if (selEl) selEl.textContent = 'Valgt: ' + folder.name + ' (' + fCount + ' filer)';
     }
-    
-    if (event) {
-        event.stopPropagation();
-    }
+    renderFileDetails();
+    if (event) event.stopPropagation();
 }
 
 function selectRealFile(fileId, event) {
     selectedFileId = fileId;
-    document.querySelectorAll('.file-row').forEach(row => row.classList.remove('selected'));
-    
-    const filteredFiles = getFilteredFiles();
-    const fileIndex = filteredFiles.findIndex(f => f.id === fileId);
-    
-    if (fileIndex >= 0) {
-        const rows = document.querySelectorAll('.file-row');
-        if (rows[fileIndex]) {
-            rows[fileIndex].classList.add('selected');
-        }
-        const file = filteredFiles[fileIndex];
-        document.getElementById('selectedInfo').textContent = `Valgt: ${file.original_name} (${formatFileSize(file.file_size)})`;
+    document.querySelectorAll('#fileListBody tr').forEach(row => row.classList.remove('row-selected'));
+    const row = document.querySelector('#fileListBody tr[data-file-id="' + fileId + '"]');
+    if (row) row.classList.add('row-selected');
+    const file = allFiles.find(f => f.id === fileId) || sharedFilesCache.find(f => f.id === fileId);
+    if (file) {
+        const selEl = document.getElementById('selectedInfo');
+        if (selEl) selEl.textContent = 'Valgt: ' + file.original_name + ' (' + formatFileSize(file.file_size) + ')';
     }
-    
-    if (event) {
-        event.stopPropagation();
-    }
+    renderFileDetails();
+    if (event) event.stopPropagation();
 }
 
 async function uploadFileToExplorer(event) {
@@ -661,44 +845,15 @@ async function showNewFolderDialog() {
 }
 
 function searchFiles() {
-    const query = prompt('Søg efter fil:');
-    if (!query || !query.trim()) {
-        loadRealFiles();
+    const input = document.getElementById('filesSearch');
+    if (input) {
+        input.focus();
         return;
     }
-    
-    const searchTerm = query.toLowerCase().trim();
-    const filteredFiles = allFiles.filter(file => 
-        file.original_name.toLowerCase().includes(searchTerm)
-    );
-    
-    const tbody = document.getElementById('fileListBody');
-    
-    if (filteredFiles.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="4" style="text-align: center; padding: 40px; color: var(--text-muted);">Ingen filer matcher "${query}"</td></tr>`;
-        document.getElementById('fileCount').textContent = '0 filer';
-        document.getElementById('addressBar').textContent = `Søgeresultat: "${query}"`;
-        return;
-    }
-    
-    tbody.innerHTML = filteredFiles.map(file => {
-        const icon = getFileIcon(file.original_name);
-        const size = formatFileSize(file.file_size);
-        const type = getFileType(file.original_name);
-        const date = new Date(file.created_at).toLocaleDateString('da-DK');
-        
-        return `
-            <tr class="file-row" onclick="selectRealFile(${file.id}, event)" ondblclick="openRealFile(${file.id})" oncontextmenu="showContextMenu(event, ${file.id})">
-                <td><span class="file-icon-small">${icon}</span>${file.original_name}</td>
-                <td>${size}</td>
-                <td>${type}</td>
-                <td>${date} - ${file.uploader_name}</td>
-            </tr>
-        `;
-    }).join('');
-    
-    document.getElementById('fileCount').textContent = `${filteredFiles.length} fil${filteredFiles.length !== 1 ? 'er' : ''} fundet`;
-    document.getElementById('addressBar').textContent = `Søgeresultat: "${query}"`;
+    const query = prompt('Søg filer:');
+    if (query === null) return;
+    filesSearchQuery = query.trim();
+    renderRealFiles();
 }
 
 let selectedFolderId = null;
@@ -913,12 +1068,23 @@ function refreshExplorer() {
 }
 
 function navigateBack() {
-    if (currentFolderId) {
-        currentFolderId = null;
-        currentFilter = 'all';
-        renderFolderTree();
-        renderRealFiles();
+    const contextMenu = document.getElementById('contextMenu');
+    if (contextMenu) contextMenu.style.display = 'none';
+
+    if (currentFilter === 'folder' && currentFolderId) {
+        const folder = allFolders.find(f => f.id === currentFolderId);
+        const parentId = folder && folder.parent_id ? folder.parent_id : null;
+        if (parentId) {
+            const parent = allFolders.find(f => f.id === parentId);
+            openFolder(parentId, parent ? parent.name : '');
+            return;
+        }
     }
+    currentFolderId = null;
+    currentFolderName = '';
+    currentFilter = 'all';
+    renderFolderTree();
+    renderRealFiles();
 }
 
 function navigateUp() {
