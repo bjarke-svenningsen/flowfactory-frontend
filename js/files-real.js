@@ -31,7 +31,7 @@ async function loadRealFiles() {
         initResizableColumns();
     } catch (error) {
         console.error('Error loading files:', error);
-        alert('Kunne ikke indlæse filer: ' + error.message);
+        await winAlert('Kunne ikke indlæse filer: ' + error.message, 'Fejl');
     }
 }
 
@@ -52,18 +52,18 @@ async function createCompanyFolder() {
     console.log('Portal: is_admin value:', user?.is_admin, 'type:', typeof user?.is_admin); // DEBUG
     
     if (!user || (user.is_admin !== 1 && user.is_admin !== true)) {
-        alert('Kun admins kan oprette firma mapper\n\nDEBUG: is_admin = ' + user?.is_admin);
+        winAlert('Kun admins kan oprette firma mapper');
         return;
     }
     
     // Check if company folder already exists
     const existingCompanyFolder = allFolders.find(f => f.is_company_folder && f.name === 'SG Seest Gulvteknik');
     if (existingCompanyFolder) {
-        alert(' firma mappen findes allerede!');
+        await winAlert('Firma mappen findes allerede!');
         return;
     }
     
-    if (!confirm('Opret firma mappe?\n\nDenne mappe vil være synlig for alle brugere i firmaet.')) {
+    if (!await winConfirm('Opret firma mappe?\nDenne mappe vil være synlig for alle brugere i firmaet.', 'Opret firma mappe')) {
         return;
     }
     
@@ -86,12 +86,12 @@ async function createCompanyFolder() {
             throw new Error(error.error || 'Failed to create company folder');
         }
         
-        alert(' firma mappe oprettet!\n\nAlle brugere kan nu se og bruge denne mappe.');
+        await winAlert('Firma mappe oprettet!\nAlle brugere kan nu se og bruge denne mappe.', 'Succes');
         await loadFolders();
         renderFolderTree();
     } catch (error) {
         console.error('Create company folder error:', error);
-        alert('Kunne ikke oprette firma mappe: ' + error.message);
+        await winAlert('Kunne ikke oprette firma mappe: ' + error.message, 'Fejl');
     }
 }
 
@@ -632,7 +632,7 @@ async function uploadFileToExplorer(event) {
     if (!file) return;
     
     if (file.size > 100 * 1024 * 1024) {
-        alert('Filen er for stor! Max 100MB');
+        await winAlert('Filen er for stor! Max 100MB', 'Fejl');
         return;
     }
     
@@ -670,9 +670,9 @@ async function uploadFileToExplorer(event) {
         }
         
         if (result.warning) {
-            alert('Advarsel: ' + result.warning);
+            await winAlert('Advarsel: ' + result.warning);
         } else {
-            alert(` ${file.name} uploadet succesfuldt!`);
+            await winAlert(`${file.name} uploadet succesfuldt!`, 'Succes');
         }
         
         console.log('Reloading files...');
@@ -681,7 +681,7 @@ async function uploadFileToExplorer(event) {
         
     } catch (error) {
         console.error('Upload error details:', error);
-        alert('Upload fejlede: ' + error.message);
+        await winAlert('Upload fejlede: ' + error.message, 'Fejl');
     }
     
     event.target.value = '';
@@ -697,7 +697,7 @@ async function openRealFile(fileId) {
     if (imageExtensions.includes(ext)) {
         await previewImage(fileId, file.original_name);
     } else {
-        alert(`${file.original_name}\n\nStørrelse: ${formatFileSize(file.file_size)}\nType: ${getFileType(file.original_name)}\nUploadet af: ${file.uploader_name}\nDato: ${new Date(file.created_at).toLocaleString('da-DK')}\n\nTryk " Download" knappen for at downloade filen.`);
+        await winAlert(`<strong>Navn:</strong> ${file.original_name}<br><br><strong>Størrelse:</strong> ${formatFileSize(file.file_size)}<br><strong>Type:</strong> ${getFileType(file.original_name)}<br><strong>Uploadet af:</strong> ${file.uploader_name}<br><strong>Dato:</strong> ${new Date(file.created_at).toLocaleString('da-DK')}`, 'Fil');
     }
 }
 
@@ -726,7 +726,7 @@ async function previewImage(fileId, filename) {
         }, { once: true });
     } catch (error) {
         console.error('Preview error:', error);
-        alert('Kunne ikke vise billede: ' + error.message);
+        await winAlert('Kunne ikke vise billede: ' + error.message, 'Fejl');
     }
 }
 
@@ -752,13 +752,13 @@ async function downloadRealFile(fileId) {
         document.body.removeChild(a);
     } catch (error) {
         console.error('Download error:', error);
-        alert('Download fejlede: ' + error.message);
+        await winAlert('Download fejlede: ' + error.message, 'Fejl');
     }
 }
 
 async function deleteSelected() {
     if (!selectedFileId) {
-        alert('Vælg en fil først');
+        await winAlert('Vælg en fil først');
         return;
     }
 
@@ -769,7 +769,7 @@ async function deleteSelected() {
 
     // Fil andre har delt med MIG: fjern kun min adgang - filen røres ikke
     if (!ownFile && sharedFile) {
-        if (!confirm('Fjern "' + sharedFile.original_name + '" fra dine delte filer?\n\nFilen slettes ikke og forbliver hos ejeren.')) return;
+        if (!await winConfirm('Fjern "' + sharedFile.original_name + '" fra dine delte filer?\nFilen slettes ikke og forbliver hos ejeren.', 'Fjern deling')) return;
         try {
             const response = await fetch('/api/files/' + selectedFileId + '/share/' + meId, {
                 method: 'DELETE',
@@ -784,14 +784,14 @@ async function deleteSelected() {
             renderRealFiles();
         } catch (error) {
             console.error('Unshare error:', error);
-            alert('Fejl: ' + error.message);
+            await winAlert('Fejl: ' + error.message, 'Fejl');
         }
         return;
     }
 
     if (!ownFile) return;
 
-    if (!confirm('ADVARSEL: Filen "' + ownFile.original_name + '" slettes permanent.\n\nDen forsvinder også fra "Alle filer" og hos dem, du har delt den med. Fortsæt?')) return;
+    if (!await winConfirm('ADVARSEL: Filen "' + ownFile.original_name + '" slettes permanent.\nDen forsvinder også fra "Alle filer" og hos dem, du har delt den med. Fortsæt?', 'Slet fil')) return;
 
     try {
         const response = await fetch('/api/files/' + selectedFileId, {
@@ -804,7 +804,7 @@ async function deleteSelected() {
             throw new Error(error.error || 'Delete failed');
         }
 
-        alert('Filen er slettet');
+        await winAlert('Filen er slettet', 'Succes');
         selectedFileId = null;
         if (currentFilter === 'shared') {
             sharedFilesCache = await loadSharedFiles();
@@ -812,7 +812,7 @@ async function deleteSelected() {
         await loadRealFiles();
     } catch (error) {
         console.error('Delete error:', error);
-        alert('Slet fejlede: ' + error.message);
+        await winAlert('Slet fejlede: ' + error.message, 'Fejl');
     }
 }
 
@@ -820,7 +820,7 @@ function downloadFile() {
     if (selectedFileId) {
         downloadRealFile(selectedFileId);
     } else {
-        alert('Vælg en fil først');
+        winAlert('Vælg en fil først');
     }
 }
 
@@ -881,7 +881,7 @@ function openFolder(folderId, folderName) {
 }
 
 async function showNewFolderDialog() {
-    const folderName = prompt('Indtast mappenavn:');
+    const folderName = await winPrompt('Indtast mappenavn:', '', 'Ny mappe');
     if (!folderName || !folderName.trim()) return;
     
     try {
@@ -903,12 +903,12 @@ async function showNewFolderDialog() {
             throw new Error(error.error || 'Failed to create folder');
         }
         
-        alert(` Mappe "${folderName}" oprettet!`);
+        await winAlert(`Mappe "${folderName}" oprettet`, "Succes");
         await loadFolders();
         renderFolderTree();
     } catch (error) {
         console.error('Create folder error:', error);
-        alert('Kunne ikke oprette mappe: ' + error.message);
+        await winAlert('Kunne ikke oprette mappe: ' + error.message, 'Fejl');
     }
 }
 
@@ -918,10 +918,11 @@ function searchFiles() {
         input.focus();
         return;
     }
-    const query = prompt('Søg filer:');
-    if (query === null) return;
-    filesSearchQuery = query.trim();
-    renderRealFiles();
+    winPrompt('Søg filer:').then(function (query) {
+        if (query === null) return;
+        filesSearchQuery = query.trim();
+        renderRealFiles();
+    });
 }
 
 let selectedFolderId = null;
@@ -970,7 +971,7 @@ async function createSubfolder() {
     const folderContextMenu = document.getElementById('folderContextMenu');
     if (folderContextMenu) folderContextMenu.style.display = 'none';
     
-    const folderName = prompt('Indtast mappenavn:');
+    const folderName = await winPrompt('Indtast mappenavn:', '', 'Ny undermappe');
     if (!folderName || !folderName.trim()) return;
     
     try {
@@ -992,13 +993,13 @@ async function createSubfolder() {
             throw new Error(error.error || 'Failed to create folder');
         }
         
-        alert(` Mappe "${folderName}" oprettet!`);
+        await winAlert(`Mappe "${folderName}" oprettet`, 'Succes');
         expandedFolders.add(selectedFolderId); // Auto-expand parent
         await loadFolders();
         renderFolderTree();
     } catch (error) {
         console.error('Create folder error:', error);
-        alert('Kunne ikke oprette mappe: ' + error.message);
+        await winAlert('Kunne ikke oprette mappe: ' + error.message, 'Fejl');
     }
 }
 
@@ -1007,7 +1008,7 @@ async function renameFolderSelected() {
     const folderContextMenu = document.getElementById('folderContextMenu');
     if (folderContextMenu) folderContextMenu.style.display = 'none';
     
-    const newName = prompt('Indtast nyt mappenavn:', selectedFolderName);
+    const newName = await winPrompt('Indtast nyt mappenavn:', selectedFolderName, 'Omdøb mappe');
     if (!newName || !newName.trim() || newName === selectedFolderName) return;
     
     try {
@@ -1026,12 +1027,12 @@ async function renameFolderSelected() {
             throw new Error(error.error || 'Failed to rename folder');
         }
         
-        alert(` Mappe omdøbt til "${newName}"`);
+        await winAlert(`Mappe omdøbt til "${newName}"`, 'Succes');
         await loadFolders();
         renderFolderTree();
     } catch (error) {
         console.error('Rename folder error:', error);
-        alert('Kunne ikke omdøbe mappe: ' + error.message);
+        await winAlert('Kunne ikke omdøbe mappe: ' + error.message, 'Fejl');
     }
 }
 
@@ -1040,7 +1041,7 @@ async function deleteFolderSelected() {
     const folderContextMenu = document.getElementById('folderContextMenu');
     if (folderContextMenu) folderContextMenu.style.display = 'none';
     
-    if (!confirm(`Er du sikker på at du vil slette mappen "${selectedFolderName}"?`)) return;
+    if (!await winConfirm(`Er du sikker på, at du vil slette mappen "${selectedFolderName}"?`, 'Slet mappe')) return;
     
     try {
         const token = sessionStorage.getItem('token');
@@ -1054,12 +1055,12 @@ async function deleteFolderSelected() {
             throw new Error(error.error || 'Delete failed');
         }
         
-        alert(' Mappe slettet');
+        await winAlert('Mappe slettet', 'Succes');
         await loadFolders();
         renderFolderTree();
     } catch (error) {
         console.error('Delete folder error:', error);
-        alert('Slet fejlede: ' + error.message);
+        await winAlert('Slet fejlede: ' + error.message, 'Fejl');
     }
 }
 
@@ -1074,12 +1075,13 @@ function showFolderProperties() {
     const fileCount = allFiles.filter(f => f.folder_id === folder.id).length;
     const subfolderCount = allFolders.filter(f => f.parent_id === folder.id).length;
     
-    alert(
-        `Mappe: ${folder.name}\n\n` +
-        `Filer: ${fileCount}\n` +
-        `Undermapper: ${subfolderCount}\n\n` +
-        `Oprettet af: ${folder.creator_name}\n` +
-        `Oprettet: ${new Date(folder.created_at).toLocaleString('da-DK')}`
+    winAlert(
+        `<strong>Navn:</strong> ${folder.name}<br><br>` +
+        `<strong>Filer:</strong> ${fileCount}<br>` +
+        `<strong>Undermapper:</strong> ${subfolderCount}<br><br>` +
+        `<strong>Oprettet af:</strong> ${folder.creator_name}<br>` +
+        `<strong>Oprettet:</strong> ${new Date(folder.created_at).toLocaleString('da-DK')}`,
+        'Mappeegenskaber'
     );
 }
 
@@ -1089,16 +1091,16 @@ async function transferToOrder() {
     if (contextMenu) contextMenu.style.display = 'none';
     
     if (!selectedFileId) {
-        alert('Vælg en fil først');
+        await winAlert('Vælg en fil først');
         return;
     }
     
     const file = allFiles.find(f => f.id === selectedFileId);
     if (!file) return;
     
-    const orderNumber = prompt(`Overfør "${file.original_name}" til ordre:\n\nIndtast ordrenummer:`);
+    const orderNumber = await winPrompt(`Overfør "${file.original_name}" til ordre — indtast ordrenummer:`, '', 'Overfør til ordre');
     if (!orderNumber || !orderNumber.trim()) {
-        alert(' Ordre nummer er påkrævet!\n\nDu skal indtaste et ordre nummer for at overføre filen.');
+        await winAlert('Ordrenummer er påkrævet.\nDu skal indtaste et ordrenummer for at overføre filen.', 'Mangler ordrenummer');
         return;
     }
     
@@ -1119,11 +1121,11 @@ async function transferToOrder() {
             throw new Error(result.error || 'Transfer failed');
         }
         
-        alert(` ${result.message}\n\nOrdre: ${result.order.title}`);
+        await winAlert(`${result.message}\nOrdre: ${result.order.title}`, 'Succes');
         
     } catch (error) {
         console.error('Transfer error:', error);
-        alert('Overførsel fejlede: ' + error.message);
+        await winAlert('Overførsel fejlede: ' + error.message, 'Fejl');
     }
 }
 
@@ -1184,7 +1186,7 @@ function clearCutStyling() {
 
 function cutSelected() {
     hideFileContextMenus();
-    if (!selectedFileId) { alert("Vælg en fil først"); return; }
+    if (!selectedFileId) { winAlert("Vælg en fil først"); return; }
     fileClipboard = { mode: "cut", fileId: selectedFileId };
     clearCutStyling();
     document.querySelectorAll("[data-file-id=" + JSON.stringify(String(selectedFileId)) + "]").forEach(function (el) { el.classList.add("cut-pending"); });
@@ -1192,7 +1194,7 @@ function cutSelected() {
 
 function copySelected() {
     hideFileContextMenus();
-    if (!selectedFileId) { alert("Vælg en fil først"); return; }
+    if (!selectedFileId) { winAlert("Vælg en fil først"); return; }
     fileClipboard = { mode: "copy", fileId: selectedFileId };
 }
 
@@ -1222,16 +1224,16 @@ function friendlyFileError(msg) {
 
 async function pasteClipboard() {
     hideFileContextMenus();
-    if (!fileClipboard) { alert("Der er intet at indsætte"); return; }
+    if (!fileClipboard) { await winAlert("Der er intet at indsætte"); return; }
     const file = findFileAnywhere(fileClipboard.fileId);
-    if (!file) { fileClipboard = null; clearCutStyling(); alert("Filen findes ikke længere"); return; }
+    if (!file) { fileClipboard = null; clearCutStyling(); await winAlert("Filen findes ikke længere", 'Fejl'); return; }
     const target = currentPasteTarget();
     const meId = getCurrentUserId();
     if (fileClipboard.mode === "cut" && file.uploaded_by !== meId) {
-        alert("Du kan kun flytte filer, du selv har uploadet (eller er administrator).");
+        await winAlert("Du kan kun flytte filer, du selv har uploadet (eller er administrator).", 'Ikke tilladt');
         return;
     }
-    if (target.company && fileClipboard.mode === "copy" && !confirm("Filen bliver synlig for alle med adgang til Fælles filer. Fortsæt?")) return;
+    if (target.company && fileClipboard.mode === "copy" && !await winConfirm("Filen bliver synlig for alle med adgang til Fælles filer. Fortsæt?", 'Del med alle')) return;
     const token = sessionStorage.getItem("token");
     try {
         let resp;
@@ -1261,16 +1263,16 @@ async function pasteClipboard() {
         await loadRealFiles();
         if (isCopy) {
             if (data.final_name && data.final_name !== file.original_name) {
-                alert("Kopieret som " + JSON.stringify(data.final_name));
+                await winAlert("Kopieret som \"" + data.final_name + "\"", 'Succes');
             } else {
-                alert("Kopieret til " + JSON.stringify(target.name));
+                await winAlert("Kopieret til \"" + target.name + "\"", 'Succes');
             }
         } else {
-            alert("Flyttet til " + JSON.stringify(target.name));
+            await winAlert("Flyttet til \"" + target.name + "\"", 'Succes');
         }
     } catch (error) {
         console.error("Paste error:", error);
-        alert(error.message);
+        await winAlert(error.message, 'Fejl');
     }
 }
 
@@ -1330,7 +1332,7 @@ async function renameSelected() {
             throw new Error(errorMsg);
         }
         
-        await winAlert(` Fil omdøbt til "${finalName}"`, 'Succes');
+        await winAlert(`Fil omdøbt til "${finalName}"`, 'Succes');
         await loadRealFiles();
         
     } catch (error) {
@@ -1344,15 +1346,15 @@ async function shareFile() {
     if (contextMenu) contextMenu.style.display = 'none';
     
     if (!selectedFileId) {
-        alert('Vælg en fil først');
+        await winAlert('Vælg en fil først');
         return;
     }
     
     const file = allFiles.find(f => f.id === selectedFileId);
     if (!file) return;
     
-    // Simpelt prompt for email
-    const email = prompt(`Del "${file.original_name}" med:\n\nIndtast brugerens email:`);
+    // Moderne prompt-dialog for email
+    const email = await winPrompt(`Del "${file.original_name}" med — indtast brugerens email:`, '', 'Del med kollega');
     if (!email || !email.trim()) return;
     
     try {
@@ -1369,7 +1371,7 @@ async function shareFile() {
         const targetUser = users.find(u => u.email.toLowerCase() === email.trim().toLowerCase());
         
         if (!targetUser) {
-            alert(' Bruger ikke fundet. Tjek emailen og prøv igen.');
+            await winAlert('Bruger ikke fundet. Tjek emailen og prøv igen.', 'Fejl');
             return;
         }
         
@@ -1391,11 +1393,11 @@ async function shareFile() {
             throw new Error(error.error || 'Kunne ikke dele fil');
         }
         
-        alert(` Fil "${file.original_name}" delt med ${targetUser.name}!`);
+        await winAlert(`Fil "${file.original_name}" delt med ${targetUser.name}!`, 'Succes');
         
     } catch (error) {
         console.error('Share error:', error);
-        alert('Kunne ikke dele fil: ' + error.message);
+        await winAlert('Kunne ikke dele fil: ' + error.message, 'Fejl');
     }
 }
 
@@ -1501,7 +1503,7 @@ async function handleRootDrop(event) {
         }
     } catch (error) {
         console.error('Move file error:', error);
-        alert(friendlyFileError(error.message));
+        await winAlert(friendlyFileError(error.message), 'Fejl');
     }
 
     draggedFileId = null;
@@ -1566,7 +1568,7 @@ async function handleFolderDrop(event, folderId) {
             renderFolderTree();
         } catch (error) {
             console.error('Folder reorder error:', error);
-            alert(error.message);
+            await winAlert(error.message, 'Fejl');
         }
         return;
     }
@@ -1610,7 +1612,7 @@ async function handleFolderDrop(event, folderId) {
         
     } catch (error) {
         console.error('Move file error:', error);
-        alert('Kunne ikke flytte fil: ' + error.message);
+        await winAlert('Kunne ikke flytte fil: ' + error.message, 'Fejl');
     }
     
     draggedFileId = null;
@@ -1743,7 +1745,7 @@ function findFileAnywhere(fileId) {
 // "Flyt til..."-dialog: Mine filer (roden), mapper og Fælles filer
 function moveSelectedToFolder() {
     if (!selectedFileId) {
-        alert('Vælg en fil først');
+        winAlert('Vælg en fil først');
         return;
     }
     const file = findFileAnywhere(selectedFileId);
@@ -1780,7 +1782,7 @@ function moveSelectedToFolder() {
 }
 
 async function doMoveFile(fileId, folderId, isCompany) {
-    if (isCompany && !confirm('Filen bliver synlig for alle med adgang til Fælles filer. Fortsæt?')) return;
+    if (isCompany && !await winConfirm('Filen bliver synlig for alle med adgang til Fælles filer. Fortsæt?', 'Del med alle')) return;
     const token = sessionStorage.getItem('token');
     try {
         const response = await fetch('/api/files/' + fileId + '/move', {
@@ -1798,7 +1800,7 @@ async function doMoveFile(fileId, folderId, isCompany) {
         await loadRealFiles();
     } catch (error) {
         console.error('Move error:', error);
-        alert('Flyt fejlede: ' + error.message);
+        await winAlert('Flyt fejlede: ' + error.message, 'Fejl');
     }
 }
 
@@ -1806,7 +1808,7 @@ async function doMoveFile(fileId, folderId, isCompany) {
 async function stopSharingSelected() {
     const id = selectedFileId;
     if (!id) {
-        alert('Vælg en fil først');
+        await winAlert('Vælg en fil først');
         return;
     }
     const token = sessionStorage.getItem('token');
@@ -1817,16 +1819,16 @@ async function stopSharingSelected() {
         if (!res.ok) throw new Error('Kunne ikke hente delinger');
         const shares = await res.json();
         if (!shares.length) {
-            alert('Filen er ikke delt med nogen.');
+            await winAlert('Filen er ikke delt med nogen.');
             return;
         }
         if (shares.length === 1) {
-            if (!confirm('Stop deling med ' + shares[0].shared_with_name + '?')) return;
+            if (!await winConfirm('Stop deling med ' + shares[0].shared_with_name + '?', 'Stop deling')) return;
             await doUnshare(id, shares[0].shared_with_user_id, token);
             return;
         }
         const names = shares.map((s, i) => (i + 1) + ') ' + s.shared_with_name).join('\n');
-        const pick = prompt('Stop deling med hvem? Skriv nummeret:\n' + names + '\n\n0 = stop alle delinger');
+        const pick = await winPrompt('Stop deling med hvem? Skriv nummeret:\n' + names + '\n\n0 = stop alle delinger', '', 'Stop deling');
         if (pick === null) return;
         const n = parseInt(pick, 10);
         if (n === 0) {
@@ -1836,11 +1838,11 @@ async function stopSharingSelected() {
         } else if (n >= 1 && n <= shares.length) {
             await doUnshare(id, shares[n - 1].shared_with_user_id, token);
         } else {
-            alert('Ugyldigt nummer');
+            await winAlert('Ugyldigt nummer', 'Fejl');
         }
     } catch (error) {
         console.error('Stop sharing error:', error);
-        alert('Fejl: ' + error.message);
+        await winAlert('Fejl: ' + error.message, 'Fejl');
     }
 }
 
@@ -1850,7 +1852,7 @@ async function doUnshare(fileId, userId, token) {
         headers: { 'Authorization': 'Bearer ' + token }
     });
     if (!res.ok) throw new Error('Kunne ikke stoppe deling');
-    alert('Delingen er stoppet');
+    await winAlert('Delingen er stoppet', 'Succes');
     renderFileDetails();
 }
 

@@ -1,19 +1,29 @@
-/* Classic Windows Dialog Style */
+/* Moderne dialog (erstatter den klassiske Windows 95-stil) */
 .windows-dialog {
     display: none;
     position: fixed;
     top: 50%;
     left: 50%;
-    transform: translate(-50%, -50%);
+    transform: translate(-50%, -50%) scale(0.96);
+    opacity: 0;
     z-index: 10000;
-    background: #c0c0c0;
-    border: 2px solid;
-    border-color: #dfdfdf #404040 #404040 #dfdfdf;
-    box-shadow: 2px 2px 0 rgba(0,0,0,0.4);
-    font-family: 'MS Sans Serif', 'Microsoft Sans Serif', sans-serif;
-    font-size: 11px;
-    min-width: 300px;
-    max-width: 500px;
+    background: var(--surface, #fff);
+    color: var(--text, #1d2126);
+    border: 1px solid var(--border-soft, rgba(0,0,0,0.08));
+    border-radius: 16px;
+    box-shadow: 0 24px 60px rgba(0,0,0,0.25), 0 4px 16px rgba(0,0,0,0.12);
+    font-size: 14px;
+    min-width: 320px;
+    max-width: 480px;
+    overflow: hidden;
+    animation: dialogIn 0.16s ease-out forwards;
+}
+
+@keyframes dialogIn {
+    to {
+        transform: translate(-50%, -50%) scale(1);
+        opacity: 1;
+    }
 }
 
 .windows-dialog-overlay {
@@ -23,93 +33,159 @@
     left: 0;
     width: 100%;
     height: 100%;
-    background: rgba(0,0,0,0.3);
+    background: rgba(16, 20, 26, 0.45);
+    backdrop-filter: blur(3px);
+    -webkit-backdrop-filter: blur(3px);
     z-index: 9999;
+    animation: overlayIn 0.15s ease-out;
+}
+
+@keyframes overlayIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
 }
 
 .windows-dialog-title {
-    background: var(--info);
-    color: white;
-    padding: 3px 5px;
-    font-weight: bold;
     display: flex;
     justify-content: space-between;
     align-items: center;
+    gap: 12px;
+    padding: 16px 18px 0 18px;
+    background: transparent;
+    color: inherit;
+    font-size: 16px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
 }
 
 .windows-dialog-close {
-    width: 16px;
-    height: 14px;
-    background: #c0c0c0;
-    border: 1px solid;
-    border-color: #dfdfdf #404040 #404040 #dfdfdf;
+    width: 28px;
+    height: 28px;
+    flex: none;
+    background: transparent;
+    color: var(--text-muted, #6b7280);
+    border: none;
+    border-radius: 8px;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 10px;
-    font-weight: bold;
+    font-size: 18px;
+    font-weight: 500;
     padding: 0;
+    line-height: 1;
+    transition: background 0.15s ease, color 0.15s ease;
 }
 
-.windows-dialog-close:active {
-    border-color: #404040 #dfdfdf #dfdfdf #404040;
+.windows-dialog-close:hover {
+    background: rgba(0,0,0,0.06);
+    color: var(--text, #1d2126);
 }
 
 .windows-dialog-content {
-    padding: 15px;
+    padding: 12px 18px 16px 18px;
     display: flex;
-    gap: 15px;
-    align-items: start;
+    gap: 14px;
+    align-items: flex-start;
 }
 
 .windows-dialog-icon {
-    font-size: 32px;
-    min-width: 32px;
+    flex: none;
+    width: 36px;
+    height: 36px;
+    min-width: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 17px;
+    font-weight: 700;
+    background: rgba(59, 130, 246, 0.12);
+    color: #2563eb;
+}
+
+.windows-dialog-icon:empty {
+    display: none;
 }
 
 .windows-dialog-text {
     flex: 1;
-    color: #000;
-    line-height: 1.4;
+    color: var(--text, #1d2126);
+    font-size: 14px;
+    line-height: 1.55;
     word-wrap: break-word;
+    padding-top: 3px;
+}
+
+.windows-dialog-text strong {
+    color: var(--text, #1d2126);
+    font-weight: 600;
 }
 
 .windows-dialog-buttons {
-    padding: 10px 15px 15px 15px;
+    padding: 0 18px 18px 18px;
     display: flex;
-    justify-content: center;
+    justify-content: flex-end;
     gap: 10px;
 }
 
 .windows-btn {
-    min-width: 75px;
-    padding: 4px 12px;
-    background: #c0c0c0;
-    border: 2px solid;
-    border-color: #dfdfdf #404040 #404040 #dfdfdf;
+    min-width: 88px;
+    padding: 9px 18px;
+    background: var(--surface, #fff);
+    color: var(--text, #1d2126);
+    border: 1px solid var(--border, rgba(0,0,0,0.15));
+    border-radius: 10px;
     cursor: pointer;
-    font-family: 'MS Sans Serif', 'Microsoft Sans Serif', sans-serif;
-    font-size: 11px;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    transition: background 0.15s ease, box-shadow 0.15s ease, transform 0.05s ease;
+}
+
+.windows-btn:hover {
+    background: rgba(0,0,0,0.04);
 }
 
 .windows-btn:active {
-    border-color: #404040 #dfdfdf #dfdfdf #404040;
+    transform: scale(0.98);
 }
 
-.windows-btn:focus {
-    outline: 1px dotted #000;
-    outline-offset: -4px;
+.windows-btn:first-child:last-child,
+.windows-dialog-buttons .windows-btn.primary {
+    background: var(--primary, #2563eb);
+    border-color: transparent;
+    color: #fff;
+}
+
+.windows-btn:first-child:last-child:hover,
+.windows-dialog-buttons .windows-btn.primary:hover {
+    background: var(--primary, #2563eb);
+    filter: brightness(1.08);
+}
+
+.windows-btn:focus-visible {
+    outline: 2px solid var(--primary, #2563eb);
+    outline-offset: 2px;
 }
 
 /* Prompt/Input Dialog */
 .windows-dialog-input {
     width: 100%;
-    padding: 3px;
-    border: 2px solid;
-    border-color: #404040 #dfdfdf #dfdfdf #404040;
-    background: white;
-    font-family: 'MS Sans Serif', 'Microsoft Sans Serif', sans-serif;
-    font-size: 11px;
+    box-sizing: border-box;
+    padding: 10px 12px;
     margin-top: 10px;
+    background: var(--surface, #fff);
+    color: var(--text, #1d2126);
+    border: 1px solid var(--border, rgba(0,0,0,0.15));
+    border-radius: 10px;
+    font-family: inherit;
+    font-size: 14px;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.windows-dialog-input:focus {
+    outline: none;
+    border-color: var(--primary, #2563eb);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
 }

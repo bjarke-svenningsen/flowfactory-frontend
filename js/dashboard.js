@@ -224,7 +224,9 @@ async function showPage(pageName, updateHash = true) {
     }
 }
 
-// Windows Dialog System
+// Dialog-system (moderne kort-stil; se css/windows-dialog.css)
+let activeDialogResolve = null;
+
 function showWindowsDialog(title, message, icon, buttons) {
     return new Promise((resolve) => {
         const dialog = document.getElementById('windowsDialog');
@@ -234,16 +236,18 @@ function showWindowsDialog(title, message, icon, buttons) {
         const dialogText = document.getElementById('windowsDialogText');
         const dialogButtons = document.getElementById('windowsDialogButtons');
         
+        activeDialogResolve = resolve;
         dialogTitle.textContent = title;
-        dialogIcon.textContent = icon;
+        dialogIcon.textContent = icon || '';
         dialogText.innerHTML = message.replace(/\n/g, '<br>');
         
         dialogButtons.innerHTML = '';
-        buttons.forEach(btn => {
+        buttons.forEach((btn, i) => {
             const button = document.createElement('button');
-            button.className = 'windows-btn';
+            button.className = 'windows-btn' + (buttons.length === 1 || i === 0 ? ' primary' : '');
             button.textContent = btn.text;
             button.onclick = () => {
+                activeDialogResolve = null;
                 closeWindowsDialog();
                 resolve(btn.value);
             };
@@ -263,16 +267,20 @@ function showWindowsDialog(title, message, icon, buttons) {
 function closeWindowsDialog() {
     document.getElementById('windowsDialog').style.display = 'none';
     document.getElementById('windowsDialogOverlay').style.display = 'none';
+    if (activeDialogResolve) {
+        activeDialogResolve(null);
+        activeDialogResolve = null;
+    }
 }
 
 window.winAlert = function(message, title = 'Besked') {
-    return showWindowsDialog(title, message, 'ℹ', [
+    return showWindowsDialog(title, message, 'i', [
         { text: 'OK', value: true }
     ]);
 };
 
 window.winConfirm = function(message, title = 'Bekræft') {
-    return showWindowsDialog(title, message, '', [
+    return showWindowsDialog(title, message, '?', [
         { text: 'Ja', value: true },
         { text: 'Nej', value: false }
     ]);
@@ -287,17 +295,22 @@ window.winPrompt = function(message, defaultValue = '', title = 'Indtast') {
         const dialogText = document.getElementById('windowsDialogText');
         const dialogButtons = document.getElementById('windowsDialogButtons');
         
+        activeDialogResolve = resolve;
         dialogTitle.textContent = title;
         dialogIcon.textContent = '';
-        dialogText.innerHTML = message.replace(/\n/g, '<br>') + 
-            '<input type="text" class="windows-dialog-input" id="windowsPromptInput" value="' + defaultValue + '">';
+        dialogText.innerHTML = message.replace(/\n/g, '<br>') +
+            '<input type="text" class="windows-dialog-input" id="windowsPromptInput">';
+        
+        const input = document.getElementById('windowsPromptInput');
+        input.value = defaultValue == null ? '' : String(defaultValue);
         
         dialogButtons.innerHTML = '';
         
         const okBtn = document.createElement('button');
-        okBtn.className = 'windows-btn';
+        okBtn.className = 'windows-btn primary';
         okBtn.textContent = 'OK';
         okBtn.onclick = () => {
+            activeDialogResolve = null;
             const value = document.getElementById('windowsPromptInput').value;
             closeWindowsDialog();
             resolve(value);
@@ -308,6 +321,7 @@ window.winPrompt = function(message, defaultValue = '', title = 'Indtast') {
         cancelBtn.className = 'windows-btn';
         cancelBtn.textContent = 'Annuller';
         cancelBtn.onclick = () => {
+            activeDialogResolve = null;
             closeWindowsDialog();
             resolve(null);
         };
@@ -328,3 +342,13 @@ window.winPrompt = function(message, defaultValue = '', title = 'Indtast') {
         }, 100);
     });
 };
+
+// Esc lukker den aktive dialog (resolver som null/annulleret)
+document.addEventListener('keydown', function (e) {
+    if (e.key !== 'Escape') return;
+    const dialog = document.getElementById('windowsDialog');
+    if (dialog && dialog.style.display === 'block') {
+        e.stopImmediatePropagation();
+        closeWindowsDialog();
+    }
+});
