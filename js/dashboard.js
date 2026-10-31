@@ -266,13 +266,13 @@ function closeWindowsDialog() {
 }
 
 window.winAlert = function(message, title = 'Besked') {
-    return showWindowsDialog(title, message, 'ℹ️', [
+    return showWindowsDialog(title, message, 'ℹ', [
         { text: 'OK', value: true }
     ]);
 };
 
 window.winConfirm = function(message, title = 'Bekræft') {
-    return showWindowsDialog(title, message, '❓', [
+    return showWindowsDialog(title, message, '', [
         { text: 'Ja', value: true },
         { text: 'Nej', value: false }
     ]);
@@ -288,7 +288,7 @@ window.winPrompt = function(message, defaultValue = '', title = 'Indtast') {
         const dialogButtons = document.getElementById('windowsDialogButtons');
         
         dialogTitle.textContent = title;
-        dialogIcon.textContent = '✏️';
+        dialogIcon.textContent = '';
         dialogText.innerHTML = message.replace(/\n/g, '<br>') + 
             '<input type="text" class="windows-dialog-input" id="windowsPromptInput" value="' + defaultValue + '">';
         

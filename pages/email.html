@@ -1,8 +1,8 @@
 <style>
   /* Windows 95 Email Client Style */
   .email-explorer {
-    background: #fff;
-    border: 1px solid #0054a6;
+    background: var(--surface);
+    border: 1px solid var(--info);
     height: calc(100vh - 120px);
     min-height: 700px;
     display: flex;
@@ -11,7 +11,7 @@
   }
 
   .email-title-bar {
-    background: linear-gradient(to bottom, #0997ff 0%, #0053ee 50%, #0050ee 51%, #06f 100%);
+    background: var(--surface-muted);
     color: white;
     padding: 4px 8px;
     font-size: 13px;
@@ -22,8 +22,8 @@
   }
 
   .email-toolbar {
-    background: #f0f0f0;
-    border-bottom: 1px solid #999;
+    background: var(--border-soft);
+    border-bottom: 1px solid var(--text-muted);
     padding: 5px;
     display: flex;
     gap: 3px;
@@ -33,8 +33,8 @@
 
   .email-toolbar-btn {
     padding: 4px 8px;
-    background: linear-gradient(to bottom, #fff 0%, #d8d8d8 100%);
-    border: 1px solid #888;
+    background: linear-gradient(to bottom, var(--surface) 0%, var(--border-soft) 100%);
+    border: 1px solid var(--text-muted);
     cursor: pointer;
     font-size: 11px;
     display: flex;
@@ -44,12 +44,12 @@
   }
 
   .email-toolbar-btn:hover {
-    background: linear-gradient(to bottom, #fff 0%, #c8c8c8 100%);
-    border-color: #666;
+    background: linear-gradient(to bottom, var(--surface) 0%, var(--border-soft) 100%);
+    border-color: var(--text-muted);
   }
 
   .email-toolbar-btn:active {
-    background: #c0c0c0;
+    background: var(--border-soft);
     border-style: inset;
   }
 
@@ -57,13 +57,13 @@
     display: flex;
     flex: 1;
     overflow: hidden;
-    border-top: 1px solid #fff;
+    border-top: 1px solid var(--surface);
   }
 
   .email-folders-tree {
     width: 220px;
     background: white;
-    border-right: 1px solid #999;
+    border-right: 1px solid var(--text-muted);
     overflow-y: auto;
     font-size: 12px;
     padding: 5px 0;
@@ -79,26 +79,26 @@
   }
 
   .folder-tree-item:hover {
-    background: #e0e0f0;
+    background: var(--surface-muted);
   }
 
   .folder-tree-item.selected {
-    background: #0a246a;
+    background: var(--bg-header);
     color: white;
   }
 
   .email-list-panel {
     width: 450px;
     background: white;
-    border-right: 1px solid #999;
+    border-right: 1px solid var(--text-muted);
     display: flex;
     flex-direction: column;
   }
 
   /* Compact List Style (Outlook-like) */
   .email-list-header {
-    background: linear-gradient(to bottom, #fff 0%, #e8e8e8 100%);
-    border-bottom: 1px solid #999;
+    background: linear-gradient(to bottom, var(--surface) 0%, var(--border-soft) 100%);
+    border-bottom: 1px solid var(--text-muted);
     padding: 6px 8px;
     display: flex;
     align-items: center;
@@ -121,7 +121,7 @@
     display: flex;
     gap: 8px;
     padding: 8px;
-    border-bottom: 1px solid #e0e0e0;
+    border-bottom: 1px solid var(--border);
     cursor: pointer;
     align-items: flex-start;
     transition: background 0.15s ease;
@@ -129,26 +129,26 @@
   }
 
   .email-item:hover {
-    background: #f0f0f0;
+    background: var(--border-soft);
   }
 
   .email-item.selected {
-    background: #e0e8ff;
-    border-left-color: #90caf9;
+    background: var(--accent-soft);
+    border-left-color: var(--info);
   }
 
   .email-item.current {
-    background: #0a246a;
+    background: var(--bg-header);
     color: white;
     border-left-color: var(--color-blue);
   }
 
   .email-item.current .email-preview {
-    color: #ddd;
+    color: var(--border);
   }
 
   .email-item.current .email-date {
-    color: #fff;
+    color: var(--surface);
   }
 
   .email-checkbox {
@@ -187,12 +187,12 @@
 
   .email-date {
     font-size: 11px;
-    color: #666;
+    color: var(--text-muted);
     white-space: nowrap;
   }
 
   .email-item.current .email-date {
-    color: #fff;
+    color: var(--surface);
   }
 
   .email-subject {
@@ -205,15 +205,15 @@
 
   .email-preview {
     font-size: 11px;
-    color: #666;
+    color: var(--text-muted);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
 
   .bulk-actions-toolbar {
-    background: #fffacd;
-    border-bottom: 1px solid #999;
+    background: var(--surface)acd;
+    border-bottom: 1px solid var(--text-muted);
     padding: 5px;
     display: none;
     gap: 5px;
@@ -234,8 +234,8 @@
   }
 
   .email-preview-header {
-    background: linear-gradient(to bottom, #fff 0%, #e8e8e8 100%);
-    border-bottom: 1px solid #999;
+    background: linear-gradient(to bottom, var(--surface) 0%, var(--border-soft) 100%);
+    border-bottom: 1px solid var(--text-muted);
     padding: 8px;
     font-size: 12px;
   }
@@ -254,18 +254,18 @@
   }
 
   .email-statusbar {
-    background: #f0f0f0;
-    border-top: 1px solid #999;
+    background: var(--border-soft);
+    border-top: 1px solid var(--text-muted);
     padding: 3px 8px;
     font-size: 11px;
-    color: #000;
+    color: var(--text);
     display: flex;
     gap: 20px;
   }
 
   .status-item {
     padding: 0 10px;
-    border-right: 1px solid #ccc;
+    border-right: 1px solid var(--border);
   }
 
   .status-item:last-child {
@@ -276,9 +276,9 @@
   .win95-dialog {
     display: none;
     position: fixed;
-    background: #c0c0c0;
+    background: var(--border-soft);
     border: 2px solid;
-    border-color: #fff #000 #000 #fff;
+    border-color: var(--surface) var(--text) var(--text) var(--surface);
     box-shadow: 2px 2px 5px rgba(0,0,0,0.5);
     z-index: 2000;
     min-width: 400px;
@@ -322,7 +322,7 @@
   }
 
   .win95-dialog-title {
-    background: linear-gradient(to bottom, #0997ff 0%, #0053ee 50%, #0050ee 51%, #06f 100%);
+    background: var(--surface-muted);
     color: white;
     padding: 3px 5px;
     font-size: 13px;
@@ -335,9 +335,9 @@
   }
 
   .win95-dialog-close {
-    background: #c0c0c0;
+    background: var(--border-soft);
     border: 2px solid;
-    border-color: #fff #000 #000 #fff;
+    border-color: var(--surface) var(--text) var(--text) var(--surface);
     width: 18px;
     height: 18px;
     cursor: pointer;
@@ -346,7 +346,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    color: #000;
+    color: var(--text);
   }
 
   .win95-dialog-body {
@@ -371,7 +371,7 @@
     width: 100%;
     padding: 3px;
     border: 2px solid;
-    border-color: #808080 #fff #fff #808080;
+    border-color: var(--text-muted) var(--surface) var(--surface) var(--text-muted);
     font-size: 11px;
     font-family: 'MS Sans Serif', Tahoma, sans-serif;
   }
@@ -392,9 +392,9 @@
 
   .win95-btn {
     padding: 4px 16px;
-    background: #c0c0c0;
+    background: var(--border-soft);
     border: 2px solid;
-    border-color: #fff #000 #000 #fff;
+    border-color: var(--surface) var(--text) var(--text) var(--surface);
     cursor: pointer;
     font-size: 11px;
     font-weight: bold;
@@ -402,12 +402,12 @@
   }
 
   .win95-btn:active {
-    border-color: #000 #fff #fff #000;
+    border-color: var(--text) var(--surface) var(--surface) var(--text);
   }
 
   .win95-info-box {
-    background: #fff8dc;
-    border: 1px solid #808080;
+    background: var(--surface)8dc;
+    border: 1px solid var(--text-muted);
     padding: 8px;
     margin-top: 8px;
     font-size: 11px;
@@ -415,8 +415,8 @@
 
   .context-menu {
     position: fixed;
-    background: #f0f0f0;
-    border: 1px solid #999;
+    background: var(--border-soft);
+    border: 1px solid var(--text-muted);
     box-shadow: 2px 2px 5px rgba(0,0,0,0.3);
     z-index: 2000;
     display: none;
@@ -434,13 +434,13 @@
   }
 
   .context-menu-item:hover {
-    background: #0a246a;
+    background: var(--bg-header);
     color: white;
   }
 
   .context-menu-separator {
     height: 1px;
-    background: #999;
+    background: var(--text-muted);
     margin: 2px 0;
   }
 
@@ -455,18 +455,18 @@
   }
 
   .resize-handle:hover {
-    background: #0054a6;
+    background: var(--info);
   }
 
   .resize-handle.dragging {
-    background: #0054a6;
+    background: var(--info);
   }
 
   /* Folder Context Menu */
   .folder-context-menu {
     position: fixed;
-    background: #f0f0f0;
-    border: 1px solid #999;
+    background: var(--border-soft);
+    border: 1px solid var(--text-muted);
     box-shadow: 2px 2px 5px rgba(0,0,0,0.3);
     z-index: 2001;
     display: none;
@@ -481,26 +481,26 @@
   .folder-picker-item {
     padding: 8px 12px;
     cursor: pointer;
-    border-bottom: 1px solid #e0e0e0;
+    border-bottom: 1px solid var(--border);
     display: flex;
     align-items: center;
     gap: 8px;
   }
 
   .folder-picker-item:hover {
-    background: #f0f0f0;
+    background: var(--border-soft);
   }
 
   .folder-picker-item.selected {
-    background: #0a246a;
+    background: var(--bg-header);
     color: white;
   }
   
   /* Rich Text Editor Formatting Buttons */
   .format-btn {
     padding: 3px 8px;
-    background: linear-gradient(to bottom, #fff 0%, #d8d8d8 100%);
-    border: 1px solid #888;
+    background: linear-gradient(to bottom, var(--surface) 0%, var(--border-soft) 100%);
+    border: 1px solid var(--text-muted);
     cursor: pointer;
     font-size: 11px;
     font-family: Arial, sans-serif;
@@ -508,12 +508,12 @@
   }
   
   .format-btn:hover {
-    background: linear-gradient(to bottom, #fff 0%, #c8c8c8 100%);
-    border-color: #666;
+    background: linear-gradient(to bottom, var(--surface) 0%, var(--border-soft) 100%);
+    border-color: var(--text-muted);
   }
   
   .format-btn:active {
-    background: #c0c0c0;
+    background: var(--border-soft);
     border-style: inset;
   }
   
@@ -529,40 +529,40 @@
   }
   
   #compose-body[contenteditable="true"]:focus {
-    border-color: #0054a6;
+    border-color: var(--info);
   }
 </style>
 
 <div class="email-explorer">
   <div class="email-title-bar">
-    <span>📧 SG Seest Gulvteknik Mail</span>
+    <span> SG Seest Gulvteknik Mail</span>
   </div>
 
   <div class="email-toolbar">
-    <button class="email-toolbar-btn" onclick="emailClient.openCompose()">✉️ Ny</button>
-    <button class="email-toolbar-btn" onclick="emailClient.replyToEmail()">↩️ Svar</button>
-    <button class="email-toolbar-btn" onclick="emailClient.forwardEmail()">➡️ Videresend</button>
-    <button class="email-toolbar-btn" onclick="emailClient.syncEmails()">🔄 Synkroniser</button>
-    <button class="email-toolbar-btn" onclick="emailClient.deleteEmail()">🗑️ Slet</button>
-    <button class="email-toolbar-btn" onclick="emailClient.linkToOrder()">📦 Til ordre</button>
-    <button class="email-toolbar-btn" onclick="emailClient.showAddAccountModal()">➕ Tilføj konto</button>
+    <button class="email-toolbar-btn" onclick="emailClient.openCompose()"> Ny</button>
+    <button class="email-toolbar-btn" onclick="emailClient.replyToEmail()">↩ Svar</button>
+    <button class="email-toolbar-btn" onclick="emailClient.forwardEmail()"> Videresend</button>
+    <button class="email-toolbar-btn" onclick="emailClient.syncEmails()"> Synkroniser</button>
+    <button class="email-toolbar-btn" onclick="emailClient.deleteEmail()"> Slet</button>
+    <button class="email-toolbar-btn" onclick="emailClient.linkToOrder()"> Til ordre</button>
+    <button class="email-toolbar-btn" onclick="emailClient.showAddAccountModal()"> Tilføj konto</button>
   </div>
 
   <div class="email-body-container">
     <div class="email-folders-tree">
       <div class="folder-tree-item selected" data-folder="inbox" onclick="emailClient.changeFolder('inbox')" oncontextmenu="emailClient.showFolderContextMenu(event, 'inbox')">
-        📥 Indbakke <span id="inbox-count">(0)</span>
+         Indbakke <span id="inbox-count">(0)</span>
       </div>
       <div class="folder-tree-item" data-folder="starred" onclick="emailClient.changeFolder('starred')" oncontextmenu="emailClient.showFolderContextMenu(event, 'starred')">
-        ⭐ Markerede <span id="starred-count">(0)</span>
+         Markerede <span id="starred-count">(0)</span>
       </div>
       <div class="folder-tree-item" data-folder="sent" onclick="emailClient.changeFolder('sent')" oncontextmenu="emailClient.showFolderContextMenu(event, 'sent')">
-        📤 Sendt
+         Sendt
       </div>
       <div class="folder-tree-item" data-folder="drafts" onclick="emailClient.changeFolder('drafts')" oncontextmenu="emailClient.showFolderContextMenu(event, 'drafts')">
-        📝 Kladder <span id="drafts-count">(0)</span>
+         Kladder <span id="drafts-count">(0)</span>
       </div>
-      <hr style="border: none; border-top: 1px solid #ccc; margin: 5px 0;">
+      <hr style="border: none; border-top: 1px solid var(--border); margin: 5px 0;">
       <div style="padding: 5px 10px; font-weight: bold; font-size: 11px;">Email konti:</div>
       <div id="email-accounts-list"></div>
       <div id="custom-folders-list"></div>
@@ -575,8 +575,8 @@
       <!-- Bulk Actions Toolbar -->
       <div class="bulk-actions-toolbar" id="bulk-actions-toolbar">
         <span id="bulk-selected-count">0 valgt</span>
-        <button class="email-toolbar-btn" onclick="emailClient.deleteBulkEmails()" style="margin-left: auto;">🗑️ Slet valgte</button>
-        <button class="email-toolbar-btn" onclick="emailClient.starBulkEmails()">⭐ Marker valgte</button>
+        <button class="email-toolbar-btn" onclick="emailClient.deleteBulkEmails()" style="margin-left: auto;"> Slet valgte</button>
+        <button class="email-toolbar-btn" onclick="emailClient.starBulkEmails()"> Marker valgte</button>
         <button class="email-toolbar-btn" onclick="emailClient.clearSelection()">✕ Ryd</button>
       </div>
 
@@ -589,11 +589,11 @@
 
         <!-- Email Items List -->
         <div class="email-items-list" id="emails-list">
-          <div style="text-align: center; padding: 40px; color: #999;">Ingen emails</div>
+          <div style="text-align: center; padding: 40px; color: var(--text-muted);">Ingen emails</div>
         </div>
 
         <!-- Load More Button Container -->
-        <div id="load-more-container" style="display: none; text-align: center; padding: 15px; border-top: 1px solid #ccc;">
+        <div id="load-more-container" style="display: none; text-align: center; padding: 15px; border-top: 1px solid var(--border);">
           <!-- Dynamically populated by emailClient.updateLoadMoreButton() -->
         </div>
       </div>
@@ -603,7 +603,7 @@
     <div class="resize-handle" data-resize="list"></div>
 
     <div class="email-preview-panel" id="email-preview">
-      <div style="display: flex; align-items: center; justify-content: center; height: 100%; color: #999;">
+      <div style="display: flex; align-items: center; justify-content: center; height: 100%; color: var(--text-muted);">
         Vælg en email for at læse den
       </div>
     </div>
@@ -619,40 +619,40 @@
 <div class="win95-dialog-overlay" id="compose-overlay"></div>
 <div class="win95-dialog" id="compose-dialog" style="width: 700px; height: 650px;">
   <div class="win95-dialog-title" style="background: var(--color-dark);">
-    <span>✉️ Ny Email</span>
+    <span> Ny Email</span>
     <button class="win95-dialog-close" onclick="emailClient.closeCompose()">✕</button>
   </div>
   <div class="win95-dialog-body" style="padding: 15px;">
     <div class="win95-field">
-      <label>📧 Til:</label>
+      <label> Til:</label>
       <input type="email" id="compose-to" placeholder="modtager@example.com" onkeyup="emailClient.autoSaveDraft()">
     </div>
     
     <!-- CC/BCC Fields (Hidden by default) -->
     <div id="cc-bcc-fields" style="display: none;">
       <div class="win95-field">
-        <label>📧 CC (Kopi):</label>
+        <label> CC (Kopi):</label>
         <input type="email" id="compose-cc" placeholder="cc@example.com" onkeyup="emailClient.autoSaveDraft()">
       </div>
       <div class="win95-field">
-        <label>🔒 BCC (Skjult kopi):</label>
+        <label> BCC (Skjult kopi):</label>
         <input type="email" id="compose-bcc" placeholder="bcc@example.com" onkeyup="emailClient.autoSaveDraft()">
       </div>
     </div>
     
     <div class="win95-field">
-      <label>📝 Emne:</label>
+      <label> Emne:</label>
       <input type="text" id="compose-subject" placeholder="Email emne" onkeyup="emailClient.autoSaveDraft()">
     </div>
     
     <div style="margin-bottom: 10px;">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
-        <label style="font-weight: bold;">💬 Besked:</label>
+        <label style="font-weight: bold;"> Besked:</label>
         <button onclick="emailClient.toggleCcBcc()" class="format-btn" style="font-size: 10px;">CC/BCC</button>
       </div>
       
       <!-- Formatting Toolbar -->
-      <div class="formatting-toolbar" style="display: flex; gap: 5px; padding: 5px; background: #f0f0f0; border: 1px solid #ccc; border-bottom: none; flex-wrap: wrap;">
+      <div class="formatting-toolbar" style="display: flex; gap: 5px; padding: 5px; background: var(--border-soft); border: 1px solid var(--border); border-bottom: none; flex-wrap: wrap;">
           <!-- Font Family -->
           <select id="font-family-select" onchange="emailClient.formatText('fontName', this.value)" class="format-btn" title="Skrifttype">
             <option value="">Skrifttype</option>
@@ -682,49 +682,49 @@
           <button onclick="emailClient.formatText('italic')" class="format-btn" title="Kursiv (Ctrl+I)"><em>I</em></button>
           <button onclick="emailClient.formatText('underline')" class="format-btn" title="Understreget (Ctrl+U)"><u>U</u></button>
           
-          <div style="width: 1px; height: 20px; background: #999; margin: 0 3px;"></div>
+          <div style="width: 1px; height: 20px; background: var(--text-muted); margin: 0 3px;"></div>
           
           <!-- Text Color -->
-          <input type="color" id="text-color-picker" onchange="emailClient.formatText('foreColor', this.value)" class="format-btn color-picker" title="Tekstfarve" value="#000000">
-          <input type="color" id="bg-color-picker" onchange="emailClient.formatText('hiliteColor', this.value)" class="format-btn color-picker" title="Baggrundsfarve" value="#ffff00">
+          <input type="color" id="text-color-picker" onchange="emailClient.formatText('foreColor', this.value)" class="format-btn color-picker" title="Tekstfarve" value="var(--text)">
+          <input type="color" id="bg-color-picker" onchange="emailClient.formatText('hiliteColor', this.value)" class="format-btn color-picker" title="Baggrundsfarve" value="var(--surface)f00">
           
-          <div style="width: 1px; height: 20px; background: #999; margin: 0 3px;"></div>
+          <div style="width: 1px; height: 20px; background: var(--text-muted); margin: 0 3px;"></div>
           
           <!-- Alignment -->
           <button onclick="emailClient.formatText('justifyLeft')" class="format-btn" title="Venstrejusteret">≡</button>
           <button onclick="emailClient.formatText('justifyCenter')" class="format-btn" title="Centreret">≡</button>
           <button onclick="emailClient.formatText('justifyRight')" class="format-btn" title="Højrejusteret">≡</button>
           
-          <div style="width: 1px; height: 20px; background: #999; margin: 0 3px;"></div>
+          <div style="width: 1px; height: 20px; background: var(--text-muted); margin: 0 3px;"></div>
           
           <!-- Lists -->
           <button onclick="emailClient.formatText('insertUnorderedList')" class="format-btn" title="Punktliste">• Liste</button>
           <button onclick="emailClient.formatText('insertOrderedList')" class="format-btn" title="Nummereret liste">1. Liste</button>
           
-          <div style="width: 1px; height: 20px; background: #999; margin: 0 3px;"></div>
+          <div style="width: 1px; height: 20px; background: var(--text-muted); margin: 0 3px;"></div>
           
           <!-- Link -->
-          <button onclick="emailClient.insertLink()" class="format-btn" title="Indsæt link">🔗 Link</button>
+          <button onclick="emailClient.insertLink()" class="format-btn" title="Indsæt link"> Link</button>
           
           <!-- Clear Formatting -->
-          <button onclick="emailClient.formatText('removeFormat')" class="format-btn" title="Fjern formatering">✖ Ryd</button>
+          <button onclick="emailClient.formatText('removeFormat')" class="format-btn" title="Fjern formatering"> Ryd</button>
         </div>
         
         <!-- Rich Text Editor -->
         <div id="compose-body" 
              contenteditable="true"
              oninput="emailClient.autoSaveDraft()"
-             style="width: 100%; min-height: 200px; max-height: 400px; overflow-y: auto; padding: 8px; font-family: Arial, sans-serif; font-size: 13px; border: 1px solid #ccc; background: white;"></div>
+             style="width: 100%; min-height: 200px; max-height: 400px; overflow-y: auto; padding: 8px; font-family: Arial, sans-serif; font-size: 13px; border: 1px solid var(--border); background: white;"></div>
         
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 5px; font-size: 11px; color: #666;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 5px; font-size: 11px; color: var(--text-muted);">
           <span id="char-count">0 tegn</span>
-          <div id="draft-notice" style="display: none; color: #0a246a;">✓ Kladde gemt</div>
+          <div id="draft-notice" style="display: none; color: var(--bg-header);">✓ Kladde gemt</div>
         </div>
       </div>
     
     <!-- File Attachments -->
     <div class="win95-field">
-      <label>📎 Vedhæft filer:</label>
+      <label> Vedhæft filer:</label>
       <input type="file" id="compose-files" multiple style="font-size: 11px;" onchange="emailClient.handleFileSelect()">
       <div id="attachment-list" style="margin-top: 5px; font-size: 11px;"></div>
       </div>
@@ -736,17 +736,17 @@
         <input type="checkbox" id="include-signature" checked onchange="emailClient.updateSignaturePreview()"> 
         Inkluder signatur
       </label>
-      <a href="#" onclick="emailClient.editSignature(); return false;" style="font-size: 11px; margin-left: 10px; color: #0000ee;">⚙️ Redigér signatur</a>
+      <a href="#" onclick="emailClient.editSignature(); return false;" style="font-size: 11px; margin-left: 10px; color: var(--text)0ee;"> Redigér signatur</a>
     </div>
     
     <div class="win95-dialog-buttons" style="margin-top: 15px;">
-      <button class="win95-btn" onclick="emailClient.sendEmail()">📤 Send</button>
-      <button class="win95-btn" onclick="emailClient.saveDraft()">💾 Gem kladde</button>
-      <button class="win95-btn" onclick="emailClient.closeCompose()">❌ Annuller</button>
+      <button class="win95-btn" onclick="emailClient.sendEmail()"> Send</button>
+      <button class="win95-btn" onclick="emailClient.saveDraft()"> Gem kladde</button>
+      <button class="win95-btn" onclick="emailClient.closeCompose()"> Annuller</button>
     </div>
     
-    <div id="draft-notice" style="display: none; background: #fffacd; padding: 5px; margin-top: 10px; font-size: 11px; border: 1px solid #ccc;">
-      📝 Kladde gemt automatisk
+    <div id="draft-notice" style="display: none; background: var(--surface)acd; padding: 5px; margin-top: 10px; font-size: 11px; border: 1px solid var(--border);">
+       Kladde gemt automatisk
     </div>
   </div>
 </div>
@@ -755,7 +755,7 @@
 <div class="win95-dialog-overlay" id="signature-overlay"></div>
 <div class="win95-dialog" id="signature-dialog" style="width: 500px;">
   <div class="win95-dialog-title" style="background: var(--color-dark);">
-    <span>✍️ Redigér Email Signatur</span>
+    <span> Redigér Email Signatur</span>
     <button class="win95-dialog-close" onclick="emailClient.closeSignatureEditor()">✕</button>
   </div>
   <div class="win95-dialog-body">
@@ -764,10 +764,10 @@
       <textarea id="signature-text" style="min-height: 150px;" placeholder="Med venlig hilsen,&#10;Dit Navn&#10;Din Stilling&#10;Telefon: +45 12 34 56 78"></textarea>
     </div>
     <div class="win95-info-box">
-      💡 Signaturen tilføjes automatisk til dine emails. Du kan slå den fra ved at fjerne fluebenet "Inkluder signatur".
+       Signaturen tilføjes automatisk til dine emails. Du kan slå den fra ved at fjerne fluebenet "Inkluder signatur".
     </div>
     <div class="win95-dialog-buttons">
-      <button class="win95-btn" onclick="emailClient.saveSignature()">💾 Gem</button>
+      <button class="win95-btn" onclick="emailClient.saveSignature()"> Gem</button>
       <button class="win95-btn" onclick="emailClient.closeSignatureEditor()">Annuller</button>
     </div>
   </div>
@@ -806,7 +806,7 @@
       <input type="number" id="account-smtp-port" value="587">
     </div>
     <div class="win95-info-box">
-      <strong>💡 Sådan tilføjer du Gmail:</strong><br><br>
+      <strong> Sådan tilføjer du Gmail:</strong><br><br>
       <strong>1. Email:</strong> Din Gmail adresse (f.eks. dit.navn@gmail.com)<br><br>
       <strong>2. Password:</strong> IKKE dit normale Gmail password!<br>
       &nbsp;&nbsp;&nbsp;→ Opret "App Password" sådan:<br>
@@ -845,20 +845,20 @@
 
 <!-- Email Context Menu -->
 <div class="context-menu" id="context-menu">
-  <div class="context-menu-item" onclick="emailClient.linkToOrder()">📦 Send til ordre</div>
+  <div class="context-menu-item" onclick="emailClient.linkToOrder()"> Send til ordre</div>
   <div class="context-menu-separator"></div>
-  <div class="context-menu-item" onclick="emailClient.showFolderPicker()">📁 Flyt til mappe</div>
-  <div class="context-menu-item" onclick="emailClient.toggleStar()">⭐ Marker email</div>
-  <div class="context-menu-item" onclick="emailClient.deleteEmail()">🗑️ Slet email</div>
+  <div class="context-menu-item" onclick="emailClient.showFolderPicker()"> Flyt til mappe</div>
+  <div class="context-menu-item" onclick="emailClient.toggleStar()"> Marker email</div>
+  <div class="context-menu-item" onclick="emailClient.deleteEmail()"> Slet email</div>
 </div>
 
 <!-- Folder Context Menu -->
 <div class="folder-context-menu" id="folder-context-menu">
-  <div class="context-menu-item" onclick="emailClient.createNewFolder()">📁 Opret ny mappe</div>
-  <div class="context-menu-item" onclick="emailClient.renameFolder()">✏️ Omdøb mappe</div>
-  <div class="context-menu-item" onclick="emailClient.deleteFolder()">🗑️ Slet mappe</div>
+  <div class="context-menu-item" onclick="emailClient.createNewFolder()"> Opret ny mappe</div>
+  <div class="context-menu-item" onclick="emailClient.renameFolder()"> Omdøb mappe</div>
+  <div class="context-menu-item" onclick="emailClient.deleteFolder()"> Slet mappe</div>
   <div class="context-menu-separator"></div>
-  <div class="context-menu-item" onclick="emailClient.markAllAsRead()">✅ Marker alle som læst</div>
+  <div class="context-menu-item" onclick="emailClient.markAllAsRead()"> Marker alle som læst</div>
 </div>
 
 <script src="js/email.js"></script>

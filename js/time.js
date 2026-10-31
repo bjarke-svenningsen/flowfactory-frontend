@@ -154,7 +154,7 @@ const timePage = {
             this.renderCurrentView();
         } catch (error) {
             console.error('Error loading time entries:', error);
-            alert('❌ Kunne ikke hente timeregistreringer: ' + (error.message || 'Ukendt fejl'));
+            alert(' Kunne ikke hente timeregistreringer: ' + (error.message || 'Ukendt fejl'));
         }
     },
 
@@ -258,10 +258,10 @@ const timePage = {
             days.push({ date: d, iso, entries });
         }
         
-        let html = `<div class="week-day-header" style="background:#f5f5f5;color:#666;">Uge ${getWeekNumber(monday)}</div>`;
+        let html = `<div class="week-day-header" style="background:var(--surface-muted);color:var(--text-muted);">Uge ${getWeekNumber(monday)}</div>`;
         days.forEach(day => {
             const isToday = fmtDate(new Date()) === day.iso;
-            const todayStyle = isToday ? 'background:var(--color-accent);color:var(--color-dark);border:2px solid var(--color-accent);' : '';
+            const todayStyle = isToday ? 'background:var(--accent-soft);color:var(--text);font-weight:700;border-top:3px solid var(--accent);' : '';
             html += `<div class="week-day-header" style="${todayStyle}">
                 ${DAY_NAMES[day.date.getDay()]}<br>
                 <span style="font-weight:400;font-size:12px;">${day.date.getDate()}. ${MONTH_NAMES[day.date.getMonth()]}</span>
@@ -280,7 +280,7 @@ const timePage = {
                 }
                 const type = getTimeType(entry);
                 const cls = type === 'overtime' ? 'overtime' : (type === 'sick' ? 'sick' : '');
-                const label = entry.order_number || entry.quote_number || '🔧 Værksted';
+                const label = entry.order_number || entry.quote_number || ' Værksted';
                 html += `<div class="week-day-column">
                     <div class="week-time-block ${cls}" onclick="timePage.editTimeEntryById(${entry.id})">
                         <strong>${hoursOf(entry).toFixed(1)} t</strong><br>
@@ -293,19 +293,19 @@ const timePage = {
         }
         
         // Dagtotaler + ugetotal i bunden
-        html += `<div class="week-day-header" style="background:#fafafa;color:#666;">I alt</div>`;
+        html += `<div class="week-day-header" style="background:var(--surface-muted);color:var(--text-muted);">I alt</div>`;
         days.forEach(day => {
             const dayHours = day.entries.reduce((s, e) => s + hoursOf(e), 0);
-            html += `<div style="text-align:center;padding:10px;background:#fafafa;border-left:1px solid #f0f0f0;font-weight:700;color:${dayHours > 0 ? '#2e7d32' : '#ccc'};">${dayHours > 0 ? dayHours.toFixed(1) + ' t' : '–'}</div>`;
+            html += `<div style="text-align:center;padding:10px;background:var(--surface-muted);border-left:1px solid var(--border-soft);font-weight:700;color:${dayHours > 0 ? 'var(--success)' : 'var(--border)'};">${dayHours > 0 ? dayHours.toFixed(1) + ' t' : '–'}</div>`;
         });
         
         const weekHours = this.timeEntries.reduce((s, e) => s + hoursOf(e), 0);
         const overtimeHours = this.timeEntries.filter(e => getTimeType(e) === 'overtime').reduce((s, e) => s + hoursOf(e), 0);
         const sickHours = this.timeEntries.filter(e => getTimeType(e) === 'sick').reduce((s, e) => s + hoursOf(e), 0);
-        html += `<div style="grid-column: 1 / -1; padding: 15px 20px; background: white; border-top: 2px solid #f0f0f0; font-weight: 600;">
+        html += `<div style="grid-column: 1 / -1; padding: 15px 20px; background: white; border-top: 2px solid var(--border-soft); font-weight: 600;">
             Uge ${getWeekNumber(monday)} i alt: ${weekHours.toFixed(1)} timer
-            ${overtimeHours > 0 ? ` · 🔥 Overtid: ${overtimeHours.toFixed(1)} t` : ''}
-            ${sickHours > 0 ? ` · 🤒 Sygdom: ${sickHours.toFixed(1)} t` : ''}
+            ${overtimeHours > 0 ? ` · Overtid: ${overtimeHours.toFixed(1)} t` : ''}
+            ${sickHours > 0 ? ` ·  Sygdom: ${sickHours.toFixed(1)} t` : ''}
         </div>`;
         
         container.innerHTML = html;
@@ -341,14 +341,14 @@ const timePage = {
         while (cells.length % 7 !== 0) cells.push(null);
         
         let calHtml = '<div class="week-grid" style="margin-top:15px;">';
-        calHtml += '<div class="week-day-header" style="background:#f5f5f5;color:#666;font-size:11px;">Uge</div>';
+        calHtml += '<div class="week-day-header" style="background:var(--surface-muted);color:var(--text-muted);font-size:11px;">Uge</div>';
         ['Man', 'Tir', 'Ons', 'Tor', 'Fre', 'Lør', 'Søn'].forEach(n => {
             calHtml += `<div class="week-day-header">${n}</div>`;
         });
         
         for (let i = 0; i < cells.length; i += 7) {
             const weekFirst = cells[i];
-            calHtml += `<div style="display:flex;align-items:center;justify-content:center;background:#fafafa;color:#999;font-size:11px;">${weekFirst ? 'U' + getWeekNumber(weekFirst) : ''}</div>`;
+            calHtml += `<div style="display:flex;align-items:center;justify-content:center;background:var(--surface-muted);color:var(--text-muted);font-size:11px;">${weekFirst ? 'U' + getWeekNumber(weekFirst) : ''}</div>`;
             for (let j = 0; j < 7; j++) {
                 calHtml += this.renderMonthCell(cells[i + j], todayIso);
             }
@@ -360,28 +360,28 @@ const timePage = {
         container.innerHTML = `
             <div class="month-summary">
                 <div class="summary-card">
-                    <h3>📊 Total Timer</h3>
+                    <h3> Total Timer</h3>
                     <div class="summary-stat">${totalHours.toFixed(1)}</div>
                     <div class="summary-label">timer i ${MONTH_NAMES[month]}</div>
                 </div>
                 <div class="summary-card">
-                    <h3>⏱️ Montørtimer</h3>
+                    <h3> Montørtimer</h3>
                     <div class="summary-stat">${normalHours.toFixed(1)}</div>
                     <div class="summary-label">almindelige timer</div>
                 </div>
                 <div class="summary-card">
-                    <h3>🔥 Overtid</h3>
+                    <h3>Overtid</h3>
                     <div class="summary-stat">${overtimeHours.toFixed(1)}</div>
                     <div class="summary-label">weekend/overarbejde</div>
                 </div>
                 <div class="summary-card">
-                    <h3>🔧 Værksted</h3>
+                    <h3> Værksted</h3>
                     <div class="summary-stat">${workshopHours.toFixed(1)}</div>
                     <div class="summary-label">intern tid</div>
                 </div>
             </div>
             <div class="summary-card">
-                <h3>📋 Detaljer Per Ordre</h3>
+                <h3> Detaljer Per Ordre</h3>
                 ${breakdown}
             </div>
             ${calHtml}
@@ -389,7 +389,7 @@ const timePage = {
     },
 
     renderMonthCell(d, todayIso) {
-        if (!d) return '<div style="border-left:1px solid #f0f0f0;background:#fafafa;min-height:70px;"></div>';
+        if (!d) return '<div style="border-left:1px solid var(--border-soft);background:var(--surface-muted);min-height:70px;"></div>';
         
         const iso = fmtDate(d);
         const dayEntries = this.timeEntries.filter(e => e.date === iso);
@@ -397,16 +397,16 @@ const timePage = {
         const isWeekend = d.getDay() === 0 || d.getDay() === 6;
         const isToday = iso === todayIso;
         
-        let style = `border-left:1px solid #f0f0f0;min-height:70px;padding:8px;cursor:pointer;background:${isWeekend ? '#fafafa' : 'white'};`;
+        let style = `border-left:1px solid var(--border-soft);min-height:70px;padding:8px;cursor:pointer;background:${isWeekend ? 'var(--surface-muted)' : 'white'};`;
         if (isToday) style += 'box-shadow: inset 0 0 0 2px var(--color-accent-hover);';
         
-        let content = `<div style="font-size:12px;color:${isToday ? 'var(--color-accent-hover)' : '#999'};font-weight:600;">${d.getDate()}</div>`;
+        let content = `<div style="font-size:12px;color:${isToday ? 'var(--color-accent-hover)' : 'var(--text-muted)'};font-weight:600;">${d.getDate()}</div>`;
         if (dayHours > 0) {
             const hasOvertime = dayEntries.some(e => getTimeType(e) === 'overtime');
             const hasSick = dayEntries.some(e => getTimeType(e) === 'sick');
-            const color = hasSick ? '#e53935' : (hasOvertime ? '#2e7d32' : '#43a047');
+            const color = hasSick ? 'var(--danger)' : (hasOvertime ? 'var(--success)' : 'var(--success)');
             content += `<div style="font-weight:700;color:${color};">${dayHours.toFixed(1)} t</div>`;
-            content += `<div style="font-size:10px;color:#666;margin-top:3px;">${dayEntries.length} reg.</div>`;
+            content += `<div style="font-size:10px;color:var(--text-muted);margin-top:3px;">${dayEntries.length} reg.</div>`;
         }
         return `<div style="${style}" onclick="timePage.jumpToDay('${iso}')">${content}</div>`;
     },
@@ -425,10 +425,10 @@ const timePage = {
         const orderKeys = Object.keys(byOrder);
         if (orderKeys.length > 0) {
             breakdown += '<table style="width:100%;border-collapse:collapse;margin-top:10px;">';
-            breakdown += '<tr style="text-align:left;color:#999;font-size:12px;"><th style="padding:8px;">Ordre</th><th>Alm. timer</th><th>Overtid</th><th>Total</th></tr>';
+            breakdown += '<tr style="text-align:left;color:var(--text-muted);font-size:12px;"><th style="padding:8px;">Ordre</th><th>Alm. timer</th><th>Overtid</th><th>Total</th></tr>';
             orderKeys.sort((a, b) => byOrder[b].total - byOrder[a].total).forEach(key => {
                 const o = byOrder[key];
-                breakdown += `<tr style="border-top:1px solid #f0f0f0;">
+                breakdown += `<tr style="border-top:1px solid var(--border-soft);">
                     <td style="padding:8px;">${key}</td>
                     <td style="text-align:center;">${o.normal.toFixed(1)}</td>
                     <td style="text-align:center;">${o.overtime.toFixed(1)}</td>
@@ -437,12 +437,12 @@ const timePage = {
             });
             breakdown += '</table>';
         } else {
-            breakdown = '<p style="color:#999;margin-top:10px;">Ingen ordre-timer registreret denne måned.</p>';
+            breakdown = '<p style="color:var(--text-muted);margin-top:10px;">Ingen ordre-timer registreret denne måned.</p>';
         }
         
-        breakdown += `<div style="margin-top:15px;padding:12px;background:#f5f5f5;border-radius:8px;">
-            <strong>🔧 Værksted (intern tid):</strong> ${workshopHours.toFixed(1)} timer
-            ${sickHours > 0 ? ` · <strong>🤒 Sygdom:</strong> ${sickHours.toFixed(1)} timer` : ''}
+        breakdown += `<div style="margin-top:15px;padding:12px;background:var(--surface-muted);border-radius:8px;">
+            <strong> Værksted (intern tid):</strong> ${workshopHours.toFixed(1)} timer
+            ${sickHours > 0 ? ` · <strong> Sygdom:</strong> ${sickHours.toFixed(1)} timer` : ''}
         </div>`;
         return breakdown;
     },
@@ -478,29 +478,29 @@ const timePage = {
         if (names.length > 0) {
             names.sort((a, b) => byUser[b].total - byUser[a].total).forEach(name => {
                 const u = byUser[name];
-                rows += `<tr style="border-top:1px solid #f0f0f0;">
+                rows += `<tr style="border-top:1px solid var(--border-soft);">
                     <td style="padding:10px;">${name}</td>
                     <td style="text-align:center;">${u.count} reg.</td>
                     <td style="text-align:center;font-weight:700;">${u.total.toFixed(1)} t</td>
                 </tr>`;
             });
         } else {
-            rows = `<tr><td colspan="3" style="padding:15px;color:#999;text-align:center;">Ingen værkstedstimer registreret i ${month}.</td></tr>`;
+            rows = `<tr><td colspan="3" style="padding:15px;color:var(--text-muted);text-align:center;">Ingen værkstedstimer registreret i ${month}.</td></tr>`;
         }
         
         container.innerHTML = `
             <div class="timeline-container">
                 <div class="timeline-header">
-                    <h2>🔧 Værksted (intern tid) - ${month} ${year}</h2>
-                    <p style="color:#666;margin:5px 0 0;">Tid uden for ordre: feje lager, rydde op, vedligehold osv.</p>
+                    <h2> Værksted (intern tid) - ${month} ${year}</h2>
+                    <p style="color:var(--text-muted);margin:5px 0 0;">Tid uden for ordre: feje lager, rydde op, vedligehold osv.</p>
                 </div>
                 <div class="summary-card" style="text-align:center;margin-bottom:15px;">
-                    <h3>📊 Total</h3>
+                    <h3> Total</h3>
                     <div class="summary-stat">${totalHours.toFixed(1)}</div>
                     <div class="summary-label">værkstedstimer i ${month}</div>
                 </div>
                 <table style="width:100%;border-collapse:collapse;">
-                    <tr style="text-align:left;color:#999;font-size:12px;">
+                    <tr style="text-align:left;color:var(--text-muted);font-size:12px;">
                         <th style="padding:8px;">Medarbejder</th>
                         <th style="text-align:center;">Registreringer</th>
                         <th style="text-align:center;">Timer</th>
@@ -656,12 +656,12 @@ const timePage = {
             // Better error message
             const timeType = document.querySelector('input[name="timeType"]:checked').value;
             const names = { normal: 'Montørtimer (8000)', overtime: 'Montørtimer weekend/overarbejde (8001)', sick: 'Sygdom (1)' };
-            alert(`❌ Materiale for "${names[timeType] || timeType}" findes ikke!\n\nGå til Materialer-siden og tjek at disse findes:\n- Materiale 8000: Montørtimer\n- Materiale 8001: Montørtimer weekend/overarbejde\n- Materiale 1: Sygdom`);
+            alert(` Materiale for "${names[timeType] || timeType}" findes ikke!\n\nGå til Materialer-siden og tjek at disse findes:\n- Materiale 8000: Montørtimer\n- Materiale 8001: Montørtimer weekend/overarbejde\n- Materiale 1: Sygdom`);
             return;
         }
         
         if (entryType === 'order' && !orderId) {
-            alert('❌ Vælg venligst en ordre at registrere tiden på');
+            alert(' Vælg venligst en ordre at registrere tiden på');
             return;
         }
         
@@ -679,17 +679,17 @@ const timePage = {
             
             if (editingId) {
                 await TimeEntries.update(editingId, timeEntryData);
-                alert('✅ Timeregistrering opdateret!');
+                alert(' Timeregistrering opdateret!');
             } else {
                 await TimeEntries.create(timeEntryData);
-                alert('✅ Timeregistrering oprettet!');
+                alert(' Timeregistrering oprettet!');
             }
             
             this.closeModal();
             await this.loadTimeEntries();
         } catch (error) {
             console.error('Error saving time entry:', error);
-            alert('❌ Fejl: ' + (error.message || 'Kunne ikke gemme timeregistrering'));
+            alert(' Fejl: ' + (error.message || 'Kunne ikke gemme timeregistrering'));
         }
     },
 
@@ -730,11 +730,11 @@ const timePage = {
         
         try {
             await TimeEntries.delete(entryId);
-            alert('✅ Timeregistrering slettet!');
+            alert(' Timeregistrering slettet!');
             this.closeModal();
             await this.loadTimeEntries();
         } catch (error) {
-            alert('❌ ' + (error.message || 'Kunne ikke slette'));
+            alert(' ' + (error.message || 'Kunne ikke slette'));
         }
     },
 
@@ -743,7 +743,7 @@ const timePage = {
     },
 
     exportToPDF() {
-        alert('📄 PDF Export kommer snart!');
+        alert(' PDF Export kommer snart!');
     }
 };
 

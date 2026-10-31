@@ -6,6 +6,7 @@
     <title>Materialer - SG Seest Gulvteknik</title>
     <link rel="stylesheet" href="../css/dashboard.css">
     <link rel="stylesheet" href="../css/mobile.css">
+    <link rel="stylesheet" href="../css/design-system.css">
     <style>
         .materials-container {
             max-width: 1400px;
@@ -44,7 +45,7 @@
         .search-box input {
             width: 100%;
             padding: 12px 40px 12px 15px;
-            border: 2px solid #e0e0e0;
+            border: 2px solid var(--border);
             border-radius: 8px;
             font-size: 14px;
         }
@@ -54,12 +55,12 @@
             right: 15px;
             top: 50%;
             transform: translateY(-50%);
-            color: #999;
+            color: var(--text-muted);
         }
 
         .filter-dropdown {
             padding: 12px 15px;
-            border: 2px solid #e0e0e0;
+            border: 2px solid var(--border);
             border-radius: 8px;
             background: white;
             cursor: pointer;
@@ -109,12 +110,12 @@
         }
 
         tbody tr {
-            border-bottom: 1px solid #f0f0f0;
+            border-bottom: 1px solid var(--border-soft);
             transition: background 0.2s;
         }
 
         tbody tr:hover {
-            background: #f8f9ff;
+            background: var(--surface-muted);
         }
 
         tbody td {
@@ -136,23 +137,23 @@
         }
 
         .category-arbejdstimer {
-            background: #e3f2fd;
-            color: #1976d2;
+            background: var(--accent-soft);
+            color: var(--info);
         }
 
         .category-materialer {
-            background: #f3e5f5;
-            color: #7b1fa2;
+            background: var(--accent-soft);
+            color: var(--info);
         }
 
         .category-intern {
-            background: #fff3e0;
-            color: #e65100;
+            background: var(--surface)3e0;
+            color: var(--accent);
         }
 
         .price-cell {
             font-weight: 600;
-            color: #2e7d32;
+            color: var(--success);
         }
 
         .actions-cell {
@@ -170,22 +171,22 @@
         }
 
         .btn-edit {
-            background: #e3f2fd;
-            color: #1976d2;
+            background: var(--accent-soft);
+            color: var(--info);
         }
 
         .btn-edit:hover {
-            background: #1976d2;
+            background: var(--info);
             color: white;
         }
 
         .btn-delete {
-            background: #ffebee;
-            color: #c62828;
+            background: var(--danger-soft);
+            color: var(--danger);
         }
 
         .btn-delete:hover {
-            background: #c62828;
+            background: var(--danger);
             color: white;
         }
 
@@ -226,7 +227,7 @@
 
         .modal-header h2 {
             margin: 0;
-            color: #333;
+            color: var(--text);
         }
 
         .modal-close {
@@ -234,7 +235,7 @@
             border: none;
             font-size: 24px;
             cursor: pointer;
-            color: #999;
+            color: var(--text-muted);
         }
 
         .form-group {
@@ -245,7 +246,7 @@
             display: block;
             margin-bottom: 8px;
             font-weight: 600;
-            color: #555;
+            color: var(--text-muted);
             font-size: 14px;
         }
 
@@ -254,7 +255,7 @@
         .form-group textarea {
             width: 100%;
             padding: 12px;
-            border: 2px solid #e0e0e0;
+            border: 2px solid var(--border);
             border-radius: 8px;
             font-size: 14px;
             box-sizing: border-box;
@@ -282,8 +283,8 @@
 
         .btn-secondary {
             padding: 12px 24px;
-            background: #f5f5f5;
-            color: #333;
+            background: var(--surface-muted);
+            color: var(--text);
             border: none;
             border-radius: 8px;
             cursor: pointer;
@@ -291,13 +292,13 @@
         }
 
         .btn-secondary:hover {
-            background: #e0e0e0;
+            background: var(--border);
         }
 
         .empty-state {
             text-align: center;
             padding: 60px 20px;
-            color: #999;
+            color: var(--text-muted);
         }
 
         .empty-state i {
@@ -330,7 +331,7 @@
 <body>
     <div class="materials-container">
         <div class="materials-header">
-            <h1>💰 Materialer</h1>
+            <h1> Materialer</h1>
             <button class="btn-primary" onclick="materialsPage.openCreateModal()">
                 <span>+</span> Nyt Materiale
             </button>
@@ -338,7 +339,7 @@
 
         <div class="search-filter-bar">
             <div class="search-box">
-                <input type="text" id="searchInput" placeholder="🔍 Søg efter materiale..." onkeyup="materialsPage.filterMaterials()">
+                <input type="text" id="searchInput" placeholder=" Søg efter materiale..." onkeyup="materialsPage.filterMaterials()">
             </div>
             <select class="filter-dropdown" id="categoryFilter" onchange="materialsPage.filterMaterials()">
                 <option value="">Alle kategorier</option>
@@ -365,7 +366,7 @@
                     <tr>
                         <td colspan="7">
                             <div class="empty-state">
-                                <i>📦</i>
+                                <i></i>
                                 <p>Indlæser materialer...</p>
                             </div>
                         </td>

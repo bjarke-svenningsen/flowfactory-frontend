@@ -453,6 +453,77 @@ h1 { font-size: var(--font-size-title); }
 }
 .field-input:focus { outline: 2px solid var(--accent); outline-offset: -1px; border-color: var(--accent); }
 
+/* ---------- Trin 2: kompatibilitetslag — gamle klasser får det nye look ---------- */
+:root {
+    --success-soft: #E6F4EA;
+    --danger-soft: #FDEAEA;
+    --info-soft: #E7F0FB;
+    --accent-today: #FFF8DB;
+}
+.btn-primary {
+    background: var(--accent) !important;
+    color: var(--bg-header) !important;
+    border-radius: var(--radius-btn);
+    font-weight: 700;
+    box-shadow: var(--shadow-soft);
+}
+.btn-primary:hover { background: var(--accent-hover) !important; transform: translateY(-1px); }
+.btn-secondary {
+    background: var(--surface) !important;
+    color: var(--text) !important;
+    border: 1px solid var(--border) !important;
+    border-radius: var(--radius-btn);
+    font-weight: 600;
+}
+.btn-secondary:hover { background: var(--surface-muted) !important; }
+.btn-danger, .btn-delete {
+    background: var(--danger) !important;
+    color: var(--surface) !important;
+    border-radius: var(--radius-btn);
+    font-weight: 600;
+}
+.status-pill { border-radius: var(--radius-pill); font-size: 12px; font-weight: 600; padding: 4px 12px; display: inline-flex; align-items: center; gap: 6px; }
+.status-pill--draft { background: var(--surface-muted); color: var(--text-muted); }
+.status-pill--sent { background: var(--info-soft); color: var(--info); }
+.status-pill--accepted { background: var(--success-soft); color: var(--success); }
+.status-pill--rejected { background: var(--danger-soft); color: var(--danger); }
+.filter-pill { border-radius: var(--radius-pill); border: 1px solid var(--border); background: var(--surface); color: var(--text); font-weight: 600; padding: 6px 14px; cursor: pointer; }
+.filter-pill.active { background: var(--accent-soft); border-color: var(--accent); color: var(--text); }
+.view-toggle { background: var(--surface-muted); border-radius: var(--radius-pill); padding: 4px; }
+.view-toggle button { border-radius: var(--radius-pill); color: var(--text-muted); }
+.view-toggle button.active { background: var(--surface); color: var(--text); box-shadow: var(--shadow-soft); }
+.week-day-header { background: var(--surface-muted) !important; color: var(--text-muted) !important; font-weight: 600; border-radius: 6px 6px 0 0; }
+.timeline-container, .stat-card, .summary-card { background: var(--surface); border-radius: var(--radius-card); box-shadow: var(--shadow-soft); }
+.timeline-header { border-bottom: 1px solid var(--border-soft) !important; }
+.timeline-header h2 { color: var(--text) !important; }
+.modal-overlay, .modal { background: rgba(26,26,26,0.5) !important; }
+.modal-content, .modal > div { background: var(--surface) !important; border-radius: var(--radius-card) !important; box-shadow: var(--shadow-lift) !important; }
+input[type=date], input[type=time], input[type=text], input[type=number], input[type=email], select, textarea {
+    border-radius: var(--radius-btn) !important;
+    border: 1px solid var(--border) !important;
+    font-family: var(--font-family) !important;
+}
+
+/* Side-menu: hvidt kort, aktivt punkt = blødt gult + 3px gul venstre-bjælke */
+.menu-item {
+    border-radius: var(--radius-btn);
+    color: var(--text-muted);
+    font-weight: 600;
+}
+.menu-item:hover { background: var(--surface-muted) !important; color: var(--text) !important; }
+.menu-item.active {
+    background: var(--accent-soft) !important;
+    color: var(--text) !important;
+    box-shadow: inset 3px 0 0 var(--accent) !important;
+}
+
+/* Kort: 14px radius + bløde skygger overalt */
+.content-area, .card, .timeline-container, .stat-card, .summary-card, .modal-content {
+    border-radius: var(--radius-card);
+}
+h1, h2, h3 { font-family: var(--font-family); }
+h1 { font-size: var(--font-size-title); }
+
 /* ---------- Truncate-hjælper ---------- */
 .truncate {
     min-width: 0;

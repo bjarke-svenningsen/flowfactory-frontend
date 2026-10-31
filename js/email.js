@@ -192,7 +192,7 @@ const emailClient = {
       // Drag and drop inline images
       editor.addEventListener('dragover', (e) => {
         e.preventDefault();
-        editor.style.background = '#f0f0ff';
+        editor.style.background = 'var(--accent-soft)';
       });
       
       editor.addEventListener('dragleave', () => {
@@ -290,14 +290,14 @@ const emailClient = {
     if (!container) return;
 
     if (this.emailAccounts.length === 0) {
-      container.innerHTML = '<div style="padding: 5px 10px; font-size: 11px; color: #999;">Ingen konti</div>';
+      container.innerHTML = '<div style="padding: 5px 10px; font-size: 11px; color: var(--text-muted);">Ingen konti</div>';
       return;
     }
 
     container.innerHTML = this.emailAccounts.map(account => `
       <div class="folder-tree-item ${account.id === this.currentAccountId ? 'selected' : ''}" 
            onclick="emailClient.selectAccount(${account.id})">
-        📧 ${this.escapeHtml(account.email)}
+         ${this.escapeHtml(account.email)}
       </div>
     `).join('');
   },
@@ -371,7 +371,7 @@ const emailClient = {
     if (!listContainer) return;
 
     if (this.emails.length === 0) {
-      listContainer.innerHTML = '<div style="text-align: center; padding: 40px; color: #999;">Ingen emails</div>';
+      listContainer.innerHTML = '<div style="text-align: center; padding: 40px; color: var(--text-muted);">Ingen emails</div>';
       return;
     }
 
@@ -399,7 +399,7 @@ const emailClient = {
                  ${isSelected ? 'checked' : ''}
                  onclick="event.stopPropagation(); emailClient.toggleEmailSelection('${email.id}')" />
           <span class="email-star" onclick="event.stopPropagation(); emailClient.toggleStarDirect('${email.id}')">
-            ${isStarred ? '⭐' : '☆'}
+            ${isStarred ? '' : ''}
           </span>
           <div class="email-content" onclick="emailClient.viewEmail('${email.id}')" oncontextmenu="emailClient.showContextMenu(event, '${email.id}')">
             <div class="email-header-row">
@@ -509,13 +509,13 @@ const emailClient = {
         <div><strong>Dato:</strong> ${dateStr}</div>
       </div>
       <div class="email-preview-content">
-        ${email.body_html || this.textToHtml(email.body_text) || '<p style="color: #999;">Ingen indhold</p>'}
+        ${email.body_html || this.textToHtml(email.body_text) || '<p style="color: var(--text-muted);">Ingen indhold</p>'}
         ${attachments.length > 0 ? `
           <hr style="margin: 15px 0;">
-          <strong>📎 Vedhæftede filer (${attachments.length}):</strong><br><br>
+          <strong> Vedhæftede filer (${attachments.length}):</strong><br><br>
           ${attachments.map(att => `
-            <div style="padding: 5px; margin: 3px 0; background: #f0f0f0;">
-              📄 ${this.escapeHtml(att.filename)} (${this.formatFileSize(att.size)})
+            <div style="padding: 5px; margin: 3px 0; background: var(--border-soft);">
+               ${this.escapeHtml(att.filename)} (${this.formatFileSize(att.size)})
               <button onclick="emailClient.downloadAttachment(${att.id})" style="margin-left: 10px; padding: 2px 8px;">Download</button>
             </div>
           `).join('')}
@@ -566,7 +566,7 @@ const emailClient = {
     // Clear viewer
     const viewer = document.getElementById('email-preview');
     if (viewer) {
-      viewer.innerHTML = '<div style="display: flex; align-items: center; justify-content: center; height: 100%; color: #999;">Vælg en email for at læse den</div>';
+      viewer.innerHTML = '<div style="display: flex; align-items: center; justify-content: center; height: 100%; color: var(--text-muted);">Vælg en email for at læse den</div>';
     }
 
     // Load emails for this folder
@@ -678,10 +678,10 @@ const emailClient = {
     if (syncButton) {
       if (syncing) {
         syncButton.disabled = true;
-        syncButton.textContent = '⏳ Synkroniserer...';
+        syncButton.textContent = ' Synkroniserer...';
       } else {
         syncButton.disabled = false;
-        syncButton.textContent = '🔄 Synkroniser';
+        syncButton.textContent = ' Synkroniser';
       }
     }
   },
@@ -697,14 +697,14 @@ const emailClient = {
       
       loadMoreContainer.innerHTML = `
         <button class="email-toolbar-btn" onclick="emailClient.loadMoreEmails()" style="width: 100%; justify-content: center;">
-          📥 Indlæs 10 mere (${emailsLoaded} af ${totalEmails})
+           Indlæs 10 mere (${emailsLoaded} af ${totalEmails})
         </button>
       `;
       loadMoreContainer.style.display = 'block';
     } else {
       loadMoreContainer.innerHTML = `
-        <div style="text-align: center; padding: 10px; color: #666; font-size: 12px;">
-          ✅ Alle emails indlæst (${this.totalEmailsInbox} total)
+        <div style="text-align: center; padding: 10px; color: var(--text-muted); font-size: 12px;">
+           Alle emails indlæst (${this.totalEmailsInbox} total)
         </div>
       `;
     }
@@ -984,7 +984,7 @@ const emailClient = {
         this.currentEmailId = null;
         const viewer = document.getElementById('email-preview');
         if (viewer) {
-          viewer.innerHTML = '<div style=\"display: flex; align-items: center; justify-content: center; height: 100%; color: #999;\">Vælg en email for at læse den</div>';
+          viewer.innerHTML = '<div style=\"display: flex; align-items: center; justify-content: center; height: 100%; color: var(--text-muted);\">Vælg en email for at læse den</div>';
         }
       }
     } catch (error) {
@@ -1257,7 +1257,7 @@ const emailClient = {
       this.currentEmailId = null;
       const viewer = document.getElementById('email-preview');
       if (viewer) {
-        viewer.innerHTML = '<div style=\"display: flex; align-items: center; justify-content: center; height: 100%; color: #999;\">Vælg en email for at læse den</div>';
+        viewer.innerHTML = '<div style=\"display: flex; align-items: center; justify-content: center; height: 100%; color: var(--text-muted);\">Vælg en email for at læse den</div>';
       }
     }
   },
@@ -1567,7 +1567,7 @@ const emailClient = {
     const tree = this.buildFolderTree(this.customFolders);
     
     container.innerHTML = `
-      <hr style="border: none; border-top: 1px solid #ccc; margin: 5px 0;">
+      <hr style="border: none; border-top: 1px solid var(--border); margin: 5px 0;">
       <div style="padding: 5px 10px; font-weight: bold; font-size: 11px;">Dine mapper:</div>
       ${this.renderFolderTree(tree)}
     `;
@@ -1587,11 +1587,11 @@ const emailClient = {
     // Render folders
     list.innerHTML = `
       <div class="folder-picker-item" onclick="emailClient.selectFolderForMove(null)">
-        📥 Indbakke
+         Indbakke
       </div>
       ${this.customFolders.map(f => `
         <div class="folder-picker-item" onclick="emailClient.selectFolderForMove(${f.id})">
-          📁 ${this.escapeHtml(f.name)}
+           ${this.escapeHtml(f.name)}
         </div>
       `).join('')}
     `;
@@ -1655,7 +1655,7 @@ const emailClient = {
     
     // If dragging email, show folder highlight
     if (this.draggedEmailId) {
-      event.currentTarget.style.background = '#e0e8ff';
+      event.currentTarget.style.background = 'var(--accent-soft)';
       return;
     }
     
@@ -1679,7 +1679,7 @@ const emailClient = {
         event.currentTarget.style.borderBottom = '2px solid var(--color-blue)';
       } else {
         // Drop on
-        event.currentTarget.style.background = '#e0e8ff';
+        event.currentTarget.style.background = 'var(--accent-soft)';
       }
     }
   },
@@ -1777,7 +1777,7 @@ const emailClient = {
               ${folder.isExpanded ? '▼' : '▶'}
             </span>
           ` : '<span style="width: 16px; display: inline-block;"></span>'}
-          📁 ${this.escapeHtml(folder.name)}
+           ${this.escapeHtml(folder.name)}
         </div>
         ${hasChildren && folder.isExpanded ? this.renderFolderTree(folder.children, depth + 1) : ''}
       `;
@@ -1955,8 +1955,8 @@ const emailClient = {
     }
     
     list.innerHTML = this.selectedFiles.map((file, index) => `
-      <div style="padding: 3px; background: #f0f0f0; margin-bottom: 2px; display: flex; justify-content: space-between; align-items: center;">
-        <span>📎 ${this.escapeHtml(file.name)} (${this.formatFileSize(file.size)})</span>
+      <div style="padding: 3px; background: var(--border-soft); margin-bottom: 2px; display: flex; justify-content: space-between; align-items: center;">
+        <span> ${this.escapeHtml(file.name)} (${this.formatFileSize(file.size)})</span>
         <button onclick="emailClient.removeAttachment(${index})" style="padding: 2px 6px; cursor: pointer;">✕</button>
       </div>
     `).join('');

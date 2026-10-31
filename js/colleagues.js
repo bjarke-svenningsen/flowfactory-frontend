@@ -165,7 +165,7 @@ function renderColleagues() {
     }
     
     if (filteredColleagues.length === 0) {
-        grid.innerHTML = '<p style="text-align: center; color: #999; padding: 40px;">Ingen kolleger fundet</p>';
+        grid.innerHTML = '<p style="text-align: center; color: var(--text-muted); padding: 40px;">Ingen kolleger fundet</p>';
         return;
     }
     

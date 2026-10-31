@@ -4,7 +4,7 @@
     <div style="position: relative;">
         <div class="profile-avatar" id="profileAvatar">TB</div>
         <input type="file" id="profilePhotoInput" accept="image/*" style="display: none;" onchange="changeProfilePhoto(event)">
-        <button class="change-photo-btn" onclick="document.getElementById('profilePhotoInput').click()">📷</button>
+        <button class="change-photo-btn" onclick="document.getElementById('profilePhotoInput').click()"></button>
     </div>
     
     <div class="profile-info">
@@ -12,7 +12,7 @@
         <p id="profileEmail">test@firma.dk</p>
     </div>
     
-    <button id="editBtn" class="edit-profile-btn" onclick="toggleEditMode()">✏️ Rediger profil</button>
+    <button id="editBtn" class="edit-profile-btn" onclick="toggleEditMode()"> Rediger profil</button>
 </div>
 
 <div id="profileViewMode">
@@ -82,8 +82,8 @@
                 <input type="tel" id="editPhone" class="profile-input">
             </div>
             <div style="display: flex; gap: 10px; margin-top: 20px;">
-                <button class="save-btn" onclick="saveProfile()">💾 Gem ændringer</button>
-                <button class="cancel-btn" onclick="toggleEditMode()">❌ Annuller</button>
+                <button class="save-btn" onclick="saveProfile()"> Gem ændringer</button>
+                <button class="cancel-btn" onclick="toggleEditMode()"> Annuller</button>
             </div>
         </div>
     </div>

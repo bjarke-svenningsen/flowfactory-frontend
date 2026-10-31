@@ -46,9 +46,9 @@ class PageLoader {
             console.error('Page load error:', error);
             this.pageContainer.innerHTML = `
                 <div style="text-align: center; padding: 40px; color: var(--color-red);">
-                    <h2>⚠️ Fejl ved indlæsning af side</h2>
+                    <h2> Fejl ved indlæsning af side</h2>
                     <p>Kunne ikke indlæse siden: ${pageName}</p>
-                    <p style="font-size: 14px; color: #999;">${error.message}</p>
+                    <p style="font-size: 14px; color: var(--text-muted);">${error.message}</p>
                 </div>
             `;
             return false;

@@ -42,7 +42,7 @@ const materialsPage = {
                 <tr>
                     <td colspan="7">
                         <div class="empty-state">
-                            <i>📦</i>
+                            <i></i>
                             <p>Ingen materialer fundet</p>
                         </div>
                     </td>
@@ -62,10 +62,10 @@ const materialsPage = {
                 <td>
                     <div class="actions-cell">
                         <button class="btn-icon btn-edit" onclick="materialsPage.editMaterial(${material.id})" title="Rediger">
-                            ✏️
+                            
                         </button>
                         <button class="btn-icon btn-delete" onclick="materialsPage.deleteMaterial(${material.id})" title="Slet">
-                            🗑️
+                            
                         </button>
                     </div>
                 </td>
@@ -180,11 +180,11 @@ const materialsPage = {
 
     showSuccess(message) {
         // Simple alert for now - you can replace with a nicer notification system
-        alert('✅ ' + message);
+        alert(' ' + message);
     },
 
     showError(message) {
-        alert('❌ ' + message);
+        alert(' ' + message);
     }
 };
 

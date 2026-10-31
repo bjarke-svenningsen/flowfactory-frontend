@@ -58,26 +58,26 @@ async function loadPendingUsers() {
         
         const container = document.getElementById('pendingUsersList');
         if (pending.length === 0) {
-            container.innerHTML = '<p style="text-align: center; color: #999; padding: 20px;">Ingen ventende registreringer</p>';
+            container.innerHTML = '<p style="text-align: center; color: var(--text-muted); padding: 20px;">Ingen ventende registreringer</p>';
             return;
         }
         
         container.innerHTML = pending.map(user => `
-            <div style="border: 1px solid #e0e0e0; border-radius: 8px; padding: 15px; margin-bottom: 10px;">
+            <div style="border: 1px solid var(--border); border-radius: 8px; padding: 15px; margin-bottom: 10px;">
                 <div style="display: flex; justify-content: space-between; align-items: start;">
                     <div style="flex: 1;">
                         <h4 style="margin: 0 0 10px 0;">${user.name}</h4>
-                        <p style="margin: 5px 0; color: #666;">📧 ${user.email}</p>
-                        <p style="margin: 5px 0; color: #666;">💼 ${user.position || 'Ikke angivet'}</p>
-                        <p style="margin: 5px 0; color: #666;">🏢 ${user.department || 'Ikke angivet'}</p>
-                        <p style="margin: 5px 0; color: #999; font-size: 12px;">Anmodet: ${new Date(user.created_at).toLocaleString('da-DK')}</p>
+                        <p style="margin: 5px 0; color: var(--text-muted);"> ${user.email}</p>
+                        <p style="margin: 5px 0; color: var(--text-muted);"> ${user.position || 'Ikke angivet'}</p>
+                        <p style="margin: 5px 0; color: var(--text-muted);"> ${user.department || 'Ikke angivet'}</p>
+                        <p style="margin: 5px 0; color: var(--text-muted); font-size: 12px;">Anmodet: ${new Date(user.created_at).toLocaleString('da-DK')}</p>
                     </div>
                     <div style="display: flex; gap: 10px;">
                         <button onclick="approveUser(${user.id})" style="padding: 8px 16px; background: var(--color-green); color: white; border: none; border-radius: 5px; cursor: pointer;">
-                            ✅ Godkend
+                             Godkend
                         </button>
                         <button onclick="rejectUser(${user.id})" style="padding: 8px 16px; background: var(--color-red); color: white; border: none; border-radius: 5px; cursor: pointer;">
-                            ❌ Afvis
+                             Afvis
                         </button>
                     </div>
                 </div>
@@ -101,7 +101,7 @@ async function approveUser(userId) {
         
         if (!response.ok) throw new Error('Godkendelse fejlede');
         
-        alert('✅ Bruger godkendt!');
+        alert(' Bruger godkendt!');
         loadPendingUsers();
         loadAdminData();
     } catch (error) {
@@ -121,7 +121,7 @@ async function rejectUser(userId) {
         
         if (!response.ok) throw new Error('Afvisning fejlede');
         
-        alert('❌ Bruger afvist');
+        alert(' Bruger afvist');
         loadPendingUsers();
         loadAdminData();
     } catch (error) {
@@ -156,7 +156,7 @@ async function sendEmailInvitation() {
         
         const result = await response.json();
         
-        alert(`✅ Email invitation sendt til ${email}!\n\nInvite kode: ${result.code}\n\nEmailen er sendt og koden er gyldig i 7 dage.`);
+        alert(` Email invitation sendt til ${email}!\n\nInvite kode: ${result.code}\n\nEmailen er sendt og koden er gyldig i 7 dage.`);
         
         loadInviteCodes();
         loadAdminData();
@@ -182,7 +182,7 @@ async function generateInviteCode() {
         
         const invite = await response.json();
         
-        alert(`✅ Invite kode genereret!\n\nKode: ${invite.code}\n\nDel denne kode med nye brugere. Den udløber: ${new Date(invite.expires_at).toLocaleString('da-DK')}`);
+        alert(` Invite kode genereret!\n\nKode: ${invite.code}\n\nDel denne kode med nye brugere. Den udløber: ${new Date(invite.expires_at).toLocaleString('da-DK')}`);
         
         loadInviteCodes();
         loadAdminData();
@@ -202,29 +202,29 @@ async function loadInviteCodes() {
         
         const container = document.getElementById('inviteCodesList');
         if (codes.length === 0) {
-            container.innerHTML = '<p style="text-align: center; color: #999; padding: 20px;">Ingen invite koder endnu</p>';
+            container.innerHTML = '<p style="text-align: center; color: var(--text-muted); padding: 20px;">Ingen invite koder endnu</p>';
             return;
         }
         
         container.innerHTML = codes.map(code => {
             const isExpired = new Date(code.expires_at) < new Date();
             const isUsed = code.used_by !== null;
-            const status = isUsed ? '✅ Brugt' : isExpired ? '⏰ Udløbet' : '🟢 Aktiv';
-            const statusColor = isUsed ? 'var(--color-green)' : isExpired ? '#999' : 'var(--color-blue)';
+            const status = isUsed ? ' Brugt' : isExpired ? ' Udløbet' : ' Aktiv';
+            const statusColor = isUsed ? 'var(--color-green)' : isExpired ? 'var(--text-muted)' : 'var(--color-blue)';
             
             return `
-                <div style="border: 1px solid #e0e0e0; border-radius: 8px; padding: 15px; margin-bottom: 10px;">
+                <div style="border: 1px solid var(--border); border-radius: 8px; padding: 15px; margin-bottom: 10px;">
                     <div style="display: flex; justify-content: space-between; align-items: start;">
                         <div style="flex: 1;">
                             <h4 style="margin: 0 0 10px 0; font-family: monospace; font-size: 18px;">${code.code}</h4>
                             <p style="margin: 5px 0; color: ${statusColor}; font-weight: bold;">${status}</p>
-                            <p style="margin: 5px 0; color: #666;">Oprettet af: ${code.created_by_name}</p>
-                            <p style="margin: 5px 0; color: #666;">Udløber: ${new Date(code.expires_at).toLocaleString('da-DK')}</p>
-                            ${isUsed ? `<p style="margin: 5px 0; color: #666;">Brugt af: ${code.used_by_name}</p>` : ''}
+                            <p style="margin: 5px 0; color: var(--text-muted);">Oprettet af: ${code.created_by_name}</p>
+                            <p style="margin: 5px 0; color: var(--text-muted);">Udløber: ${new Date(code.expires_at).toLocaleString('da-DK')}</p>
+                            ${isUsed ? `<p style="margin: 5px 0; color: var(--text-muted);">Brugt af: ${code.used_by_name}</p>` : ''}
                         </div>
                         ${!isUsed ? `
                             <button onclick="deleteInviteCode(${code.id})" style="padding: 8px 16px; background: var(--color-red); color: white; border: none; border-radius: 5px; cursor: pointer;">
-                                🗑️ Slet
+                                 Slet
                             </button>
                         ` : ''}
                     </div>
@@ -247,7 +247,7 @@ async function deleteInviteCode(codeId) {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         
-        alert('✅ Invite kode slettet');
+        alert(' Invite kode slettet');
         loadInviteCodes();
         loadAdminData();
     } catch (error) {
@@ -268,23 +268,23 @@ async function loadAllUsers() {
         container.innerHTML = `
             <table style="width: 100%; border-collapse: collapse;">
                 <thead>
-                    <tr style="background: #f5f5f5;">
-                        <th style="padding: 10px; text-align: left; border-bottom: 2px solid #e0e0e0;">Navn</th>
-                        <th style="padding: 10px; text-align: left; border-bottom: 2px solid #e0e0e0;">Email</th>
-                        <th style="padding: 10px; text-align: left; border-bottom: 2px solid #e0e0e0;">Stilling</th>
-                        <th style="padding: 10px; text-align: left; border-bottom: 2px solid #e0e0e0;">Afdeling</th>
-                        <th style="padding: 10px; text-align: center; border-bottom: 2px solid #e0e0e0;">Admin</th>
-                        <th style="padding: 10px; text-align: center; border-bottom: 2px solid #e0e0e0;">Handlinger</th>
+                    <tr style="background: var(--surface-muted);">
+                        <th style="padding: 10px; text-align: left; border-bottom: 2px solid var(--border);">Navn</th>
+                        <th style="padding: 10px; text-align: left; border-bottom: 2px solid var(--border);">Email</th>
+                        <th style="padding: 10px; text-align: left; border-bottom: 2px solid var(--border);">Stilling</th>
+                        <th style="padding: 10px; text-align: left; border-bottom: 2px solid var(--border);">Afdeling</th>
+                        <th style="padding: 10px; text-align: center; border-bottom: 2px solid var(--border);">Admin</th>
+                        <th style="padding: 10px; text-align: center; border-bottom: 2px solid var(--border);">Handlinger</th>
                     </tr>
                 </thead>
                 <tbody>
                     ${users.map(user => `
-                        <tr style="border-bottom: 1px solid #e0e0e0;">
+                        <tr style="border-bottom: 1px solid var(--border);">
                             <td style="padding: 10px;">${user.name}</td>
                             <td style="padding: 10px;">${user.email}</td>
                             <td style="padding: 10px;">${user.position || '-'}</td>
                             <td style="padding: 10px;">${user.department || '-'}</td>
-                            <td style="padding: 10px; text-align: center;">${user.is_admin ? '🛡️ Ja' : '-'}</td>
+                            <td style="padding: 10px; text-align: center;">${user.is_admin ? ' Ja' : '-'}</td>
                             <td style="padding: 10px; text-align: center;">
                                 ${user.id !== window.currentUser.id ? `
                                     <div style="display: flex; gap: 5px; justify-content: center;">
@@ -297,8 +297,8 @@ async function loadAllUsers() {
                                                 Fjern admin
                                             </button>
                                         `}
-                                        <button onclick="deleteUser(${user.id}, '${user.name.replace(/'/g, "\\'")}', '${user.email}')" style="padding: 5px 10px; background: #d32f2f; color: white; border: none; border-radius: 3px; cursor: pointer; font-size: 12px;">
-                                            🗑️ Slet
+                                        <button onclick="deleteUser(${user.id}, '${user.name.replace(/'/g, "\\'")}', '${user.email}')" style="padding: 5px 10px; background: var(--danger); color: white; border: none; border-radius: 3px; cursor: pointer; font-size: 12px;">
+                                             Slet
                                         </button>
                                     </div>
                                 ` : '<em>Dig selv</em>'}
@@ -324,7 +324,7 @@ async function makeAdmin(userId) {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         
-        alert('✅ Bruger er nu administrator');
+        alert(' Bruger er nu administrator');
         loadAllUsers();
     } catch (error) {
         alert('Fejl: ' + error.message);
@@ -341,7 +341,7 @@ async function removeAdmin(userId) {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         
-        alert('✅ Admin rettigheder fjernet');
+        alert(' Admin rettigheder fjernet');
         loadAllUsers();
     } catch (error) {
         alert('Fejl: ' + error.message);
@@ -349,7 +349,7 @@ async function removeAdmin(userId) {
 }
 
 async function deleteUser(userId, userName, userEmail) {
-    const confirmed = confirm(`⚠️ ADVARSEL!\n\nEr du sikker på at du vil slette brugeren:\n\n${userName}\n${userEmail}\n\nDette vil permanent slette:\n- Brugerens konto\n- Alle beskeder\n- Alle opslag\n- Alle uploadede filer\n- Alle mapper\n\nDenne handling kan IKKE fortrydes!`);
+    const confirmed = confirm(` ADVARSEL!\n\nEr du sikker på at du vil slette brugeren:\n\n${userName}\n${userEmail}\n\nDette vil permanent slette:\n- Brugerens konto\n- Alle beskeder\n- Alle opslag\n- Alle uploadede filer\n- Alle mapper\n\nDenne handling kan IKKE fortrydes!`);
     
     if (!confirmed) return;
     
@@ -369,7 +369,7 @@ async function deleteUser(userId, userName, userEmail) {
         }
         
         const result = await response.json();
-        alert(`✅ ${result.message}\n\nBrugeren er blevet permanent slettet.`);
+        alert(` ${result.message}\n\nBrugeren er blevet permanent slettet.`);
         loadAllUsers();
         loadAdminData();
     } catch (error) {

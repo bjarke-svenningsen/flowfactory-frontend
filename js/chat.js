@@ -128,13 +128,13 @@ function renderUserList() {
                 </div>
                 <div onclick="openChatWith(${user.id})" style="flex: 1; cursor: pointer;">
                     <div style="font-weight: 500;">${user.name}</div>
-                    <div style="font-size: 12px; color: #999;">${getStatusText(user.status)}</div>
+                    <div style="font-size: 12px; color: var(--text-muted);">${getStatusText(user.status)}</div>
                 </div>
                 <button onclick="event.stopPropagation(); if(typeof startVideoCall !== 'undefined') startVideoCall(${user.id}, '${user.name.replace(/'/g, "\\'")}');" 
-                        style="padding: 6px 10px; background: ${isOnline ? 'var(--color-green)' : '#ccc'}; color: white; border: none; border-radius: 15px; cursor: ${isOnline ? 'pointer' : 'not-allowed'}; font-size: 12px;"
+                        style="padding: 6px 10px; background: ${isOnline ? 'var(--color-green)' : 'var(--border)'}; color: white; border: none; border-radius: 15px; cursor: ${isOnline ? 'pointer' : 'not-allowed'}; font-size: 12px;"
                         ${!isOnline ? 'disabled' : ''}
                         title="${isOnline ? 'Start videoopkald' : 'Bruger er offline'}">
-                    📞
+                    
                 </button>
             </div>
         `;
@@ -166,7 +166,7 @@ async function openChatWith(userId) {
     document.getElementById('chatUserStatus').textContent = getStatusText(user.status);
     document.getElementById('chatUserStatus').style.color = 
         user.status === 'online' ? 'var(--color-green)' : 
-        user.status === 'busy' ? 'var(--color-red)' : '#9e9e9e';
+        user.status === 'busy' ? 'var(--color-red)' : 'var(--text-muted)';
     
     renderUserList();
     
@@ -210,7 +210,7 @@ function renderMessages() {
     const container = document.getElementById('chatMessages');
     
     if (messages.length === 0) {
-        container.innerHTML = '<div style="text-align: center; color: #999; padding: 40px;">Ingen beskeder endnu. Send den første!</div>';
+        container.innerHTML = '<div style="text-align: center; color: var(--text-muted); padding: 40px;">Ingen beskeder endnu. Send den første!</div>';
         return;
     }
     
@@ -301,9 +301,9 @@ function getRandomReply() {
     const replies = [
         'Det lyder godt! 👍',
         'Tak for info!',
-        'Forstået 😊',
+        'Forstået ',
         'Super, så gør vi det!',
-        'Perfekt! 🎉',
+        'Perfekt! ',
         'Okay, jeg vender tilbage snart',
         'Tak!',
         'Sounds good!'

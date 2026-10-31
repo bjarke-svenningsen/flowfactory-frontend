@@ -9,24 +9,24 @@ function changePassword() {
     
     const confirmPassword = prompt('Bekræft ny adgangskode:');
     if (newPassword !== confirmPassword) {
-        alert('❌ Adgangskoderne matcher ikke!');
+        alert(' Adgangskoderne matcher ikke!');
         return;
     }
     
     if (newPassword.length < 6) {
-        alert('❌ Adgangskoden skal være mindst 6 tegn lang!');
+        alert(' Adgangskoden skal være mindst 6 tegn lang!');
         return;
     }
     
     // Her ville vi normalt sende til backend
-    alert('✅ Adgangskode ændret succesfuldt!\n\n(I en rigtig app ville dette opdatere din adgangskode i databasen)');
+    alert(' Adgangskode ændret succesfuldt!\n\n(I en rigtig app ville dette opdatere din adgangskode i databasen)');
 }
 
 function clearCache() {
     if (confirm('Er du sikker på at du vil rydde cache?\n\nDette vil slette alle midlertidige filer og du bliver logget ud.')) {
         sessionStorage.clear();
         localStorage.clear();
-        alert('✅ Cache ryddet! Du bliver nu logget ud.');
+        alert(' Cache ryddet! Du bliver nu logget ud.');
         window.location.href = 'index.html';
     }
 }
@@ -49,7 +49,7 @@ function exportData() {
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
     
-    alert('✅ Dine data er blevet eksporteret!');
+    alert(' Dine data er blevet eksporteret!');
 }
 
 function changeTheme(theme) {
@@ -60,7 +60,7 @@ function changeTheme(theme) {
     console.log('Theme changed to:', theme);
     
     // Future: Add actual dark/light theme implementation
-    alert(`✅ Tema ændret til: ${theme}\n\n(Fuld tema-funktionalitet kan implementeres senere)`);
+    alert(` Tema ændret til: ${theme}\n\n(Fuld tema-funktionalitet kan implementeres senere)`);
 }
 
 // Initialize settings page

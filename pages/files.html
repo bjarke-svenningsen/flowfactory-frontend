@@ -1,25 +1,25 @@
 <div class="file-explorer">
     <div class="explorer-title-bar">
-        <span>📁 Filhåndtering</span>
+        <span> Filhåndtering</span>
     </div>
 
     <div class="explorer-toolbar">
         <div class="toolbar-left">
             <button class="toolbar-btn" onclick="navigateBack()" title="Tilbage">◀ Tilbage</button>
-            <button class="toolbar-btn" onclick="navigateUp()" title="Op">⬆</button>
+            <button class="toolbar-btn" onclick="navigateUp()" title="Op"></button>
         </div>
         <div class="toolbar-center">
             <span class="address-bar-label">Adresse:</span>
             <div class="address-bar" id="addressBar">C:\Mine dokumenter</div>
         </div>
         <div class="toolbar-right">
-            <button class="toolbar-btn" onclick="showNewFolderDialog()">📁 Ny</button>
-            <button class="toolbar-btn admin-only" onclick="createCompanyFolder()">🏢 Firma Mappe</button>
-            <button class="toolbar-btn" onclick="document.getElementById('fileExplorerUpload').click()">📤 Upload</button>
-            <button class="toolbar-btn" onclick="downloadFile()">💾 Download</button>
-            <button class="toolbar-btn" onclick="deleteSelected()">🗑️ Slet</button>
-            <button class="toolbar-btn" onclick="searchFiles()">🔍 Søg</button>
-            <button class="toolbar-btn" onclick="refreshExplorer()">🔄</button>
+            <button class="toolbar-btn" onclick="showNewFolderDialog()"> Ny</button>
+            <button class="toolbar-btn admin-only" onclick="createCompanyFolder()"> Firma Mappe</button>
+            <button class="toolbar-btn" onclick="document.getElementById('fileExplorerUpload').click()"> Upload</button>
+            <button class="toolbar-btn" onclick="downloadFile()"> Download</button>
+            <button class="toolbar-btn" onclick="deleteSelected()"> Slet</button>
+            <button class="toolbar-btn" onclick="searchFiles()"> Søg</button>
+            <button class="toolbar-btn" onclick="refreshExplorer()"></button>
             <input type="file" id="fileExplorerUpload" style="display: none;" onchange="uploadFileToExplorer(event)">
         </div>
     </div>
@@ -55,9 +55,9 @@
     <div class="context-menu-item" onclick="copySelected()">Kopier</div>
     <div class="context-menu-item" onclick="pasteClipboard()">Sæt ind</div>
     <div class="context-menu-separator"></div>
-    <div class="context-menu-item" onclick="downloadFile()">💾 Download</div>
-    <div class="context-menu-item" onclick="shareFile()">🔗 Del med kolleger</div>
-    <div class="context-menu-item" onclick="transferToOrder()">📦 Overfør til ordre</div>
+    <div class="context-menu-item" onclick="downloadFile()"> Download</div>
+    <div class="context-menu-item" onclick="shareFile()"> Del med kolleger</div>
+    <div class="context-menu-item" onclick="transferToOrder()"> Overfør til ordre</div>
     <div class="context-menu-separator"></div>
     <div class="context-menu-item" onclick="deleteSelected()">Slet</div>
     <div class="context-menu-item" onclick="renameSelected()">Omdøb</div>
@@ -66,10 +66,10 @@
 </div>
 
 <div id="folderContextMenu" class="context-menu">
-    <div class="context-menu-item" onclick="createSubfolder()">📁 Ny undermappe</div>
+    <div class="context-menu-item" onclick="createSubfolder()"> Ny undermappe</div>
     <div class="context-menu-separator"></div>
-    <div class="context-menu-item" onclick="renameFolderSelected()">✏️ Omdøb mappe</div>
-    <div class="context-menu-item" onclick="deleteFolderSelected()">🗑️ Slet mappe</div>
+    <div class="context-menu-item" onclick="renameFolderSelected()"> Omdøb mappe</div>
+    <div class="context-menu-item" onclick="deleteFolderSelected()"> Slet mappe</div>
     <div class="context-menu-separator"></div>
-    <div class="context-menu-item" onclick="showFolderProperties()">📋 Egenskaber</div>
+    <div class="context-menu-item" onclick="showFolderProperties()"> Egenskaber</div>
 </div>

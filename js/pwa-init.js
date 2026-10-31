@@ -10,24 +10,24 @@ if ('serviceWorker' in navigator) {
     // Unregister all existing service workers first (clear old cache)
     const registrations = await navigator.serviceWorker.getRegistrations();
     for (let registration of registrations) {
-      console.log('🗑️ Unregistering old Service Worker...');
+      console.log(' Unregistering old Service Worker...');
       await registration.unregister();
     }
     
     // Clear all caches
     const cacheNames = await caches.keys();
     for (let cacheName of cacheNames) {
-      console.log('🗑️ Deleting old cache:', cacheName);
+      console.log(' Deleting old cache:', cacheName);
       await caches.delete(cacheName);
     }
     
     // Now register fresh service worker
     navigator.serviceWorker.register('/service-worker.js')
       .then(registration => {
-        console.log('✅ Service Worker registered:', registration);
+        console.log(' Service Worker registered:', registration);
       })
       .catch(error => {
-        console.log('❌ Service Worker registration failed:', error);
+        console.log(' Service Worker registration failed:', error);
       });
   });
 }
@@ -71,7 +71,7 @@ function showInstallPrompt() {
   
   promptDiv.innerHTML = `
     <div>
-      <div style="font-weight: 600; margin-bottom: 5px;">📱 Installer SG Seest Gulvteknik Portal</div>
+      <div style="font-weight: 600; margin-bottom: 5px;"> Installer SG Seest Gulvteknik Portal</div>
       <div style="font-size: 12px; opacity: 0.9;">Tilføj til hjemmeskærm for hurtig adgang</div>
     </div>
     <div style="display: flex; gap: 10px;">
@@ -104,9 +104,9 @@ function showInstallPrompt() {
     const { outcome } = await deferredPrompt.userChoice;
     
     if (outcome === 'accepted') {
-      console.log('✅ User accepted install');
+      console.log(' User accepted install');
     } else {
-      console.log('❌ User dismissed install');
+      console.log(' User dismissed install');
     }
     
     deferredPrompt = null;
@@ -129,7 +129,7 @@ function initMobileMenu() {
   // Create hamburger button
   const hamburger = document.createElement('button');
   hamburger.id = 'mobile-menu-toggle';
-  hamburger.innerHTML = '☰';
+  hamburger.innerHTML = '';
   hamburger.style.cssText = `
     position: fixed;
     top: 15px;
@@ -178,7 +178,7 @@ function initMobileMenu() {
       sidebar.style.zIndex = '';
       sidebar.style.width = '';
       sidebar.style.boxShadow = '';
-      hamburger.innerHTML = '☰';
+      hamburger.innerHTML = '';
     }
   });
   
@@ -189,7 +189,7 @@ function initMobileMenu() {
         const sidebar = document.querySelector('.sidebar');
         sidebar.style.position = '';
         menuOpen = false;
-        hamburger.innerHTML = '☰';
+        hamburger.innerHTML = '';
       }
     });
   });

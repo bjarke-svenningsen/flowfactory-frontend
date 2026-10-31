@@ -86,7 +86,7 @@ function setupDragAndDrop() {
     
     content.addEventListener('dragover', (e) => {
         e.preventDefault();
-        content.style.background = '#e8f4ff';
+        content.style.background = 'var(--accent-soft)';
     });
     
     content.addEventListener('dragleave', () => {
@@ -184,7 +184,7 @@ function renderFolderTree() {
     function renderTreeFolder(key, folder, level = 0) {
         const isSelected = currentPath === key && currentSubPath.length === 0;
         const hasContents = folder.contents && Object.keys(folder.contents).length > 0;
-        const expandIcon = folder.expanded ? '📂' : '📁';
+        const expandIcon = folder.expanded ? '' : '';
         
         let html = `
             <div class="tree-item ${isSelected ? 'selected' : ''}" 
@@ -204,7 +204,7 @@ function renderFolderTree() {
                         <div class="tree-item ${subSelected ? 'selected' : ''}"
                              style="padding-left: ${(level + 1) * 15 + 20}px;"
                              onclick="selectTreeFolder('${key}', ['${name}'])">
-                            <span class="tree-expand">📁</span> ${name}
+                            <span class="tree-expand"></span> ${name}
                         </div>
                     `;
                 }
@@ -266,7 +266,7 @@ function renderFileList() {
     document.getElementById('selectedInfo').textContent = '';
 
     if (items.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; padding: 40px; color: #999;">Denne mappe er tom</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; padding: 40px; color: var(--text-muted);">Denne mappe er tom</td></tr>';
         document.getElementById('fileCount').textContent = '0 objekter';
         return;
     }
@@ -297,10 +297,10 @@ function renderFileList() {
     });
 
     tbody.innerHTML = items.map((item, index) => {
-        const icon = item.type === 'folder' ? '📁' : getFileIcon(item.name);
+        const icon = item.type === 'folder' ? '' : getFileIcon(item.name);
         const size = item.type === 'folder' ? '' : formatFileSize(item.size);
         const type = item.type === 'folder' ? 'Filmappe' : getFileType(item.name);
-        const sharedIcon = item.shared ? ' 🔗' : '';
+        const sharedIcon = item.shared ? ' ' : '';
         
         return `
             <tr class="file-row" onclick="selectFile(${index})" ondblclick="openItem(${index})" oncontextmenu="showContextMenu(event, ${index}); return false;">
@@ -438,25 +438,25 @@ function showImagePreview(item) {
 function getFileIcon(filename) {
     const ext = filename.split('.').pop().toLowerCase();
     const icons = {
-        'pdf': '📄',
-        'doc': '📝',
-        'docx': '📝',
-        'xls': '📊',
-        'xlsx': '📊',
-        'ppt': '📊',
-        'pptx': '📊',
-        'jpg': '🖼️',
-        'jpeg': '🖼️',
-        'png': '🖼️',
-        'gif': '🖼️',
-        'zip': '📦',
-        'rar': '📦',
-        'txt': '📃',
-        'html': '🌐',
-        'css': '🎨',
-        'js': '⚙️'
+        'pdf': '',
+        'doc': '',
+        'docx': '',
+        'xls': '',
+        'xlsx': '',
+        'ppt': '',
+        'pptx': '',
+        'jpg': '',
+        'jpeg': '',
+        'png': '',
+        'gif': '',
+        'zip': '',
+        'rar': '',
+        'txt': '',
+        'html': '',
+        'css': '',
+        'js': ''
     };
-    return icons[ext] || '📄';
+    return icons[ext] || '';
 }
 
 // Få fil type
@@ -670,26 +670,26 @@ Indtast dit valg (1-4):`;
     switch(choice) {
         case '1':
             selectedFile.sharedWith = ['Alle medarbejdere'];
-            alert(`✅ "${selectedFile.name}" er nu delt med alle medarbejdere!`);
+            alert(` "${selectedFile.name}" er nu delt med alle medarbejdere!`);
             break;
         case '2':
             const department = prompt('Indtast afdeling (f.eks. IT, HR, Salg, Marketing):');
             if (department) {
                 selectedFile.sharedWith = [department];
-                alert(`✅ "${selectedFile.name}" er nu delt med ${department} afdelingen!`);
+                alert(` "${selectedFile.name}" er nu delt med ${department} afdelingen!`);
             }
             break;
         case '3':
             const person = prompt('Indtast navn på person:');
             if (person) {
                 selectedFile.sharedWith = [person];
-                alert(`✅ "${selectedFile.name}" er nu delt med ${person}!`);
+                alert(` "${selectedFile.name}" er nu delt med ${person}!`);
             }
             break;
         case '4':
             if (selectedFile.sharedWith) {
                 delete selectedFile.sharedWith;
-                alert(`🔒 Deling fjernet fra "${selectedFile.name}"`);
+                alert(` Deling fjernet fra "${selectedFile.name}"`);
             } else {
                 alert('Denne fil er ikke delt');
             }
@@ -779,17 +779,17 @@ function showSearchResults(results, query) {
     const tbody = document.getElementById('fileListBody');
     
     tbody.innerHTML = results.map((result, index) => {
-        const icon = result.item.type === 'folder' ? '📁' : getFileIcon(result.item.name);
+        const icon = result.item.type === 'folder' ? '' : getFileIcon(result.item.name);
         const size = result.item.type === 'folder' ? '' : formatFileSize(result.item.size);
         const type = result.item.type === 'folder' ? 'Filmappe' : getFileType(result.item.name);
-        const sharedIcon = result.item.shared ? ' 🔗' : '';
+        const sharedIcon = result.item.shared ? ' ' : '';
         
         return `
             <tr class="file-row" onclick="selectSearchResult(${index})" ondblclick="openSearchResult(${index})">
                 <td><span class="file-icon-small">${icon}</span>${result.item.name}${sharedIcon}</td>
                 <td>${size}</td>
                 <td>${type}</td>
-                <td>📁 ${result.path}</td>
+                <td> ${result.path}</td>
             </tr>
         `;
     }).join('');

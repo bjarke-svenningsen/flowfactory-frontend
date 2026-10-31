@@ -6,6 +6,7 @@
     <title>Min Tid - SG Seest Gulvteknik</title>
     <link rel="stylesheet" href="../css/dashboard.css">
     <link rel="stylesheet" href="../css/mobile.css">
+    <link rel="stylesheet" href="../css/design-system.css">
     <style>
         .time-container {
             max-width: 1600px;
@@ -38,7 +39,7 @@
 
         .view-toggle {
             display: flex;
-            background: #f5f5f5;
+            background: var(--surface-muted);
             border-radius: 8px;
             padding: 4px;
         }
@@ -66,21 +67,21 @@
 
         .date-picker input {
             padding: 10px 15px;
-            border: 2px solid #e0e0e0;
+            border: 2px solid var(--border);
             border-radius: 8px;
         }
 
         .btn-nav {
             padding: 10px 15px;
             background: white;
-            border: 2px solid #e0e0e0;
+            border: 2px solid var(--border);
             border-radius: 8px;
             cursor: pointer;
             font-size: 18px;
         }
 
         .btn-nav:hover {
-            background: #f5f5f5;
+            background: var(--surface-muted);
         }
 
         .btn-primary {
@@ -114,12 +115,12 @@
             text-align: center;
             margin-bottom: 20px;
             padding-bottom: 15px;
-            border-bottom: 2px solid #f0f0f0;
+            border-bottom: 2px solid var(--border-soft);
         }
 
         .timeline-header h2 {
             margin: 0;
-            color: #333;
+            color: var(--text);
         }
 
         .timeline-grid {
@@ -130,7 +131,7 @@
         }
 
         .timeline-hours {
-            border-right: 2px solid #f0f0f0;
+            border-right: 2px solid var(--border-soft);
         }
 
         .hour-label {
@@ -140,18 +141,18 @@
             justify-content: flex-end;
             padding-right: 10px;
             font-size: 12px;
-            color: #999;
-            border-bottom: 1px solid #f5f5f5;
+            color: var(--text-muted);
+            border-bottom: 1px solid var(--surface-muted);
         }
 
         .timeline-blocks {
             position: relative;
-            border-left: 2px solid #f0f0f0;
+            border-left: 2px solid var(--border-soft);
         }
 
         .timeline-row {
             height: 50px;
-            border-bottom: 1px solid #f5f5f5;
+            border-bottom: 1px solid var(--surface-muted);
         }
 
         .time-block {
@@ -189,7 +190,7 @@
         }
 
         .time-block.locked::after {
-            content: '🔒';
+            content: '';
             position: absolute;
             top: 5px;
             right: 5px;
@@ -228,7 +229,7 @@
 
         .week-day-column {
             min-height: 400px;
-            border-left: 1px solid #f0f0f0;
+            border-left: 1px solid var(--border-soft);
             position: relative;
             padding: 10px 5px;
         }
@@ -275,11 +276,11 @@
         .summary-stat {
             font-size: 32px;
             font-weight: 700;
-            color: #333;
+            color: var(--text);
         }
 
         .summary-label {
-            color: #999;
+            color: var(--text-muted);
             font-size: 14px;
             margin-top: 5px;
         }
@@ -324,7 +325,7 @@
             border: none;
             font-size: 24px;
             cursor: pointer;
-            color: #999;
+            color: var(--text-muted);
         }
 
         .form-group {
@@ -335,7 +336,7 @@
             display: block;
             margin-bottom: 8px;
             font-weight: 600;
-            color: #555;
+            color: var(--text-muted);
             font-size: 14px;
         }
 
@@ -344,7 +345,7 @@
         .form-group textarea {
             width: 100%;
             padding: 12px;
-            border: 2px solid #e0e0e0;
+            border: 2px solid var(--border);
             border-radius: 8px;
             font-size: 14px;
             box-sizing: border-box;
@@ -375,8 +376,8 @@
         }
 
         .time-calculation {
-            background: #f8f9ff;
-            border: 2px solid #e3f2fd;
+            background: var(--surface-muted);
+            border: 2px solid var(--accent-soft);
             border-radius: 8px;
             padding: 15px;
             margin: 15px 0;
@@ -400,8 +401,8 @@
 
         .btn-secondary {
             padding: 12px 24px;
-            background: #f5f5f5;
-            color: #333;
+            background: var(--surface-muted);
+            color: var(--text);
             border: none;
             border-radius: 8px;
             cursor: pointer;
@@ -409,8 +410,8 @@
         }
 
         .btn-delete {
-            background: #ffebee;
-            color: #c62828;
+            background: var(--danger-soft);
+            color: var(--danger);
         }
 
         @media (max-width: 768px) {
@@ -432,10 +433,10 @@
 <body>
     <div class="time-container">
         <div class="time-header">
-            <h1>⏰ Min Tid</h1>
+            <h1> Min Tid</h1>
             <div style="display: flex; gap: 15px; align-items: center;">
                 <!-- Admin User Selector (only visible for admins) -->
-                <select id="adminUserSelect" style="display: none; padding: 12px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 14px;" onchange="timePage.switchUser()">
+                <select id="adminUserSelect" style="display: none; padding: 12px; border: 2px solid var(--border); border-radius: 8px; font-size: 14px;" onchange="timePage.switchUser()">
                     <option value="">Vælg medarbejder...</option>
                 </select>
                 <button class="btn-primary" onclick="timePage.openCreateModal()">
@@ -449,7 +450,7 @@
                 <button id="viewDay" class="active" onclick="timePage.changeView('day')">Dag</button>
                 <button id="viewWeek" onclick="timePage.changeView('week')">Uge</button>
                 <button id="viewMonth" onclick="timePage.changeView('month')">Måned</button>
-                <button id="viewWorkshop" onclick="timePage.changeView('workshop')">🔧 Værksted</button>
+                <button id="viewWorkshop" onclick="timePage.changeView('workshop')"> Værksted</button>
             </div>
 
             <div class="date-picker">
@@ -459,7 +460,7 @@
             </div>
 
             <button class="btn-primary" onclick="timePage.exportToPDF()" style="margin-left: auto;">
-                📄 Eksporter PDF
+                 Eksporter PDF
             </button>
         </div>
 
@@ -483,24 +484,24 @@
         <div id="monthView" style="display: none;">
             <div class="month-summary">
                 <div class="summary-card">
-                    <h3>📊 Total Timer</h3>
+                    <h3> Total Timer</h3>
                     <div class="summary-stat" id="monthTotalHours">0</div>
                     <div class="summary-label">timer i måneden</div>
                 </div>
                 <div class="summary-card">
-                    <h3>⏱️ Normal Tid</h3>
+                    <h3> Normal Tid</h3>
                     <div class="summary-stat" id="monthNormalHours">0</div>
                     <div class="summary-label">almindelige timer</div>
                 </div>
                 <div class="summary-card">
-                    <h3>🔥 Overtid</h3>
+                    <h3>Overtid</h3>
                     <div class="summary-stat" id="monthOvertimeHours">0</div>
                     <div class="summary-label">overtimer</div>
                 </div>
             </div>
 
             <div class="summary-card">
-                <h3>📋 Detaljer Per Ordre</h3>
+                <h3> Detaljer Per Ordre</h3>
                 <div id="monthOrderBreakdown"></div>
             </div>
         </div>
@@ -532,7 +533,7 @@
                         </label>
                         <label class="radio-option">
                             <input type="radio" name="entryType" value="internal" onchange="timePage.toggleEntryType()">
-                            <span>🔧 Værksted (intern tid)</span>
+                            <span> Værksted (intern tid)</span>
                         </label>
                     </div>
                 </div>
@@ -568,7 +569,7 @@
                         </label>
                         <label class="radio-option">
                             <input type="radio" name="timeType" value="sick" onchange="timePage.updateMaterialSelection()">
-                            <span>🤒 Sygdom</span>
+                            <span> Sygdom</span>
                         </label>
                     </div>
                 </div>

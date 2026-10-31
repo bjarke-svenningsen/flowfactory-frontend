@@ -2,7 +2,7 @@
 function changeTheme(theme) {
     localStorage.setItem('theme', theme);
     applyTheme(theme);
-    alert(`✅ Tema ændret til: ${theme === 'dark' ? '🌙 Mørkt' : theme === 'light' ? '☀️ Lyst' : '🔄 Automatisk'}`);
+    alert(` Tema ændret til: ${theme === 'dark' ? ' Mørkt' : theme === 'light' ? ' Lyst' : ' Automatisk'}`);
 }
 
 function applyTheme(theme) {
@@ -10,35 +10,35 @@ function applyTheme(theme) {
     
     if (theme === 'dark') {
         // Body & main containers
-        body.style.background = '#1a1a1a';
-        body.style.color = '#e0e0e0';
+        body.style.background = 'var(--bg-header)';
+        body.style.color = 'var(--text)';
         
         // Dashboard background
         const dashboard = document.querySelector('.dashboard');
-        if (dashboard) dashboard.style.background = '#1a1a1a';
+        if (dashboard) dashboard.style.background = 'var(--bg-header)';
         
         // Top navigation
         const topNav = document.querySelector('.top-nav');
         if (topNav) {
-            topNav.style.background = '#2a2a2a';
-            topNav.style.borderBottom = '1px solid #404040';
+            topNav.style.background = 'var(--bg-header)';
+            topNav.style.borderBottom = '1px solid var(--border)';
         }
         
         // Sidebar
         const sidebar = document.querySelector('.sidebar');
         if (sidebar) {
-            sidebar.style.background = '#2a2a2a';
-            sidebar.style.color = '#e0e0e0';
+            sidebar.style.background = 'var(--bg-header)';
+            sidebar.style.color = 'var(--text)';
         }
         
         document.querySelectorAll('.sidebar h3').forEach(el => {
-            el.style.color = '#ffffff';
+            el.style.color = 'var(--surface)';
         });
         
         document.querySelectorAll('.menu-item').forEach(el => {
-            el.style.color = '#e0e0e0';
+            el.style.color = 'var(--text)';
             el.addEventListener('mouseenter', function() {
-                this.style.background = '#404040';
+                this.style.background = 'var(--border)';
             });
             el.addEventListener('mouseleave', function() {
                 if (!this.classList.contains('active')) {
@@ -50,73 +50,73 @@ function applyTheme(theme) {
         // Content area
         const contentArea = document.querySelector('.content-area');
         if (contentArea) {
-            contentArea.style.background = '#1a1a1a';
+            contentArea.style.background = 'var(--bg-header)';
         }
         
         // All cards
         document.querySelectorAll('.info-card, .create-post, .post-card, .file-explorer, .chat-container, .colleagues-grid > div').forEach(el => {
-            el.style.background = '#2a2a2a';
-            el.style.color = '#e0e0e0';
-            el.style.borderColor = '#404040';
+            el.style.background = 'var(--bg-header)';
+            el.style.color = 'var(--text)';
+            el.style.borderColor = 'var(--border)';
         });
         
         // Headings
         document.querySelectorAll('h1, h2, h3, h4, h5, h6').forEach(el => {
-            el.style.color = '#ffffff';
+            el.style.color = 'var(--surface)';
         });
         
         // Inputs & textareas
         document.querySelectorAll('input[type="text"], input[type="email"], input[type="tel"], input[type="password"], textarea, select').forEach(el => {
-            el.style.background = '#404040';
-            el.style.color = '#ffffff';
-            el.style.borderColor = '#555';
+            el.style.background = 'var(--border)';
+            el.style.color = 'var(--surface)';
+            el.style.borderColor = 'var(--border)';
         });
         
         // Buttons - preserve their original colors but adjust for dark theme
         document.querySelectorAll('button').forEach(el => {
             if (!el.style.background || el.style.background === '') {
-                el.style.background = '#404040';
-                el.style.color = '#ffffff';
-                el.style.borderColor = '#555';
+                el.style.background = 'var(--border)';
+                el.style.color = 'var(--surface)';
+                el.style.borderColor = 'var(--border)';
             }
         });
         
         // Tables
         document.querySelectorAll('table, th, td').forEach(el => {
-            el.style.background = '#2a2a2a';
-            el.style.color = '#e0e0e0';
-            el.style.borderColor = '#404040';
+            el.style.background = 'var(--bg-header)';
+            el.style.color = 'var(--text)';
+            el.style.borderColor = 'var(--border)';
         });
         
         document.querySelectorAll('thead tr').forEach(el => {
-            el.style.background = '#333';
+            el.style.background = 'var(--bg-header)';
         });
         
         // File explorer specific
         const explorerToolbar = document.querySelector('.explorer-toolbar');
         if (explorerToolbar) {
-            explorerToolbar.style.background = '#2a2a2a';
-            explorerToolbar.style.borderColor = '#404040';
+            explorerToolbar.style.background = 'var(--bg-header)';
+            explorerToolbar.style.borderColor = 'var(--border)';
         }
         
         const explorerTree = document.querySelector('.explorer-tree');
         if (explorerTree) {
-            explorerTree.style.background = '#2a2a2a';
-            explorerTree.style.borderColor = '#404040';
+            explorerTree.style.background = 'var(--bg-header)';
+            explorerTree.style.borderColor = 'var(--border)';
         }
         
         const statusbar = document.querySelector('.explorer-statusbar');
         if (statusbar) {
-            statusbar.style.background = '#2a2a2a';
-            statusbar.style.borderColor = '#404040';
-            statusbar.style.color = '#e0e0e0';
+            statusbar.style.background = 'var(--bg-header)';
+            statusbar.style.borderColor = 'var(--border)';
+            statusbar.style.color = 'var(--text)';
         }
         
         // Chat specific
         const chatUsers = document.querySelector('.chat-users');
         if (chatUsers) {
-            chatUsers.style.background = '#2a2a2a';
-            chatUsers.style.borderColor = '#404040';
+            chatUsers.style.background = 'var(--bg-header)';
+            chatUsers.style.borderColor = 'var(--border)';
         }
         
     } else if (theme === 'auto') {

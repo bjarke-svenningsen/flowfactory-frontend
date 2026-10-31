@@ -177,13 +177,13 @@ function initVideoCallSocket() {
     
     // Listen for incoming call notifications
     videoSocket.on('video:incoming-call', ({ callerId, callerName, roomId }) => {
-        console.log(`📞 Incoming call from ${callerName} (ID: ${callerId})`);
+        console.log(` Incoming call from ${callerName} (ID: ${callerId})`);
         
         // Play incoming ringtone
         playRingtone();
         
         // Show incoming call notification
-        const accepted = confirm(`📞 Indgående opkald fra ${callerName}\n\nVil du acceptere opkaldet?`);
+        const accepted = confirm(` Indgående opkald fra ${callerName}\n\nVil du acceptere opkaldet?`);
         
         // Stop ringtone
         stopRingtone();
@@ -217,7 +217,7 @@ async function acceptIncomingCall(callerId, callerName, roomId) {
                 audio: true
             });
             mediaObtained = true;
-            console.log('✅ Got video + audio');
+            console.log(' Got video + audio');
         } catch (e1) {
             console.warn('Video+Audio failed:', e1);
             try {
@@ -226,8 +226,8 @@ async function acceptIncomingCall(callerId, callerName, roomId) {
                     audio: true
                 });
                 mediaObtained = true;
-                console.log('✅ Got audio only');
-                alert('⚠️ Kunne ikke få adgang til kamera.\n\nFortsætter med kun lyd.');
+                console.log(' Got audio only');
+                alert(' Kunne ikke få adgang til kamera.\n\nFortsætter med kun lyd.');
             } catch (e2) {
                 console.warn('Audio failed:', e2);
                 try {
@@ -236,11 +236,11 @@ async function acceptIncomingCall(callerId, callerName, roomId) {
                         audio: false
                     });
                     mediaObtained = true;
-                    console.log('✅ Got video only');
-                    alert('⚠️ Kunne ikke få adgang til mikrofon.\n\nFortsætter med kun video.');
+                    console.log(' Got video only');
+                    alert(' Kunne ikke få adgang til mikrofon.\n\nFortsætter med kun video.');
                 } catch (e3) {
                     console.error('No media devices available:', e3);
-                    alert('❌ Kunne ikke få adgang til kamera eller mikrofon.\n\nKan ikke acceptere opkald.');
+                    alert(' Kunne ikke få adgang til kamera eller mikrofon.\n\nKan ikke acceptere opkald.');
                     floatingCall.style.display = 'none';
                     return;
                 }
@@ -266,7 +266,7 @@ async function acceptIncomingCall(callerId, callerName, roomId) {
             console.log(`Accepting call from ${callerName} - joining room ${roomId}`);
             videoSocket.emit('video:join-room', currentRoomId);
             
-            console.log(`✅ Floating overlay shown for incoming call from ${callerName}`);
+            console.log(` Floating overlay shown for incoming call from ${callerName}`);
         }
         
     } catch (error) {
@@ -291,7 +291,7 @@ async function createPeerConnection(socketId, isInitiator) {
     let playTimeout;
     
     pc.ontrack = (event) => {
-        console.log('🎥 RECEIVED TRACK:', event.track.kind, event.track.id);
+        console.log(' RECEIVED TRACK:', event.track.kind, event.track.id);
         
         // Stop ringtone when first track arrives
         stopRingtone();
@@ -326,7 +326,7 @@ async function createPeerConnection(socketId, isInitiator) {
         const existingTrack = accumulatedStream.getTracks().find(t => t.id === event.track.id);
         if (!existingTrack) {
             accumulatedStream.addTrack(event.track);
-            console.log(`✅ Added ${event.track.kind} track. Total: ${accumulatedStream.getTracks().length}`);
+            console.log(` Added ${event.track.kind} track. Total: ${accumulatedStream.getTracks().length}`);
         }
         
         // Clear previous play timeout
@@ -335,9 +335,9 @@ async function createPeerConnection(socketId, isInitiator) {
         // Debounce play() call
         playTimeout = setTimeout(() => {
             remoteVideo.play().then(() => {
-                console.log('✅ Remote video playing in floating overlay');
+                console.log(' Remote video playing in floating overlay');
             }).catch(err => {
-                console.error('❌ Play error:', err);
+                console.error(' Play error:', err);
             });
         }, 300);
     };
@@ -424,7 +424,7 @@ function removeVideoElement(socketId) {
         } else {
             mainVideo.innerHTML = `
                 <div id="callPlaceholder" style="text-align: center; color: white;">
-                    <div style="font-size: 80px; margin-bottom: 20px;">📹</div>
+                    <div style="font-size: 80px; margin-bottom: 20px;"></div>
                     <h3>Vælg en kollega for at starte videoopkald</h3>
                     <p style="margin-top: 10px; opacity: 0.7;">Klik på en kollega i listen til højre</p>
                 </div>
@@ -460,7 +460,7 @@ async function startVideoCall(colleagueId, colleagueName) {
                 audio: true
             });
             mediaObtained = true;
-            console.log('✅ Got video + audio');
+            console.log(' Got video + audio');
         } catch (e1) {
             console.warn('Video+Audio failed:', e1);
             try {
@@ -470,8 +470,8 @@ async function startVideoCall(colleagueId, colleagueName) {
                     audio: true
                 });
                 mediaObtained = true;
-                console.log('✅ Got audio only');
-                alert('⚠️ Kunne ikke få adgang til kamera.\n\nFortsætter med kun lyd.');
+                console.log(' Got audio only');
+                alert(' Kunne ikke få adgang til kamera.\n\nFortsætter med kun lyd.');
             } catch (e2) {
                 console.warn('Audio failed:', e2);
                 try {
@@ -481,11 +481,11 @@ async function startVideoCall(colleagueId, colleagueName) {
                         audio: false
                     });
                     mediaObtained = true;
-                    console.log('✅ Got video only');
-                    alert('⚠️ Kunne ikke få adgang til mikrofon.\n\nFortsætter med kun video.');
+                    console.log(' Got video only');
+                    alert(' Kunne ikke få adgang til mikrofon.\n\nFortsætter med kun video.');
                 } catch (e3) {
                     console.error('No media devices available:', e3);
-                    alert('❌ Kunne ikke få adgang til kamera eller mikrofon.\n\nTjek at du har givet tilladelse i browser indstillinger.');
+                    alert(' Kunne ikke få adgang til kamera eller mikrofon.\n\nTjek at du har givet tilladelse i browser indstillinger.');
                     floatingCall.style.display = 'none';
                     return;
                 }
@@ -574,7 +574,7 @@ function endFloatingCall() {
     document.getElementById('floatingVideoCall').style.display = 'none';
     
     // Reset placeholder
-    document.getElementById('floatingPlaceholder').innerHTML = '<div class="initials">📹</div><p>Forbinder...</p>';
+    document.getElementById('floatingPlaceholder').innerHTML = '<div class="initials"></div><p>Forbinder...</p>';
     
     // Hide local video
     document.getElementById('floatingLocalVideo').style.display = 'none';
@@ -591,7 +591,7 @@ function toggleCamera() {
             const btn = document.getElementById('camBtn');
             if (btn) {
                 btn.style.background = cameraEnabled ? 'var(--color-blue)' : 'var(--color-red)';
-                btn.textContent = cameraEnabled ? '📹 Kamera' : '📹 Kamera (Slukket)';
+                btn.textContent = cameraEnabled ? ' Kamera' : ' Kamera (Slukket)';
             }
         }
     }
@@ -608,7 +608,7 @@ function toggleMicrophone() {
             const btn = document.getElementById('micBtn');
             if (btn) {
                 btn.style.background = microphoneEnabled ? 'var(--color-green)' : 'var(--color-red)';
-                btn.textContent = microphoneEnabled ? '🎤 Mikrofon' : '🎤 Mikrofon (Slukket)';
+                btn.textContent = microphoneEnabled ? ' Mikrofon' : ' Mikrofon (Slukket)';
             }
         }
     }
@@ -626,10 +626,10 @@ function toggleRemoteAudio() {
     const btn = document.getElementById('remoteMuteBtn');
     if (btn) {
         btn.style.background = remoteAudioMuted ? 'var(--color-red)' : 'var(--color-orange)';
-        btn.textContent = remoteAudioMuted ? '🔇 Lyd fra' : '🔊 Lyd fra';
+        btn.textContent = remoteAudioMuted ? ' Lyd fra' : ' Lyd fra';
     }
     
-    console.log(remoteAudioMuted ? '🔇 Remote audio muted' : '🔊 Remote audio unmuted');
+    console.log(remoteAudioMuted ? ' Remote audio muted' : ' Remote audio unmuted');
 }
 
 // Stop screen share manually
@@ -647,11 +647,11 @@ async function stopScreenShare() {
             if (sender && videoTrack) {
                 // Replace screen track with camera track
                 await sender.replaceTrack(videoTrack);
-                console.log(`✅ Camera track restored for peer ${socketId}`);
+                console.log(` Camera track restored for peer ${socketId}`);
             } else if (sender && !videoTrack) {
                 // Was audio-only before screen share - remove video track
                 pc.removeTrack(sender);
-                console.log(`✅ Screen track removed from peer ${socketId} (reverting to audio-only)`);
+                console.log(` Screen track removed from peer ${socketId} (reverting to audio-only)`);
             }
             
             // Create new offer to trigger renegotiation
@@ -664,13 +664,13 @@ async function stopScreenShare() {
                 offer,
                 targetSocketId: socketId
             });
-            console.log(`📡 Sent camera restore offer to peer ${socketId}`);
+            console.log(` Sent camera restore offer to peer ${socketId}`);
         };
         renegotiationPromises.push(renegotiate());
     });
     
     await Promise.all(renegotiationPromises);
-    console.log('✅ Reverted to camera for all peers');
+    console.log(' Reverted to camera for all peers');
     
     // Revert local video to show camera again
     const localVideoElement = document.querySelector('#localVideo video');
@@ -689,7 +689,7 @@ async function stopScreenShare() {
     if (shareBtn) shareBtn.style.display = 'inline-block';
     if (stopShareBtn) stopShareBtn.style.display = 'none';
     
-    console.log('⏹️ Screen sharing stopped');
+    console.log(' Screen sharing stopped');
 }
 
 // Screen share
@@ -719,18 +719,18 @@ async function shareScreen() {
                 if (sender) {
                     // Replace existing video track (camera → screen)
                     await sender.replaceTrack(screenTrack);
-                    console.log(`✅ Screen track replaced for peer ${socketId}`);
+                    console.log(` Screen track replaced for peer ${socketId}`);
                 } else {
                     // No video track exists (audio-only call) - add screen track
                     pc.addTrack(screenTrack, screenStream);
-                    console.log(`✅ Screen track added to peer ${socketId} (was audio-only)`);
+                    console.log(` Screen track added to peer ${socketId} (was audio-only)`);
                 }
                 
                 // Add screen audio if available
                 const screenAudioTrack = screenStream.getAudioTracks()[0];
                 if (screenAudioTrack) {
                     pc.addTrack(screenAudioTrack, screenStream);
-                    console.log(`🔊 Screen audio track added for peer ${socketId}`);
+                    console.log(` Screen audio track added for peer ${socketId}`);
                 }
                 
                 // Create new offer to trigger renegotiation
@@ -743,14 +743,14 @@ async function shareScreen() {
                     offer,
                     targetSocketId: socketId
                 });
-                console.log(`📡 Sent renegotiation offer to peer ${socketId}`);
+                console.log(` Sent renegotiation offer to peer ${socketId}`);
             };
             renegotiationPromises.push(renegotiate());
         });
         
         // Wait for all renegotiations to complete
         await Promise.all(renegotiationPromises);
-        console.log('✅ Screen sharing activated for all peers');
+        console.log(' Screen sharing activated for all peers');
         
         // Update local video to show screen share preview
         const localVideoElement = document.querySelector('#localVideo video');
@@ -779,11 +779,11 @@ async function shareScreen() {
                         if (sender && videoTrack) {
                             // Replace screen track with camera track
                             await sender.replaceTrack(videoTrack);
-                            console.log(`✅ Camera track restored for peer ${socketId}`);
+                            console.log(` Camera track restored for peer ${socketId}`);
                         } else if (sender && !videoTrack) {
                             // Was audio-only before screen share - remove video track
                             pc.removeTrack(sender);
-                            console.log(`✅ Screen track removed from peer ${socketId} (reverting to audio-only)`);
+                            console.log(` Screen track removed from peer ${socketId} (reverting to audio-only)`);
                         }
                         
                         // Create new offer to trigger renegotiation
@@ -796,13 +796,13 @@ async function shareScreen() {
                             offer,
                             targetSocketId: socketId
                         });
-                        console.log(`📡 Sent camera restore offer to peer ${socketId}`);
+                        console.log(` Sent camera restore offer to peer ${socketId}`);
                     };
                     renegotiationPromises.push(renegotiate());
                 });
                 
                 await Promise.all(renegotiationPromises);
-                console.log('✅ Reverted to camera for all peers');
+                console.log(' Reverted to camera for all peers');
                 
                 // Revert local video to show camera again
                 const localVideoElement = document.querySelector('#localVideo video');
@@ -823,7 +823,7 @@ async function shareScreen() {
             if (stopShareBtn) stopShareBtn.style.display = 'none';
         };
         
-        console.log('✅ Screen sharing setup complete');
+        console.log(' Screen sharing setup complete');
         
     } catch (error) {
         console.error('Screen share error:', error);
@@ -865,7 +865,7 @@ function endCall() {
     if (mainVideo) {
         mainVideo.innerHTML = `
             <div id="callPlaceholder" style="text-align: center; color: white;">
-                <div style="font-size: 80px; margin-bottom: 20px;">📹</div>
+                <div style="font-size: 80px; margin-bottom: 20px;"></div>
                 <h3>Vælg en kollega for at starte videoopkald</h3>
                 <p style="margin-top: 10px; opacity: 0.7;">Klik på en kollega i listen til højre</p>
             </div>
@@ -899,14 +899,14 @@ function loadVideoCallColleagues() {
         const others = colleagues.filter(c => c.id !== window.currentUser.id);
         
         if (others.length === 0) {
-            colleaguesList.innerHTML = '<p style="text-align: center; color: #999; padding: 20px;">Ingen kolleger fundet</p>';
+            colleaguesList.innerHTML = '<p style="text-align: center; color: var(--text-muted); padding: 20px;">Ingen kolleger fundet</p>';
             return;
         }
         
         colleaguesList.innerHTML = others.map(colleague => {
             const initials = colleague.name.split(' ').map(n => n[0]).join('');
             const isOnline = window.onlineUsers && window.onlineUsers.has(colleague.id);
-            const statusColor = isOnline ? 'var(--color-green)' : '#999';
+            const statusColor = isOnline ? 'var(--color-green)' : 'var(--text-muted)';
             const statusText = isOnline ? 'Online' : 'Offline';
             
             return `
@@ -919,7 +919,7 @@ function loadVideoCallColleagues() {
                         <div class="colleague-name">${colleague.name}</div>
                         <div class="colleague-position" style="color: ${statusColor};">${statusText}</div>
                     </div>
-                    <button class="call-btn" ${!isOnline ? 'disabled style="opacity: 0.5; cursor: not-allowed;"' : ''}>📞 Ring</button>
+                    <button class="call-btn" ${!isOnline ? 'disabled style="opacity: 0.5; cursor: not-allowed;"' : ''}> Ring</button>
                 </div>
             `;
         }).join('');

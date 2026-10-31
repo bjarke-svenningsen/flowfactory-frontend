@@ -59,7 +59,7 @@ async function createCompanyFolder() {
     // Check if company folder already exists
     const existingCompanyFolder = allFolders.find(f => f.is_company_folder && f.name === 'SG Seest Gulvteknik');
     if (existingCompanyFolder) {
-        alert('❌ firma mappen findes allerede!');
+        alert(' firma mappen findes allerede!');
         return;
     }
     
@@ -86,7 +86,7 @@ async function createCompanyFolder() {
             throw new Error(error.error || 'Failed to create company folder');
         }
         
-        alert('✅ firma mappe oprettet!\n\nAlle brugere kan nu se og bruge denne mappe.');
+        alert(' firma mappe oprettet!\n\nAlle brugere kan nu se og bruge denne mappe.');
         await loadFolders();
         renderFolderTree();
     } catch (error) {
@@ -111,32 +111,32 @@ function renderFolderTree() {
     
     let html = `
         <div class="tree-item ${currentFilter === 'all' && !currentFolderId ? 'selected' : ''}" onclick="filterFiles('all')">
-            <span class="tree-expand">📁</span> Alle Filer (${allFiles.length})
+            <span class="tree-expand"></span> Alle Filer (${allFiles.length})
         </div>
         <div class="tree-item ${currentFilter === 'documents' ? 'selected' : ''}" onclick="filterFiles('documents')">
-            <span class="tree-expand">📄</span> Dokumenter (${documentCount})
+            <span class="tree-expand"></span> Dokumenter (${documentCount})
         </div>
         <div class="tree-item ${currentFilter === 'images' ? 'selected' : ''}" onclick="filterFiles('images')">
-            <span class="tree-expand">🖼️</span> Billeder (${imageCount})
+            <span class="tree-expand"></span> Billeder (${imageCount})
         </div>
         <div class="tree-item ${currentFilter === 'shared' ? 'selected' : ''}" onclick="filterFiles('shared')">
-            <span class="tree-expand">🔗</span> Delte Filer
+            <span class="tree-expand"></span> Delte Filer
         </div>
     `;
     
     // Show company folders first (firma)
     const companyFolders = allFolders.filter(f => f.is_company_folder && !f.parent_id);
     if (companyFolders.length > 0) {
-        html += '<div style=\"margin-top: 10px; padding-top: 10px; border-top: 1px solid #e0e0e0;\"></div>';
-        html += '<div style=\"padding: 5px 10px; font-size: 12px; color: #999; font-weight: 600;\">🏢 SG SEEST GULVTEKNIK</div>';
+        html += '<div style=\"margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border);\"></div>';
+        html += '<div style=\"padding: 5px 10px; font-size: 12px; color: var(--text-muted); font-weight: 600;\"> SG SEEST GULVTEKNIK</div>';
         html += renderFolderBranch(companyFolders, 0, true);
     }
     
     // Show user's personal folders
     const personalFolders = allFolders.filter(f => !f.is_company_folder && !f.parent_id);
     if (personalFolders.length > 0) {
-        html += '<div style=\"margin-top: 10px; padding-top: 10px; border-top: 1px solid #e0e0e0;\"></div>';
-        html += '<div style=\"padding: 5px 10px; font-size: 12px; color: #999; font-weight: 600;\">DINE MAPPER</div>';
+        html += '<div style=\"margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border);\"></div>';
+        html += '<div style=\"padding: 5px 10px; font-size: 12px; color: var(--text-muted); font-weight: 600;\">DINE MAPPER</div>';
         html += renderFolderBranch(personalFolders, 0, false);
     }
     
@@ -156,7 +156,7 @@ function renderFolderBranch(folders, level, isCompany = false) {
         
         const indent = level * 15;
         const expandIcon = hasChildren ? (isExpanded ? '▼' : '▶') : '　';
-        const folderIcon = '📁'; // All folders use same icon
+        const folderIcon = ''; // All folders use same icon
         
         html += `
             <div class=\"tree-item ${isSelected ? 'selected' : ''}\" style=\"padding-left: ${indent + 10}px;\" data-folder-id=\"${folder.id}\" ondrop=\"handleFolderDrop(event, ${folder.id})\" ondragover=\"handleFolderDragOver(event)\" ondragleave=\"handleFolderDragLeave(event)\">
@@ -198,14 +198,14 @@ async function filterFiles(category) {
     // Load shared files if selecting "Delte Filer"
     if (category === 'shared') {
         const tbody = document.getElementById('fileListBody');
-        tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; padding: 20px;">⏳ Henter delte filer...</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; padding: 20px;"> Henter delte filer...</td></tr>';
         
         const sharedFiles = await loadSharedFiles();
         
         renderFolderTree();
         
         if (sharedFiles.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; padding: 40px; color: #999;">Ingen delte filer endnu.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; padding: 40px; color: var(--text-muted);">Ingen delte filer endnu.</td></tr>';
             document.getElementById('fileCount').textContent = '0 filer';
             document.getElementById('addressBar').textContent = 'Delte Filer';
             return;
@@ -309,9 +309,9 @@ function renderRealFiles() {
         const emptyMessage = currentFilter === 'folder' 
             ? 'Mappen er tom. Upload filer til denne mappe.'
             : currentFilter === 'all' 
-            ? 'Ingen filer uploadet endnu. Klik "📤 Upload" for at tilføje filer.'
+            ? 'Ingen filer uploadet endnu. Klik " Upload" for at tilføje filer.'
             : `Ingen ${filterNames[currentFilter].toLowerCase()} endnu.`;
-        tbody.innerHTML = `<tr><td colspan="4" style="text-align: center; padding: 40px; color: #999;">${emptyMessage}</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="4" style="text-align: center; padding: 40px; color: var(--text-muted);">${emptyMessage}</td></tr>`;
         fileCount.textContent = '0 filer';
         return;
     }
@@ -321,7 +321,7 @@ function renderRealFiles() {
     // Render subfolders first (like Windows Explorer)
     subfolders.forEach(folder => {
         const fileCount = allFiles.filter(f => f.folder_id === folder.id).length;
-        const folderIcon = '📁'; // All folders use same icon
+        const folderIcon = ''; // All folders use same icon
         const date = new Date(folder.created_at).toLocaleDateString('da-DK');
         
         html += `
@@ -440,7 +440,7 @@ async function uploadFileToExplorer(event) {
             throw new Error(result.error || 'Upload failed');
         }
         
-        alert(`✅ ${file.name} uploadet succesfuldt!`);
+        alert(` ${file.name} uploadet succesfuldt!`);
         
         console.log('Reloading files...');
         await loadRealFiles();
@@ -464,7 +464,7 @@ async function openRealFile(fileId) {
     if (imageExtensions.includes(ext)) {
         await previewImage(fileId, file.original_name);
     } else {
-        alert(`${file.original_name}\n\nStørrelse: ${formatFileSize(file.file_size)}\nType: ${getFileType(file.original_name)}\nUploadet af: ${file.uploader_name}\nDato: ${new Date(file.created_at).toLocaleString('da-DK')}\n\nTryk "💾 Download" knappen for at downloade filen.`);
+        alert(`${file.original_name}\n\nStørrelse: ${formatFileSize(file.file_size)}\nType: ${getFileType(file.original_name)}\nUploadet af: ${file.uploader_name}\nDato: ${new Date(file.created_at).toLocaleString('da-DK')}\n\nTryk " Download" knappen for at downloade filen.`);
     }
 }
 
@@ -544,7 +544,7 @@ async function deleteSelected() {
             throw new Error(error.error || 'Delete failed');
         }
         
-        alert('✅ Fil slettet');
+        alert(' Fil slettet');
         selectedFileId = null;
         await loadRealFiles();
     } catch (error) {
@@ -564,13 +564,13 @@ function downloadFile() {
 function getFileIcon(filename) {
     const ext = filename.split('.').pop().toLowerCase();
     const icons = {
-        'pdf': '📄', 'doc': '📝', 'docx': '📝',
-        'xls': '📊', 'xlsx': '📊', 'ppt': '📊', 'pptx': '📊',
-        'jpg': '🖼️', 'jpeg': '🖼️', 'png': '🖼️', 'gif': '🖼️',
-        'zip': '📦', 'rar': '📦', 'txt': '📃',
-        'html': '🌐', 'css': '🎨', 'js': '⚙️'
+        'pdf': '', 'doc': '', 'docx': '',
+        'xls': '', 'xlsx': '', 'ppt': '', 'pptx': '',
+        'jpg': '', 'jpeg': '', 'png': '', 'gif': '',
+        'zip': '', 'rar': '', 'txt': '',
+        'html': '', 'css': '', 'js': ''
     };
-    return icons[ext] || '📄';
+    return icons[ext] || '';
 }
 
 function getFileType(filename) {
@@ -639,7 +639,7 @@ async function showNewFolderDialog() {
             throw new Error(error.error || 'Failed to create folder');
         }
         
-        alert(`✅ Mappe "${folderName}" oprettet!`);
+        alert(` Mappe "${folderName}" oprettet!`);
         await loadFolders();
         renderFolderTree();
     } catch (error) {
@@ -663,7 +663,7 @@ function searchFiles() {
     const tbody = document.getElementById('fileListBody');
     
     if (filteredFiles.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="4" style="text-align: center; padding: 40px; color: #999;">Ingen filer matcher "${query}"</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="4" style="text-align: center; padding: 40px; color: var(--text-muted);">Ingen filer matcher "${query}"</td></tr>`;
         document.getElementById('fileCount').textContent = '0 filer';
         document.getElementById('addressBar').textContent = `Søgeresultat: "${query}"`;
         return;
@@ -748,7 +748,7 @@ async function createSubfolder() {
             throw new Error(error.error || 'Failed to create folder');
         }
         
-        alert(`✅ Mappe "${folderName}" oprettet!`);
+        alert(` Mappe "${folderName}" oprettet!`);
         expandedFolders.add(selectedFolderId); // Auto-expand parent
         await loadFolders();
         renderFolderTree();
@@ -782,7 +782,7 @@ async function renameFolderSelected() {
             throw new Error(error.error || 'Failed to rename folder');
         }
         
-        alert(`✅ Mappe omdøbt til "${newName}"`);
+        alert(` Mappe omdøbt til "${newName}"`);
         await loadFolders();
         renderFolderTree();
     } catch (error) {
@@ -810,7 +810,7 @@ async function deleteFolderSelected() {
             throw new Error(error.error || 'Delete failed');
         }
         
-        alert('✅ Mappe slettet');
+        alert(' Mappe slettet');
         await loadFolders();
         renderFolderTree();
     } catch (error) {
@@ -854,7 +854,7 @@ async function transferToOrder() {
     
     const orderNumber = prompt(`Overfør "${file.original_name}" til ordre:\n\nIndtast ordrenummer:`);
     if (!orderNumber || !orderNumber.trim()) {
-        alert('❌ Ordre nummer er påkrævet!\n\nDu skal indtaste et ordre nummer for at overføre filen.');
+        alert(' Ordre nummer er påkrævet!\n\nDu skal indtaste et ordre nummer for at overføre filen.');
         return;
     }
     
@@ -875,7 +875,7 @@ async function transferToOrder() {
             throw new Error(result.error || 'Transfer failed');
         }
         
-        alert(`✅ ${result.message}\n\nOrdre: ${result.order.title}`);
+        alert(` ${result.message}\n\nOrdre: ${result.order.title}`);
         
     } catch (error) {
         console.error('Transfer error:', error);
@@ -973,7 +973,7 @@ async function renameSelected() {
             throw new Error(errorMsg);
         }
         
-        await winAlert(`✅ Fil omdøbt til "${finalName}"`, 'Succes');
+        await winAlert(` Fil omdøbt til "${finalName}"`, 'Succes');
         await loadRealFiles();
         
     } catch (error) {
@@ -1012,7 +1012,7 @@ async function shareFile() {
         const targetUser = users.find(u => u.email.toLowerCase() === email.trim().toLowerCase());
         
         if (!targetUser) {
-            alert('❌ Bruger ikke fundet. Tjek emailen og prøv igen.');
+            alert(' Bruger ikke fundet. Tjek emailen og prøv igen.');
             return;
         }
         
@@ -1034,7 +1034,7 @@ async function shareFile() {
             throw new Error(error.error || 'Kunne ikke dele fil');
         }
         
-        alert(`✅ Fil "${file.original_name}" delt med ${targetUser.name}!`);
+        alert(` Fil "${file.original_name}" delt med ${targetUser.name}!`);
         
     } catch (error) {
         console.error('Share error:', error);

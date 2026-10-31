@@ -70,7 +70,7 @@ async function addPost() {
             });
 
             if (currentAttachments.some(a => a.type !== 'image')) {
-                alert('⚠️ Bemærk: video- og fil-vedhæftninger gemmes ikke permanent endnu.');
+                alert(' Bemærk: video- og fil-vedhæftninger gemmes ikke permanent endnu.');
             }
         } else {
             let msg = '';
@@ -84,11 +84,11 @@ async function addPost() {
         // IKKE længere: gem lokalt i det skjulte. Brugeren skal vide at posten IKKE blev gemt!
         console.error('Kunne ikke gemme post:', error);
         if (error.message.includes('401')) {
-            alert('❌ Posten kunne ikke gemmes: din session er udløbet. Log ud og ind igen.');
+            alert(' Posten kunne ikke gemmes: din session er udløbet. Log ud og ind igen.');
         } else if (error.message.includes('Failed to fetch')) {
-            alert('❌ Posten kunne ikke gemmes: ingen forbindelse til serveren. Tjek din internetforbindelse.');
+            alert(' Posten kunne ikke gemmes: ingen forbindelse til serveren. Tjek din internetforbindelse.');
         } else {
-            alert('❌ Posten kunne ikke gemmes: ' + error.message);
+            alert(' Posten kunne ikke gemmes: ' + error.message);
         }
         return;
     }
@@ -167,7 +167,7 @@ function updateFilePreview() {
                     <div class="preview-item">
                         <button class="remove-preview" onclick="removeAttachment(${index})">×</button>
                         <div class="file-attachment">
-                            📎 ${att.name} (${att.size})
+                             ${att.name} (${att.size})
                         </div>
                     </div>
                 `;
@@ -269,7 +269,7 @@ async function loadPosts() {
         }
     } catch (error) {
         console.error('Kunne ikke hente posts fra backend:', error);
-        alert('⚠️ Kunne ikke hente opslag fra serveren. Viser gemte opslag – prøv at logge ud og ind igen, hvis det fortsætter.');
+        alert(' Kunne ikke hente opslag fra serveren. Viser gemte opslag – prøv at logge ud og ind igen, hvis det fortsætter.');
         return;
     }
 
@@ -311,7 +311,7 @@ async function renderPosts() {
     const feedContainer = document.getElementById('feedPosts');
     
     if (posts.length === 0) {
-        feedContainer.innerHTML = '<p style="text-align: center; color: #999; padding: 40px;">Ingen opslag endnu. Vær den første til at dele noget!</p>';
+        feedContainer.innerHTML = '<p style="text-align: center; color: var(--text-muted); padding: 40px;">Ingen opslag endnu. Vær den første til at dele noget!</p>';
         return;
     }
 
@@ -348,7 +348,7 @@ async function renderPosts() {
                         </div>
                     `;
                 } else {
-                    return `<div class="post-file">📎 ${att.name} (${att.size})</div>`;
+                    return `<div class="post-file"> ${att.name} (${att.size})</div>`;
                 }
             }).join('');
         }
@@ -406,20 +406,20 @@ async function renderPosts() {
                 // Edit/delete buttons for own comments
                 const commentActionsHTML = isOwnComment ? `
                     <div style="margin-left: 50px; margin-top: 4px; margin-bottom: 8px; display: flex; gap: 10px;">
-                        <button onclick="editComment(${post.id}, ${commentIndex})" style="background: none; border: none; color: #65676b; cursor: pointer; font-size: 12px; font-weight: 600;">✏️ Rediger</button>
-                        <button onclick="deleteComment(${post.id}, ${commentIndex})" style="background: none; border: none; color: #65676b; cursor: pointer; font-size: 12px; font-weight: 600;">🗑️ Slet</button>
-                        <span style="color: #65676b; font-size: 12px;">${commentTimeAgo}</span>
+                        <button onclick="editComment(${post.id}, ${commentIndex})" style="background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 12px; font-weight: 600;"> Rediger</button>
+                        <button onclick="deleteComment(${post.id}, ${commentIndex})" style="background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 12px; font-weight: 600;"> Slet</button>
+                        <span style="color: var(--text-muted); font-size: 12px;">${commentTimeAgo}</span>
                     </div>
                 ` : `
-                    <div style="margin-left: 50px; margin-bottom: 8px; font-size: 12px; color: #65676b;">${commentTimeAgo}</div>
+                    <div style="margin-left: 50px; margin-bottom: 8px; font-size: 12px; color: var(--text-muted);">${commentTimeAgo}</div>
                 `;
                 
                 return `
                     <div class="comment-item" style="display: flex; gap: 10px; margin-bottom: 4px;">
                         ${commentAvatarHTML}
-                        <div style="flex: 1; background: #f0f2f5; padding: 8px 12px; border-radius: 18px;">
+                        <div style="flex: 1; background: var(--surface-muted); padding: 8px 12px; border-radius: 18px;">
                             <div style="font-weight: 600; font-size: 13px; margin-bottom: 2px;">${comment.author}</div>
-                            <div style="font-size: 14px; color: #050505;">${comment.content}</div>
+                            <div style="font-size: 14px; color: var(--text);">${comment.content}</div>
                         </div>
                     </div>
                     ${commentActionsHTML}
@@ -457,11 +457,11 @@ async function renderPosts() {
                 <div class="post-actions">
                     <button class="post-action-btn" onclick="likePost(${post.id})">Synes godt om (${post.likes})</button>
                     <button class="post-action-btn" onclick="commentOnPost(${post.id})">Kommenter${post.comments && post.comments.length > 0 ? ` (${post.comments.length})` : ''}</button>
-                    <button class="post-action-btn" onclick="sharePost(${post.id})">↗️ Del</button>
+                    <button class="post-action-btn" onclick="sharePost(${post.id})">↗ Del</button>
                 </div>
                 
                 <!-- Facebook-style comment section -->
-                <div id="comments-${post.id}" class="comments-section" style="display: none; padding: 15px; border-top: 1px solid #e4e6eb; background: #f7f8fa; position: relative;">
+                <div id="comments-${post.id}" class="comments-section" style="display: none; padding: 15px; border-top: 1px solid var(--border); background: var(--surface-muted); position: relative;">
                     ${commentsHTML}
                     <div style="display: flex; gap: 10px; align-items: center; position: relative;">
                         ${currentUserAvatarHTML}
@@ -471,94 +471,94 @@ async function renderPosts() {
                                 id="comment-input-${post.id}" 
                                 placeholder="Skriv en kommentar..." 
                                 onkeypress="handleCommentKeyPress(event, ${post.id})"
-                                style="width: 100%; padding: 8px 40px 8px 12px; border: 1px solid #ccc; border-radius: 18px; font-size: 14px; outline: none;"
+                                style="width: 100%; padding: 8px 40px 8px 12px; border: 1px solid var(--border); border-radius: 18px; font-size: 14px; outline: none;"
                             >
-                            <button onclick="toggleCommentEmojiPicker(${post.id})" style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; font-size: 18px; padding: 4px;">😊</button>
+                            <button onclick="toggleCommentEmojiPicker(${post.id})" style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; font-size: 18px; padding: 4px;"></button>
                             
                             <!-- Emoji picker for comment -->
-                            <div id="comment-emoji-picker-${post.id}" class="emoji-picker" style="display: none; position: absolute; bottom: 45px; right: 0; background: white; border: 1px solid #ccc; border-radius: 8px; padding: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.15); z-index: 1000; max-height: 300px; overflow-y: auto;">
+                            <div id="comment-emoji-picker-${post.id}" class="emoji-picker" style="display: none; position: absolute; bottom: 45px; right: 0; background: white; border: 1px solid var(--border); border-radius: 8px; padding: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.15); z-index: 1000; max-height: 300px; overflow-y: auto;">
                                 <div class="emoji-grid" style="display: grid; grid-template-columns: repeat(8, 1fr); gap: 5px;">
-                                    <span class="emoji-item" onclick="insertCommentEmoji(${post.id}, '😊')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">😊</span>
+                                    <span class="emoji-item" onclick="insertCommentEmoji(${post.id}, '')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;"></span>
                                     <span class="emoji-item" onclick="insertCommentEmoji(${post.id}, '😂')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">😂</span>
-                                    <span class="emoji-item" onclick="insertCommentEmoji(${post.id}, '🤣')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">🤣</span>
-                                    <span class="emoji-item" onclick="insertCommentEmoji(${post.id}, '😍')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">😍</span>
-                                    <span class="emoji-item" onclick="insertCommentEmoji(${post.id}, '😘')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">😘</span>
-                                    <span class="emoji-item" onclick="insertCommentEmoji(${post.id}, '😎')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">😎</span>
-                                    <span class="emoji-item" onclick="insertCommentEmoji(${post.id}, '🥳')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">🥳</span>
-                                    <span class="emoji-item" onclick="insertCommentEmoji(${post.id}, '🤗')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">🤗</span>
-                                    <span class="emoji-item" onclick="insertCommentEmoji(${post.id}, '🥰')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">🥰</span>
-                                    <span class="emoji-item" onclick="insertCommentEmoji(${post.id}, '😇')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">😇</span>
-                                    <span class="emoji-item" onclick="insertCommentEmoji(${post.id}, '🙃')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">🙃</span>
-                                    <span class="emoji-item" onclick="insertCommentEmoji(${post.id}, '😉')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">😉</span>
-                                    <span class="emoji-item" onclick="insertCommentEmoji(${post.id}, '😋')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">😋</span>
-                                    <span class="emoji-item" onclick="insertCommentEmoji(${post.id}, '😛')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">😛</span>
-                                    <span class="emoji-item" onclick="insertCommentEmoji(${post.id}, '😜')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">😜</span>
-                                    <span class="emoji-item" onclick="insertCommentEmoji(${post.id}, '😝')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">😝</span>
-                                    <span class="emoji-item" onclick="insertCommentEmoji(${post.id}, '🤪')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">🤪</span>
-                                    <span class="emoji-item" onclick="insertCommentEmoji(${post.id}, '😁')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">😁</span>
-                                    <span class="emoji-item" onclick="insertCommentEmoji(${post.id}, '😏')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">😏</span>
-                                    <span class="emoji-item" onclick="insertCommentEmoji(${post.id}, '😌')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">😌</span>
-                                    <span class="emoji-item" onclick="insertCommentEmoji(${post.id}, '😔')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">😔</span>
+                                    <span class="emoji-item" onclick="insertCommentEmoji(${post.id}, '')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;"></span>
+                                    <span class="emoji-item" onclick="insertCommentEmoji(${post.id}, '')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;"></span>
+                                    <span class="emoji-item" onclick="insertCommentEmoji(${post.id}, '')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;"></span>
+                                    <span class="emoji-item" onclick="insertCommentEmoji(${post.id}, '')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;"></span>
+                                    <span class="emoji-item" onclick="insertCommentEmoji(${post.id}, '')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;"></span>
+                                    <span class="emoji-item" onclick="insertCommentEmoji(${post.id}, '')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;"></span>
+                                    <span class="emoji-item" onclick="insertCommentEmoji(${post.id}, '')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;"></span>
+                                    <span class="emoji-item" onclick="insertCommentEmoji(${post.id}, '')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;"></span>
+                                    <span class="emoji-item" onclick="insertCommentEmoji(${post.id}, '')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;"></span>
+                                    <span class="emoji-item" onclick="insertCommentEmoji(${post.id}, '')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;"></span>
+                                    <span class="emoji-item" onclick="insertCommentEmoji(${post.id}, '')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;"></span>
+                                    <span class="emoji-item" onclick="insertCommentEmoji(${post.id}, '')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;"></span>
+                                    <span class="emoji-item" onclick="insertCommentEmoji(${post.id}, '')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;"></span>
+                                    <span class="emoji-item" onclick="insertCommentEmoji(${post.id}, '')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;"></span>
+                                    <span class="emoji-item" onclick="insertCommentEmoji(${post.id}, '')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;"></span>
+                                    <span class="emoji-item" onclick="insertCommentEmoji(${post.id}, '')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;"></span>
+                                    <span class="emoji-item" onclick="insertCommentEmoji(${post.id}, '')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;"></span>
+                                    <span class="emoji-item" onclick="insertCommentEmoji(${post.id}, '')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;"></span>
+                                    <span class="emoji-item" onclick="insertCommentEmoji(${post.id}, '')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;"></span>
                                     <span class="emoji-item" onclick="insertCommentEmoji(${post.id}, '😢')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">😢</span>
-                                    <span class="emoji-item" onclick="insertCommentEmoji(${post.id}, '😭')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">😭</span>
-                                    <span class="emoji-item" onclick="insertCommentEmoji(${post.id}, '😤')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">😤</span>
-                                    <span class="emoji-item" onclick="insertCommentEmoji(${post.id}, '😡')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">😡</span>
-                                    <span class="emoji-item" onclick="insertCommentEmoji(${post.id}, '🤬')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">🤬</span>
-                                    <span class="emoji-item" onclick="insertCommentEmoji(${post.id}, '😱')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">😱</span>
-                                    <span class="emoji-item" onclick="insertCommentEmoji(${post.id}, '😨')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">😨</span>
-                                    <span class="emoji-item" onclick="insertCommentEmoji(${post.id}, '🥺')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">🥺</span>
-                                    <span class="emoji-item" onclick="insertCommentEmoji(${post.id}, '🤔')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">🤔</span>
-                                    <span class="emoji-item" onclick="insertCommentEmoji(${post.id}, '🤨')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">🤨</span>
-                                    <span class="emoji-item" onclick="insertCommentEmoji(${post.id}, '😐')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">😐</span>
-                                    <span class="emoji-item" onclick="insertCommentEmoji(${post.id}, '😑')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">😑</span>
-                                    <span class="emoji-item" onclick="insertCommentEmoji(${post.id}, '🙄')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">🙄</span>
-                                    <span class="emoji-item" onclick="insertCommentEmoji(${post.id}, '😴')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">😴</span>
-                                    <span class="emoji-item" onclick="insertCommentEmoji(${post.id}, '🤤')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">🤤</span>
-                                    <span class="emoji-item" onclick="insertCommentEmoji(${post.id}, '🥱')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">🥱</span>
+                                    <span class="emoji-item" onclick="insertCommentEmoji(${post.id}, '')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;"></span>
+                                    <span class="emoji-item" onclick="insertCommentEmoji(${post.id}, '')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;"></span>
+                                    <span class="emoji-item" onclick="insertCommentEmoji(${post.id}, '')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;"></span>
+                                    <span class="emoji-item" onclick="insertCommentEmoji(${post.id}, '')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;"></span>
+                                    <span class="emoji-item" onclick="insertCommentEmoji(${post.id}, '')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;"></span>
+                                    <span class="emoji-item" onclick="insertCommentEmoji(${post.id}, '')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;"></span>
+                                    <span class="emoji-item" onclick="insertCommentEmoji(${post.id}, '')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;"></span>
+                                    <span class="emoji-item" onclick="insertCommentEmoji(${post.id}, '')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;"></span>
+                                    <span class="emoji-item" onclick="insertCommentEmoji(${post.id}, '')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;"></span>
+                                    <span class="emoji-item" onclick="insertCommentEmoji(${post.id}, '')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;"></span>
+                                    <span class="emoji-item" onclick="insertCommentEmoji(${post.id}, '')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;"></span>
+                                    <span class="emoji-item" onclick="insertCommentEmoji(${post.id}, '')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;"></span>
+                                    <span class="emoji-item" onclick="insertCommentEmoji(${post.id}, '')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;"></span>
+                                    <span class="emoji-item" onclick="insertCommentEmoji(${post.id}, '')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;"></span>
+                                    <span class="emoji-item" onclick="insertCommentEmoji(${post.id}, '')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;"></span>
                                     <span class="emoji-item" onclick="insertCommentEmoji(${post.id}, '👍')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">👍</span>
                                     <span class="emoji-item" onclick="insertCommentEmoji(${post.id}, '👎')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">👎</span>
-                                    <span class="emoji-item" onclick="insertCommentEmoji(${post.id}, '👏')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">👏</span>
-                                    <span class="emoji-item" onclick="insertCommentEmoji(${post.id}, '🙌')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">🙌</span>
-                                    <span class="emoji-item" onclick="insertCommentEmoji(${post.id}, '🤝')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">🤝</span>
-                                    <span class="emoji-item" onclick="insertCommentEmoji(${post.id}, '✋')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">✋</span>
-                                    <span class="emoji-item" onclick="insertCommentEmoji(${post.id}, '🤚')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">🤚</span>
-                                    <span class="emoji-item" onclick="insertCommentEmoji(${post.id}, '👋')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">👋</span>
-                                    <span class="emoji-item" onclick="insertCommentEmoji(${post.id}, '🤟')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">🤟</span>
-                                    <span class="emoji-item" onclick="insertCommentEmoji(${post.id}, '✌️')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">✌️</span>
-                                    <span class="emoji-item" onclick="insertCommentEmoji(${post.id}, '🤞')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">🤞</span>
-                                    <span class="emoji-item" onclick="insertCommentEmoji(${post.id}, '🫰')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">🫰</span>
-                                    <span class="emoji-item" onclick="insertCommentEmoji(${post.id}, '💪')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">💪</span>
+                                    <span class="emoji-item" onclick="insertCommentEmoji(${post.id}, '')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;"></span>
+                                    <span class="emoji-item" onclick="insertCommentEmoji(${post.id}, '')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;"></span>
+                                    <span class="emoji-item" onclick="insertCommentEmoji(${post.id}, '')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;"></span>
+                                    <span class="emoji-item" onclick="insertCommentEmoji(${post.id}, '')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;"></span>
+                                    <span class="emoji-item" onclick="insertCommentEmoji(${post.id}, '')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;"></span>
+                                    <span class="emoji-item" onclick="insertCommentEmoji(${post.id}, '')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;"></span>
+                                    <span class="emoji-item" onclick="insertCommentEmoji(${post.id}, '')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;"></span>
+                                    <span class="emoji-item" onclick="insertCommentEmoji(${post.id}, '')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;"></span>
+                                    <span class="emoji-item" onclick="insertCommentEmoji(${post.id}, '')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;"></span>
+                                    <span class="emoji-item" onclick="insertCommentEmoji(${post.id}, '')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;"></span>
+                                    <span class="emoji-item" onclick="insertCommentEmoji(${post.id}, '')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;"></span>
                                     <span class="emoji-item" onclick="insertCommentEmoji(${post.id}, '🙏')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">🙏</span>
-                                    <span class="emoji-item" onclick="insertCommentEmoji(${post.id}, '❤️')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">❤️</span>
-                                    <span class="emoji-item" onclick="insertCommentEmoji(${post.id}, '🧡')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">🧡</span>
-                                    <span class="emoji-item" onclick="insertCommentEmoji(${post.id}, '💛')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">💛</span>
-                                    <span class="emoji-item" onclick="insertCommentEmoji(${post.id}, '💚')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">💚</span>
-                                    <span class="emoji-item" onclick="insertCommentEmoji(${post.id}, '💙')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">💙</span>
-                                    <span class="emoji-item" onclick="insertCommentEmoji(${post.id}, '💜')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">💜</span>
-                                    <span class="emoji-item" onclick="insertCommentEmoji(${post.id}, '🖤')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">🖤</span>
-                                    <span class="emoji-item" onclick="insertCommentEmoji(${post.id}, '🤍')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">🤍</span>
-                                    <span class="emoji-item" onclick="insertCommentEmoji(${post.id}, '🤎')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">🤎</span>
-                                    <span class="emoji-item" onclick="insertCommentEmoji(${post.id}, '💕')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">💕</span>
-                                    <span class="emoji-item" onclick="insertCommentEmoji(${post.id}, '💖')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">💖</span>
-                                    <span class="emoji-item" onclick="insertCommentEmoji(${post.id}, '💗')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">💗</span>
-                                    <span class="emoji-item" onclick="insertCommentEmoji(${post.id}, '💓')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">💓</span>
-                                    <span class="emoji-item" onclick="insertCommentEmoji(${post.id}, '💞')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">💞</span>
+                                    <span class="emoji-item" onclick="insertCommentEmoji(${post.id}, '❤')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">❤</span>
+                                    <span class="emoji-item" onclick="insertCommentEmoji(${post.id}, '')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;"></span>
+                                    <span class="emoji-item" onclick="insertCommentEmoji(${post.id}, '')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;"></span>
+                                    <span class="emoji-item" onclick="insertCommentEmoji(${post.id}, '')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;"></span>
+                                    <span class="emoji-item" onclick="insertCommentEmoji(${post.id}, '')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;"></span>
+                                    <span class="emoji-item" onclick="insertCommentEmoji(${post.id}, '')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;"></span>
+                                    <span class="emoji-item" onclick="insertCommentEmoji(${post.id}, '')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;"></span>
+                                    <span class="emoji-item" onclick="insertCommentEmoji(${post.id}, '')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;"></span>
+                                    <span class="emoji-item" onclick="insertCommentEmoji(${post.id}, '')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;"></span>
+                                    <span class="emoji-item" onclick="insertCommentEmoji(${post.id}, '')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;"></span>
+                                    <span class="emoji-item" onclick="insertCommentEmoji(${post.id}, '')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;"></span>
+                                    <span class="emoji-item" onclick="insertCommentEmoji(${post.id}, '')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;"></span>
+                                    <span class="emoji-item" onclick="insertCommentEmoji(${post.id}, '')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;"></span>
+                                    <span class="emoji-item" onclick="insertCommentEmoji(${post.id}, '')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;"></span>
                                     <span class="emoji-item" onclick="insertCommentEmoji(${post.id}, '🔥')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">🔥</span>
-                                    <span class="emoji-item" onclick="insertCommentEmoji(${post.id}, '✨')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">✨</span>
-                                    <span class="emoji-item" onclick="insertCommentEmoji(${post.id}, '💯')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">💯</span>
-                                    <span class="emoji-item" onclick="insertCommentEmoji(${post.id}, '⭐')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">⭐</span>
-                                    <span class="emoji-item" onclick="insertCommentEmoji(${post.id}, '🎉')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">🎉</span>
-                                    <span class="emoji-item" onclick="insertCommentEmoji(${post.id}, '🎊')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">🎊</span>
-                                    <span class="emoji-item" onclick="insertCommentEmoji(${post.id}, '🎈')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">🎈</span>
-                                    <span class="emoji-item" onclick="insertCommentEmoji(${post.id}, '👀')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">👀</span>
-                                    <span class="emoji-item" onclick="insertCommentEmoji(${post.id}, '💀')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">💀</span>
-                                    <span class="emoji-item" onclick="insertCommentEmoji(${post.id}, '💩')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">💩</span>
-                                    <span class="emoji-item" onclick="insertCommentEmoji(${post.id}, '👻')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">👻</span>
-                                    <span class="emoji-item" onclick="insertCommentEmoji(${post.id}, '🤡')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">🤡</span>
-                                    <span class="emoji-item" onclick="insertCommentEmoji(${post.id}, '🦄')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">🦄</span>
-                                    <span class="emoji-item" onclick="insertCommentEmoji(${post.id}, '✅')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">✅</span>
-                                    <span class="emoji-item" onclick="insertCommentEmoji(${post.id}, '❌')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">❌</span>
-                                    <span class="emoji-item" onclick="insertCommentEmoji(${post.id}, '⚠️')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;">⚠️</span>
+                                    <span class="emoji-item" onclick="insertCommentEmoji(${post.id}, '')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;"></span>
+                                    <span class="emoji-item" onclick="insertCommentEmoji(${post.id}, '')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;"></span>
+                                    <span class="emoji-item" onclick="insertCommentEmoji(${post.id}, '')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;"></span>
+                                    <span class="emoji-item" onclick="insertCommentEmoji(${post.id}, '')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;"></span>
+                                    <span class="emoji-item" onclick="insertCommentEmoji(${post.id}, '')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;"></span>
+                                    <span class="emoji-item" onclick="insertCommentEmoji(${post.id}, '')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;"></span>
+                                    <span class="emoji-item" onclick="insertCommentEmoji(${post.id}, '')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;"></span>
+                                    <span class="emoji-item" onclick="insertCommentEmoji(${post.id}, '')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;"></span>
+                                    <span class="emoji-item" onclick="insertCommentEmoji(${post.id}, '')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;"></span>
+                                    <span class="emoji-item" onclick="insertCommentEmoji(${post.id}, '')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;"></span>
+                                    <span class="emoji-item" onclick="insertCommentEmoji(${post.id}, '')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;"></span>
+                                    <span class="emoji-item" onclick="insertCommentEmoji(${post.id}, '')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;"></span>
+                                    <span class="emoji-item" onclick="insertCommentEmoji(${post.id}, '')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;"></span>
+                                    <span class="emoji-item" onclick="insertCommentEmoji(${post.id}, '')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;"></span>
+                                    <span class="emoji-item" onclick="insertCommentEmoji(${post.id}, '')" style="cursor: pointer; font-size: 20px; padding: 4px; text-align: center;"></span>
                                 </div>
                             </div>
                         </div>
@@ -625,10 +625,10 @@ function sharePost(postId) {
     
     // Kopier til clipboard
     navigator.clipboard.writeText(shareText).then(() => {
-        alert('✅ Opslag kopieret til udklipsholder!\n\nDu kan nu dele det hvor som helst.');
+        alert(' Opslag kopieret til udklipsholder!\n\nDu kan nu dele det hvor som helst.');
     }).catch(() => {
         // Fallback
-        alert(`📤 Del dette opslag:\n\n${shareText}`);
+        alert(` Del dette opslag:\n\n${shareText}`);
     });
 }
 
@@ -730,8 +730,8 @@ function editPost(postId) {
         <div class="edit-post-area">
             <textarea id="edit-textarea-${postId}">${originalContent}</textarea>
             <div class="edit-buttons">
-                <button class="save-btn" onclick="savePost(${postId})">💾 Gem</button>
-                <button class="cancel-btn" onclick="cancelEdit(${postId}, \`${originalContent.replace(/`/g, '\\`')}\`)">❌ Annuller</button>
+                <button class="save-btn" onclick="savePost(${postId})"> Gem</button>
+                <button class="cancel-btn" onclick="cancelEdit(${postId}, \`${originalContent.replace(/`/g, '\\`')}\`)"> Annuller</button>
             </div>
         </div>
     `;
@@ -782,11 +782,11 @@ async function deletePost(postId) {
                 let msg = '';
                 try { const j = await response.json(); msg = j.error || ''; } catch (e) {}
                 console.error('Delete svarede', response.status, msg);
-                alert('❌ Kunne ikke slette opslag (' + response.status + (msg ? ': ' + msg : '') + ')');
+                alert(' Kunne ikke slette opslag (' + response.status + (msg ? ': ' + msg : '') + ')');
             }
         } catch (error) {
             console.error('Delete error:', error);
-            alert('❌ Kunne ikke slette opslag - ingen forbindelse til server');
+            alert(' Kunne ikke slette opslag - ingen forbindelse til server');
         }
     }
 }
@@ -814,7 +814,7 @@ async function loadDemoPosts() {
         {
             id: 3,
             author: 'Administrator',
-            content: 'Husk! Vi holder firmafest på fredag kl. 18:00 i kantinen. Alle er velkomne! 🎉',
+            content: 'Husk! Vi holder firmafest på fredag kl. 18:00 i kantinen. Alle er velkomne! ',
             timestamp: new Date(Date.now() - 7200000),
             likes: 5,
             attachments: [],
@@ -823,7 +823,7 @@ async function loadDemoPosts() {
         {
             id: 2,
             author: window.currentUser?.name || 'Test Bruger',
-            content: 'Har lige afsluttet Q3 rapporten. Den ser rigtig godt ud! Tak for hjælpen team 💪',
+            content: 'Har lige afsluttet Q3 rapporten. Den ser rigtig godt ud! Tak for hjælpen team ',
             timestamp: new Date(Date.now() - 14400000),
             likes: 3,
             attachments: [],
@@ -1046,16 +1046,16 @@ async function detectAndRenderLinks(content, postId) {
         
         return `
             <a href="${preview.url}" target="_blank" rel="noopener noreferrer" style="text-decoration: none; color: inherit; display: block;">
-                <div class="link-preview-card" style="border: 1px solid #e4e6eb; border-radius: 8px; overflow: hidden; margin-top: 10px; max-width: 500px; cursor: pointer; transition: box-shadow 0.2s;">
+                <div class="link-preview-card" style="border: 1px solid var(--border); border-radius: 8px; overflow: hidden; margin-top: 10px; max-width: 500px; cursor: pointer; transition: box-shadow 0.2s;">
                     ${image ? `
-                        <div style="width: 100%; height: 260px; overflow: hidden; background: #f0f2f5;">
+                        <div style="width: 100%; height: 260px; overflow: hidden; background: var(--surface-muted);">
                             <img src="${image}" alt="${title}" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.parentElement.style.display='none'">
                         </div>
                     ` : ''}
-                    <div style="padding: 12px; background: #f7f8fa;">
-                        <div style="font-size: 12px; color: #65676b; text-transform: uppercase; margin-bottom: 4px;">${domain}</div>
-                        <div style="font-weight: 600; font-size: 16px; color: #050505; margin-bottom: 4px; line-height: 20px;">${title.length > 80 ? title.substring(0, 80) + '...' : title}</div>
-                        ${description ? `<div style="font-size: 14px; color: #65676b; line-height: 20px;">${description.length > 120 ? description.substring(0, 120) + '...' : description}</div>` : ''}
+                    <div style="padding: 12px; background: var(--surface-muted);">
+                        <div style="font-size: 12px; color: var(--text-muted); text-transform: uppercase; margin-bottom: 4px;">${domain}</div>
+                        <div style="font-weight: 600; font-size: 16px; color: var(--text); margin-bottom: 4px; line-height: 20px;">${title.length > 80 ? title.substring(0, 80) + '...' : title}</div>
+                        ${description ? `<div style="font-size: 14px; color: var(--text-muted); line-height: 20px;">${description.length > 120 ? description.substring(0, 120) + '...' : description}</div>` : ''}
                     </div>
                 </div>
             </a>
@@ -1081,7 +1081,7 @@ async function lazyLoadLinkPreview(content, postId) {
 // Make URLs clickable in text content
 function linkifyContent(content) {
     const urlRegex = /(https?:\/\/[^\s]+)/g;
-    return content.replace(urlRegex, '<a href="$1" target="_blank" rel="noopener noreferrer" style="color: #1877f2;">$1</a>');
+    return content.replace(urlRegex, '<a href="$1" target="_blank" rel="noopener noreferrer" style="color: var(--info);">$1</a>');
 }
 
 // Start loading af posts når siden loader

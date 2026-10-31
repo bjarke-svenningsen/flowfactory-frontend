@@ -14,11 +14,11 @@ function toggleEditMode() {
         
         viewMode.style.display = 'none';
         editMode.style.display = 'block';
-        editBtn.textContent = '❌ Annuller';
+        editBtn.textContent = ' Annuller';
     } else {
         viewMode.style.display = 'block';
         editMode.style.display = 'none';
-        editBtn.textContent = '✏️ Rediger profil';
+        editBtn.textContent = ' Rediger profil';
     }
 }
 
@@ -79,7 +79,7 @@ async function saveProfile() {
         document.getElementById('infoPhone').textContent = newPhone || 'Ikke angivet';
         
         toggleEditMode();
-        alert('Profil opdateret! ✅');
+        alert('Profil opdateret! ');
     } catch (error) {
         console.error('Profil opdatering fejl:', error);
         alert('Fejl ved opdatering: ' + error.message);
@@ -139,10 +139,10 @@ async function changeProfilePhoto(event) {
         const serverUrl = '' + user.profile_image;
         updateProfileImages(serverUrl);
         
-        alert('✅ Profilbillede uploadet!');
+        alert(' Profilbillede uploadet!');
     } catch (error) {
         console.error('Upload error:', error);
-        alert('❌ Kunne ikke uploade profilbillede: ' + error.message);
+        alert(' Kunne ikke uploade profilbillede: ' + error.message);
     }
 }
 
