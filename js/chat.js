@@ -129,7 +129,7 @@ async function loadPresence() {
 const AVATAR_COLORS = ['#7fc4f0', '#7ddc9a', '#f2938c', '#b7a3f5', '#5ecfc2', '#f2a3c0', '#f5c26b'];
 
 function avatarColor(id) {
-    return AVATAR_COLORS[Math.abs(Number(id) || 0) % AVATAR_COLORS.length];
+    return AVATAR_COLORS[Math.abs(Number(id === undefined ? 0 : id)) % AVATAR_COLORS.length];
 }
 
 function avatarHtml(user, extraClass) {
@@ -137,7 +137,8 @@ function avatarHtml(user, extraClass) {
     if (user && user.avatar) {
         return `<div class="user-avatar-small ${cls}"><img class="avatar-img" src="${escapeHtml(user.avatar)}" alt=""><div class="status-dot ${user.status || ''}"></div></div>`;
     }
-    const color = user ? avatarColor(user.id) : '#c9ccd1';
+    const uid = user ? (user.id !== undefined ? user.id : user.peerId) : undefined;
+    const color = avatarColor(uid);
     const init = user && user.initials ? user.initials : '?';
     return `<div class="user-avatar-small ${cls}" style="background:${color};"><span class="avatar-init">${init}</span><div class="status-dot ${user && user.status ? user.status : ''}"></div></div>`;
 }
