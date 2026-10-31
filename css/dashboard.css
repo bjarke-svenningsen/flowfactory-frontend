@@ -2548,3 +2548,21 @@ svg.lucide-building-2 { color: var(--company-stroke); fill: var(--company-fill);
     from { transform: translateX(30px); opacity: 0; }
     to { transform: translateX(0); opacity: 1; }
 }
+
+/* ============================================================
+   HOEJDE-FIX: input-felt skal altid vaere synligt i chat
+   ============================================================ */
+.chat-main,
+.chat-active { min-height: 0; }
+
+.chat-messages {
+    flex: 1 1 0;
+    min-height: 0;
+    max-height: none;
+}
+
+/* Avatar-fix: hvide initialer skal staar tydeligt paa gul baggrund */
+.user-avatar-small {
+    background: linear-gradient(135deg, #f7b731, #f5a623);
+    color: #fff;
+}
