@@ -1002,11 +1002,11 @@ function showFolderContextMenu(event, folderId, folderName) {
     // Rettigheder: top-"Fælles filer" må kun omdøbes/flyttes/slettes af admins.
     // Undermapper i Fælles filer: kun creator eller admin.
     const folder = allFolders.find(f => f.id === folderId);
-    const me = JSON.parse(sessionStorage.getItem('user') || '{}');
+    const me = JSON.parse(sessionStorage.getItem('currentUser') || 'null') || window.currentUser || {};
     const isAdmin = !!me.is_admin;
     const isOwner = !!(folder && folder.created_by === getCurrentUserId());
     const isPrimaryTop = folder && folder.id === (getPrimaryCompanyFolder() || {}).id;
-    const canManage = folder ? (isAdmin || (isPrimaryTop ? false : isOwner)) : true;
+    const canManage = folder ? (!me.id ? true : (isAdmin || (isPrimaryTop ? false : isOwner))) : true;
     
     const setItem = (id, show) => {
         const el = document.getElementById(id);
@@ -1848,12 +1848,13 @@ async function moveFolderSelected() {
 }
 
 // Indlogget bruger-id (null hvis ukendt)
+// NB: appen gemmer brugeren under sessionStorage-noglen 'currentUser' (jf. login.js)
 function getCurrentUserId() {
     try {
-        const u = JSON.parse(sessionStorage.getItem('user') || 'null');
+        const u = JSON.parse(sessionStorage.getItem('currentUser') || 'null') || window.currentUser || null;
         return u ? u.id : null;
     } catch (e) {
-        return null;
+        return window.currentUser ? window.currentUser.id : null;
     }
 }
 
