@@ -709,6 +709,17 @@ window.addEventListener('beforeunload', function (e) {
     }
 });
 
+// Globalt sikkerhedsnet: drop af filer fra computeren uden for et gyldigt slip-mål
+// må aldrig få browseren til at navigere væk eller åbne filen.
+window.addEventListener('dragover', function (e) {
+    const dt = e.dataTransfer;
+    if (dt && dt.types && Array.prototype.indexOf.call(dt.types, 'Files') !== -1) e.preventDefault();
+});
+window.addEventListener('drop', function (e) {
+    const dt = e.dataTransfer;
+    if (dt && dt.types && Array.prototype.indexOf.call(dt.types, 'Files') !== -1) e.preventDefault();
+});
+
 function ensureProgressPanel() {
     let panel = document.getElementById('uploadProgressPanel');
     if (!panel) {
@@ -758,23 +769,33 @@ function finishProgressRow(job, ok) {
 // --- Upload af hele mapper (knap og træk-ind) ---
 
 function onUploadFolderClick() {
-    const input = document.getElementById('fileExplorerFolderUpload');
-    if (!input) return;
-    if (!input.webkitdirectory) {
-        // Fallback på mobil/netsider uden webkitdirectory: brug almindelig upload
-        winAlert('Din browser understøtter ikke upload af hele mapper. Vælg filerne enkeltvis i stedet.', 'Ikke understøttet');
-        document.getElementById('fileExplorerUpload').click();
-        return;
+    try {
+        const input = document.getElementById('fileExplorerFolderUpload');
+        if (!input) return;
+        if (!input.webkitdirectory) {
+            // Fallback på mobil/netsider uden webkitdirectory: brug almindelig upload
+            winAlert('Din browser understøtter ikke upload af hele mapper. Vælg filerne enkeltvis i stedet.', 'Ikke understøttet');
+            document.getElementById('fileExplorerUpload').click();
+            return;
+        }
+        input.click();
+    } catch (err) {
+        console.error('Upload mappe-klik fejlede:', err);
+        winAlert('Kunne ikke åbne mappevælgeren: ' + err.message, 'Fejl');
     }
-    input.click();
 }
 
 async function uploadFolderFromExplorer(event) {
-    const files = Array.from(event.target.files || []);
-    event.target.value = '';
-    if (files.length === 0) return;
-    const baseFolder = currentFolderId || null;
-    await ingestIncomingFiles(files, baseFolder, true);
+    try {
+        const files = Array.from(event.target.files || []);
+        event.target.value = '';
+        if (files.length === 0) return;
+        const baseFolder = currentFolderId || null;
+        await ingestIncomingFiles(files, baseFolder, true);
+    } catch (err) {
+        console.error('Upload af mappe fejlede:', err);
+        await winAlert('Upload fejlede: ' + err.message, 'Fejl');
+    }
 }
 
 // Trukket ind fra computeren: kaldes fra handleFolderDrop når dataTransfer har filer
@@ -2006,6 +2027,20 @@ function handleFolderDragStart(event, folderId) {
 // Ugyldigt mål: ingen preventDefault → browserens forbudt-markør og ingen gul ramme.
 function handleFolderDragOver(event, folderId, opts) {
     folderId = (folderId === undefined) ? null : folderId;
+
+    // Trukket ind fra computeren: intern drag-state er tom, men droppet er tilladt.
+    // Uden preventDefault her viser browseren den forbudte markør og drop-event fyres aldrig.
+    const dt = event.dataTransfer;
+    const isExternal = !draggedKind && !!dt && ((dt.files && dt.files.length > 0) ||
+        (dt.items && dt.items.length > 0 && typeof dt.items[0].webkitGetAsEntry === 'function'));
+    if (isExternal) {
+        event.preventDefault();
+        event.stopPropagation();
+        if (dt) dt.dropEffect = 'copy';
+        markDropZone(event.currentTarget, 'inside');
+        return;
+    }
+
     if (!draggedKind || draggedIds.length === 0) return;
     if (!validateDrop(folderId)) {
         if (event.dataTransfer) event.dataTransfer.dropEffect = 'none';
