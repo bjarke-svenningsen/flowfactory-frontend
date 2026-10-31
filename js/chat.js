@@ -393,7 +393,7 @@ function renderContactsStrip() {
 
 // Video-knap i chathjornet (nuvaerende samtalepartner)
 function startVideoCallCurrent() {
-    if (currentChatUser) startVideoCall(currentChatUser.id, currentChatUser.name);
+    if (currentChatUser) startChatVideoCall(currentChatUser.id, currentChatUser.name);
 }
 
 // Toast nederst til hojre ved indgaende besked
@@ -704,7 +704,7 @@ async function loadJitsiScript() {
 }
 
 // Videoopkald via Jitsi (ingen konto/noegler - offentlig infrastruktur)
-async function startVideoCall(userId, userName) {
+async function startChatVideoCall(userId, userName) {
     try {
         let convId = conversationByPeer[userId];
         if (!convId) {
