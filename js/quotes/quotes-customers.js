@@ -47,38 +47,35 @@ async function loadCustomersTable() {
     }
     
     container.innerHTML = `
-        <table style="width: 100%; border-collapse: collapse; background: var(--surface); border-radius: 8px; overflow: hidden;">
+        <table class="customers-table">
             <thead>
-                <tr style="background: var(--surface-muted);">
-                    <th style="padding: 15px; text-align: left; border-bottom: 2px solid var(--border);">Kunde Nr.</th>
-                    <th style="padding: 15px; text-align: left; border-bottom: 2px solid var(--border);">Firma</th>
-                    <th style="padding: 15px; text-align: left; border-bottom: 2px solid var(--border);">Kontakt</th>
-                    <th style="padding: 15px; text-align: left; border-bottom: 2px solid var(--border);">Email</th>
-                    <th style="padding: 15px; text-align: left; border-bottom: 2px solid var(--border);">Telefon</th>
-                    <th style="padding: 15px; text-align: center; border-bottom: 2px solid var(--border);">Handlinger</th>
+                <tr>
+                    <th>Kunde Nr.</th>
+                    <th>Firma</th>
+                    <th>Kontakt</th>
+                    <th>Email</th>
+                    <th>Telefon</th>
+                    <th style="text-align: center;">Handlinger</th>
                 </tr>
             </thead>
             <tbody>
                 ${allCustomers.map(customer => `
-                    <tr style="border-bottom: 1px solid var(--border);">
-                        <td style="padding: 15px;">${customer.customer_number || '-'}</td>
-                        <td style="padding: 15px; font-weight: 600;">${customer.company_name}</td>
-                        <td style="padding: 15px;">${customer.contact_person || '-'}</td>
-                        <td style="padding: 15px;">${customer.email || '-'}</td>
-                        <td style="padding: 15px;">${customer.phone || '-'}</td>
-                        <td style="padding: 15px; text-align: center;">
-                            <button onclick="editCustomer(${customer.id})" class="btn btn-primary btn-sm">
-                                Rediger
-                            </button>
-                            <button onclick="deleteCustomer(${customer.id})" style="padding: 6px 12px; margin: 2px; background: var(--color-red); color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">
-                                Slet
-                            </button>
+                    <tr>
+                        <td>${customer.customer_number || '-'}</td>
+                        <td style="font-weight: 600;">${customer.company_name}</td>
+                        <td>${customer.contact_person || '-'}</td>
+                        <td>${customer.email || '-'}</td>
+                        <td>${customer.phone || '-'}</td>
+                        <td class="actions-cell">
+                            ${btn('icon', 'pencil', null, { title: 'Rediger', small: true, onclick: `editCustomer(${customer.id})` })}
+                            ${btn('icon', 'trash-2', null, { title: 'Slet', small: true, onclick: `deleteCustomer(${customer.id})` })}
                         </td>
                     </tr>
                 `).join('')}
             </tbody>
         </table>
     `;
+    if (window.lucide) lucide.createIcons();
 }
 
 // Quick create customer - Open full form
@@ -472,12 +469,8 @@ function renderContactsList(customerId) {
                             ${contact.phone ? `<div style="color: var(--text-muted); font-size: 13px;">${contact.phone}</div>` : ''}
                         </div>
                         <div style="display: flex; gap: 5px;">
-                            <button onclick="editContact(${customerId}, ${contact.id})" class="btn btn-primary btn-sm">
-                                Rediger
-                            </button>
-                            <button onclick="deleteContact(${customerId}, ${contact.id})" style="padding: 4px 8px; background: var(--color-red); color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 11px;">
-                                Slet
-                            </button>
+                            ${btn('icon', 'pencil', null, { title: 'Rediger', small: true, onclick: `editContact(${customerId}, ${contact.id})` })}
+                            ${btn('icon', 'trash-2', null, { title: 'Slet', small: true, onclick: `deleteContact(${customerId}, ${contact.id})` })}
                         </div>
                     </div>
                 </div>

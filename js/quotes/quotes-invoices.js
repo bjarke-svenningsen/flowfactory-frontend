@@ -30,62 +30,56 @@ function renderInvoicedContent(invoices) {
     
     if (invoices.length === 0) {
         container.innerHTML = `
-            <div style="text-align: center; padding: 60px 20px; color: var(--text-muted);">
-                <i data-lucide="coins" style="width:48px;height:48px;color:var(--text-muted);display:inline-block;margin-bottom:16px;"></i>
+            <div class="list-empty">
+                <div class="icon-box"><i data-lucide="coins"></i></div>
                 <h3>Der er ingen fakturaer endnu</h3>
-                <p style="margin: 10px 0;">Opret en faktura fra en accepteret ordre</p>
+                <p>Opret en faktura fra en accepteret ordre</p>
             </div>
         `;
         return;
     }
     
-    const statusColors = {
-        'draft': 'var(--text-muted)',
-        'sent': 'var(--color-blue)',
-        'paid': 'var(--color-green)'
+    const badgeClass = {
+        'draft': 'badge--draft',
+        'sent': 'badge--sent',
+        'paid': 'badge--accepted'
     };
     const statusText = {
-        'draft': ' Udkast',
+        'draft': 'Udkast',
         'sent': 'Sendt',
         'paid': 'Betalt'
     };
+    const cardClass = {
+        'draft': 'list-card--draft',
+        'sent': 'list-card--sent',
+        'paid': 'list-card--paid'
+    };
     
-    let html = '';
+    let html = `<div class="list-section-head"><span class="title">Fakturerede ordrer og fakturaer</span><span class="badge badge--invoiced">${invoices.length}</span></div>`;
     invoices.forEach(invoice => {
         html += `
-            <div style="background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 20px; margin-bottom: 15px;">
-                <div style="display: flex; justify-content: space-between; align-items: start;">
-                    <div style="flex: 1;">
-                        <h4 style="margin: 0 0 10px 0;">Faktura ${invoice.invoice_number}</h4>
-                        <p style="margin: 5px 0;"><strong>Ordre:</strong> ${invoice.full_order_number}</p>
-                        <p style="margin: 5px 0;"><strong>Kunde:</strong> ${invoice.customer_name}</p>
-                        <p style="margin: 5px 0;"><strong>Total:</strong> ${formatCurrency(invoice.total)}</p>
-                        <p style="margin: 5px 0;"><strong>Forfald:</strong> ${new Date(invoice.due_date).toLocaleDateString('da-DK')}</p>
-                        <p style="margin: 5px 0;">
-                            <span style="background: ${statusColors[invoice.status]}; color: white; padding: 5px 12px; border-radius: 20px; font-size: 12px; font-weight: 600;">
-                                ${statusText[invoice.status]}
-                            </span>
-                        </p>
-                    </div>
-                    <div style="display: flex; flex-direction: column; gap: 10px;">
-                        <button onclick="viewInvoice(${invoice.id})" style="padding: 10px 20px; background: var(--color-blue); color: white; border: none; border-radius: 5px; cursor: pointer; white-space: nowrap;">
-                            Se Faktura
-                        </button>
-                        ${invoice.status === 'draft' ? `
-                            <button onclick="sendInvoice(${invoice.id})" style="padding: 10px 20px; background: var(--color-green); color: white; border: none; border-radius: 5px; cursor: pointer; white-space: nowrap;">
-                                Send
-                            </button>
-                        ` : ''}
-                        <button onclick="deleteInvoice(${invoice.id})" style="padding: 10px 20px; background: var(--color-red); color: white; border: none; border-radius: 5px; cursor: pointer; white-space: nowrap;">
-                            Slet Faktura
-                        </button>
-                    </div>
+            <div class="list-card ${cardClass[invoice.status] || 'list-card--draft'}">
+                <div class="list-card-head">
+                    <h4 class="list-card-title">Faktura ${invoice.invoice_number}</h4>
+                    <span class="badge ${badgeClass[invoice.status] || 'badge--draft'}">${statusText[invoice.status] || 'Udkast'}</span>
+                </div>
+                <div class="list-card-grid">
+                    <div class="list-card-field"><span class="label">Kunde</span><span class="value">${invoice.customer_name}</span></div>
+                    <div class="list-card-field"><span class="label">Ordre</span><span class="value">${invoice.full_order_number}</span></div>
+                    <div class="list-card-field"><span class="label">Forfald</span><span class="value">${new Date(invoice.due_date).toLocaleDateString('da-DK')}</span></div>
+                    <div class="list-card-total"><span class="label">Total</span>${formatCurrency(invoice.total)}</div>
+                </div>
+                <div class="list-card-actions">
+                    ${btn('secondary', 'eye', 'Se Faktura', { onclick: `viewInvoice(${invoice.id})` })}
+                    ${btn(invoice.status === 'draft' ? 'primary' : 'secondary', 'send', 'Send', { onclick: `sendInvoice(${invoice.id})` })}
+                    ${btn('icon', 'trash-2', null, { title: 'Slet Faktura', onclick: `deleteInvoice(${invoice.id})` })}
                 </div>
             </div>
         `;
     });
     
     container.innerHTML = html;
+    if (window.lucide) lucide.createIcons();
 }
 
 // Filter invoices by status

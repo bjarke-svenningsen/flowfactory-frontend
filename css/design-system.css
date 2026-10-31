@@ -99,6 +99,24 @@ h1 { font-size: var(--font-size-title); }
     border-radius: var(--radius-btn);
 }
 .btn-icon:hover { border-color: var(--text-muted); background: var(--surface-muted); }
+.btn-icon.btn-icon-sm { width: 36px; height: 36px; min-width: 36px; }
+.btn-icon.btn-icon-sm svg { width: 16px; height: 16px; }
+
+/* ---------- Kunder (punkt 2): kundetabel ---------- */
+.customers-table { width: 100%; border-collapse: collapse; background: var(--surface); overflow: hidden; }
+.customers-table thead th {
+    background: #F1F2F4;
+    color: var(--text-muted);
+    font-size: 12px;
+    font-weight: 700;
+    text-align: left;
+    padding: 14px 15px;
+    border-bottom: 1px solid var(--border);
+}
+.customers-table tbody td { padding: 14px 15px; border-bottom: 1px solid var(--border); font-size: 14px; }
+.customers-table tbody tr:hover td { background: #FFFBEB; }
+.customers-table .actions-cell { text-align: center; white-space: nowrap; }
+.customers-table .actions-cell .btn-icon { vertical-align: middle; margin: 0 2px; }
 
 /* ---------- Kort ---------- */
 .card {
@@ -237,6 +255,57 @@ h1 { font-size: var(--font-size-title); }
 .badge--accepted { background: #DCFCE7; color: #166534; }
 .badge--invoiced { background: #FEF3C7; color: #92400E; }
 .badge--rejected { background: #FEE2E2; color: #991B1B; }
+
+/* ---------- Listekort (punkt 1): faelles kort til ordre-/faktura-/tilbudslister ---------- */
+.list-card {
+    position: relative;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    box-shadow: var(--shadow-soft);
+    padding: 16px;
+    margin-bottom: 12px;
+    overflow: hidden;
+}
+.list-card::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 4px;
+    background: var(--list-accent, #9CA3AF);
+}
+.list-card--draft    { --list-accent: #9CA3AF; }
+.list-card--sent     { --list-accent: #2563EB; }
+.list-card--accepted { --list-accent: #16A34A; }
+.list-card--invoiced { --list-accent: #D97706; }
+.list-card--rejected { --list-accent: #DC2626; }
+.list-card--paid     { --list-accent: #16A34A; }
+
+.list-card-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 0 0 12px 0; }
+.list-card-title { margin: 0; font-size: 15px; font-weight: 700; color: var(--text); }
+.list-card-sub { font-size: 12px; color: var(--text-muted); }
+.list-card-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)) auto; gap: 8px 24px; align-items: start; }
+.list-card-field .label { display: block; font-size: 12px; color: var(--text-muted); margin-bottom: 2px; }
+.list-card-field .value { display: block; font-size: 14px; font-weight: 500; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.list-card-total { text-align: right; font-size: 20px; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--text); }
+.list-card-total .label { display: block; font-size: 12px; color: var(--text-muted); font-weight: 600; }
+.list-card-actions { display: flex; justify-content: flex-end; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 14px; }
+
+.list-section-head { display: flex; align-items: center; gap: 8px; margin: 0 0 12px 0; }
+.list-section-head .title { font-size: 13px; font-weight: 700; color: var(--text-muted); }
+.list-section-head .badge { font-size: 11px; }
+
+.list-empty { text-align: center; padding: 60px 20px; color: var(--text-muted); }
+.list-empty .icon-box { margin: 0 auto 16px auto; }
+.list-empty h3 { color: var(--text); }
+.list-empty p { margin: 10px 0 0 0; }
+
+@media (max-width: 900px) {
+    .list-card-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .list-card-total { grid-column: span 2; text-align: left; }
+}
 
 /* ---------- Tabel ---------- */
 .table { width: 100%; border-collapse: collapse; background: var(--surface); }

@@ -1002,51 +1002,49 @@ async function loadOrders() {
 // Render orders content
 function renderOrdersContent(orders) {
     const container = document.getElementById('ordersContainer');
-    
+
     if (orders.length === 0) {
         container.innerHTML = `
-            <div style="text-align: center; padding: 60px 20px; color: var(--text-muted);">
-                <div style="font-size: 44px; margin-bottom: 20px; color: var(--color-text-muted); display: flex; justify-content: center;"><i data-lucide="package" style="width:48px;height:48px;"></i></div>
+            <div class="list-empty">
+                <div class="icon-box"><i data-lucide="package"></i></div>
                 <h3>Ingen ordrer endnu</h3>
-                <p style="margin: 10px 0;">Acceptér et tilbud for at se det her</p>
+                <p>Acceptér et tilbud for at se det her</p>
             </div>
         `;
         return;
     }
-    
-    let html = '';
+
+    let html = `<div class="list-section-head"><span class="title">Godkendte ordrer</span><span class="badge badge--accepted">${orders.length}</span></div>`;
     orders.forEach(order => {
         // Use order_number if available, otherwise use quote_number
         const displayNumber = order.order_number || order.quote_number || 'N/A';
-        const fullOrderNumber = order.is_extra_work && order.parent_order_id 
+        const fullOrderNumber = order.is_extra_work && order.parent_order_id
             ? `${displayNumber}-${String(order.sub_number).padStart(2, '0')}`
             : displayNumber;
-        
+
         html += `
-            <div class="order-card" style="padding: 20px; margin-bottom: 15px;">
-                <div style="display: flex; justify-content: space-between; align-items: start; gap: 16px; flex-wrap: wrap;">
-                    <div style="flex: 1; min-width: 0;">
-                        <h4 style="margin: 0 0 10px 0;">Ordre ${fullOrderNumber}</h4>
-                        <p style="margin: 5px 0;"><strong>Kunde:</strong> ${order.customer_name}</p>
-                        <p style="margin: 5px 0;"><strong>Titel:</strong> ${order.title}</p>
-                        <p style="margin: 3px 0 5px 0; font-size: 0.85em; color: var(--text-muted); font-style: italic;">Oprettet af ${order.created_by_name || 'Ukendt'}</p>
-                        <p style="margin: 5px 0;"><strong>Total:</strong> ${formatCurrency(order.total)}</p>
-                        <p style="margin: 5px 0;"><span class="status-pill status-pill--accepted">Accepteret</span> <span style="color: var(--color-text-muted);">${new Date(order.accepted_at).toLocaleDateString('da-DK')}</span></p>
-                    </div>
-                    <div style="display: flex; flex-direction: column; gap: 10px;">
-                        <button onclick="viewQuote(${order.id})" class="btn-secondary" style="white-space: nowrap;">
-                            <i data-lucide="eye"></i> Se Ordre
-                        </button>
-                        <button onclick="moveOrderBackToQuote(${order.id})" class="btn-secondary" style="white-space: nowrap;">
-                            <i data-lucide="undo-2"></i> Rykke til Tilbud
-                        </button>
-                    </div>
+            <div class="list-card list-card--accepted">
+                <div class="list-card-head">
+                    <h4 class="list-card-title">Ordre ${fullOrderNumber}</h4>
+                    <span class="badge badge--accepted">Godkendt</span>
+                    <span class="list-card-sub">${new Date(order.accepted_at).toLocaleDateString('da-DK')}</span>
+                </div>
+                <div class="list-card-grid">
+                    <div class="list-card-field"><span class="label">Kunde</span><span class="value">${order.customer_name}</span></div>
+                    <div class="list-card-field"><span class="label">Titel</span><span class="value">${order.title}</span></div>
+                    <div class="list-card-field"><span class="label">Oprettet af</span><span class="value">${order.created_by_name || 'Ukendt'}</span></div>
+                    <div class="list-card-total"><span class="label">Total</span>${formatCurrency(order.total)}</div>
+                </div>
+                <div class="list-card-actions">
+                    ${btn('primary', 'eye', 'Se Ordre', { onclick: `viewQuote(${order.id})` })}
+                    ${btn('secondary', 'undo-2', 'Flyt til Tilbud', { onclick: `moveOrderBackToQuote(${order.id})` })}
                 </div>
             </div>
         `;
     });
-    
+
     container.innerHTML = html;
+    if (window.lucide) lucide.createIcons();
 }
 
 // Load rejected tab
@@ -1075,45 +1073,41 @@ function renderRejectedContent(quotes) {
     
     if (quotes.length === 0) {
         container.innerHTML = `
-            <div style="text-align: center; padding: 60px 20px; color: var(--text-muted);">
-                <div style="font-size: 44px; margin-bottom: 20px; color: var(--color-red); display: flex; justify-content: center;"><i data-lucide="x-circle" style="width:48px;height:48px;"></i></div>
-                <h3>Ingen afviste tilbud</h3>
-                <p style="margin: 10px 0;">Afviste tilbud vises her</p>
+            <div class="list-empty">
+                <div class="icon-box"><i data-lucide="x-circle"></i></div>
+                <h3>Ingen afviste tilbud endnu</h3>
+                <p>Afviste tilbud vises her</p>
             </div>
         `;
         return;
     }
     
-    let html = '';
+    let html = `<div class="list-section-head"><span class="title">Afviste tilbud</span><span class="badge badge--rejected">${quotes.length}</span></div>`;
     quotes.forEach(quote => {
         html += `
-            <div class="order-card" style="padding: 20px; margin-bottom: 15px;">
-                <div style="display: flex; justify-content: space-between; align-items: start; gap: 16px; flex-wrap: wrap;">
-                    <div style="flex: 1; min-width: 0;">
-                        <h4 style="margin: 0 0 10px 0;">Tilbud ${quote.quote_number}</h4>
-                        <p style="margin: 5px 0;"><strong>Kunde:</strong> ${quote.customer_name}</p>
-                        <p style="margin: 5px 0;"><strong>Titel:</strong> ${quote.title}</p>
-                        <p style="margin: 3px 0 5px 0; font-size: 0.85em; color: var(--text-muted); font-style: italic;">Oprettet af ${quote.created_by_name || 'Ukendt'}</p>
-                        <p style="margin: 5px 0;"><strong>Total:</strong> ${formatCurrency(quote.total)}</p>
-                        <p style="margin: 5px 0; color: var(--color-red); font-weight: 600;">Afvist: ${new Date(quote.date).toLocaleDateString('da-DK')}</p>
-                    </div>
-                    <div style="display: flex; flex-direction: column; gap: 10px;">
-                        <button onclick="viewQuote(${quote.id})" style="padding: 10px 20px; background: var(--color-blue); color: white; border: none; border-radius: 5px; cursor: pointer; white-space: nowrap;">
-                            Se Tilbud
-                        </button>
-                        <button onclick="moveRejectedBackToQuote(${quote.id})" class="btn btn-secondary">
-                            ◀ Rykke til Tilbud
-                        </button>
-                        <button onclick="deleteQuote(${quote.id})" style="padding: 10px 20px; background: var(--color-red); color: white; border: none; border-radius: 5px; cursor: pointer; white-space: nowrap;">
-                            Slet
-                        </button>
-                    </div>
+            <div class="list-card list-card--rejected">
+                <div class="list-card-head">
+                    <h4 class="list-card-title">Tilbud ${quote.quote_number}</h4>
+                    <span class="badge badge--rejected">Afvist</span>
+                    <span class="list-card-sub">${new Date(quote.date).toLocaleDateString('da-DK')}</span>
+                </div>
+                <div class="list-card-grid">
+                    <div class="list-card-field"><span class="label">Kunde</span><span class="value">${quote.customer_name}</span></div>
+                    <div class="list-card-field"><span class="label">Titel</span><span class="value">${quote.title}</span></div>
+                    <div class="list-card-field"><span class="label">Oprettet af</span><span class="value">${quote.created_by_name || 'Ukendt'}</span></div>
+                    <div class="list-card-total"><span class="label">Total</span>${formatCurrency(quote.total)}</div>
+                </div>
+                <div class="list-card-actions">
+                    ${btn('secondary', 'eye', 'Se Tilbud', { onclick: `viewQuote(${quote.id})` })}
+                    ${btn('secondary', 'undo-2', 'Flyt til Tilbud', { onclick: `moveRejectedBackToQuote(${quote.id})` })}
+                    ${btn('icon', 'trash-2', null, { title: 'Slet', onclick: `deleteQuote(${quote.id})` })}
                 </div>
             </div>
         `;
     });
     
     container.innerHTML = html;
+    if (window.lucide) lucide.createIcons();
 }
 
 // Move order back to quote status

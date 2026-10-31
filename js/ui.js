@@ -10,8 +10,8 @@
 // ============================================================
 window.btn = function (type, icon, text, opts) {
     opts = opts || {};
-    const cls = ['btn', type === 'icon' ? 'btn-icon' : 'btn-' + type];
-    if (opts.small) cls.push('btn-sm');
+    const cls = ['btn', type === 'icon' ? 'btn-icon' + (opts.small ? ' btn-icon-sm' : '') : 'btn-' + type];
+    if (opts.small && type !== 'icon') cls.push('btn-sm');
     const id = opts.id ? ` id="${opts.id}"` : '';
     const title = opts.title ? ` title="${opts.title}"` : '';
     const onclick = opts.onclick ? ` onclick="${opts.onclick}"` : '';
