@@ -243,7 +243,13 @@ function isDocument(filename) {
 
 function isImage(filename) {
     const ext = filename.split('.').pop().toLowerCase();
-    return ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp'].includes(ext);
+    return ['jpg', 'jpeg', 'jfif', 'pjpeg', 'pjp', 'png', 'gif', 'bmp', 'webp'].includes(ext);
+}
+
+// .jfif/.pjpeg/.pjp er almindelige JPEG-varianter - tving altid rigtig MIME-type
+function getImageMime(filename) {
+    const ext = filename.split('.').pop().toLowerCase();
+    return ['jpg', 'jpeg', 'jfif', 'pjpeg', 'pjp'].includes(ext) ? 'image/jpeg' : '';
 }
 
 async function loadSharedFiles() {
@@ -463,7 +469,7 @@ async function openRealFile(fileId) {
     if (!file) return;
     
     const ext = file.original_name.split('.').pop().toLowerCase();
-    const imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp'];
+    const imageExtensions = ['jpg', 'jpeg', 'jfif', 'pjpeg', 'pjp', 'png', 'gif', 'bmp', 'webp'];
     
     if (imageExtensions.includes(ext)) {
         await previewImage(fileId, file.original_name);
@@ -482,7 +488,8 @@ async function previewImage(fileId, filename) {
         if (!response.ok) throw new Error('Failed to load image');
         
         const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
+        const typedBlob = new Blob([blob], { type: getImageMime(filename) || blob.type });
+        const url = window.URL.createObjectURL(typedBlob);
         
         const modal = document.getElementById('imageModal');
         const modalImg = document.getElementById('modalImage');
@@ -511,7 +518,8 @@ async function downloadRealFile(fileId) {
         
         const blob = await response.blob();
         const file = allFiles.find(f => f.id === fileId);
-        const url = window.URL.createObjectURL(blob);
+        const typedBlob = new Blob([blob], { type: getImageMime(file.original_name) || blob.type });
+        const url = window.URL.createObjectURL(typedBlob);
         const a = document.createElement('a');
         a.href = url;
         a.download = file.original_name;

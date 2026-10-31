@@ -132,9 +132,12 @@ ensureStorageColumns().catch(err => console.error('Fejl ved tilføjelse af stora
 
 // MIME-fallback: kendte filtyper browsers ellers fejlfortolker
 const MIME_FALLBACKS = { jfif: 'image/jpeg', pjpeg: 'image/jpeg', pjp: 'image/jpeg' };
+// JPEG-varianter der ofte gemmes med en forkert/generisk mime_type - endelsen vinder altid
+const JPEG_EXT_OVERRIDES = new Set(['jfif', 'pjpeg', 'pjp']);
 function resolveContentType(file) {
-  if (file.mime_type && file.mime_type !== 'application/octet-stream') return file.mime_type;
   const ext = (file.original_name || file.filename || '').split('.').pop().toLowerCase();
+  if (JPEG_EXT_OVERRIDES.has(ext)) return 'image/jpeg';
+  if (file.mime_type && file.mime_type !== 'application/octet-stream') return file.mime_type;
   return MIME_FALLBACKS[ext] || 'application/octet-stream';
 }
 
