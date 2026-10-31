@@ -2,7 +2,7 @@
 let allFiles = [];
 let allFolders = [];
 let selectedFileId = null;
-let currentFilter = 'all'; // 'all', 'documents', 'images', 'shared', 'folder'
+let currentFilter = 'all'; // 'all', 'root', 'documents', 'images', 'shared', 'folder'
 let currentFolderId = null; // null = root level
 let currentFolderName = '';
 
@@ -98,7 +98,7 @@ async function createCompanyFolder() {
 // Track expanded folders
 let expandedFolders = new Set();
 
-// Render folder tree: "Fælles filer" fast øverst + "Mine mapper"
+// Render folder tree: kun rigtige steder - Fælles filer, Mine filer (roden), Mine mapper
 function renderFolderTree() {
     const tree = document.getElementById('folderTree');
     if (!tree) {
@@ -108,40 +108,28 @@ function renderFolderTree() {
 
     let html = '';
 
-    // "Alle filer" rod-node
-    html += `
-        <div class="tree-node ${currentFilter === 'all' && !currentFolderId ? 'active' : ''}" onclick="filterFiles('all')">
-            <span class="tree-chevron"></span>
-            <i data-lucide="hard-drive"></i>
-            <span class="tree-label">Alle filer</span>
-            <span class="tree-count">${allFiles.length}</span>
-        </div>
-    `;
-
-    // Delte filer
-    html += `
-        <div class="tree-node ${currentFilter === 'shared' ? 'active' : ''}" onclick="filterFiles('shared')">
-            <span class="tree-chevron"></span>
-            <i data-lucide="users"></i>
-            <span class="tree-label">Delte filer</span>
-        </div>
-    `;
-
-    // Fælles filer (firma-mapper) — fast øverst
+    // Fælles filer (firmamappe) - fast øverst
     const companyFolders = allFolders.filter(f => f.is_company_folder && !f.parent_id);
     html += '<div class="tree-section-label">Fælles filer</div>';
     if (companyFolders.length > 0) {
         html += renderFolderBranch(companyFolders, 0, true);
+    } else {
+        html += '<div class="tree-empty-note">Oprettes automatisk</div>';
     }
-    const adminUser = JSON.parse(sessionStorage.getItem('user') || 'null');
-    if (adminUser && adminUser.is_admin && companyFolders.length === 0) {
-        html += '<button class="btn-company-create" onclick="createCompanyFolder()"><i data-lucide="plus"></i>Opret fælles mappe</button>';
-    }
+
+    // Mine filer = roden (filer uden mappe)
+    const meId = getCurrentUserId();
+    const rootCount = allFiles.filter(f => !f.folder_id && (!meId || f.owner_id === meId)).length;
+    html += '<div class="tree-section-label">Mine filer</div>';
+    html += '<div class="tree-node ' + (currentFilter === 'root' ? 'active' : '') + '" onclick="filterFiles(\'root\')">' +
+        '<span class="tree-chevron"></span><i data-lucide="hard-drive"></i>' +
+        '<span class="tree-label">Mine filer</span>' +
+        '<span class="tree-count">' + rootCount + '</span></div>';
 
     // Mine mapper
     const personalFolders = allFolders.filter(f => !f.is_company_folder && !f.parent_id);
-    html += '<div class="tree-section-label">Mine mapper</div>';
     if (personalFolders.length > 0) {
+        html += '<div class="tree-section-label">Mine mapper</div>';
         html += renderFolderBranch(personalFolders, 0, false);
     }
 
@@ -159,7 +147,8 @@ function renderFolderBranch(folders, level, isCompany = false) {
         const hasChildren = childFolders.length > 0;
         const isExpanded = expandedFolders.has(folder.id);
         const isSelected = currentFolderId === folder.id;
-        const safeName = folder.name.replace(/'/g, "\\'");
+        const displayName = isCompany ? 'Fælles filer' : folder.name;
+        const safeName = displayName.replace(/'/g, "\\'");
         const indent = level * 16;
 
         html += `
@@ -172,7 +161,7 @@ function renderFolderBranch(folders, level, isCompany = false) {
                  ondragleave="handleFolderDragLeave(event)">
                 <span class="tree-chevron" onclick="toggleFolder(event, ${folder.id})">${hasChildren ? '<i data-lucide="' + (isExpanded ? 'chevron-down' : 'chevron-right') + '"></i>' : ''}</span>
                 <i data-lucide="${isCompany ? 'building-2' : 'folder'}"></i>
-                <span class="tree-label">${folder.name}</span>
+                <span class="tree-label">${displayName}</span>
                 ${fileCount > 0 ? '<span class="tree-count">' + fileCount + '</span>' : ''}
             </div>
         `;
@@ -204,6 +193,7 @@ async function filterFiles(category) {
     currentFilter = category;
     currentFolderId = null;
     currentFolderName = '';
+    selectedFileId = null; // ryd markering ved visningsskift
 
     // Hent delte filer når "Delte filer" vælges
     if (category === 'shared') {
@@ -285,6 +275,10 @@ function getFilteredFiles() {
     let files;
     if (currentFilter === 'folder' && currentFolderId) {
         files = allFiles.filter(f => f.folder_id === currentFolderId);
+    } else if (currentFilter === 'root') {
+        // Mine filer = roden: egne filer uden mappe
+        const meId = getCurrentUserId();
+        files = allFiles.filter(f => !f.folder_id && (!meId || f.owner_id === meId));
     } else if (currentFilter === 'documents') {
         files = allFiles.filter(f => isDocument(f.original_name));
     } else if (currentFilter === 'images') {
@@ -347,14 +341,14 @@ function getFolderPath(folderId) {
 function renderBreadcrumb() {
     const crumb = document.getElementById('filesCrumb');
     if (!crumb) return;
-    const names = { all: 'Alle filer', documents: 'Dokumenter', images: 'Billeder', shared: 'Delte filer' };
+    const names = { all: 'Alle filer', root: 'Mine filer', documents: 'Dokumenter', images: 'Billeder', shared: 'Delte filer' };
     let html = '<span class="crumb-root">Alle filer</span>';
     if (currentFilter === 'folder' && currentFolderId) {
         const path = getFolderPath(currentFolderId);
         path.forEach((f, i) => {
             const last = i === path.length - 1;
             html += '<span class="crumb-sep">/</span>';
-            html += '<span class="crumb-item' + (last ? ' current' : '') + '" onclick="openFolder(' + f.id + ', \'' + f.name.replace(/'/g, "\\'") + '\')">' + escapeFileName(f.name) + '</span>';
+            html += '<span class="crumb-item' + (last ? ' current' : '') + '" onclick="openFolder(' + f.id + ', \'' + (f.is_company_folder ? 'Fælles filer' : f.name).replace(/'/g, "\\'") + '\')">' + escapeFileName(f.is_company_folder ? 'Fælles filer' : f.name) + '</span>';
         });
     } else {
         html += '<span class="crumb-sep">/</span><span class="crumb-item current">' + (names[currentFilter] || 'Alle filer') + '</span>';
@@ -426,6 +420,8 @@ function renderRealFiles() {
     if (totalItems === 0) {
         const emptyMessage = currentFilter === 'folder'
             ? 'Mappen er tom. Upload filer til denne mappe.'
+            : currentFilter === 'root'
+            ? 'Ingen filer i "Mine filer" endnu. Klik "Upload" for at tilføje filer.'
             : currentFilter === 'shared'
             ? 'Ingen delte filer endnu.'
             : currentFilter === 'documents'
@@ -511,34 +507,49 @@ function renderFilesGrid(files, subfolders) {
 function renderFileDetails() {
     const panel = document.getElementById('filesDetails');
     if (!panel) return;
-    const file = allFiles.find(f => f.id === selectedFileId) || sharedFilesCache.find(f => f.id === selectedFileId);
+    const file = findFileAnywhere(selectedFileId);
     if (!file) {
-        panel.innerHTML = '<div class="files-details-empty"><i data-lucide="mouse-pointer-click"></i><p>Vælg en fil for at se detaljer og handlinger.</p></div>';
+        panel.innerHTML = '<div class="files-details-empty"><i data-lucide="mouse-pointer-click"></i><p>Vælg en fil for at se detaljer</p></div>';
         refreshIcons();
         return;
     }
+    const meId = getCurrentUserId();
+    const inOwnList = allFiles.some(f => f.id === selectedFileId);
+    const inSharedList = sharedFilesCache.some(f => f.id === selectedFileId);
+    // Fil andre har delt med MIG: ingen Slet - kun fjern min adgang
+    const sharedByOther = inSharedList && !inOwnList && file.owner_id !== meId;
     const isImg = isImage(file.original_name);
     const t = fileTypeInfo(file.original_name);
     const date = new Date(file.created_at).toLocaleString('da-DK');
     const preview = isImg
         ? '<div class="files-preview"><img id="detailsPreviewImg" alt=""></div>'
         : '<div class="files-preview"><span class="file-type-icon ' + t.cls + '">' + t.label + '</span></div>';
-    panel.innerHTML = `
-        ${preview}
-        <h3>${escapeFileName(file.original_name)}</h3>
-        <div class="files-meta">
-            <div class="meta-row"><span class="meta-key">Størrelse</span><span class="meta-val">${formatFileSize(file.file_size)}</span></div>
-            <div class="meta-row"><span class="meta-key">Type</span><span class="meta-val">${getFileType(file.original_name)}</span></div>
-            <div class="meta-row"><span class="meta-key">Ændret</span><span class="meta-val">${date}</span></div>
-            <div class="meta-row"><span class="meta-key">Uploadet af</span><span class="meta-val">${escapeFileName(file.uploader_name || file.owner_name || '')}</span></div>
-        </div>
-        <div class="details-actions">
-            <button class="btn btn-primary" onclick="openRealFile(${file.id})"><i data-lucide="eye"></i>Åbn</button>
-            <button class="btn btn-secondary" onclick="selectedFileId = ${file.id}; downloadFile()"><i data-lucide="download"></i>Download</button>
-            <button class="btn btn-secondary" onclick="selectedFileId = ${file.id}; transferToOrder()"><i data-lucide="send"></i>Overfør til ordre</button>
-            <button class="btn btn-secondary" onclick="selectedFileId = ${file.id}; shareFile()"><i data-lucide="share-2"></i>Del</button>
-            <button class="btn btn-secondary" style="color:#D93025" onclick="selectedFileId = ${file.id}; deleteSelected()"><i data-lucide="trash-2"></i>Slet</button>
-        </div>`;
+    let actions = '';
+    if (sharedByOther) {
+        actions =
+            '<button class="btn btn-primary" onclick="selectedFileId = ' + file.id + '; openRealFile(' + file.id + ')"><i data-lucide="eye"></i>Åbn</button>' +
+            '<button class="btn btn-secondary" onclick="selectedFileId = ' + file.id + '; downloadFile()"><i data-lucide="download"></i>Download</button>' +
+            '<button class="btn btn-secondary" style="color:#D93025" onclick="selectedFileId = ' + file.id + '; deleteSelected()"><i data-lucide="log-out"></i>Fjern fra mine delte</button>';
+    } else {
+        actions =
+            '<button class="btn btn-secondary" onclick="selectedFileId = ' + file.id + '; openRealFile(' + file.id + ')"><i data-lucide="eye"></i>Åbn</button>' +
+            '<button class="btn btn-primary" onclick="selectedFileId = ' + file.id + '; transferToOrder()"><i data-lucide="send"></i>Overfør til ordre</button>' +
+            '<button class="btn btn-secondary" onclick="selectedFileId = ' + file.id + '; downloadFile()"><i data-lucide="download"></i>Download</button>' +
+            '<button class="btn btn-secondary" onclick="selectedFileId = ' + file.id + '; shareFile()"><i data-lucide="share-2"></i>Del</button>' +
+            '<button class="btn btn-secondary" onclick="selectedFileId = ' + file.id + '; moveSelectedToFolder()"><i data-lucide="folder-input"></i>Flyt til...</button>' +
+            (inSharedList && !inOwnList ? '' : '<button class="btn btn-secondary" onclick="selectedFileId = ' + file.id + '; stopSharingSelected()"><i data-lucide="link-break"></i>Stop deling</button>') +
+            '<button class="btn btn-secondary" style="color:#D93025" onclick="selectedFileId = ' + file.id + '; deleteSelected()"><i data-lucide="trash-2"></i>Slet</button>';
+    }
+    panel.innerHTML =
+        preview +
+        '<h3>' + escapeFileName(file.original_name) + '</h3>' +
+        '<div class="files-meta">' +
+            '<div class="meta-row"><span class="meta-key">Størrelse</span><span class="meta-val">' + formatFileSize(file.file_size) + '</span></div>' +
+            '<div class="meta-row"><span class="meta-key">Type</span><span class="meta-val">' + getFileType(file.original_name) + '</span></div>' +
+            '<div class="meta-row"><span class="meta-key">Ændret</span><span class="meta-val">' + date + '</span></div>' +
+            '<div class="meta-row"><span class="meta-key">Uploadet af</span><span class="meta-val">' + escapeFileName(file.uploader_name || file.owner_name || '') + '</span></div>' +
+        '</div>' +
+        '<div class="details-actions">' + actions + '</div>';
     refreshIcons();
     if (isImg) loadDetailsPreview(file);
 }
@@ -649,7 +660,7 @@ async function uploadFileToExplorer(event) {
 }
 
 async function openRealFile(fileId) {
-    const file = allFiles.find(f => f.id === fileId);
+    const file = findFileAnywhere(fileId);
     if (!file) return;
     
     const ext = file.original_name.split('.').pop().toLowerCase();
@@ -701,7 +712,7 @@ async function downloadRealFile(fileId) {
         if (!response.ok) throw new Error('Download failed');
         
         const blob = await response.blob();
-        const file = allFiles.find(f => f.id === fileId);
+        const file = findFileAnywhere(fileId);
         const typedBlob = new Blob([blob], { type: getImageMime(file.original_name) || blob.type });
         const url = window.URL.createObjectURL(typedBlob);
         const a = document.createElement('a');
@@ -722,26 +733,54 @@ async function deleteSelected() {
         alert('Vælg en fil først');
         return;
     }
-    
-    const file = allFiles.find(f => f.id === selectedFileId);
-    if (!file) return;
-    
-    if (!confirm(`Er du sikker på at du vil slette "${file.original_name}"?`)) return;
-    
+
+    const meId = getCurrentUserId();
+    const token = sessionStorage.getItem('token');
+    const ownFile = allFiles.find(f => f.id === selectedFileId);
+    const sharedFile = sharedFilesCache.find(f => f.id === selectedFileId);
+
+    // Fil andre har delt med MIG: fjern kun min adgang - filen røres ikke
+    if (!ownFile && sharedFile) {
+        if (!confirm('Fjern "' + sharedFile.original_name + '" fra dine delte filer?\n\nFilen slettes ikke og forbliver hos ejeren.')) return;
+        try {
+            const response = await fetch('/api/files/' + selectedFileId + '/share/' + meId, {
+                method: 'DELETE',
+                headers: { 'Authorization': 'Bearer ' + token }
+            });
+            if (!response.ok) {
+                const error = await response.json().catch(() => ({}));
+                throw new Error(error.error || 'Kunne ikke fjerne deling');
+            }
+            selectedFileId = null;
+            sharedFilesCache = await loadSharedFiles();
+            renderRealFiles();
+        } catch (error) {
+            console.error('Unshare error:', error);
+            alert('Fejl: ' + error.message);
+        }
+        return;
+    }
+
+    if (!ownFile) return;
+
+    if (!confirm('ADVARSEL: Filen "' + ownFile.original_name + '" slettes permanent.\n\nDen forsvinder også fra "Alle filer" og hos dem, du har delt den med. Fortsæt?')) return;
+
     try {
-        const token = sessionStorage.getItem('token');
-        const response = await fetch(`/api/files/${selectedFileId}`, {
+        const response = await fetch('/api/files/' + selectedFileId, {
             method: 'DELETE',
-            headers: { 'Authorization': `Bearer ${token}` }
+            headers: { 'Authorization': 'Bearer ' + token }
         });
-        
+
         if (!response.ok) {
             const error = await response.json();
             throw new Error(error.error || 'Delete failed');
         }
-        
-        alert(' Fil slettet');
+
+        alert('Filen er slettet');
         selectedFileId = null;
+        if (currentFilter === 'shared') {
+            sharedFilesCache = await loadSharedFiles();
+        }
         await loadRealFiles();
     } catch (error) {
         console.error('Delete error:', error);
@@ -808,6 +847,7 @@ function openFolder(folderId, folderName) {
     currentFolderId = folderId;
     currentFolderName = folderName;
     currentFilter = 'folder';
+    selectedFileId = null; // ryd markering ved mappeskift
     renderFolderTree();
     renderRealFiles();
 }
@@ -1418,4 +1458,135 @@ function initResizableColumns() {
         document.body.style.userSelect = '';
         document.body.style.cursor = '';
     }
+}
+
+// ===== Trin a2: helpers, flyt-dialog og deling =====
+
+// Indlogget bruger-id (null hvis ukendt)
+function getCurrentUserId() {
+    try {
+        const u = JSON.parse(sessionStorage.getItem('user') || 'null');
+        return u ? u.id : null;
+    } catch (e) {
+        return null;
+    }
+}
+
+// Find fil i både egne og delte filer
+function findFileAnywhere(fileId) {
+    return allFiles.find(f => f.id === fileId) || sharedFilesCache.find(f => f.id === fileId);
+}
+
+// "Flyt til..."-dialog: Mine filer (roden), mapper og Fælles filer
+function moveSelectedToFolder() {
+    if (!selectedFileId) {
+        alert('Vælg en fil først');
+        return;
+    }
+    const file = findFileAnywhere(selectedFileId);
+    if (!file) return;
+
+    const companyFolder = allFolders.find(f => f.is_company_folder && !f.parent_id);
+    const opts = [{ id: null, name: 'Mine filer', company: false, indent: 0 }];
+    allFolders.filter(f => !f.is_company_folder).forEach(f => {
+        const depth = getFolderPath(f.id).length - 1;
+        opts.push({ id: f.id, name: f.name, company: false, indent: depth });
+    });
+    if (companyFolder) {
+        opts.push({ id: companyFolder.id, name: 'Fælles filer', company: true, indent: 0 });
+    }
+
+    const old = document.getElementById('moveFileDialog');
+    if (old) old.remove();
+    const overlay = document.createElement('div');
+    overlay.id = 'moveFileDialog';
+    overlay.className = 'move-overlay';
+    overlay.innerHTML =
+        '<div class="move-dialog">' +
+        '<h3>Flyt "' + escapeFileName(file.original_name) + '" til...</h3>' +
+        '<div class="move-list">' +
+        opts.map(o =>
+            '<button class="move-opt" style="padding-left:' + (12 + o.indent * 16) + 'px" onclick="doMoveFile(' + file.id + ', ' + (o.id === null ? 'null' : o.id) + ', ' + (o.company ? 'true' : 'false') + ')">' +
+            '<i data-lucide="' + (o.company ? 'building-2' : 'folder') + '"></i>' + escapeFileName(o.name) + '</button>'
+        ).join('') +
+        '</div>' +
+        '<button class="move-cancel" onclick="document.getElementById(\'moveFileDialog\').remove()">Annuller</button>' +
+        '</div>';
+    document.body.appendChild(overlay);
+    refreshIcons();
+}
+
+async function doMoveFile(fileId, folderId, isCompany) {
+    if (isCompany && !confirm('Filen bliver synlig for alle med adgang til Fælles filer. Fortsæt?')) return;
+    const token = sessionStorage.getItem('token');
+    try {
+        const response = await fetch('/api/files/' + fileId + '/move', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+            body: JSON.stringify({ folder_id: folderId })
+        });
+        if (!response.ok) {
+            const error = await response.json().catch(() => ({}));
+            throw new Error(error.error || 'Flyt fejlede');
+        }
+        selectedFileId = null; // ryd markering efter flyt
+        const dlg = document.getElementById('moveFileDialog');
+        if (dlg) dlg.remove();
+        await loadRealFiles();
+    } catch (error) {
+        console.error('Move error:', error);
+        alert('Flyt fejlede: ' + error.message);
+    }
+}
+
+// "Stop deling": ejer vælger hvilken kollega delingen skal stoppes for (eller alle)
+async function stopSharingSelected() {
+    const id = selectedFileId;
+    if (!id) {
+        alert('Vælg en fil først');
+        return;
+    }
+    const token = sessionStorage.getItem('token');
+    try {
+        const res = await fetch('/api/files/' + id + '/shares', {
+            headers: { 'Authorization': 'Bearer ' + token }
+        });
+        if (!res.ok) throw new Error('Kunne ikke hente delinger');
+        const shares = await res.json();
+        if (!shares.length) {
+            alert('Filen er ikke delt med nogen.');
+            return;
+        }
+        if (shares.length === 1) {
+            if (!confirm('Stop deling med ' + shares[0].shared_with_name + '?')) return;
+            await doUnshare(id, shares[0].shared_with_user_id, token);
+            return;
+        }
+        const names = shares.map((s, i) => (i + 1) + ') ' + s.shared_with_name).join('\n');
+        const pick = prompt('Stop deling med hvem? Skriv nummeret:\n' + names + '\n\n0 = stop alle delinger');
+        if (pick === null) return;
+        const n = parseInt(pick, 10);
+        if (n === 0) {
+            for (const s of shares) {
+                await doUnshare(id, s.shared_with_user_id, token);
+            }
+        } else if (n >= 1 && n <= shares.length) {
+            await doUnshare(id, shares[n - 1].shared_with_user_id, token);
+        } else {
+            alert('Ugyldigt nummer');
+        }
+    } catch (error) {
+        console.error('Stop sharing error:', error);
+        alert('Fejl: ' + error.message);
+    }
+}
+
+async function doUnshare(fileId, userId, token) {
+    const res = await fetch('/api/files/' + fileId + '/share/' + userId, {
+        method: 'DELETE',
+        headers: { 'Authorization': 'Bearer ' + token }
+    });
+    if (!res.ok) throw new Error('Kunne ikke stoppe deling');
+    alert('Delingen er stoppet');
+    renderFileDetails();
 }

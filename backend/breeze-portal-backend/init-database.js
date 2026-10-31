@@ -584,6 +584,21 @@ export async function initializeDatabase() {
       }
     }
 
+    // Fælles filer: sikr at der altid findes præcis én top-level firmamappe
+    try {
+      const existingCompany = await db.get('SELECT id FROM folders WHERE is_company_folder = 1 AND parent_id IS NULL LIMIT 1');
+      if (existingCompany) {
+        console.log('INFO: Firmamappe findes allerede - ingen oprettelse');
+      } else {
+        let creator = await db.get('SELECT id FROM users WHERE is_admin = 1 ORDER BY id LIMIT 1');
+        if (!creator) creator = await db.get('SELECT id FROM users ORDER BY id LIMIT 1');
+        await db.run('INSERT INTO folders (name, parent_id, created_by, is_company_folder) VALUES (?, NULL, ?, 1)', ['SG Seest Gulvteknik', creator ? creator.id : null]);
+        console.log('Firma mappe oprettet: SG Seest Gulvteknik (vises som "Fælles filer")');
+      }
+    } catch (companyErr) {
+      console.error('Kunne ikke sikre firmamappe:', companyErr.message);
+    }
+
     console.log('✅ All database tables initialized successfully!');
   } catch (error) {
     console.error('❌ Database initialization failed:', error);

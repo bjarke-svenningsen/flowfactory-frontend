@@ -216,6 +216,13 @@ async function maybeStoreInR2(file, folder = 'files') {
 // Sletter et R2-objekt KUN hvis ingen anden række (fx efter "Overfør til ordre")
 // stadig bruger samme storage_key. Fejl logges - objektet efterlades i så fald.
 const R2_KEY_TABLES = ['files', 'order_documents', 'quote_attachments', 'email_attachments'];
+// Fælles filer: samlet adgangstjek for firma-mapper.
+// I dag: alle indloggede brugere har adgang. Skal adgangen senere styres af
+// stilling/rolle, ændres KUN denne funktion.
+function canAccessCompanyFolder(user) {
+  return !!user;
+}
+
 async function deleteR2ObjectIfUnused(storageKey, excludeTable, excludeId) {
   if (!storageKey) return;
   for (const table of R2_KEY_TABLES) {
@@ -709,6 +716,18 @@ app.post('/api/files/upload', auth, upload.single('file'), async (req, res) => {
 
     const folder_id = req.body.folder_id ? Number(req.body.folder_id) : null;
 
+    // Tjek adgang til mål-mappe (egen mappe, firmamappe eller admin)
+    if (folder_id) {
+      const targetFolder = await db.get('SELECT * FROM folders WHERE id = ?', [folder_id]);
+      if (!targetFolder) {
+        return res.status(404).json({ error: 'Folder not found' });
+      }
+      const actorUser = await db.get('SELECT is_admin FROM users WHERE id = ?', [req.user.id]);
+      if (targetFolder.created_by !== req.user.id && !(targetFolder.is_company_folder && canAccessCompanyFolder(req.user)) && !actorUser.is_admin) {
+        return res.status(403).json({ error: 'Permission denied - folder access' });
+      }
+    }
+
     // Upload til R2 hvis aktiveret (USE_R2=true) - ellers disk som hidtil
     const storage = await maybeStoreInR2(req.file, 'files');
 
@@ -1017,8 +1036,8 @@ app.put('/api/files/:id/move', auth, async (req, res) => {
       return res.status(404).json({ error: 'Folder not found' });
     }
     
-    // Check if user has access to folder (owner or company folder)
-    if (folder.created_by !== req.user.id && !folder.is_company_folder && !user.is_admin) {
+    // Check if user has access to folder (owner, company folder via canAccessCompanyFolder, or admin)
+    if (folder.created_by !== req.user.id && !(folder.is_company_folder && canAccessCompanyFolder(user)) && !user.is_admin) {
       return res.status(403).json({ error: 'Permission denied - folder access' });
     }
   }
@@ -1149,8 +1168,11 @@ app.delete('/api/files/:id/share/:userId', auth, async (req, res) => {
     return res.status(404).json({ error: 'File not found' });
   }
   
-  if (file.owner_id !== req.user.id) {
-    return res.status(403).json({ error: 'Only file owner can unshare' });
+  // Ejeren må stoppe enhver deling; modtageren må fjerne sin egen adgang; admins må alt
+  const actor = await db.get('SELECT is_admin FROM users WHERE id = ?', [req.user.id]);
+  const isRecipient = !!(await db.get('SELECT id FROM file_shares WHERE file_id = ? AND shared_with_user_id = ?', [fileId, userId]));
+  if (file.owner_id !== req.user.id && !isRecipient && !actor.is_admin) {
+    return res.status(403).json({ error: 'Only owner or recipient can remove share' });
   }
   
   await db.run('DELETE FROM file_shares WHERE file_id = ? AND shared_with_user_id = ?', [fileId, userId]);
