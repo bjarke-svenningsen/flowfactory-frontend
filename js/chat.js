@@ -196,17 +196,21 @@ async function markConversationRead() {
     } catch (error) { /* proeves igen naeste gang */ }
 }
 
-// Global badge paa "Chat & Video" i menuen
+// Global badge: menu ("Chat & Video") + profilbillede i top-hjornet
 function updateChatMenuBadge() {
-    const badge = document.getElementById('chatMenuBadge');
-    if (!badge) return;
     let total = 0;
     for (const k in unreadCounts) total += unreadCounts[k] || 0;
-    if (total > 0) {
-        badge.textContent = total > 9 ? '9+' : total;
-        badge.style.display = 'flex';
-    } else {
-        badge.style.display = 'none';
+    const label = total > 9 ? '9+' : (total > 0 ? String(total) : '');
+
+    const menuBadge = document.getElementById('chatMenuBadge');
+    if (menuBadge) {
+        if (total > 0) { menuBadge.textContent = label; menuBadge.style.display = 'flex'; }
+        else { menuBadge.style.display = 'none'; }
+    }
+    const avatarBadge = document.getElementById('navAvatarBadge');
+    if (avatarBadge) {
+        if (total > 0) { avatarBadge.textContent = label; avatarBadge.style.display = 'flex'; }
+        else { avatarBadge.style.display = 'none'; }
     }
 }
 
@@ -214,9 +218,14 @@ function updateChatMenuBadge() {
 // saa ulaeste-badge i menuen virker overalt.
 if (typeof window !== 'undefined' && !window._chatAutoInit) {
     window._chatAutoInit = true;
-    window.addEventListener('load', () => {
+    const startChatBackground = () => {
         if (sessionStorage.getItem('token')) initChat();
-    });
+    };
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', startChatBackground);
+    } else {
+        startChatBackground();
+    }
 }
 
 // Render bruger liste
@@ -342,6 +351,7 @@ function renderMessages() {
 
     const messages = chatStore[currentConversationId] || [];
     const container = document.getElementById('chatMessages');
+    if (!container) return;
 
     if (messages.length === 0) {
         container.innerHTML = '<div style="text-align: center; color: var(--text-muted); padding: 40px;">Ingen beskeder endnu. Send den første!</div>';

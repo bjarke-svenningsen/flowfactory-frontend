@@ -57,6 +57,7 @@ body {
 }
 
 .user-avatar {
+    position: relative;
     width: 40px;
     height: 40px;
     border-radius: 50%;
@@ -118,6 +119,7 @@ body {
 }
 
 .menu-item {
+    position: relative;
     padding: 12px 15px;
     margin-bottom: 5px;
     border-radius: 5px;
@@ -1100,8 +1102,12 @@ body {
 }
 
 .menu-unread-badge {
-    background: var(--accent);
-    color: var(--text);
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: #e41e3f;
+    color: #fff;
     font-size: 11px;
     font-weight: 700;
     min-width: 18px;
@@ -1111,8 +1117,28 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
-    margin-left: auto;
-    flex-shrink: 0;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.25);
+    pointer-events: none;
+}
+
+.avatar-unread-badge {
+    position: absolute;
+    top: -4px;
+    right: -4px;
+    background: #e41e3f;
+    color: #fff;
+    font-size: 10px;
+    font-weight: 700;
+    min-width: 16px;
+    height: 16px;
+    padding: 0 4px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 2px solid #fff;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.25);
+    pointer-events: none;
 }
 
 .message-bubble a {
