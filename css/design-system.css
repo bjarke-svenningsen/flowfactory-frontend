@@ -165,7 +165,7 @@ h1 { font-size: var(--font-size-title); }
 }
 
 /* ---------- Faner (underline) ---------- */
-.tabs { display: flex; gap: 4px; border-bottom: 2px solid var(--border); }
+.tabs { display: inline-flex; gap: 4px; border-bottom: 2px solid var(--border); }
 .tab {
     padding: 12px 18px;
     background: transparent;

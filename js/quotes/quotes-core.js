@@ -933,11 +933,12 @@ function switchOrderTab(tab) {
     previewView.style.display = 'none';
     customersView.style.display = 'none';
     
-    // Update button styles
+    // Update button styles (in_progress mapper til tabInProgress/orderTabInProgress)
     const tabs = ['quotes', 'orders', 'in_progress', 'invoiced', 'rejected', 'customers'];
     tabs.forEach(t => {
-        const btn = document.getElementById(`tab${t.charAt(0).toUpperCase() + t.slice(1)}`);
-        const content = document.getElementById(`orderTab${t.charAt(0).toUpperCase() + t.slice(1)}`);
+        const name = t === 'in_progress' ? 'InProgress' : t.charAt(0).toUpperCase() + t.slice(1);
+        const btn = document.getElementById(`tab${name}`);
+        const content = document.getElementById(`orderTab${name}`);
         
         if (btn && content) {
             btn.classList.toggle('active', t === tab);
