@@ -588,7 +588,9 @@ const timePage = {
         document.getElementById('timeEntryForm').reset();
         document.getElementById('entryDate').valueAsDate = this.selectedDate;
         document.getElementById('editingTimeEntryId').value = '';
-        document.getElementById('deleteBtn').style.display = 'none';
+        document.getElementById('deleteBtn').classList.add('hidden-field');
+        this.setEntryType('order');
+        document.getElementById('timeCalculation').classList.add('hidden-field');
         document.getElementById('timeEntryModal').classList.add('active');
         
         this.loadOrders();
@@ -629,17 +631,40 @@ const timePage = {
         }
     },
 
-    toggleEntryType() {
-        const entryType = document.querySelector('input[name="entryType"]:checked').value;
-        const orderGroup = document.getElementById('orderSelectGroup');
-        
-        if (entryType === 'order') {
-            orderGroup.style.display = 'block';
-            document.getElementById('orderId').required = true;
-        } else {
-            orderGroup.style.display = 'none';
-            document.getElementById('orderId').required = false;
+    // Segmenteret typevælger: Ordre | Værksted | Sygdom
+    setEntryType(type) {
+        const valid = ['order', 'workshop', 'sick'];
+        if (!valid.includes(type)) type = 'order';
+        document.getElementById('entryTypeInput').value = type;
+
+        document.getElementById('typeOrder').classList.toggle('active', type === 'order');
+        document.getElementById('typeWorkshop').classList.toggle('active', type === 'workshop');
+        document.getElementById('typeSick').classList.toggle('active', type === 'sick');
+
+        // Vis/skjul felter der ikke hoerer til typen og nulstil dem
+        document.getElementById('orderSelectGroup').classList.toggle('hidden-field', type !== 'order');
+        document.getElementById('materialGroup').classList.toggle('hidden-field', type === 'sick');
+        if (type !== 'order') document.getElementById('orderId').value = '';
+        if (type === 'sick') {
+            // Sygdom bruger automatisk materialet "Sygdom" (nr. 1) i baggrunden
+            document.getElementById('materialKind').value = 'normal';
         }
+        this.clearFieldErrors();
+        this.calculateDuration();
+    },
+
+    getFormEntryType() {
+        const t = document.getElementById('entryTypeInput').value;
+        return ['order', 'workshop', 'sick'].includes(t) ? t : 'order';
+    },
+
+    clearFieldErrors() {
+        document.querySelectorAll('#timeEntryForm .input-error').forEach(el => el.classList.remove('input-error'));
+    },
+
+    markFieldError(id) {
+        const el = document.getElementById(id);
+        if (el) el.classList.add('input-error');
     },
 
     calculateDuration() {
@@ -657,10 +682,11 @@ const timePage = {
         
         if (durationHours > 0) {
             document.getElementById('calculatedHours').textContent = durationHours;
-            document.getElementById('timeCalculation').style.display = 'block';
+            document.getElementById('timeCalculation').classList.remove('hidden-field');
             
             // Find material price based on type
-            const timeType = document.querySelector('input[name="timeType"]:checked').value;
+            // Sygdom -> materiale nr. 1; ellers timetype-vaelgeren (alm./overtid)
+            const timeType = this.getFormEntryType() === 'sick' ? 'sick' : document.getElementById('materialKind').value;
             let materialNumber = TIME_MATERIALS.normal; // Default: Montørtimer
             if (timeType === 'overtime') materialNumber = TIME_MATERIALS.overtime;
             if (timeType === 'sick') materialNumber = TIME_MATERIALS.sick;
@@ -680,7 +706,7 @@ const timePage = {
                     '| Numre:', this.materials.map(m => m.material_number).join(', '));
             }
         } else {
-            document.getElementById('timeCalculation').style.display = 'none';
+            document.getElementById('timeCalculation').classList.add('hidden-field');
         }
     },
 
@@ -690,21 +716,40 @@ const timePage = {
 
     async saveTimeEntry(event) {
         event.preventDefault();
+        this.clearFieldErrors();
         
-        const entryType = document.querySelector('input[name="entryType"]:checked').value;
+        const entryType = this.getFormEntryType();
         const orderId = entryType === 'order' ? document.getElementById('orderId').value : null;
+        
+        // Soerg for at materialet er valgt (Sygdom saettes automatisk)
+        this.calculateDuration();
         const materialId = document.getElementById('selectedMaterialId').value;
         
+        let hasError = false;
+        if (!document.getElementById('entryDate').value) {
+            this.markFieldError('entryDate'); hasError = true;
+        }
+        if (!document.getElementById('startTime').value) {
+            this.markFieldError('startTime'); hasError = true;
+        }
+        if (!document.getElementById('endTime').value) {
+            this.markFieldError('endTime'); hasError = true;
+        }
+        if (hasError) {
+            alert('Udfyld alle påkrævede felter (markeret med rødt).');
+            return;
+        }
+        
         if (!materialId) {
-            // Better error message
-            const timeType = document.querySelector('input[name="timeType"]:checked').value;
+            const timeType = entryType === 'sick' ? 'sick' : document.getElementById('materialKind').value;
             const names = { normal: 'Montørtimer (8000)', overtime: 'Montørtimer weekend/overarbejde (8001)', sick: 'Sygdom (1)' };
-            alert(` Materiale for "${names[timeType] || timeType}" findes ikke!\n\nGå til Materialer-siden og tjek at disse findes:\n- Materiale 8000: Montørtimer\n- Materiale 8001: Montørtimer weekend/overarbejde\n- Materiale 1: Sygdom`);
+            alert(`Materialet for "${names[timeType] || timeType}" findes ikke.\n\nGå til Materialer-siden og tjek at disse findes:\n- Materiale 8000: Montørtimer\n- Materiale 8001: Montørtimer weekend/overarbejde\n- Materiale 1: Sygdom`);
             return;
         }
         
         if (entryType === 'order' && !orderId) {
-            alert(' Vælg venligst en ordre at registrere tiden på');
+            this.markFieldError('orderId');
+            alert('Vælg venligst en ordre at registrere tiden på.');
             return;
         }
         
@@ -714,7 +759,8 @@ const timePage = {
             date: document.getElementById('entryDate').value,
             start_time: document.getElementById('startTime').value,
             end_time: document.getElementById('endTime').value,
-            notes: document.getElementById('notes').value
+            notes: document.getElementById('notes').value,
+            entry_type: entryType
         };
         
         try {
@@ -722,17 +768,17 @@ const timePage = {
             
             if (editingId) {
                 await TimeEntries.update(editingId, timeEntryData);
-                alert(' Timeregistrering opdateret!');
+                alert('Timeregistrering opdateret!');
             } else {
                 await TimeEntries.create(timeEntryData);
-                alert(' Timeregistrering oprettet!');
+                alert('Timeregistrering oprettet!');
             }
             
             this.closeModal();
             await this.loadTimeEntries();
         } catch (error) {
             console.error('Error saving time entry:', error);
-            alert(' Fejl: ' + (error.message || 'Kunne ikke gemme timeregistrering'));
+            alert('Fejl: ' + (error.message || 'Kunne ikke gemme timeregistrering'));
         }
     },
 
@@ -744,21 +790,22 @@ const timePage = {
         document.getElementById('notes').value = entry.notes || '';
         document.getElementById('editingTimeEntryId').value = entry.id;
         
-        if (entry.order_id) {
-            document.querySelector('input[name="entryType"][value="order"]').checked = true;
-        } else {
-            document.querySelector('input[name="entryType"][value="internal"]').checked = true;
+        // Typen: gemt entry_type, fallback udledes af ordre/materiale (gamle data)
+        let entryType = entry.entry_type;
+        if (!['order', 'workshop', 'sick'].includes(entryType)) {
+            if (entry.order_id) entryType = 'order';
+            else if ((entry.material_name || '').toLowerCase().includes('sygdom')) entryType = 'sick';
+            else entryType = 'workshop';
         }
         
-        // Sæt tidstype ud fra materialet (8000=alm, 8001=overtid, 1=sygdom)
-        const typeInput = document.querySelector(`input[name="timeType"][value="${getTimeType(entry)}"]`);
-        if (typeInput) typeInput.checked = true;
+        // Timetype ud fra materialet (8000=alm, 8001=overtid, 1=sygdom)
+        const timeKind = getTimeType(entry) === 'overtime' ? 'overtime' : 'normal';
+        document.getElementById('materialKind').value = timeKind;
         
-        this.toggleEntryType();
-        this.calculateDuration();
+        this.setEntryType(entryType);
         
         if (!entry.is_locked || this.currentUser.is_admin) {
-            document.getElementById('deleteBtn').style.display = 'inline-block';
+            document.getElementById('deleteBtn').classList.remove('hidden-field');
         }
         
         document.getElementById('timeEntryModal').classList.add('active');

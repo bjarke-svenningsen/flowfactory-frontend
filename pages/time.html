@@ -70,6 +70,18 @@
             border-radius: 8px;
         }
 
+        .type-toggle {
+            margin-top: 6px;
+        }
+
+        .hidden-field {
+            display: none !important;
+        }
+
+        .input-error {
+            border-color: var(--danger) !important;
+        }
+
         .btn-nav {
             padding: 10px 15px;
             background: white;
@@ -524,21 +536,11 @@
 
             <form id="timeEntryForm" onsubmit="timePage.saveTimeEntry(event)">
                 <div class="form-group">
-                    <label>Dato *</label>
-                    <input type="date" id="entryDate" required>
-                </div>
-
-                <div class="form-group">
-                    <label>Registrer på:</label>
-                    <div class="radio-group">
-                        <label class="radio-option">
-                            <input type="radio" name="entryType" value="order" checked onchange="timePage.toggleEntryType()">
-                            <span>Ordre</span>
-                        </label>
-                        <label class="radio-option">
-                            <input type="radio" name="entryType" value="internal" onchange="timePage.toggleEntryType()">
-                            <span> Værksted (intern tid)</span>
-                        </label>
+                    <label>Registreringstype</label>
+                    <div class="view-toggle segmented type-toggle">
+                        <button type="button" id="typeOrder" class="active" onclick="timePage.setEntryType('order')">Ordre</button>
+                        <button type="button" id="typeWorkshop" onclick="timePage.setEntryType('workshop')">Værksted</button>
+                        <button type="button" id="typeSick" onclick="timePage.setEntryType('sick')">Sygdom</button>
                     </div>
                 </div>
 
@@ -547,6 +549,19 @@
                     <select id="orderId">
                         <option value="">Indlæser ordre...</option>
                     </select>
+                </div>
+
+                <div class="form-group" id="materialGroup">
+                    <label>Timetype *</label>
+                    <select id="materialKind" onchange="timePage.updateMaterialSelection()">
+                        <option value="normal">Alm. timer</option>
+                        <option value="overtime">Overtid (weekend/overarbejde)</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>Dato *</label>
+                    <input type="date" id="entryDate" required>
                 </div>
 
                 <div class="form-row">
@@ -560,28 +575,10 @@
                     </div>
                 </div>
 
-                <div class="form-group">
-                    <label>Type Timer:</label>
-                    <div class="radio-group">
-                        <label class="radio-option">
-                            <input type="radio" name="timeType" value="normal" checked onchange="timePage.updateMaterialSelection()">
-                            <span>Alm. Timer</span>
-                        </label>
-                        <label class="radio-option">
-                            <input type="radio" name="timeType" value="overtime" onchange="timePage.updateMaterialSelection()">
-                            <span>Overtid</span>
-                        </label>
-                        <label class="radio-option">
-                            <input type="radio" name="timeType" value="sick" onchange="timePage.updateMaterialSelection()">
-                            <span> Sygdom</span>
-                        </label>
-                    </div>
-                </div>
-
-                <div class="time-calculation" id="timeCalculation" style="display: none;">
-                    <p><strong>Duration:</strong> <span id="calculatedHours">0</span> timer (minus 30 min frokost)</p>
+                <div class="time-calculation hidden-field" id="timeCalculation">
+                    <p><strong>Varighed:</strong> <span id="calculatedHours">0</span> timer</p>
                     <!-- Priser kun synlige for admins -->
-                    <p id="priceInfo" style="display: none;">
+                    <p id="priceInfo" class="hidden-field">
                         <strong>Kostpris:</strong> <span id="calculatedCost">0</span> kr<br>
                         <strong>Salgspris:</strong> <span id="calculatedSale">0</span> kr
                     </p>
@@ -594,10 +591,11 @@
 
                 <input type="hidden" id="editingTimeEntryId">
                 <input type="hidden" id="selectedMaterialId">
+                <input type="hidden" id="entryTypeInput" value="order">
 
                 <div class="modal-actions">
                     <button type="button" class="btn-secondary" onclick="timePage.closeModal()">Annuller</button>
-                    <button type="button" class="btn-secondary btn-delete" id="deleteBtn" onclick="timePage.deleteTimeEntry()" style="display: none;">Slet</button>
+                    <button type="button" class="btn-secondary btn-delete hidden-field" id="deleteBtn" onclick="timePage.deleteTimeEntry()">Slet</button>
                     <button type="submit" class="btn-primary">Gem Registrering</button>
                 </div>
             </form>
