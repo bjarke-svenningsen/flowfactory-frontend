@@ -357,9 +357,7 @@ function renderQuoteForm() {
                                 </option>
                             `).join('')}
                         </select>
-                        <button onclick="showQuickCreateCustomer()" style="padding: 10px 20px; background: var(--color-green); color: white; border: none; border-radius: 5px; cursor: pointer; white-space: nowrap;">
-                            Ny Kunde
-                        </button>
+                        ${btn('secondary', 'user-plus', 'Ny Kunde', { onclick: 'showQuickCreateCustomer()' })}
                     </div>
                 </div>
                 
@@ -431,9 +429,7 @@ function renderQuoteForm() {
                 <button onclick="saveQuote('draft')" class="btn btn-primary">
                     Gem som Udkast
                 </button>
-                <button onclick="saveAndPreviewQuote()" style="padding: 12px 24px; background: var(--color-green); color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 14px;">
-                    Gem & Se Preview
-                </button>
+                ${btn('primary', 'save', 'Gem & Se Preview', { onclick: 'saveAndPreviewQuote()' })}
             </div>
         </div>
     `;

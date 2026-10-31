@@ -375,9 +375,7 @@ function renderWorkspaceOverview(container) {
                             <button onclick="cancelOrderDetailsEdit()" class="btn btn-secondary btn-sm">
                                 Annuller
                             </button>
-                            <button onclick="saveOrderDetails()" style="padding: 8px 16px; background: var(--color-green); color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 13px;">
-                                Gem
-                            </button>
+                            ${btn('primary', 'save', 'Gem', { onclick: 'saveOrderDetails()', small: true })}
                         </div>
                     </div>
                 </div>
@@ -467,9 +465,7 @@ function renderWorkspaceOverview(container) {
                     <button onclick="cancelWorkDescriptionEdit()" class="btn btn-secondary">
                         Annuller
                     </button>
-                    <button onclick="saveWorkDescription()" style="padding: 10px 20px; background: var(--color-green); color: white; border: none; border-radius: 5px; cursor: pointer;">
-                        Gem
-                    </button>
+                    ${btn('primary', 'save', 'Gem', { onclick: 'saveWorkDescription()' })}
                 </div>
             </div>
         </div>
@@ -489,9 +485,7 @@ function renderWorkspaceOverview(container) {
                                         <p style="margin: 5px 0;"><strong>Total:</strong> ${formatCurrency(extraOrder.total)}</p>
                                         <p style="margin: 5px 0; font-size: 12px; color: var(--text-muted);">Oprettet: ${new Date(extraOrder.created_at).toLocaleDateString('da-DK')}</p>
                                     </div>
-                                    <button onclick="openOrderWorkspace(${extraOrder.id}, ${currentWorkspaceOrder.id})" style="padding: 10px 20px; background: var(--color-orange); color: white; border: none; border-radius: 5px; cursor: pointer; white-space: nowrap;">
-                                        Åbn
-                                    </button>
+                                    ${btn('secondary', 'external-link', 'Åbn', { onclick: `openOrderWorkspace(${extraOrder.id}, ${currentWorkspaceOrder.id})`, small: true })}
                                 </div>
                             </div>
                         `).join('')}
@@ -600,9 +594,7 @@ function renderExpensesList() {
                             <button onclick="editExpense(${exp.id})" class="btn btn-primary btn-sm">
                                 Rediger
                             </button>
-                            <button onclick="deleteExpense(${exp.id})" style="padding: 6px 12px; background: var(--color-red); color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">
-                                Slet
-                            </button>
+                            ${btn('danger', 'trash-2', 'Slet', { onclick: `deleteExpense(${exp.id})`, small: true, title: 'Slet udgift' })}
                         </td>
                     </tr>
                 `).join('')}
@@ -982,7 +974,7 @@ function renderDocumentsList() {
                 const date = new Date(doc.created_at).toLocaleDateString('da-DK');
                 
                 return `
-                    <div style="background: var(--surface-muted); padding: 20px; border-radius: 8px; border: 2px solid var(--border); display: flex; justify-content: space-between; align-items: center;">
+                    <div style="background: var(--surface-muted); padding: 20px; border-radius: 12px; border: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; gap: 10px;">
                         <div style="display: flex; align-items: center; gap: 15px; flex: 1;">
                             <div style="font-size: 32px;">${icon}</div>
                             <div style="flex: 1;">
@@ -992,16 +984,10 @@ function renderDocumentsList() {
                                 </div>
                             </div>
                         </div>
-                        <div style="display: flex; gap: 10px;">
-                            <button onclick="previewDocument(${doc.id}, '${doc.original_name.replace(/'/g, "\\'")}')" class="btn btn-secondary">
-                                <i data-lucide="eye"></i> Preview
-                            </button>
-                            <button onclick="downloadDocument(${doc.id}, '${doc.original_name.replace(/'/g, "\\'")}')" class="btn btn-secondary">
-                                <i data-lucide="download"></i> Download
-                            </button>
-                            <button onclick="deleteDocument(${doc.id})" class="btn btn-danger">
-                                <i data-lucide="trash-2"></i> Slet
-                            </button>
+                        <div style="display: flex; gap: 6px; flex: 0 0 auto;">
+                            ${btn('ghost', 'eye', 'Preview', { onclick: `previewDocument(${doc.id}, '${doc.original_name.replace(/'/g, "\\'")}')`, title: 'Vis dokument' })}
+                            ${btn('ghost', 'download', 'Download', { onclick: `downloadDocument(${doc.id}, '${doc.original_name.replace(/'/g, "\\'")}')`, title: 'Download dokument' })}
+                            ${btn('icon', 'trash-2', 'Slet dokument', { onclick: `deleteDocument(${doc.id})`, danger: true })}
                         </div>
                     </div>
                 `;
@@ -1488,9 +1474,7 @@ async function createExtraWork(parentOrderId) {
                 <div style="margin-bottom: 30px;">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
                         <h3 style="margin: 0;">Arbejdslinjer</h3>
-                        <button type="button" onclick="addExtraWorkLine()" style="padding: 8px 16px; background: var(--color-orange); color: white; border: none; border-radius: 5px; cursor: pointer;">
-                            Tilføj Linje
-                        </button>
+                        ${btn('secondary', 'plus', 'Tilføj Linje', { onclick: 'addExtraWorkLine()', small: true })}
                     </div>
                     <div id="extraWorkLinesContainer"></div>
                 </div>
@@ -1513,9 +1497,7 @@ async function createExtraWork(parentOrderId) {
                     <button type="button" onclick="closeExtraWorkModal()" class="btn btn-secondary">
                         Annuller
                     </button>
-                    <button type="submit" style="padding: 12px 24px; background: var(--color-orange); color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 14px;">
-                        Opret Ekstraarbejde
-                    </button>
+                    <button type="submit" class="btn btn-primary">Opret Ekstraarbejde</button>
                 </div>
             </form>
         </div>
@@ -1541,9 +1523,7 @@ function renderExtraWorkLines() {
         <div style="background: var(--surface-muted); padding: 15px; border-radius: 8px; margin-bottom: 15px; border: 2px solid var(--border);">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
                 <strong>Linje ${index + 1}</strong>
-                <button type="button" onclick="removeExtraWorkLine(${index})" style="padding: 5px 10px; background: var(--color-red); color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">
-                    Fjern
-                </button>
+                ${btn('danger', 'x', 'Fjern', { onclick: `removeExtraWorkLine(${index})`, small: true, title: 'Fjern linje' })}
             </div>
             
             <div style="margin-bottom: 10px;">

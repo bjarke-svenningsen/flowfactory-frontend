@@ -47,6 +47,16 @@
     --font-size-body: 14px;
 
     --transition: 150ms ease;
+    --transition-fast: 120ms ease;
+
+    /* Knap-tokens */
+    --border-strong: #D1D5DB;   /* secondary hover-kant */
+    --hover-fill: #F6F7F9;      /* secondary hover-baggrund */
+    --ghost-hover: #F0F1F3;     /* ghost hover-baggrund */
+    --danger-soft: #FEF2F2;     /* danger hover-baggrund */
+    --btn-height: 36px;
+    --btn-height-sm: 30px;
+    --btn-icon-size: 32px;
 }
 
 /* ---------- Basis ---------- */
@@ -59,48 +69,66 @@
 h1, h2, h3 { font-family: var(--font-family); }
 h1 { font-size: var(--font-size-title); }
 
-/* ---------- Knapper ---------- */
+/* ---------- Knapper (ÉN komponent, bruges overalt) ----------
+   Fælles: 36px (sm 30), padding 0 14px, radius 8, font 14/500,
+   gap 8, ikoner 16px, ingen skygger, overgang 120ms, focus-ring 2px gul. */
 .btn {
     display: inline-flex;
     align-items: center;
     justify-content: center;
     gap: 8px;
-    height: 40px;
-    padding: 0 16px;
+    height: var(--btn-height);
+    padding: 0 14px;
     border-radius: var(--radius-btn);
     border: 1px solid transparent;
     font-family: var(--font-family);
     font-size: var(--font-size-body);
-    font-weight: 600;
+    font-weight: 500;
+    line-height: 1;
     cursor: pointer;
     white-space: nowrap;
-    transition: background var(--transition), border-color var(--transition), color var(--transition), box-shadow var(--transition);
+    text-decoration: none;
+    box-shadow: none;
+    transition: background var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast);
 }
-.btn svg { width: 18px; height: 18px; flex-shrink: 0; }
+.btn svg, .btn .lucide { width: 16px; height: 16px; flex-shrink: 0; stroke-width: 1.75; }
 .btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.btn:disabled, .btn[aria-disabled="true"] { opacity: 0.5; pointer-events: none; }
+.btn-sm { height: var(--btn-height-sm); padding: 0 10px; font-size: 13px; }
 
-.btn-primary { background: var(--accent); color: var(--text); }
+/* Primary: fyldt gul, sort tekst — MAKS ÉN pr. visning/kort */
+.btn-primary { background: var(--accent); color: var(--text); font-weight: 600; }
 .btn-primary:hover { background: var(--accent-hover); }
 
+/* Secondary: hvid med 1px kant */
 .btn-secondary { background: var(--surface); color: var(--text); border-color: var(--border); }
-.btn-secondary:hover { border-color: var(--text-muted); background: var(--surface-muted); }
+.btn-secondary:hover { background: var(--hover-fill); border-color: var(--border-strong); }
 
-.btn-danger { background: var(--surface); color: var(--danger); border-color: var(--border); }
-.btn-danger:hover { background: var(--danger); color: var(--surface); border-color: var(--danger); }
+/* Ghost: ingen baggrund/kant — små handlinger i kort og tabeller */
+.btn-ghost { background: transparent; color: #4B5563; }
+.btn-ghost:hover { background: var(--ghost-hover); }
 
+/* Danger: ghost-udseende med rød tekst. ALDRIG fyldt rød. */
+.btn-danger { background: transparent; border-color: transparent; color: var(--danger); }
+.btn-danger:hover { background: var(--danger-soft); }
+
+/* Icon-knap: 32px firkant, kun ikon (ghost-stil), tooltip via title/aria-label */
 .btn-icon {
-    width: 40px;
-    height: 40px;
-    min-width: 40px;
+    width: var(--btn-icon-size);
+    height: var(--btn-icon-size);
+    min-width: var(--btn-icon-size);
     padding: 0;
-    background: var(--surface);
-    color: var(--text);
-    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text-muted);
+    border: none;
     border-radius: var(--radius-btn);
 }
-.btn-icon:hover { border-color: var(--text-muted); background: var(--surface-muted); }
-.btn-icon.btn-icon-sm { width: 36px; height: 36px; min-width: 36px; }
-.btn-icon.btn-icon-sm svg { width: 16px; height: 16px; }
+.btn-icon:hover { background: var(--ghost-hover); color: var(--text); }
+.btn-icon.btn-icon-sm { width: 28px; height: 28px; min-width: 28px; }
+.btn-icon.btn-icon-sm svg { width: 15px; height: 15px; }
+/* Slet som ikon: grå, rød ved hover */
+.btn-icon.btn-icon-danger { color: var(--text-muted); }
+.btn-icon.btn-icon-danger:hover { background: var(--danger-soft); color: var(--danger); }
 
 /* ---------- Kunder (punkt 2): kundetabel ---------- */
 .customers-table { width: 100%; border-collapse: collapse; background: var(--surface); overflow: hidden; }
@@ -588,34 +616,9 @@ h1 { font-size: var(--font-size-title); }
     --info-soft: #E7F0FB;
     --accent-today: #FFF8DB;
 }
-.btn-primary {
-    background: var(--accent) !important;
-    color: var(--bg-header) !important;
-    border-radius: var(--radius-btn);
-    font-weight: 700;
-    box-shadow: var(--shadow-soft);
-}
-.btn-primary:hover { background: var(--accent-hover) !important; transform: translateY(-1px); }
-.btn-secondary {
-    background: var(--surface) !important;
-    color: var(--text) !important;
-    border: 1px solid var(--border) !important;
-    border-radius: var(--radius-btn);
-    font-weight: 600;
-}
-.btn-secondary:hover { background: var(--surface-muted) !important; }
-.btn-danger, .btn-delete {
-    background: var(--surface) !important;
-    color: var(--danger) !important;
-    border: 1px solid var(--border) !important;
-    border-radius: var(--radius-btn);
-    font-weight: 600;
-}
-.btn-danger:hover, .btn-delete:hover {
-    background: var(--danger) !important;
-    color: var(--surface) !important;
-    border-color: var(--danger) !important;
-}
+/* Gamle klassenavne mappes til den fælles knapkomponent (ingen duplikat-CSS) */
+.btn-delete { background: transparent; color: var(--danger); border-color: transparent; }
+.btn-delete:hover { background: var(--danger-soft); }
 .status-pill { border-radius: var(--radius-pill); font-size: 12px; font-weight: 600; padding: 4px 12px; display: inline-flex; align-items: center; gap: 6px; }
 .status-pill--draft { background: var(--surface-muted); color: var(--text-muted); }
 .status-pill--sent { background: var(--info-soft); color: var(--info); }
@@ -862,19 +865,6 @@ body, .dashboard { background: var(--bg-page); }
 /* Eksporter-knappen skal skydes til hjre */
 .export-right { margin-left: auto; }
 
-/* Slet-knap i tilbudsvisning: hvid m. rd tekst, rd baggrund kun ved hover */
-.btn-danger, .btn-delete {
-    background: var(--surface) !important;
-    color: var(--danger) !important;
-    border: 1px solid var(--danger);
-    border-radius: var(--radius-btn);
-    font-weight: 600;
-}
-.btn-danger:hover, .btn-delete:hover {
-    background: var(--danger) !important;
-    color: var(--surface) !important;
-}
-
 /* Eksporter-knappen skal skydes til hjre */
 .export-right { margin-left: auto; }
 
@@ -882,10 +872,10 @@ body, .dashboard { background: var(--bg-page); }
 /* ---------- Trin 4: Responsivitet (1280 / 1024 / 390) ---------- */
 /* Trygge trykflader på touch-enheder (>= 40px) */
 @media (hover: none) and (pointer: coarse) {
-    .btn, .btn-primary, .btn-secondary, .btn-danger, .btn-sm,
+    .btn, .btn-primary, .btn-secondary, .btn-danger, .btn-ghost, .btn-sm,
     .toolbar-btn, .pill, .filter-pill, .tab, .menu-item,
     .segmented button, .view-toggle button {
-        min-height: 40px;
+        min-height: 36px;
     }
 }
 

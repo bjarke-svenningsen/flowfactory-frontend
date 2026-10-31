@@ -562,7 +562,7 @@ async function renderPosts() {
                                 </div>
                             </div>
                         </div>
-                        <button onclick="addComment(${post.id})" style="padding: 8px 16px; background: var(--color-accent-hover); color: white; border: none; border-radius: 18px; cursor: pointer; font-weight: 600;">Post</button>
+                        ${btn('primary', 'send', 'Post', { onclick: `addComment(${post.id})`, small: true })}
                     </div>
                 </div>
             </div>

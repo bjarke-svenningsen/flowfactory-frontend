@@ -67,24 +67,6 @@
             font-size: 14px;
         }
 
-        .btn-primary {
-            padding: 12px 24px;
-            background: var(--color-dark);
-            color: white;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            font-weight: 600;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            transition: transform 0.2s;
-        }
-
-        .btn-primary:hover {
-            transform: translateY(-2px);
-        }
-
         .materials-table {
             background: white;
             border-radius: 12px;
@@ -281,20 +263,6 @@
             margin-top: 25px;
         }
 
-        .btn-secondary {
-            padding: 12px 24px;
-            background: var(--surface-muted);
-            color: var(--text);
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            font-weight: 600;
-        }
-
-        .btn-secondary:hover {
-            background: var(--border);
-        }
-
         .empty-state {
             text-align: center;
             padding: 60px 20px;
@@ -332,8 +300,8 @@
     <div class="materials-container">
         <div class="materials-header">
             <h1> Materialer</h1>
-            <button class="btn-primary" onclick="materialsPage.openCreateModal()">
-                <span>+</span> Nyt Materiale
+            <button class="btn btn-primary" onclick="materialsPage.openCreateModal()">
+                <i data-lucide="plus"></i> Nyt Materiale
             </button>
         </div>
 
@@ -443,14 +411,15 @@
                 <input type="hidden" id="editingMaterialId">
 
                 <div class="modal-actions">
-                    <button type="button" class="btn-secondary" onclick="materialsPage.closeModal()">Annuller</button>
-                    <button type="submit" class="btn-primary">Gem Materiale</button>
+                    <button type="button" class="btn btn-secondary" onclick="materialsPage.closeModal()">Annuller</button>
+                    <button type="submit" class="btn btn-primary">Gem Materiale</button>
                 </div>
             </form>
         </div>
     </div>
 
     <script src="../js/api.js"></script>
+    <script src="../js/ui.js"></script>
     <script src="../js/materials.js"></script>
 </body>
 </html>
