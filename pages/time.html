@@ -231,33 +231,64 @@
         }
 
         .timegrid-sumrow {
+            height: 38px;
+            align-items: center;
+            overflow: hidden;
             background: var(--surface);
             border-bottom: 1px solid var(--border-soft);
         }
 
         .timegrid-sumcorner {
             display: flex;
-            flex-direction: column;
-            align-items: flex-end;
-            gap: 4px;
-            padding: 8px 12px 8px 4px;
+            align-items: center;
+            justify-content: flex-end;
+            padding: 0 10px 0 4px;
             font-weight: 700;
-            font-size: 13px;
+            font-size: 12px;
             color: var(--text-muted);
-        }
-
-        .timegrid-sumcorner .legend-chip {
-            font-size: 11px;
+            white-space: nowrap;
+            overflow: hidden;
         }
 
         .timegrid-sumcell {
-            padding: 8px 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            padding: 0 6px;
             text-align: center;
             font-size: 12px;
             font-weight: 600;
             color: var(--text-muted);
             border-left: 1px solid var(--border-soft);
             font-variant-numeric: tabular-nums;
+            white-space: nowrap;
+            overflow: hidden;
+        }
+
+        /* Ugetotal + chips: samlet bjaelke i bunden af kortet (maa gerne bryde over to linjer paa smalle skærme) */
+        .timegrid-weekbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 8px;
+            padding: 10px 14px;
+            border-top: 1px solid var(--border-soft);
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        .timegrid-weektotal {
+            font-weight: 700;
+            white-space: nowrap;
+        }
+
+        .timegrid-weekchips {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
         }
 
         .timegrid-corner {
@@ -328,6 +359,7 @@
             font-size: 12px;
             color: var(--text-muted);
             font-variant-numeric: tabular-nums;
+            white-space: nowrap;
         }
 
         .timegrid-col {
@@ -422,7 +454,7 @@
 
         @media (max-width: 768px) {
             .timegrid-card {
-                --axis-w: 40px;
+                --axis-w: 48px;
             }
 
             .timegrid-scroll {

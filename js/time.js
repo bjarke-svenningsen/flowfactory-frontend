@@ -255,7 +255,7 @@ const timePage = {
             head += `<div class="timegrid-day${isToday ? ' today-col' : ''}">${DAY_NAMES[day.date.getDay()]}<span class="day-num">${day.date.getDate()}. ${MONTH_NAMES[day.date.getMonth()]}</span></div>`;
         });
         head += '</div>';
-        // Sticky sumraekke lige under dagsnavnene: Timer pr. dag + ugetotal i hjornet (med Overtid/Sygdom-chips)
+        // Sticky sumraekke lige under dagsnavnene: kun dagsummer, fast lav hoejde
         const allEntries = days.flatMap(d => d.entries || []);
         const totalHours = allEntries.reduce((s, e) => s + hoursOf(e), 0);
         const overtimeHours = allEntries.filter(e => getEntryType(e) === 'overtime').reduce((s, e) => s + hoursOf(e), 0);
@@ -263,11 +263,12 @@ const timePage = {
         const chips =
             (overtimeHours > 0 ? `<span class="legend-chip time-overtime">Overtid ${overtimeHours.toFixed(1).replace('.', ',')} t</span>` : '') +
             (sickHours > 0 ? `<span class="legend-chip time-sick">Sygdom ${sickHours.toFixed(1).replace('.', ',')} t</span>` : '');
-        const cornerLabel = cols > 1
-            ? `Uge ${getWeekNumber(days[0].date)}: ${totalHours.toFixed(1).replace('.', ',')} t`
-            : `I alt: ${totalHours.toFixed(1).replace('.', ',')} t`;
+        const cornerLabel = cols > 1 ? `Uge ${getWeekNumber(days[0].date)}` : '';
+        const weekTotalLabel = cols > 1
+            ? `Uge ${getWeekNumber(days[0].date)} i alt: ${totalHours.toFixed(1).replace('.', ',')} timer`
+            : `I alt: ${totalHours.toFixed(1).replace('.', ',')} timer`;
         let sumRow = `<div class="timegrid-sumrow" style="display:grid;grid-template-columns:var(--axis-w) repeat(${cols}, 1fr);">` +
-            `<div class="timegrid-sumcorner"><span>${cornerLabel}</span>${chips}</div>`;
+            `<div class="timegrid-sumcorner">${cornerLabel}</div>`;
         days.forEach(day => {
             const h = (day.entries || []).reduce((s, e) => s + hoursOf(e), 0);
             sumRow += `<div class="timegrid-sumcell">Timer: <strong${h > 0 ? ' style="color:var(--success)"' : ''}>${h > 0 ? h.toFixed(1).replace('.', ',') + ' t' : '\u2013'}</strong></div>`;
@@ -356,10 +357,16 @@ const timePage = {
         for (let h = 0; h < 24; h++) axis += `<div class="axis-label">${String(h).padStart(2, '0')}:00</div>`;
         axis += '</div>';
 
+        // Ugetotal + chips i samlet bjaelke i bunden af kortet (ikke inde i kalenderen)
+        const weekBar = `<div class="timegrid-weekbar">` +
+            `<span class="timegrid-weektotal">${weekTotalLabel}</span>` +
+            (chips ? `<span class="timegrid-weekchips">${chips}</span>` : '') +
+            `</div>`;
+
         container.innerHTML = `<div class="timegrid-card"><div class="timegrid-topbar">${head}${sumRow}</div>${noTimeRow}` +
             `<div class="timegrid-scroll">` +
             `<div class="timegrid-canvas" style="display:grid;grid-template-columns:var(--axis-w) repeat(${cols}, 1fr);">${axis}${body}</div>` +
-            `</div></div>`;
+            `</div>${weekBar}</div>`;
 
         // Scroll til kl. 06:00 (eller en time for foerste registrering)
         const scroller = container.querySelector('.timegrid-scroll');
