@@ -19,7 +19,11 @@
     <button id="tabCustomers" onclick="switchOrderTab('customers')" class="tab">Kunder <span class="tab-count" id="tabCountCustomers"></span></button>
 </div>
 
-<!-- TAB 1: TILBUD -->
+<!-- Fase 4: Soegning (gaelder aktiv fane) -->
+<div class="order-search-wrap">
+    <i data-lucide="search"></i>
+    <input id="orderSearchInput" type="search" class="field-input order-search-input" placeholder="Søg — ordrenr., kunde, titel…  (tryk /)" autocomplete="off">
+</div>
 <div id="orderTabQuotes" class="order-tab-content" style="display: none;">
     <div id="quotesListView">
         <div class="page-header">

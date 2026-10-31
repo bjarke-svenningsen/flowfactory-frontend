@@ -194,6 +194,15 @@ h1 { font-size: var(--font-size-title); }
 .tab:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
 .tab.active { color: var(--text); font-weight: 700; border-bottom-color: var(--accent); }
 
+/* Fase 4: soegefelt i Ordrestyring */
+.order-search-wrap {
+    display: flex; align-items: center; gap: 8px;
+    max-width: 420px; margin-bottom: 18px;
+    color: var(--text-muted);
+}
+.order-search-wrap svg { width: 16px; height: 16px; flex-shrink: 0; }
+.order-search-input { flex: 1; }
+
 /* ---------- Filter-pills ---------- */
 .pill {
     display: inline-flex;

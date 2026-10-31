@@ -17,7 +17,7 @@ async function loadInvoiced() {
         // Handle both array format and object format (defensive programming)
         const invoices = Array.isArray(data) ? data : (data.invoices || []);
         
-        renderInvoicedContent(invoices);
+        renderTabSlice('invoiced', invoices, renderInvoicedContent);
     } catch (error) {
         console.error('Error loading invoiced:', error);
         alert('Kunne ikke indlæse fakturerede ordrer: ' + error.message);

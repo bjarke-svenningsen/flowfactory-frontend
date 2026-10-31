@@ -41,6 +41,16 @@ function renderQuotesList() {
     if (currentQuoteFilter !== 'all') {
         filteredQuotes = allQuotes.filter(q => q.status === currentQuoteFilter);
     }
+
+    // Fase 4: soegning + paginering
+    const searchActive = orderSearchQuery.trim() !== '';
+    filteredQuotes = filteredQuotes.filter(q => orderSearchMatch(q, 'quotes'));
+    if (searchActive && filteredQuotes.length === 0) {
+        container.innerHTML = orderSearchEmptyHtml(orderSearchQuery.trim());
+        return;
+    }
+    const quotePages = orderSearchPages.quotes || 1;
+    const visibleQuotes = filteredQuotes.slice(0, ORDER_PAGE_SIZE * quotePages);
     
     if (filteredQuotes.length === 0) {
         container.innerHTML = `
@@ -87,7 +97,7 @@ function renderQuotesList() {
                 </tr>
             </thead>
             <tbody>
-                ${filteredQuotes.map(quote => {
+                ${visibleQuotes.map(quote => {
                     // Display order number instead of quote number
                     const displayNumber = quote.order_number || quote.quote_number;
                     return `
@@ -135,6 +145,12 @@ function renderQuotesList() {
         </table>
         </div>
     `;
+    // Fase 4: "Vis flere" naar der er flere rækker i soegning/paginering
+    const quoteRemaining = filteredQuotes.length - visibleQuotes.length;
+    if (quoteRemaining > 0) {
+        container.insertAdjacentHTML('beforeend',
+            `<div style="text-align: center; padding: 12px 0;"><button class="btn btn-secondary" onclick="orderShowMore('quotes')">Vis flere (${quoteRemaining} tilbage)</button></div>`);
+    }
     if (window.lucide) {
         try { lucide.createIcons(); } catch (e) { /* ignore */ }
     }
@@ -949,6 +965,7 @@ function switchOrderTab(tab) {
     
     // Opdater alle fanetællinger uanset hvilken fane der åbnes
     loadOrderTabCounts();
+    initOrderSearch();
 
     // Load content for active tab
     if (tab === 'quotes') {
@@ -1001,7 +1018,7 @@ async function loadOrders() {
         const orders = allQuotes.filter(q => q.status === 'accepted' && !q.is_extra_work && (q.order_stage !== 'in_progress'));
 
         updateTabCountsFromQuotes(allQuotes);
-        renderOrdersContent(orders);
+        renderTabSlice('orders', orders, renderOrdersContent);
         // Sikkerhedsnet: sikr at fane-indholdet er synligt, hvis Igangværende er aktiv
         if (currentOrderTab === 'orders') {
             const wrap = document.getElementById('orderTabOrders');
@@ -1027,7 +1044,7 @@ async function loadInProgress() {
         const inProgress = allQuotes.filter(q => q.status === 'accepted' && !q.is_extra_work && q.order_stage === 'in_progress');
 
         updateTabCountsFromQuotes(allQuotes);
-        renderInProgressContent(inProgress);
+        renderTabSlice('in_progress', inProgress, renderInProgressContent);
         // Sikkerhedsnet: sikr at fane-indholdet er synligt, hvis Igangværende er aktiv
         if (currentOrderTab === 'in_progress') {
             const wrap = document.getElementById('orderTabInProgress');
@@ -1037,6 +1054,125 @@ async function loadInProgress() {
         console.error('Error loading in-progress orders:', error);
         alert('Kunne ikke indlæse igangværende ordrer: ' + error.message);
     }
+}
+
+// ---------- Fase 4: Soegning + paginering ----------
+const ORDER_PAGE_SIZE = 25;
+let orderSearchQuery = '';
+const orderSearchPages = { quotes: 1, orders: 1, in_progress: 1, invoiced: 1, rejected: 1, customers: 1 };
+const orderTabCache = {};
+const ORDER_TAB_CONTAINERS = {
+    quotes: 'quotesListContainer',
+    orders: 'ordersContainer',
+    in_progress: 'inProgressContainer',
+    invoiced: 'invoicingContainer',
+    rejected: 'rejectedContainer',
+    customers: 'customersListContainer'
+};
+
+function orderSearchMatch(item, tab) {
+    const q = orderSearchQuery.trim().toLowerCase();
+    if (!q) return true;
+    let fields = [];
+    switch (tab) {
+        case 'quotes': case 'orders': case 'in_progress': case 'rejected':
+            fields = [item.order_number, item.quote_number, item.customer_name, item.title, item.created_by_name];
+            break;
+        case 'invoiced':
+            fields = [item.invoice_number, item.quote_number, item.order_number, item.customer_name];
+            break;
+        case 'customers':
+            fields = [item.customer_number, item.company_name, item.contact_person, item.email, item.phone];
+            break;
+    }
+    return fields.some(v => String(v || '').toLowerCase().includes(q));
+}
+
+function orderSearchEmptyHtml(query) {
+    return `
+        <div class="list-empty">
+            <div class="icon-box"><i data-lucide="search-x"></i></div>
+            <h3>Ingen resultater</h3>
+            <p>Ingen rækker matcher «${query}». Tryk Escape for at rydde søgningen.</p>
+        </div>
+    `;
+}
+
+// Filtrer + vis første slice, og tilføj "Vis flere" hvis der er mere
+function renderTabSlice(tab, items, rendererFn) {
+    orderTabCache[tab] = items;
+    const container = document.getElementById(ORDER_TAB_CONTAINERS[tab]);
+    if (!container) return;
+
+    const filtered = items.filter(it => orderSearchMatch(it, tab));
+    if (orderSearchQuery.trim() && filtered.length === 0) {
+        container.innerHTML = orderSearchEmptyHtml(orderSearchQuery.trim());
+        return;
+    }
+
+    const pages = orderSearchPages[tab] || 1;
+    const visible = filtered.slice(0, ORDER_PAGE_SIZE * pages);
+    rendererFn(visible);
+
+    const remaining = filtered.length - visible.length;
+    if (remaining > 0) {
+        container.insertAdjacentHTML('beforeend',
+            `<div style="text-align: center; padding: 12px 0;"><button class="btn btn-secondary" onclick="orderShowMore('${tab}')">Vis flere (${remaining} tilbage)</button></div>`);
+    }
+}
+
+function orderShowMore(tab) {
+    orderSearchPages[tab] = (orderSearchPages[tab] || 1) + 1;
+    rerenderTab(tab);
+}
+
+// Genrender aktiv fane ud fra cachet data (uden nyt API-kald)
+function rerenderTab(tab) {
+    switch (tab) {
+        case 'quotes': renderQuotesList(); break;
+        case 'orders': renderTabSlice('orders', orderTabCache.orders || [], renderOrdersContent); break;
+        case 'in_progress': renderTabSlice('in_progress', orderTabCache.in_progress || [], renderInProgressContent); break; 
+        case 'invoiced': renderTabSlice('invoiced', orderTabCache.invoiced || [], renderInvoicedContent); break;
+        case 'rejected': renderTabSlice('rejected', orderTabCache.rejected || [], renderRejectedContent); break;
+        case 'customers': renderTabSlice('customers', allCustomers, renderCustomersContent); break;
+    }
+}
+
+// Init soegefelt: debounce 300ms + "/"-genvej + Escape rydder
+let orderSearchInitDone = false;
+let orderSearchTimer = null;
+function initOrderSearch() {
+    if (orderSearchInitDone) return;
+    const input = document.getElementById('orderSearchInput');
+    if (!input) return;
+    orderSearchInitDone = true;
+
+    input.addEventListener('input', () => {
+        clearTimeout(orderSearchTimer);
+        orderSearchTimer = setTimeout(() => {
+            orderSearchQuery = input.value;
+            Object.keys(orderSearchPages).forEach(k => orderSearchPages[k] = 1);
+            rerenderTab(currentOrderTab);
+        }, 300);
+    });
+
+    input.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            input.value = '';
+            orderSearchQuery = '';
+            Object.keys(orderSearchPages).forEach(k => orderSearchPages[k] = 1);
+            rerenderTab(currentOrderTab);
+        }
+    });
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key !== '/') return;
+        const t = e.target;
+        if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable)) return;
+        if (input.offsetParent === null) return; // kun naar Ordrestyring er synlig
+        e.preventDefault();
+        input.focus();
+    });
 }
 
 // Set antal-badge på en fane (viser altid et tal, også "0")
@@ -1348,7 +1484,7 @@ async function loadRejected() {
         const rejected = allQuotes.filter(q => q.status === 'rejected');
         
         updateTabCountsFromQuotes(allQuotes);
-        renderRejectedContent(rejected);
+        renderTabSlice('rejected', rejected, renderRejectedContent);
     } catch (error) {
         console.error('Error loading rejected:', error);
         alert('Kunne ikke indlæse afviste tilbud: ' + error.message);

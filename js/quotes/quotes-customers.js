@@ -30,9 +30,15 @@ function showCustomersManagement() {
 
 // Load customers table
 async function loadCustomersTable() {
+    // Fase 4: soegning + paginering via faelles renderTabSlice
+    renderTabSlice('customers', allCustomers, renderCustomersContent);
+}
+
+// Render kundetabellen ud fra en (filtreret/afsnittet) liste
+function renderCustomersContent(customers) {
     const container = document.getElementById('customersListContainer');
     
-    if (allCustomers.length === 0) {
+    if (customers.length === 0 && allCustomers.length === 0) {
         container.innerHTML = `
             <div style="text-align: center; padding: 60px 20px; color: var(--text-muted);">
                 <div style="font-size: 64px; margin-bottom: 20px;"></div>
@@ -59,7 +65,7 @@ async function loadCustomersTable() {
                 </tr>
             </thead>
             <tbody>
-                ${allCustomers.map(customer => `
+                ${customers.map(customer => `
                     <tr>
                         <td>${customer.customer_number || '-'}</td>
                         <td style="font-weight: 600;">${customer.company_name}</td>
