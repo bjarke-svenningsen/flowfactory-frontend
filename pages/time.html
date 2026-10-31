@@ -23,10 +23,7 @@
 
         .time-header h1 {
             margin: 0;
-            background: var(--color-dark);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
+            color: var(--text);
         }
 
         .view-controls {
@@ -39,8 +36,8 @@
 
         .view-toggle {
             display: flex;
-            background: var(--surface-muted);
-            border-radius: 8px;
+            background: var(--surface-segmented);
+            border-radius: var(--radius-pill);
             padding: 4px;
         }
 
@@ -49,14 +46,16 @@
             border: none;
             background: transparent;
             cursor: pointer;
-            border-radius: 6px;
+            border-radius: var(--radius-pill);
             font-weight: 600;
             transition: all 0.2s;
+            color: var(--text-muted);
         }
 
         .view-toggle button.active {
-            background: var(--color-dark);
-            color: white;
+            background: var(--surface);
+            color: var(--text);
+            box-shadow: var(--shadow-soft);
         }
 
         .date-picker {
@@ -159,29 +158,18 @@
             position: absolute;
             left: 10px;
             right: 10px;
-            background: var(--color-green);
-            color: white;
             border-radius: 8px;
             padding: 10px;
             cursor: pointer;
-            box-shadow: 0 2px 8px rgba(129, 199, 132, 0.3);
+            box-shadow: var(--shadow-soft);
             transition: transform 0.2s;
             overflow: hidden;
+            color: var(--text);
         }
 
         .time-block:hover {
             transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(129, 199, 132, 0.4);
-        }
-
-        .time-block.overtime {
-            background: var(--color-green);
-            box-shadow: 0 2px 8px rgba(46, 125, 50, 0.3);
-        }
-
-        .time-block.sick {
-            background: var(--color-red);
-            box-shadow: 0 2px 8px rgba(239, 83, 80, 0.3);
+            box-shadow: var(--shadow-lift);
         }
 
         .time-block.locked {
@@ -433,34 +421,50 @@
 <body>
     <div class="time-container">
         <div class="time-header">
-            <h1> Min Tid</h1>
+            <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+                <div class="icon-box"><i data-lucide="clock"></i></div>
+                <div>
+                    <h1 style="margin: 0;">Min Tid</h1>
+                    <span id="timeSubtitle" style="color: var(--text-muted); font-size: 13px;"></span>
+                </div>
+                <div class="time-legend" style="margin-left: auto;">
+                    <span class="legend-chip time-regular">Alm. timer</span>
+                    <span class="legend-chip time-overtime">Overtid</span>
+                    <span class="legend-chip time-sick">Sygdom</span>
+                </div>
+            </div>
             <div style="display: flex; gap: 15px; align-items: center;">
                 <!-- Admin User Selector (only visible for admins) -->
                 <select id="adminUserSelect" style="display: none; padding: 12px; border: 2px solid var(--border); border-radius: 8px; font-size: 14px;" onchange="timePage.switchUser()">
                     <option value="">Vælg medarbejder...</option>
                 </select>
-                <button class="btn-primary" onclick="timePage.openCreateModal()">
-                    <span>+</span> Ny Registrering
+                <button class="btn btn-primary" onclick="timePage.openCreateModal()">
+                    <i data-lucide="plus"></i> Ny Registrering
                 </button>
             </div>
         </div>
 
         <div class="view-controls">
-            <div class="view-toggle">
+            <div class="view-toggle segmented">
                 <button id="viewDay" class="active" onclick="timePage.changeView('day')">Dag</button>
                 <button id="viewWeek" onclick="timePage.changeView('week')">Uge</button>
                 <button id="viewMonth" onclick="timePage.changeView('month')">Måned</button>
-                <button id="viewWorkshop" onclick="timePage.changeView('workshop')"> Værksted</button>
+                <button id="viewWorkshop" onclick="timePage.changeView('workshop')">Værksted</button>
             </div>
 
             <div class="date-picker">
-                <button class="btn-nav" onclick="timePage.navigateDate(-1)">◀</button>
-                <input type="date" id="selectedDate" onchange="timePage.loadTimeEntries()">
-                <button class="btn-nav" onclick="timePage.navigateDate(1)">▶</button>
+                <button class="btn btn-icon" onclick="timePage.navigateDate(-1)" title="Forrige"><i data-lucide="chevron-left"></i></button>
+                <div class="date-display-wrap">
+                    <button type="button" class="date-display" onclick="try { document.getElementById('selectedDate').showPicker(); } catch (e) {}">
+                        <i data-lucide="calendar"></i><span id="dateLabel"></span>
+                    </button>
+                    <input type="date" id="selectedDate" onchange="timePage.onDateChange()">
+                </div>
+                <button class="btn btn-icon" onclick="timePage.navigateDate(1)" title="Næste"><i data-lucide="chevron-right"></i></button>
             </div>
 
-            <button class="btn-primary" onclick="timePage.exportToPDF()" style="margin-left: auto;">
-                 Eksporter PDF
+            <button class="btn btn-secondary export-right" onclick="timePage.exportToPDF()">
+                <i data-lucide="download"></i> Eksporter PDF
             </button>
         </div>
 
@@ -600,6 +604,7 @@
         </div>
     </div>
 
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
     <script type="module" src="../js/time.js"></script>
 </body>
 </html>

@@ -28,7 +28,7 @@
 }
 
 .windows-dialog-title {
-    background: linear-gradient(to right, #000080, #1084d0);
+    background: var(--info);
     color: white;
     padding: 3px 5px;
     font-weight: bold;

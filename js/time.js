@@ -42,6 +42,18 @@ function getTimeType(entry) {
     return 'normal';
 }
 
+// Visuel blok-type: udledes af materiale-navnet (case-insensitive),
+// fallback til materiale-nummeret
+function getEntryType(entry) {
+    const nm = (entry.material_name || '').toLowerCase();
+    if (nm.includes('sygdom')) return 'sick';
+    if (nm.includes('weekend') || nm.includes('overarbejde') || nm.includes('overtid')) return 'overtime';
+    const t = getTimeType(entry);
+    if (t === 'sick') return 'sick';
+    if (t === 'overtime') return 'overtime';
+    return 'regular';
+}
+
 function hoursOf(entry) {
     return parseFloat(entry.duration_hours) || 0;
 }
@@ -190,6 +202,39 @@ const timePage = {
         } else if (this.currentView === 'workshop') {
             this.renderWorkshopView();
         }
+        this.updateHeader();
+    },
+
+    // Opdater undertekst + datolabel (og Lucide-ikoner) efter render
+    updateHeader() {
+        const total = this.timeEntries.reduce((s, e) => s + hoursOf(e), 0);
+        const sub = document.getElementById('timeSubtitle');
+        const label = document.getElementById('dateLabel');
+        if (!sub || !label) return;
+        const d = this.selectedDate;
+        if (this.currentView === 'week') {
+            const monday = getWeekStart(d);
+            const sunday = new Date(monday); sunday.setDate(monday.getDate() + 6);
+            sub.textContent = `Uge ${getWeekNumber(monday)} · ${total.toFixed(1)} timer registreret`;
+            label.textContent = `${monday.getDate()}. ${MONTH_NAMES[monday.getMonth()].slice(0, 3)} – ${sunday.getDate()}. ${MONTH_NAMES[sunday.getMonth()].slice(0, 3)} ${sunday.getFullYear()}`;
+        } else if (this.currentView === 'day') {
+            sub.textContent = `${DAY_NAMES[d.getDay()]} ${d.getDate()}. ${MONTH_NAMES[d.getMonth()]} · ${total.toFixed(1)} timer registreret`;
+            label.textContent = `${d.getDate()}. ${MONTH_NAMES[d.getMonth()].slice(0, 3)} ${d.getFullYear()}`;
+        } else {
+            sub.textContent = `${MONTH_NAMES[d.getMonth()]} ${d.getFullYear()} · ${total.toFixed(1)} timer registreret`;
+            label.textContent = `${MONTH_NAMES[d.getMonth()]} ${d.getFullYear()}`;
+        }
+        if (window.lucide) { try { lucide.createIcons(); } catch (e) { /* ignore */ } }
+    },
+
+    // Datovælger ændret i UI'et
+    onDateChange() {
+        const v = document.getElementById('selectedDate').value;
+        if (v) {
+            const [y, m, dd] = v.split('-').map(Number);
+            this.selectedDate = new Date(y, m - 1, dd);
+        }
+        this.loadTimeEntries();
     },
 
     renderDayView() {
@@ -207,13 +252,8 @@ const timePage = {
         const div = document.createElement('div');
         div.className = 'time-block';
         
-        // Check material type for styling
-        if (entry.material_number === TIME_MATERIALS.overtime) {
-            div.classList.add('overtime'); // Mørk grøn
-        } else if (entry.material_number === TIME_MATERIALS.sick) {
-            div.classList.add('sick'); // Rød
-        }
-        // Normal timer (8000) bruger standard lys grøn styling
+        // Farve efter TYPE (ikke sort)
+        div.classList.add('time-' + getEntryType(entry));
         
         // Check if locked
         if (entry.is_locked) {
@@ -261,8 +301,7 @@ const timePage = {
         let html = `<div class="week-day-header" style="background:var(--surface-muted);color:var(--text-muted);">Uge ${getWeekNumber(monday)}</div>`;
         days.forEach(day => {
             const isToday = fmtDate(new Date()) === day.iso;
-            const todayStyle = isToday ? 'background:var(--accent-soft);color:var(--text);font-weight:700;border-top:3px solid var(--accent);' : '';
-            html += `<div class="week-day-header" style="${todayStyle}">
+            html += `<div class="week-day-header${isToday ? ' today-col' : ''}"${isToday ? '' : ' style="background:var(--surface-muted);color:var(--text-muted);"'}>
                 ${DAY_NAMES[day.date.getDay()]}<br>
                 <span style="font-weight:400;font-size:12px;">${day.date.getDate()}. ${MONTH_NAMES[day.date.getMonth()]}</span>
             </div>`;
@@ -278,10 +317,11 @@ const timePage = {
                     html += '<div class="week-day-column"></div>';
                     return;
                 }
-                const type = getTimeType(entry);
-                const cls = type === 'overtime' ? 'overtime' : (type === 'sick' ? 'sick' : '');
-                const label = entry.order_number || entry.quote_number || ' Værksted';
-                html += `<div class="week-day-column">
+                const type = getEntryType(entry);
+                const cls = 'time-' + type;
+                const label = entry.order_number || entry.quote_number || 'Værksted';
+                const isToday = fmtDate(new Date()) === day.iso;
+                html += `<div class="week-day-column${isToday ? ' today-col' : ''}">
                     <div class="week-time-block ${cls}" onclick="timePage.editTimeEntryById(${entry.id})">
                         <strong>${hoursOf(entry).toFixed(1)} t</strong><br>
                         ${label}<br>
@@ -296,19 +336,21 @@ const timePage = {
         html += `<div class="week-day-header" style="background:var(--surface-muted);color:var(--text-muted);">I alt</div>`;
         days.forEach(day => {
             const dayHours = day.entries.reduce((s, e) => s + hoursOf(e), 0);
-            html += `<div style="text-align:center;padding:10px;background:var(--surface-muted);border-left:1px solid var(--border-soft);font-weight:700;color:${dayHours > 0 ? 'var(--success)' : 'var(--border)'};">${dayHours > 0 ? dayHours.toFixed(1) + ' t' : '–'}</div>`;
+            const isToday = fmtDate(new Date()) === day.iso;
+            html += `<div class="${isToday ? 'today-col' : ''}" style="text-align:center;padding:10px;${isToday ? '' : 'background:var(--surface-muted);'}border-left:1px solid var(--border-soft);font-weight:700;color:${dayHours > 0 ? 'var(--success)' : 'var(--border)'};">${dayHours > 0 ? dayHours.toFixed(1) + ' t' : '–'}</div>`;
         });
         
         const weekHours = this.timeEntries.reduce((s, e) => s + hoursOf(e), 0);
-        const overtimeHours = this.timeEntries.filter(e => getTimeType(e) === 'overtime').reduce((s, e) => s + hoursOf(e), 0);
-        const sickHours = this.timeEntries.filter(e => getTimeType(e) === 'sick').reduce((s, e) => s + hoursOf(e), 0);
+        const overtimeHours = this.timeEntries.filter(e => getEntryType(e) === 'overtime').reduce((s, e) => s + hoursOf(e), 0);
+        const sickHours = this.timeEntries.filter(e => getEntryType(e) === 'sick').reduce((s, e) => s + hoursOf(e), 0);
         html += `<div style="grid-column: 1 / -1; padding: 15px 20px; background: white; border-top: 2px solid var(--border-soft); font-weight: 600;">
             Uge ${getWeekNumber(monday)} i alt: ${weekHours.toFixed(1)} timer
-            ${overtimeHours > 0 ? ` · Overtid: ${overtimeHours.toFixed(1)} t` : ''}
-            ${sickHours > 0 ? ` ·  Sygdom: ${sickHours.toFixed(1)} t` : ''}
+            ${overtimeHours > 0 ? ` · Overtid: <span class="legend-chip time-overtime">${overtimeHours.toFixed(1)} t</span>` : ''}
+            ${sickHours > 0 ? ` ·  Sygdom: <span class="legend-chip time-sick">${sickHours.toFixed(1)} t</span>` : ''}
         </div>`;
         
         container.innerHTML = html;
+        this.updateHeader();
     },
 
     // Find og rediger registrering ud fra id (bruges fra uge-/månedsvisning)
@@ -325,8 +367,8 @@ const timePage = {
         // Summary-tal
         const totalHours = this.timeEntries.reduce((s, e) => s + hoursOf(e), 0);
         const normalHours = this.timeEntries.filter(e => getTimeType(e) === 'normal').reduce((s, e) => s + hoursOf(e), 0);
-        const overtimeHours = this.timeEntries.filter(e => getTimeType(e) === 'overtime').reduce((s, e) => s + hoursOf(e), 0);
-        const sickHours = this.timeEntries.filter(e => getTimeType(e) === 'sick').reduce((s, e) => s + hoursOf(e), 0);
+        const overtimeHours = this.timeEntries.filter(e => getEntryType(e) === 'overtime').reduce((s, e) => s + hoursOf(e), 0);
+        const sickHours = this.timeEntries.filter(e => getEntryType(e) === 'sick').reduce((s, e) => s + hoursOf(e), 0);
         const workshopHours = this.timeEntries.filter(e => !e.order_id && getTimeType(e) !== 'sick').reduce((s, e) => s + hoursOf(e), 0);
         
         // Kalendergitter (mandag først) med ugenumre
@@ -397,14 +439,15 @@ const timePage = {
         const isWeekend = d.getDay() === 0 || d.getDay() === 6;
         const isToday = iso === todayIso;
         
-        let style = `border-left:1px solid var(--border-soft);min-height:70px;padding:8px;cursor:pointer;background:${isWeekend ? 'var(--surface-muted)' : 'white'};`;
-        if (isToday) style += 'box-shadow: inset 0 0 0 2px var(--color-accent-hover);';
+        let style = `border-left:1px solid var(--border-soft);min-height:70px;padding:8px;cursor:pointer;`;
+        if (isToday) style += 'box-shadow: inset 0 3px 0 var(--accent);background: var(--accent-today);';
+        else if (isWeekend) style += 'background: var(--surface-muted);';
         
         let content = `<div style="font-size:12px;color:${isToday ? 'var(--color-accent-hover)' : 'var(--text-muted)'};font-weight:600;">${d.getDate()}</div>`;
         if (dayHours > 0) {
-            const hasOvertime = dayEntries.some(e => getTimeType(e) === 'overtime');
-            const hasSick = dayEntries.some(e => getTimeType(e) === 'sick');
-            const color = hasSick ? 'var(--danger)' : (hasOvertime ? 'var(--success)' : 'var(--success)');
+            const hasOvertime = dayEntries.some(e => getEntryType(e) === 'overtime');
+            const hasSick = dayEntries.some(e => getEntryType(e) === 'sick');
+            const color = hasSick ? 'var(--time-sick-text)' : (hasOvertime ? 'var(--time-overtime-text)' : 'var(--time-alm-text)');
             content += `<div style="font-weight:700;color:${color};">${dayHours.toFixed(1)} t</div>`;
             content += `<div style="font-size:10px;color:var(--text-muted);margin-top:3px;">${dayEntries.length} reg.</div>`;
         }

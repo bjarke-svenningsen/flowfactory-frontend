@@ -704,23 +704,24 @@ function renderQuotePreview() {
     
     // Professional PDF-style preview matching invoice design
     container.innerHTML = `
-        <div style="max-width: 900px; margin: 0 auto;">
-            <div style="display: flex; gap: 15px; margin-bottom: 20px;">
-                <button onclick="editQuote(${currentQuote.id})" class="btn btn-primary">
-                    Rediger
+        <div class="quote-sheet-wrap">
+            <div class="preview-actions">
+                <button onclick="editQuote(${currentQuote.id})" class="btn btn-secondary">
+                    <i data-lucide="pencil"></i> Rediger
                 </button>
-                <button onclick="sendQuote(${currentQuote.id})" style="padding: 10px 20px; background: var(--color-green); color: white; border: none; border-radius: 5px; cursor: pointer;">
-                    Send til Kunde
+                <button onclick="sendQuote(${currentQuote.id})" class="btn btn-primary">
+                    <i data-lucide="send"></i> Send til Kunde
                 </button>
-                <button onclick="downloadQuotePDF(${currentQuote.id})" style="padding: 10px 20px; background: var(--color-blue); color: white; border: none; border-radius: 5px; cursor: pointer;">
-                    Download PDF
+                <button onclick="downloadQuotePDF(${currentQuote.id})" class="btn btn-secondary">
+                    <i data-lucide="download"></i> Download PDF
                 </button>
-                <button onclick="deleteQuote(${currentQuote.id})" style="padding: 10px 20px; background: var(--color-red); color: white; border: none; border-radius: 5px; cursor: pointer;">
-                    Slet
+                <button onclick="deleteQuote(${currentQuote.id})" class="btn btn-danger">
+                    <i data-lucide="trash-2"></i> Slet
                 </button>
             </div>
-            
-            <div style="background: var(--surface); padding: 60px; padding-top: 30px;">
+
+            <div class="quote-sheet">
+                <div style="max-width: 900px; margin: 0 auto;">
                 <!-- Minimal Header -->
                 <div style="display: flex; justify-content: space-between; align-items: start; padding-bottom: 30px; border-bottom: 1px solid var(--text); margin-bottom: 40px;">
                     <div style="background: transparent !important; margin-top: 0; padding: 0;">
@@ -845,6 +846,7 @@ function renderQuotePreview() {
                 </div>
             </div>
         </div>
+    </div>
     `;
 }
 
