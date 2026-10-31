@@ -418,8 +418,8 @@ h1 { font-size: var(--font-size-title); }
 }
 
 /* ---------- Trin 2-tilføjelser: små knapper, tabelkort, celler, modal ---------- */
-.btn-sm { height: 32px; padding: 0 12px; font-size: 13px; }
-.btn-icon.btn-sm { width: 32px; min-width: 32px; height: 32px; }
+.btn-sm { height: 34px; padding: 0 12px; font-size: 13px; }
+.btn-icon.btn-sm { width: 34px; min-width: 34px; height: 34px; }
 .table-card { overflow-x: auto; border-radius: var(--radius-card); }
 .cell-strong { font-weight: 600; }
 .cell-muted { font-size: 12px; color: var(--text-muted); margin-top: 3px; }
@@ -478,10 +478,16 @@ h1 { font-size: var(--font-size-title); }
 }
 .btn-secondary:hover { background: var(--surface-muted) !important; }
 .btn-danger, .btn-delete {
-    background: var(--danger) !important;
-    color: var(--surface) !important;
+    background: var(--surface) !important;
+    color: var(--danger) !important;
+    border: 1px solid var(--border) !important;
     border-radius: var(--radius-btn);
     font-weight: 600;
+}
+.btn-danger:hover, .btn-delete:hover {
+    background: var(--danger) !important;
+    color: var(--surface) !important;
+    border-color: var(--danger) !important;
 }
 .status-pill { border-radius: var(--radius-pill); font-size: 12px; font-weight: 600; padding: 4px 12px; display: inline-flex; align-items: center; gap: 6px; }
 .status-pill--draft { background: var(--surface-muted); color: var(--text-muted); }
