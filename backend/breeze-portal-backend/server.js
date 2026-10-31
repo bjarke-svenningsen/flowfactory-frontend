@@ -863,8 +863,53 @@ app.put('/api/folders/:id', auth, async (req, res) => {
     JOIN users u ON f.created_by = u.id
     WHERE f.id = ?
   `, [folderId]);
-  
+
   res.json(updated);
+});
+
+// Move/reorder folder position (drag & drop in folder tree)
+// body: { before_id: <folderId|null> } - placeres før before_id (eller til sidst) blandt søskende
+app.put('/api/folders/:id/position', auth, async (req, res) => {
+  const folderId = Number(req.params.id);
+  const beforeId = req.body.before_id ? Number(req.body.before_id) : null;
+  try {
+    const folder = await db.get('SELECT * FROM folders WHERE id = ?', [folderId]);
+    if (!folder) return res.status(404).json({ error: 'Folder not found' });
+
+    const user = await db.get('SELECT is_admin FROM users WHERE id = ?', [req.user.id]);
+    if (folder.created_by !== req.user.id && !user.is_admin) {
+      return res.status(403).json({ error: 'Permission denied' });
+    }
+    if (folder.is_company_folder) {
+      return res.status(400).json({ error: 'Fælles filer kan ikke flyttes' });
+    }
+
+    // Søskende i samme parent (sorteres om samlet)
+    const siblings = await db.all(
+      'SELECT * FROM folders WHERE parent_id IS ? AND id != ? ORDER BY COALESCE(sort_order, 2147483647), name ASC',
+      [folder.parent_id, folderId]
+    );
+
+    let list = siblings.slice();
+    if (beforeId) {
+      const idx = list.findIndex(f => f.id === beforeId);
+      const insertAt = idx === -1 ? list.length : idx;
+      list.splice(insertAt, 0, folder);
+    } else {
+      list.push(folder);
+    }
+
+    let i = 0;
+    for (const f of list) {
+      await db.run('UPDATE folders SET sort_order = ? WHERE id = ?', [i * 10, f.id]);
+      i++;
+    }
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Folder position error:', error);
+    res.status(500).json({ error: 'Kunne ikke flytte mappen' });
+  }
 });
 
 // Delete folder

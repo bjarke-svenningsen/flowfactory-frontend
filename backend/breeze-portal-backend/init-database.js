@@ -93,9 +93,15 @@ export async function initializeDatabase() {
       await db.run(`ALTER TABLE folders ADD COLUMN is_company_folder INTEGER DEFAULT 0`);
       console.log('✅ Added is_company_folder column to folders table');
     } catch (error) {
-      if (error.message.includes('duplicate column') || error.message.includes('already exists')) {
-        console.log('ℹ️  is_company_folder column already exists in folders table');
-      }
+      if (!/duplicate column|already exists/i.test(error.message)) throw error;
+    }
+
+    // Add sort_order column for folder drag-reordering
+    try {
+      await db.run(`ALTER TABLE folders ADD COLUMN sort_order INTEGER DEFAULT 0`);
+      console.log('✅ Added sort_order column to folders table');
+    } catch (error) {
+      if (!/duplicate column|already exists/i.test(error.message)) throw error;
     }
 
     // Files
