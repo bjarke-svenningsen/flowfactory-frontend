@@ -29,6 +29,14 @@
     --color-gray: #6B7280;
     --color-gray-soft: #EEF0F3;
 
+    /* Mappe-ikoner i Filer (kun udseende) */
+    --folder-stroke: #D97706;          /* gul/orange streg - almindelige mapper */
+    --folder-fill: #FEF3C7;            /* lys gul fyld - almindelige mapper */
+    --folder-stroke-active: #B45309;   /* mørkere streg - markeret mappe */
+    --folder-fill-active: #FDE68A;     /* mørkere fyld - markeret mappe */
+    --company-stroke: #2563EB;         /* blå streg - Fælles filer */
+    --company-fill: #DBEAFE;           /* lys blå fyld - Fælles filer */
+
     /* Form */
     --radius-card: 12px;
     --radius-btn: 8px;

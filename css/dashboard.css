@@ -1739,12 +1739,18 @@ body {
     border-left: 3px solid var(--accent);
 }
 .tree-node .lucide { width: 15px; height: 15px; color: var(--text-muted); flex: 0 0 auto; }
-.tree-node.active .lucide { color: var(--accent-hover); }
+/* Mappe-ikoner: altid gul/orange (også umarkerede); mørkere når rækken er markeret/hover.
+   Virker også i fillisten og "Flyt til..."-dialogen, da Lucide navngiver SVG'erne ens. */
+.tree-node svg.lucide-folder { color: var(--folder-stroke); fill: var(--folder-fill); }
+.tree-node:hover svg.lucide-folder { fill: var(--folder-fill-active); }
+.tree-node.active svg.lucide-folder { color: var(--folder-stroke-active); fill: var(--folder-fill-active); }
+/* Fælles filer (building-2): altid blå - træ, filliste, "Flyt til..." osv. */
+svg.lucide-building-2 { color: var(--company-stroke); fill: var(--company-fill); }
 .tree-node .tree-label { overflow: hidden; text-overflow: ellipsis; }
 .tree-node .tree-count { color: var(--text-muted); font-size: 12px; margin-left: auto; }
 .tree-chevron { display: inline-flex; width: 16px; justify-content: center; flex: 0 0 auto; }
 .tree-chevron .lucide { width: 13px; height: 13px; }
-.tree-node.company-node .lucide { color: var(--accent-hover); }
+.tree-chevron svg.lucide-folder, .tree-chevron svg.lucide-building-2 { color: var(--text-muted); fill: none; }
 .tree-section-label {
     font-size: 11px;
     font-weight: 700;
@@ -1828,7 +1834,7 @@ body {
 .file-type-icon.ti-word { background: #E6F4EA; color: #188038; }
 .file-type-icon.ti-excel { background: #E6F4EA; color: #0B6B3A; }
 .file-type-icon.ti-other { background: #ECEEF1; color: #6B7280; }
-.file-type-icon.ti-folder { background: var(--accent-soft); color: var(--accent-hover); }
+.file-type-icon.ti-folder { background: var(--folder-fill); color: var(--folder-stroke); }
 .file-type-icon.ti-folder .lucide { width: 17px; height: 17px; }
 
 .files-empty {

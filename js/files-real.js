@@ -171,7 +171,7 @@ function renderFolderTree() {
     html += '<div class="tree-node ' + (currentFilter === 'root' ? 'active' : '') + '"' +
         ' onclick="filterFiles(\'root\')" id="mineFilerNode"' +
         ' ondrop="handleRootDrop(event)" ondragover="handleRootDragOver(event)" ondragleave="handleFolderDragLeave(event)">' +
-        '<span class="tree-chevron"></span><i data-lucide="hard-drive"></i>' +
+        '<span class="tree-chevron"></span><i data-lucide="folder"></i>' +
         '<span class="tree-label">Mine filer</span>' +
         '<span class="tree-count">' + rootCount + '</span></div>';
 
