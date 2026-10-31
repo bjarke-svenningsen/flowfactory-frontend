@@ -129,7 +129,7 @@ function initMobileMenu() {
   // Create hamburger button
   const hamburger = document.createElement('button');
   hamburger.id = 'mobile-menu-toggle';
-  hamburger.innerHTML = '';
+  hamburger.innerHTML = '☰';
   hamburger.style.cssText = `
     position: fixed;
     top: 15px;
@@ -178,7 +178,7 @@ function initMobileMenu() {
       sidebar.style.zIndex = '';
       sidebar.style.width = '';
       sidebar.style.boxShadow = '';
-      hamburger.innerHTML = '';
+      hamburger.innerHTML = '☰';
     }
   });
   
@@ -189,7 +189,7 @@ function initMobileMenu() {
         const sidebar = document.querySelector('.sidebar');
         sidebar.style.position = '';
         menuOpen = false;
-        hamburger.innerHTML = '';
+        hamburger.innerHTML = '☰';
       }
     });
   });

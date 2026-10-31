@@ -524,6 +524,57 @@ input[type=date], input[type=time], input[type=text], input[type=number], input[
 h1, h2, h3 { font-family: var(--font-family); }
 h1 { font-size: var(--font-size-title); }
 
+/* ---------- Trin 4: Responsivitet (1280 / 1024 / 390) ---------- */
+/* Trygge trykflader på touch-enheder (>= 40px) */
+@media (hover: none) and (pointer: coarse) {
+    .btn, .btn-primary, .btn-secondary, .btn-danger, .btn-sm,
+    .toolbar-btn, .pill, .filter-pill, .tab, .menu-item,
+    .segmented button, .view-toggle button {
+        min-height: 40px;
+    }
+}
+
+/* 1280px: lidt strammere layout */
+@media (max-width: 1280px) {
+    .sidebar { width: 180px; }
+    .content-area { padding: 24px; }
+    .page-header { flex-wrap: wrap; gap: 12px; }
+}
+
+/* 1024px: snævrere sidebar, scrollable tabs, tabeller scroller */
+@media (max-width: 1024px) {
+    .sidebar { width: 170px; }
+    .content-area { padding: 20px; }
+    .tabs { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    .tab { white-space: nowrap; }
+    .table-card { overflow-x: auto; }
+    .table { min-width: 640px; }
+    .kpi-grid { grid-template-columns: repeat(2, 1fr) !important; }
+    .modal-card, .modal-content { max-width: 92% !important; }
+}
+
+/* 768px: supplerer mobile.css (sidebar -> vandret pillerække) */
+@media (max-width: 768px) {
+    .page-header { flex-direction: column; align-items: flex-start; }
+    .page-header .icon-box { display: none; }
+    .modal-card, .modal-content, .windows-dialog { width: 95% !important; max-width: 95% !important; }
+    .pill, .filter-pill, .tab, .segmented button, .view-toggle button { min-height: 40px; }
+}
+
+/* 390px (mobil): kompakt layout */
+@media (max-width: 390px) {
+    .content-area { padding: 12px; }
+    .table { font-size: 13px; }
+    .tabs { gap: 4px; }
+    .tab { padding: 8px 12px; }
+    .kpi-grid { grid-template-columns: 1fr !important; }
+    .modal-actions { flex-direction: column; gap: 8px; }
+    .modal-actions .btn, .modal-actions button { width: 100%; }
+    .btn, .btn-primary, .btn-secondary, .btn-danger, .btn-sm,
+    .toolbar-btn, .pill, .filter-pill { min-height: 40px; }
+}
+
+
 /* ---------- Truncate-hjælper ---------- */
 .truncate {
     min-width: 0;
