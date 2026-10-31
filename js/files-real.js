@@ -669,63 +669,64 @@ function selectRealFile(fileId, event) {
 }
 
 async function uploadFileToExplorer(event) {
-    const file = event.target.files[0];
-    if (!file) return;
-    
-    if (file.size > 100 * 1024 * 1024) {
-        await winAlert('Filen er for stor! Max 100MB', 'Fejl');
-        return;
-    }
-    
-    const formData = new FormData();
-    formData.append('file', file);
-    if (currentFolderId) {
-        formData.append('folder_id', currentFolderId);
-    }
-    
-    try {
-        const token = sessionStorage.getItem('token');
-        
-        console.log('Uploading file...', file.name);
-        
-        const response = await fetch('/api/files/upload', {
-            method: 'POST',
-            headers: { 'Authorization': `Bearer ${token}` },
-            body: formData
-        });
-        
-        console.log('Upload response status:', response.status);
-        
-        const contentType = response.headers.get('content-type');
-        console.log('Response content-type:', contentType);
-        
-        if (!contentType || !contentType.includes('application/json')) {
-            throw new Error('Server returnerede ikke JSON. Tjek at backend kører korrekt.');
-        }
-        
-        const result = await response.json();
-        console.log('Upload result:', result);
-        
-        if (!response.ok) {
-            throw new Error(result.error || 'Upload failed');
-        }
-        
-        if (result.warning) {
-            await winAlert('Advarsel: ' + result.warning);
-        } else {
-            await winAlert(`${file.name} uploadet succesfuldt!`, 'Succes');
-        }
-        
-        console.log('Reloading files...');
-        await loadRealFiles();
-        console.log('Files reloaded successfully');
-        
-    } catch (error) {
-        console.error('Upload error details:', error);
-        await winAlert('Upload fejlede: ' + error.message, 'Fejl');
-    }
-    
+    const files = Array.from(event.target.files || []);
     event.target.value = '';
+    if (files.length === 0) return;
+
+    // Størrelsestjek på alle filer først
+    const tooBig = files.filter(f => f.size > 100 * 1024 * 1024);
+    const uploadList = files.filter(f => f.size <= 100 * 1024 * 1024);
+    if (tooBig.length > 0) {
+        await winAlert(`${tooBig.length} fil(er) sprunget over - for store (max 100MB):\n${tooBig.map(f => f.name).join('\n')}`, 'For store filer');
+    }
+    if (uploadList.length === 0) return;
+
+    const token = sessionStorage.getItem('token');
+    let ok = 0;
+    const failed = [];
+
+    for (const file of uploadList) {
+        try {
+            const formData = new FormData();
+            formData.append('file', file);
+            if (currentFolderId) formData.append('folder_id', currentFolderId);
+
+            const response = await fetch('/api/files/upload', {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}` },
+                body: formData
+            });
+
+            const contentType = response.headers.get('content-type');
+            if (!contentType || !contentType.includes('application/json')) {
+                throw new Error('Server returnerede ikke JSON');
+            }
+            const result = await response.json();
+            if (!response.ok) throw new Error(result.error || 'Upload failed');
+            if (result.warning) {
+                await winAlert(`${file.name}: advarsel - ${result.warning}`, 'Advarsel');
+            }
+            ok++;
+        } catch (error) {
+            console.error('Upload error:', file.name, error);
+            failed.push(`${file.name}: ${error.message}`);
+        }
+    }
+
+    await loadRealFiles();
+
+    // Opsummering
+    if (uploadList.length === 1) {
+        if (ok === 1) {
+            await winAlert(`${uploadList[0].name} uploadet succesfuldt!`, 'Succes');
+        } else if (failed.length === 1) {
+            await winAlert('Upload fejlede: ' + failed[0].split(': ').slice(1).join(': '), 'Fejl');
+        }
+    } else {
+        let msg = `${ok} af ${uploadList.length} filer uploadet succesfuldt.`;
+        if (failed.length > 0) msg += '\n\nFejlede:\n' + failed.join('\n');
+        await winAlert(msg, ok === uploadList.length ? 'Succes' : 'Delvist gennemført');
+    }
 }
 
 async function openRealFile(fileId) {
