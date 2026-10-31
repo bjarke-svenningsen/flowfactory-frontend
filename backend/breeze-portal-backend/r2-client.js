@@ -1,7 +1,7 @@
 // r2-client.js - Cloudflare R2 (S3-kompatibel) lagerklient
 // Nøgler læses KUN fra miljøvariabler (Render). Aldrig i koden eller git.
 // Aktivér med miljøvariablen USE_R2=true - uden den sker intet.
-import { S3Client, PutObjectCommand, GetObjectCommand, HeadObjectCommand } from '@aws-sdk/client-s3';
+import { S3Client, PutObjectCommand, GetObjectCommand, HeadObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
 import { Readable } from 'stream';
 
 const R2_ACCESS_KEY_ID = process.env.R2_ACCESS_KEY_ID || '';
@@ -67,4 +67,9 @@ export function pipeR2ToRes(body, res) {
     stream.on('error', reject);
     stream.pipe(res);
   });
+}
+
+// Slet et objekt i R2
+export async function r2Delete(key) {
+  await getClient().send(new DeleteObjectCommand({ Bucket: R2_BUCKET, Key: key }));
 }

@@ -537,10 +537,25 @@ const emailClient = {
     return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
   },
 
-  // Download attachment
+  // Download attachment (via fetch med login-header + blob, da /uploads kræver login)
   async downloadAttachment(attachmentId) {
     try {
-      window.open(`${API_URL}/api/email/attachments/${attachmentId}`, '_blank');
+      const response = await fetch(`${API_URL}/api/email/attachments/${attachmentId}`, {
+        headers: { 'Authorization': `Bearer ${getToken()}` }
+      });
+      if (!response.ok) throw new Error('Kunne ikke hente filen (' + response.status + ')');
+      const blob = await response.blob();
+      const disposition = response.headers.get('Content-Disposition') || '';
+      const match = disposition.match(/filename="?([^";]+)"?/);
+      const filename = match ? decodeURIComponent(match[1]) : `vedhaeftning-${attachmentId}`;
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
     } catch (error) {
       console.error('Error downloading attachment:', error);
       this.showNotification('Kunne ikke downloade fil: ' + error.message, 'error');

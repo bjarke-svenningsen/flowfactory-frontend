@@ -137,6 +137,8 @@ export async function syncEmails(accountId) {
                   storageKey = `email-attachments/${filename}`;
                   await r2Put(attachment.content, storageKey, attachment.contentType);
                   storageProvider = 'r2';
+                  try { if (fs.existsSync(filePath)) fs.unlinkSync(filePath); } catch (delErr) { console.error('Kunne ikke slette disk-kopien efter R2-upload:', delErr.message); }
+
                   console.log(`☁️  R2 upload OK: ${storageKey}`);
                 } catch (r2Err) {
                   console.error('R2 upload fejlede, fil forbliver på disk:', r2Err.message);
@@ -407,6 +409,8 @@ export async function syncNewEmails(accountId) {
                   storageKey = `email-attachments/${filename}`;
                   await r2Put(attachment.content, storageKey, attachment.contentType);
                   storageProvider = 'r2';
+                  try { if (fs.existsSync(filePath)) fs.unlinkSync(filePath); } catch (delErr) { console.error('Kunne ikke slette disk-kopien efter R2-upload:', delErr.message); }
+
                   console.log(`☁️  R2 upload OK: ${storageKey}`);
                 } catch (r2Err) {
                   console.error('R2 upload fejlede, fil forbliver på disk:', r2Err.message);
@@ -607,6 +611,8 @@ export async function syncEmailsPaginated(accountId, offset = 0, limit = 10) {
                   await r2Put(attachment.content, storageKey, attachment.contentType);
                   storageProvider = 'r2';
                   console.log(`☁️  R2 upload OK: ${storageKey}`);
+                  try { if (fs.existsSync(filePath)) fs.unlinkSync(filePath); } catch (delErr) { console.error('Kunne ikke slette disk-kopien efter R2-upload:', delErr.message); }
+
                 } catch (r2Err) {
                   console.error('R2 upload fejlede, fil forbliver på disk:', r2Err.message);
                   storageProvider = 'disk'; storageKey = null;

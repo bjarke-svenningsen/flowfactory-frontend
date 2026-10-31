@@ -14,7 +14,7 @@ import nodemailer from 'nodemailer';
 import ogs from 'open-graph-scraper';
 import { db } from './database-config.js';
 import { initializeDatabase } from './init-database.js';
-import { r2Enabled, r2Put, r2GetStream, pipeR2ToRes } from './r2-client.js';
+import { r2Enabled, r2Put, r2GetStream, pipeR2ToRes, r2Delete } from './r2-client.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -76,8 +76,37 @@ if (!fs.existsSync(UPLOADS_DIR)) {
   fs.mkdirSync(UPLOADS_DIR, { recursive: true });
 }
 
-// Serve static files from uploads directory
-app.use('/uploads', express.static(UPLOADS_DIR));
+// Serve uploads directory MED login-krav:
+// Offentlig adgang (uden login) KUN for filer der bruges som profilbillede (users.avatar_url)
+// eller opslagsbillede (posts.image_url), fordi <img>-tags ikke kan sende login-headers.
+// Alt andet under /uploads kræver gyldig login-token i Authorization-headeren.
+// Ingen mappelister, ingen path-traversal.
+app.use('/uploads', async (req, res, next) => {
+  try {
+    let rel;
+    try { rel = decodeURIComponent(req.path.replace(/^\/+/, '')); } catch { return res.status(400).end(); }
+    if (!rel || rel.includes('..') || rel.includes('\\')) return res.status(400).end();
+
+    const filePath = path.join(UPLOADS_DIR, rel);
+    if (!filePath.startsWith(UPLOADS_DIR)) return res.status(400).end();
+    if (!fs.existsSync(filePath) || !fs.statSync(filePath).isFile()) return res.status(404).end();
+
+    const publicPath = `/uploads/${rel}`;
+    const isPublic = !!(await db.get('SELECT id FROM users WHERE avatar_url = ? LIMIT 1', [publicPath])) ||
+                     !!(await db.get('SELECT id FROM posts WHERE image_url = ? LIMIT 1', [publicPath]));
+
+    if (!isPublic) {
+      const authHeader = req.headers.authorization || '';
+      const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
+      if (!token) return res.status(401).json({ error: 'Login påkrævet' });
+      try { jwt.verify(token, JWT_SECRET); } catch { return res.status(401).json({ error: 'Ugyldigt login' }); }
+    }
+
+    res.sendFile(filePath);
+  } catch (err) {
+    next(err);
+  }
+});
 
 // ===== R2-lagerhjælpere (Trin A) =====
 // Nye kolonner storage_provider ('disk'|'r2') og storage_key tilføjes somALTER TABLE ADD COLUMN.
@@ -116,11 +145,13 @@ function setContentDisposition(res, filename, disposition) {
     `${disposition}; filename="${asciiName}"; filename*=UTF-8''${encodeURIComponent(filename || 'fil')}`);
 }
 
-// Sender en fil (fra R2 hvis storage_provider='r2', ellers fra disk som i dag)
+// Sender en fil (fra R2 hvis rækkens storage_provider='r2', ellers fra disk som i dag).
+// Læsningen styres AF RÆKKENS storage_provider - ikke af USE_R2-flaget. USE_R2 styrer kun,
+// hvor NYE uploads gemmes, så R2-filer kan altid åbnes selvom USE_R2 slås fra.
 async function sendFileContent(file, res, disposition = 'inline') {
   const contentType = resolveContentType(file);
 
-  if (file.storage_provider === 'r2' && file.storage_key && r2Enabled()) {
+  if (file.storage_provider === 'r2' && file.storage_key) {
     try {
       const body = await r2GetStream(file.storage_key);
       res.setHeader('Content-Type', contentType);
@@ -132,12 +163,20 @@ async function sendFileContent(file, res, disposition = 'inline') {
     }
   }
 
-  const filePath = path.join(UPLOADS_DIR, file.filename);
+  // Find filens relative placering under UPLOADS_DIR (understøtter undermapper fx email-attachments/)
+  let rel = file.filename;
+  if (file.file_path && typeof file.file_path === 'string' && file.file_path.startsWith('/uploads/')) {
+    rel = file.file_path.slice('/uploads/'.length);
+  }
+  if (rel.includes('..')) {
+    return res.status(400).json({ error: 'Invalid path' });
+  }
+  const filePath = path.join(UPLOADS_DIR, rel);
   if (!fs.existsSync(filePath)) {
     return res.status(404).json({ error: 'File not found on disk' });
   }
   if (disposition === 'attachment') {
-    res.download(filePath, file.original_name);
+    res.download(filePath, file.original_name || file.filename);
   } else {
     res.setHeader('Content-Type', contentType);
     setContentDisposition(res, file.original_name || file.filename, 'inline');
@@ -145,15 +184,50 @@ async function sendFileContent(file, res, disposition = 'inline') {
   }
 }
 
-// Upload req.file til R2 hvis aktiveret - returnerer { storage_provider, storage_key }
-// Disk-filen skrives ALTID først som sikkerhedskopi og slettes aldrig.
+// Upload req.file til R2 hvis aktiveret (USE_R2=true). USE_R2 styrer KUN nye uploads.
+// Ved vellykket R2-upload slettes disk-kopien (den er nu overflødig).
+// Ved fejl beholdes disk-kopien som nødløsning, og der returneres en dansk advarsel.
 async function maybeStoreInR2(file, folder = 'files') {
-  if (!r2Enabled()) return { storage_provider: 'disk', storage_key: null };
+  if (!r2Enabled()) return { storage_provider: 'disk', storage_key: null, warning: null };
   const key = `${folder}/${file.filename}`;
-  const buffer = fs.readFileSync(file.path);
-  await r2Put(buffer, key, file.mimetype);
-  console.log(`☁️  R2 upload OK: ${key} (${file.size} bytes)`);
-  return { storage_provider: 'r2', storage_key: key };
+  try {
+    const buffer = fs.readFileSync(file.path);
+    await r2Put(buffer, key, file.mimetype);
+    try {
+      if (fs.existsSync(file.path)) fs.unlinkSync(file.path);
+    } catch (delErr) {
+      console.error('Kunne ikke slette disk-kopien efter R2-upload:', delErr.message);
+    }
+    console.log(`☁️  R2 upload OK: ${key} (${file.size} bytes)`);
+    return { storage_provider: 'r2', storage_key: key, warning: null };
+  } catch (err) {
+    console.error('R2 upload FEJLEDE - filen gemmes på disk i stedet:', err.message);
+    return {
+      storage_provider: 'disk',
+      storage_key: null,
+      warning: 'Upload til skyen fejlede - filen blev gemt på serverens disk som nødløsning.'
+    };
+  }
+}
+
+// Sletter et R2-objekt KUN hvis ingen anden række (fx efter "Overfør til ordre")
+// stadig bruger samme storage_key. Fejl logges - objektet efterlades i så fald.
+const R2_KEY_TABLES = ['files', 'order_documents', 'quote_attachments', 'email_attachments'];
+async function deleteR2ObjectIfUnused(storageKey, excludeTable, excludeId) {
+  if (!storageKey) return;
+  for (const table of R2_KEY_TABLES) {
+    let sql = `SELECT id FROM ${table} WHERE storage_key = ?`;
+    const params = [storageKey];
+    if (table === excludeTable) { sql += ' AND id != ?'; params.push(excludeId); }
+    sql += ' LIMIT 1';
+    if (await db.get(sql, params)) return; // bruges et andet sted - slet ikke
+  }
+  try {
+    await r2Delete(storageKey);
+    console.log(`☁️  R2 objekt slettet: ${storageKey}`);
+  } catch (err) {
+    console.error('R2-sletning fejlede (objekt efterlades i bucketten):', err.message);
+  }
 }
 
 
@@ -670,7 +744,7 @@ app.post('/api/files/upload', auth, upload.single('file'), async (req, res) => {
       WHERE f.id = ?
     `, [info.lastInsertRowid]);
 
-    res.json({ success: true, file });
+    res.json({ success: true, file, warning: storage.warning });
   } catch (error) {
     console.error('Upload error:', error);
     res.status(500).json({ error: 'Failed to upload file' });
@@ -867,7 +941,7 @@ app.delete('/api/files/:id', auth, async (req, res) => {
     return res.status(403).json({ error: 'Permission denied' });
   }
   
-  // Delete physical file
+  // Delete physical file (R2-filer har ingen disk-kopi - findes ikke, ignoreres)
   const filePath = path.join(UPLOADS_DIR, file.filename);
   if (fs.existsSync(filePath)) {
     fs.unlinkSync(filePath);
@@ -875,6 +949,9 @@ app.delete('/api/files/:id', auth, async (req, res) => {
   
   // Delete from database
   await db.run('DELETE FROM files WHERE id = ?', [fileId]);
+  
+  // Delete from R2 (kun hvis ingen anden række bruger samme storage_key)
+  await deleteR2ObjectIfUnused(file.storage_key, 'files', fileId);
   
   res.json({ success: true });
 });
@@ -2018,7 +2095,7 @@ app.post('/api/quotes/:id/attachments', auth, upload.single('file'), async (req,
     WHERE qa.id = ?
   `, [info.lastInsertRowid]);
   
-  res.json(attachment);
+  res.json({ ...attachment, warning: quoteStorage.warning });
 });
 
 // Delete quote attachment
@@ -2030,14 +2107,28 @@ app.delete('/api/quotes/:quoteId/attachments/:attachmentId', auth, async (req, r
     return res.status(404).json({ error: 'Attachment not found' });
   }
   
-  // Delete physical file
+  // Delete physical file (R2-filer har ingen disk-kopi - findes ikke, ignoreres)
   const filePath = path.join(UPLOADS_DIR, attachment.filename);
   if (fs.existsSync(filePath)) {
     fs.unlinkSync(filePath);
   }
   
   await db.run('DELETE FROM quote_attachments WHERE id = ?', [attachmentId]);
+  
+  // Delete from R2 (kun hvis ingen anden række bruger samme storage_key)
+  await deleteR2ObjectIfUnused(attachment.storage_key, 'quote_attachments', attachmentId);
+  
   res.json({ success: true });
+});
+
+// Email-vedhæftning: download via API med login-header (ingen offentlig /uploads-adgang)
+app.get('/api/email/attachments/:id', auth, async (req, res) => {
+  const attachmentId = Number(req.params.id);
+  const attachment = await db.get('SELECT * FROM email_attachments WHERE id = ?', [attachmentId]);
+  if (!attachment) {
+    return res.status(404).json({ error: 'Vedhæftning ikke fundet' });
+  }
+  await sendFileContent(attachment, res, 'attachment');
 });
 
 // Send quote via email
@@ -2727,7 +2818,7 @@ app.post('/api/orders/:orderId/documents', auth, upload.single('file'), async (r
     WHERE d.id = ?
   `, [info.lastInsertRowid]);
   
-  res.json(document);
+  res.json({ ...document, warning: storage.warning });
 });
 
 // Delete order document
@@ -2739,13 +2830,17 @@ app.delete('/api/orders/:orderId/documents/:documentId', auth, async (req, res) 
     return res.status(404).json({ error: 'Document not found' });
   }
   
-  // Delete physical file
+  // Delete physical file (R2-filer har ingen disk-kopi - findes ikke, ignoreres)
   const filePath = path.join(UPLOADS_DIR, document.filename);
   if (fs.existsSync(filePath)) {
     fs.unlinkSync(filePath);
   }
   
   await db.run('DELETE FROM order_documents WHERE id = ?', [documentId]);
+  
+  // Delete from R2 (kun hvis ingen anden række bruger samme storage_key)
+  await deleteR2ObjectIfUnused(document.storage_key, 'order_documents', documentId);
+  
   res.json({ success: true });
 });
 

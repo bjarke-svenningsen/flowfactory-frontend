@@ -440,7 +440,11 @@ async function uploadFileToExplorer(event) {
             throw new Error(result.error || 'Upload failed');
         }
         
-        alert(` ${file.name} uploadet succesfuldt!`);
+        if (result.warning) {
+            alert('Advarsel: ' + result.warning);
+        } else {
+            alert(` ${file.name} uploadet succesfuldt!`);
+        }
         
         console.log('Reloading files...');
         await loadRealFiles();
