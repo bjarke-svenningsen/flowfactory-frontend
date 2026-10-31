@@ -48,6 +48,7 @@ async function loadConversations() {
             if (c.peer) conversationByPeer[c.peer.id] = c.id;
         }
         renderUserList();
+        updateChatMenuBadge();
     } catch (error) { /* listoen praever igen naeste gang */ }
 }
 
@@ -121,6 +122,7 @@ async function connectChatSse() {
             } else {
                 unreadCounts[m.conversation_id] = (unreadCounts[m.conversation_id] || 0) + 1;
                 renderUserList();
+                updateChatMenuBadge();
             }
         });
 
@@ -189,7 +191,32 @@ async function markConversationRead() {
             headers: chatAuthHeaders(),
             body: JSON.stringify({ conversationId: currentConversationId })
         });
+        unreadCounts[currentConversationId] = 0;
+        updateChatMenuBadge();
     } catch (error) { /* proeves igen naeste gang */ }
+}
+
+// Global badge paa "Chat & Video" i menuen
+function updateChatMenuBadge() {
+    const badge = document.getElementById('chatMenuBadge');
+    if (!badge) return;
+    let total = 0;
+    for (const k in unreadCounts) total += unreadCounts[k] || 0;
+    if (total > 0) {
+        badge.textContent = total > 9 ? '9+' : total;
+        badge.style.display = 'flex';
+    } else {
+        badge.style.display = 'none';
+    }
+}
+
+// Saet SSE + presence op saa snart dashboardet er loadet (ikke kun paa chat-siden),
+// saa ulaeste-badge i menuen virker overalt.
+if (typeof window !== 'undefined' && !window._chatAutoInit) {
+    window._chatAutoInit = true;
+    window.addEventListener('load', () => {
+        if (sessionStorage.getItem('token')) initChat();
+    });
 }
 
 // Render bruger liste
@@ -274,6 +301,7 @@ async function openChatWith(userId) {
         conversationByPeer[userId] = currentConversationId;
         unreadCounts[currentConversationId] = 0;
         renderUserList();
+        updateChatMenuBadge();
 
         // Hent hele historikken
         const msgResponse = await fetch('/api/chat/conversations/' + currentConversationId + '/messages?after=0', {
@@ -301,6 +329,13 @@ function closeChat() {
     renderUserList();
 }
 
+// Lav http(s)-links klikbare (teksten er allerede HTML-escapet)
+function linkifyText(escaped) {
+    return escaped.replace(/(https?:\/\/[^\s<]+)/g, function (url) {
+        return '<a href="' + url + '" target="_blank" rel="noopener noreferrer">' + url + '</a>';
+    });
+}
+
 // Render beskeder
 function renderMessages() {
     if (!currentChatUser || !currentConversationId) return;
@@ -322,7 +357,7 @@ function renderMessages() {
         return `
             <div class="message ${isOwn ? 'own' : ''}">
                 <div class="message-bubble">
-                    <div>${escapeHtml(msg.text)}</div>
+                    <div>${linkifyText(escapeHtml(msg.text))}</div>
                     <div class="message-time">${msg.time}</div>
                     ${seenLabel}
                 </div>
@@ -439,7 +474,21 @@ async function startVideoCall(userId, userName) {
             conversationByPeer[userId] = convId;
         }
         const room = 'seest-conv' + convId + '-' + Math.random().toString(36).substring(2, 10);
-        window.open('https://meet.jit.si/' + room, '_blank');
+        const url = 'https://meet.jit.si/' + room;
+        window.open(url, '_blank');
+        // Del linket i samtalen, sa modtageren kan joine direkte
+        try {
+            const response = await fetch('/api/chat/messages', {
+                method: 'POST',
+                headers: chatAuthHeaders(),
+                body: JSON.stringify({ conversationId: convId, body: '🎥 Videoopkald started: ' + url })
+            });
+            if (response.ok) {
+                const msg = await response.json();
+                storeMessage(msg);
+                if (currentConversationId === convId) renderMessages();
+            }
+        } catch (e) { /* linket er stadig aabnet */ }
     } catch (error) {
         alert('Videoopkald kunne ikke startes');
     }

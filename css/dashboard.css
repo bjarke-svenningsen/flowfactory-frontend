@@ -1099,6 +1099,28 @@ body {
     flex-shrink: 0;
 }
 
+.menu-unread-badge {
+    background: var(--accent);
+    color: var(--text);
+    font-size: 11px;
+    font-weight: 700;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    border-radius: 9px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-left: auto;
+    flex-shrink: 0;
+}
+
+.message-bubble a {
+    color: inherit;
+    text-decoration: underline;
+    word-break: break-all;
+}
+
 .chat-input-area {
     padding: 15px;
     border-top: 1px solid #e0e0e0;
