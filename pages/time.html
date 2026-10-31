@@ -207,52 +207,224 @@
             margin-top: 2px;
         }
 
-        /* Week View */
+        /* Tidsakse-grid (faelles for Dag- og Ugevisning) */
+        .timegrid-card {
+            --hour-h: 48px;
+            --axis-w: 56px;
+            background: var(--surface);
+            border-radius: 12px;
+            box-shadow: var(--shadow-soft);
+            overflow: hidden;
+            margin-top: 15px;
+        }
+
+        .timegrid-head {
+            position: sticky;
+            top: 0;
+            z-index: 5;
+            display: grid;
+            grid-template-columns: var(--axis-w) repeat(var(--cols, 7), 1fr);
+            background: var(--surface-muted);
+            border-bottom: 1px solid var(--border-soft);
+        }
+
+        .timegrid-corner {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            padding: 10px 12px 10px 4px;
+            font-weight: 700;
+            font-size: 13px;
+            color: var(--text-muted);
+        }
+
+        .timegrid-day {
+            padding: 10px 6px;
+            text-align: center;
+            font-weight: 600;
+            font-size: 13px;
+            color: var(--text);
+            border-left: 1px solid var(--border-soft);
+        }
+
+        .timegrid-day .day-num {
+            display: block;
+            font-weight: 400;
+            font-size: 11px;
+            color: var(--text-muted);
+        }
+
+        .timegrid-notime {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            align-items: center;
+            padding: 8px 12px;
+            border-bottom: 1px solid var(--border-soft);
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        .no-time-chip {
+            border-radius: 6px;
+            padding: 2px 8px;
+            font-size: 11px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .timegrid-scroll {
+            max-height: 600px;
+            overflow-y: auto;
+        }
+
+        .timegrid-canvas {
+            display: grid;
+            grid-template-columns: var(--axis-w) repeat(var(--cols, 7), 1fr);
+            position: relative;
+        }
+
+        .timegrid-axis {
+            border-right: 1px solid var(--border-soft);
+        }
+
+        .axis-label {
+            height: var(--hour-h);
+            display: flex;
+            align-items: flex-start;
+            justify-content: flex-end;
+            padding: 2px 8px 0 0;
+            font-size: 12px;
+            color: var(--text-muted);
+            font-variant-numeric: tabular-nums;
+        }
+
+        .timegrid-col {
+            position: relative;
+            height: calc(var(--hour-h) * 24);
+            border-left: 1px solid var(--border-soft);
+        }
+
+        .grid-line {
+            position: absolute;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: var(--border-soft);
+        }
+
+        .grid-line--half {
+            height: 0;
+            background: transparent;
+            border-top: 1px dashed var(--border-soft);
+        }
+
+        .tg-block {
+            position: absolute;
+            border-radius: 8px;
+            border-left: 3px solid var(--border);
+            padding: 4px 6px;
+            font-size: 11px;
+            line-height: 1.35;
+            overflow: hidden;
+            cursor: pointer;
+            box-shadow: var(--shadow-soft);
+            transition: transform 0.15s, box-shadow 0.15s;
+            z-index: 2;
+        }
+
+        .tg-block:hover {
+            transform: translateY(-1px);
+            box-shadow: var(--shadow-lift);
+        }
+
+        .tg-block .tg-line1 {
+            font-weight: 700;
+            font-variant-numeric: tabular-nums;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .tg-block .tg-line2 {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .tg-block.locked {
+            opacity: 0.7;
+            cursor: not-allowed;
+        }
+
+        .now-line {
+            position: absolute;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: var(--danger);
+            z-index: 4;
+            pointer-events: none;
+        }
+
+        .now-dot {
+            position: absolute;
+            left: -4px;
+            top: -3px;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--danger);
+        }
+
+        .timegrid-summary {
+            padding: 12px 16px;
+            border-top: 1px solid var(--border-soft);
+            background: var(--surface);
+            font-weight: 600;
+            font-size: 13px;
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        @media (max-width: 768px) {
+            .timegrid-card {
+                --axis-w: 40px;
+            }
+
+            .timegrid-scroll {
+                overflow-x: auto;
+            }
+
+            .timegrid-canvas,
+            .timegrid-head {
+                min-width: 720px;
+            }
+        }
+
+        /* Maanedskalender (genbruger week-grid-navne) */
         .week-grid {
             display: grid;
             grid-template-columns: 60px repeat(7, 1fr);
             gap: 0;
-            background: white;
+            background: var(--surface);
             border-radius: 12px;
             overflow: hidden;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+            box-shadow: var(--shadow-soft);
         }
 
         .week-day-header {
-            padding: 15px 10px;
+            padding: 12px 8px;
             text-align: center;
-            background: var(--color-dark);
-            color: white;
+            background: var(--surface-muted);
+            color: var(--text-muted);
             font-weight: 600;
-            font-size: 14px;
+            font-size: 13px;
         }
 
-        .week-day-column {
-            min-height: 400px;
-            border-left: 1px solid var(--border-soft);
-            position: relative;
-            padding: 10px 5px;
-        }
-
-        .week-day-column:first-child {
-            border-left: none;
-        }
-
-        .week-time-block {
-            background: var(--color-dark);
-            color: white;
-            border-radius: 6px;
-            padding: 8px;
-            margin-bottom: 5px;
-            font-size: 11px;
-            cursor: pointer;
-        }
-
-        .week-time-block.overtime {
-            background: var(--color-red);
-        }
-
-        /* Month Summary */
+        /* Maanedssammendrag */
         .month-summary {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
@@ -485,9 +657,8 @@
             <div class="timeline-header">
                 <h2 id="dayTitle">Onsdag 1. november 2025</h2>
             </div>
-            <div class="timeline-grid">
-                <div class="timeline-hours" id="timelineHours"></div>
-                <div class="timeline-blocks" id="timelineBlocks"></div>
+            <div class="timeline-grid" id="dayGrid">
+                <!-- Udfyldes af JavaScript (faelles tidsakse-komponent) -->
             </div>
         </div>
 

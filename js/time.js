@@ -170,26 +170,181 @@ const timePage = {
         }
     },
 
+    // ---- Faelles tidsakse-komponent (Dag + Uge) ----
+
+    // Parse "HH:MM" til minutter (ingen Date-objekter - undgaar tidszoner)
+    parseMinutes(t) {
+        if (!t || typeof t !== 'string' || !t.includes(':')) return null;
+        const [h, m] = t.split(':').map(Number);
+        if (Number.isNaN(h) || Number.isNaN(m)) return null;
+        return h * 60 + m;
+    },
+
+    minToLabel(min) {
+        return `${String(Math.floor(min / 60) % 24).padStart(2, '0')}:${String(min % 60).padStart(2, '0')}`;
+    },
+
+    // Opdel registreringer over midnat (fx 22:00-02:00) i to dele
+    splitParts(entry) {
+        const s = this.parseMinutes(entry.start_time);
+        const e = this.parseMinutes(entry.end_time);
+        if (s === null || e === null || s === e) return null; // uden tidspunkt
+        if (e > s) return [{ entry, iso: entry.date, startMin: s, endMin: e }];
+        // Over midnat: forste dag til 24:00, naeste dag fra 00:00
+        const next = new Date(entry.date + 'T12:00:00');
+        next.setDate(next.getDate() + 1);
+        return [
+            { entry, iso: entry.date, startMin: s, endMin: 1440 },
+            { entry, iso: fmtDate(next), startMin: 0, endMin: e }
+        ];
+    },
+
     initDayView() {
-        const hoursContainer = document.getElementById('timelineHours');
-        const blocksContainer = document.getElementById('timelineBlocks');
-        
-        // Create hour labels (0-23)
-        let hoursHTML = '';
-        let rowsHTML = '';
-        for (let i = 0; i < 24; i++) {
-            hoursHTML += `<div class="hour-label">${String(i).padStart(2, '0')}:00</div>`;
-            rowsHTML += `<div class="timeline-row"></div>`;
+        // Tegnes nu af renderDayView via faelles tidsakse-komponent
+    },
+
+    // Fordel overlappende blokke side om side (delt bredde pr. overlapgruppe)
+    layoutParts(parts) {
+        const sorted = [...parts].sort((a, b) => a.startMin - b.startMin || a.endMin - b.endMin);
+        const clusters = [];
+        let cluster = null;
+        sorted.forEach(p => {
+            if (cluster && p.startMin < cluster.maxEnd) {
+                cluster.parts.push(p);
+                cluster.maxEnd = Math.max(cluster.maxEnd, p.endMin);
+            } else {
+                cluster = { parts: [p], maxEnd: p.endMin };
+                clusters.push(cluster);
+            }
+        });
+        clusters.forEach(c => {
+            const laneEnds = [];
+            c.parts.forEach(p => {
+                let lane = laneEnds.findIndex(end => end <= p.startMin);
+                if (lane === -1) lane = laneEnds.length;
+                laneEnds[lane] = p.endMin;
+                p.lane = lane;
+                p.lanesOfCluster = laneEnds.length; // vaekstende; korrigeres til max nedenfor
+            });
+            const total = laneEnds.length;
+            c.parts.forEach(p => { p.lanesOfCluster = total; });
+        });
+        return sorted;
+    },
+
+    buildTimeGrid(container, days) {
+        const HOUR_H = 48;
+        const todayIso = fmtDate(new Date());
+        const cols = days.length;
+
+        let head = `<div class="timegrid-head" style="--cols:${cols};">`;
+        head += `<div class="timegrid-corner">Uge ${getWeekNumber(days[0].date)}</div>`;
+        days.forEach(day => {
+            const isToday = day.iso === todayIso;
+            head += `<div class="timegrid-day${isToday ? ' today-col' : ''}">${DAY_NAMES[day.date.getDay()]}<span class="day-num">${day.date.getDate()}. ${MONTH_NAMES[day.date.getMonth()]}</span></div>`;
+        });
+        head += '</div>';
+
+        let body = '';
+        days.forEach(day => {
+            const noTime = [];
+            let parts = [];
+            (day.entries || []).forEach(entry => {
+                const sp = this.splitParts(entry);
+                if (!sp) { noTime.push(entry); return; }
+                sp.forEach(p => { if (p.iso === day.iso) parts.push(p); });
+            });
+            parts = this.layoutParts(parts);
+
+            const isToday = day.iso === todayIso;
+            let col = `<div class="timegrid-col${isToday ? ' today-col' : ''}" data-date="${day.iso}">`;
+
+            // Hel- og halvtimeslinjer
+            for (let h = 0; h <= 24; h++) {
+                col += `<div class="grid-line" style="top:${h * HOUR_H}px;"></div>`;
+                if (h < 24) col += `<div class="grid-line grid-line--half" style="top:${h * HOUR_H + HOUR_H / 2}px;"></div>`;
+            }
+
+            // Blokke placeret efter klokkaeslaet
+            parts.forEach(p => {
+                const e = p.entry;
+                const top = Math.round((p.startMin / 60) * HOUR_H);
+                const height = Math.max(24, Math.round(((p.endMin - p.startMin) / 60) * HOUR_H));
+                const compact = height < 40;
+                const widthPct = 100 / p.lanesOfCluster;
+                const leftPct = (p.lane * 100) / p.lanesOfCluster;
+                const timeStr = `${this.minToLabel(p.startMin)}-${this.minToLabel(p.endMin)}`;
+                const line1 = `(${hoursOf(e).toFixed(1).replace('.', ',')}) ${timeStr}`;
+                const label = e.order_number || e.quote_number || 'Værksted';
+                const tooltip = `${line1}\n${label}\n${e.material_name || ''}`;
+                col += `<div class="tg-block time-${getEntryType(e)}${e.is_locked ? ' locked' : ''}${compact ? ' compact' : ''}"` +
+                    ` style="top:${top}px;height:${height}px;left:calc(${leftPct}% + 3px);width:calc(${widthPct}% - 6px);"` +
+                    ` title="${tooltip.replace(/"/g, '&quot;')}"` +
+                    ` onclick="timePage.editTimeEntryById(${e.id})">` +
+                    `<div class="tg-line1">${line1}</div>` +
+                    (compact ? '' : `<div class="tg-line2">${label}</div><div class="tg-line2">${e.material_name || ''}</div>`) +
+                    `</div>`;
+            });
+
+            // Roed "nu"-streg for i dag
+            if (isToday) {
+                const now = new Date();
+                const nowMin = now.getHours() * 60 + now.getMinutes();
+                col += `<div class="now-line" data-now style="top:${(nowMin / 60) * HOUR_H}px;"><div class="now-dot"></div></div>`;
+            }
+
+            col += '</div>';
+            body += col;
+        });
+
+        // Chips for registreringer uden tidspunkt
+        let noTimeRow = '';
+        const hasNoTime = days.some(d => (d.entries || []).some(e => !this.splitParts(e)));
+        if (hasNoTime) {
+            noTimeRow = '<div class="timegrid-notime"><span>Uden tidspunkt:</span>';
+            days.forEach(day => {
+                (day.entries || []).forEach(e => {
+                    if (this.splitParts(e)) return;
+                    const label = e.order_number || e.quote_number || 'Værksted';
+                    noTimeRow += `<span class="no-time-chip legend-chip time-${getEntryType(e)}"` +
+                        ` title="${(e.material_name || '').replace(/"/g, '&quot;')}"` +
+                        ` onclick="timePage.editTimeEntryById(${e.id})">${label} · ${hoursOf(e).toFixed(1).replace('.', ',')} t</span>`;
+                });
+            });
+            noTimeRow += '</div>';
         }
-        
-        hoursContainer.innerHTML = hoursHTML;
-        blocksContainer.innerHTML = rowsHTML;
-        
-        // Update title
-        const dayNames = ['Søndag', 'Mandag', 'Tirsdag', 'Onsdag', 'Torsdag', 'Fredag', 'Lørdag'];
-        const monthNames = ['januar', 'februar', 'marts', 'april', 'maj', 'juni', 'juli', 'august', 'september', 'oktober', 'november', 'december'];
-        document.getElementById('dayTitle').textContent = 
-            `${dayNames[this.selectedDate.getDay()]} ${this.selectedDate.getDate()}. ${monthNames[this.selectedDate.getMonth()]} ${this.selectedDate.getFullYear()}`;
+
+        // Akse 00:00-24:00
+        let axis = '<div class="timegrid-axis">';
+        for (let h = 0; h < 24; h++) axis += `<div class="axis-label">${String(h).padStart(2, '0')}:00</div>`;
+        axis += '</div>';
+
+        container.innerHTML = `${head}${noTimeRow}` +
+            `<div class="timegrid-scroll">` +
+            `<div class="timegrid-canvas" style="--cols:${cols};">${axis}${body}</div>` +
+            `</div>`;
+
+        // Scroll til kl. 06:00 (eller en time for foerste registrering)
+        const scroller = container.querySelector('.timegrid-scroll');
+        if (scroller) {
+            let firstStart = null;
+            days.forEach(d => (d.entries || []).forEach(e => {
+                const s = this.parseMinutes(e.start_time);
+                if (s !== null && (firstStart === null || s < firstStart)) firstStart = s;
+            }));
+            const target = firstStart !== null ? Math.max(0, firstStart - 60) : 6 * 60;
+            scroller.scrollTop = (target / 60) * HOUR_H;
+        }
+
+        // "Nu"-streg opdateres hvert minut
+        if (this._nowTimer) clearInterval(this._nowTimer);
+        this._nowTimer = setInterval(() => {
+            const now = new Date();
+            const nowMin = now.getHours() * 60 + now.getMinutes();
+            document.querySelectorAll('[data-now]').forEach(el => {
+                el.style.top = (nowMin / 60) * HOUR_H + 'px';
+            });
+        }, 60000);
     },
 
     renderCurrentView() {
@@ -238,56 +393,20 @@ const timePage = {
     },
 
     renderDayView() {
-        const blocksContainer = document.getElementById('timelineBlocks');
-        blocksContainer.querySelectorAll('.time-block').forEach(el => el.remove());
-        
-        // Render time blocks
-        this.timeEntries.forEach(entry => {
-            const block = this.createTimeBlock(entry);
-            blocksContainer.appendChild(block);
-        });
-    },
+        // Dagtitel
+        document.getElementById('dayTitle').textContent =
+            `${DAY_NAMES[this.selectedDate.getDay()]} ${this.selectedDate.getDate()}. ${MONTH_NAMES[this.selectedDate.getMonth()]} ${this.selectedDate.getFullYear()}`;
 
-    createTimeBlock(entry) {
-        const div = document.createElement('div');
-        div.className = 'time-block';
-        
-        // Farve efter TYPE (ikke sort)
-        div.classList.add('time-' + getEntryType(entry));
-        
-        // Check if locked
-        if (entry.is_locked) {
-            div.classList.add('locked');
-        }
-        
-        // Calculate position
-        const [startHour, startMin] = entry.start_time.split(':').map(Number);
-        const [endHour, endMin] = entry.end_time.split(':').map(Number);
-        
-        const startMinutes = startHour * 60 + startMin;
-        const endMinutes = endHour * 60 + endMin;
-        const durationMinutes = endMinutes - startMinutes;
-        
-        const top = (startMinutes / 60) * 50; // 50px per hour
-        const height = (durationMinutes / 60) * 50;
-        
-        div.style.top = `${top}px`;
-        div.style.height = `${height}px`;
-        
-        div.innerHTML = `
-            <div class="block-info">${entry.quote_number || 'Intern'} - ${entry.material_name}</div>
-            <div class="block-time">${entry.start_time} - ${entry.end_time} (${entry.duration_hours}t)</div>
-        `;
-        
-        div.onclick = () => this.editTimeEntry(entry);
-        
-        return div;
+        const container = document.getElementById('dayGrid');
+        const iso = fmtDate(this.selectedDate);
+        const days = [{ date: this.selectedDate, iso, entries: this.timeEntries.filter(e => e.date === iso) }];
+        this.buildTimeGrid(container, days);
     },
 
     renderWeekView() {
         const container = document.getElementById('weekView');
-        
-        // Grupper registreringer pr. dag (mandag-først)
+
+        // Grupper registreringer pr. dag (mandag-forst)
         const monday = getWeekStart(this.selectedDate);
         const days = [];
         for (let i = 0; i < 7; i++) {
@@ -297,59 +416,26 @@ const timePage = {
             const entries = this.timeEntries.filter(e => e.date === iso);
             days.push({ date: d, iso, entries });
         }
-        
-        let html = `<div class="week-day-header" style="background:var(--surface-muted);color:var(--text-muted);">Uge ${getWeekNumber(monday)}</div>`;
-        days.forEach(day => {
-            const isToday = fmtDate(new Date()) === day.iso;
-            html += `<div class="week-day-header${isToday ? ' today-col' : ''}"${isToday ? '' : ' style="background:var(--surface-muted);color:var(--text-muted);"'}>
-                ${DAY_NAMES[day.date.getDay()]}<br>
-                <span style="font-weight:400;font-size:12px;">${day.date.getDate()}. ${MONTH_NAMES[day.date.getMonth()]}</span>
-            </div>`;
-        });
-        
-        // Registreringer pr. dag (én række pr. slot)
-        const maxEntries = Math.max(1, ...days.map(d => d.entries.length));
-        for (let row = 0; row < maxEntries; row++) {
-            html += '<div></div>'; // hjørnecelle
-            days.forEach(day => {
-                const entry = day.entries[row];
-                if (!entry) {
-                    html += '<div class="week-day-column"></div>';
-                    return;
-                }
-                const type = getEntryType(entry);
-                const cls = 'time-' + type;
-                const label = entry.order_number || entry.quote_number || 'Værksted';
-                const isToday = fmtDate(new Date()) === day.iso;
-                html += `<div class="week-day-column${isToday ? ' today-col' : ''}">
-                    <div class="week-time-block ${cls}" onclick="timePage.editTimeEntryById(${entry.id})">
-                        <strong>${hoursOf(entry).toFixed(1)} t</strong><br>
-                        ${label}<br>
-                        ${entry.material_name || ''}<br>
-                        ${entry.start_time}-${entry.end_time}
-                    </div>
-                </div>`;
-            });
-        }
-        
+
+        // Faelles tidsakse med absolute blokke
+        this.buildTimeGrid(container, days);
+
         // Dagtotaler + ugetotal i bunden
-        html += `<div class="week-day-header" style="background:var(--surface-muted);color:var(--text-muted);">I alt</div>`;
-        days.forEach(day => {
-            const dayHours = day.entries.reduce((s, e) => s + hoursOf(e), 0);
-            const isToday = fmtDate(new Date()) === day.iso;
-            html += `<div class="${isToday ? 'today-col' : ''}" style="text-align:center;padding:10px;${isToday ? '' : 'background:var(--surface-muted);'}border-left:1px solid var(--border-soft);font-weight:700;color:${dayHours > 0 ? 'var(--success)' : 'var(--border)'};">${dayHours > 0 ? dayHours.toFixed(1) + ' t' : '–'}</div>`;
-        });
-        
+        const dayTotals = days.map(day => {
+            const h = day.entries.reduce((s, e) => s + hoursOf(e), 0);
+            return `<span>${DAY_NAMES[day.date.getDay()].slice(0, 3)}: <strong style="color:${h > 0 ? 'var(--success)' : 'var(--border)'};">${h > 0 ? h.toFixed(1).replace('.', ',') + ' t' : '–'}</strong></span>`;
+        }).join('');
         const weekHours = this.timeEntries.reduce((s, e) => s + hoursOf(e), 0);
         const overtimeHours = this.timeEntries.filter(e => getEntryType(e) === 'overtime').reduce((s, e) => s + hoursOf(e), 0);
         const sickHours = this.timeEntries.filter(e => getEntryType(e) === 'sick').reduce((s, e) => s + hoursOf(e), 0);
-        html += `<div style="grid-column: 1 / -1; padding: 15px 20px; background: white; border-top: 2px solid var(--border-soft); font-weight: 600;">
-            Uge ${getWeekNumber(monday)} i alt: ${weekHours.toFixed(1)} timer
-            ${overtimeHours > 0 ? ` · Overtid: <span class="legend-chip time-overtime">${overtimeHours.toFixed(1)} t</span>` : ''}
-            ${sickHours > 0 ? ` ·  Sygdom: <span class="legend-chip time-sick">${sickHours.toFixed(1)} t</span>` : ''}
-        </div>`;
-        
-        container.innerHTML = html;
+        container.insertAdjacentHTML('beforeend',
+            `<div class="timegrid-summary">` +
+            dayTotals +
+            `<span style="margin-left:auto;">Uge ${getWeekNumber(monday)} i alt: <strong>${weekHours.toFixed(1).replace('.', ',')} timer</strong></span>` +
+            (overtimeHours > 0 ? ` <span class="legend-chip time-overtime">Overtid ${overtimeHours.toFixed(1).replace('.', ',')} t</span>` : '') +
+            (sickHours > 0 ? ` <span class="legend-chip time-sick">Sygdom ${sickHours.toFixed(1).replace('.', ',')} t</span>` : '') +
+            `</div>`);
+
         this.updateHeader();
     },
 
@@ -557,12 +643,12 @@ const timePage = {
     changeView(view) {
         this.currentView = view;
         
-        // Update buttons
-        document.querySelectorAll('.view-toggle button').forEach(btn => btn.classList.remove('active'));
+        // Update buttons (kun view-toggle, ikke modalens type-toggle)
+        document.querySelectorAll('.view-toggle button:not(.type-toggle button)').forEach(btn => btn.classList.remove('active'));
         document.getElementById(`view${view.charAt(0).toUpperCase() + view.slice(1)}`).classList.add('active');
         // Show/hide views
         document.getElementById('dayView').style.display = view === 'day' ? 'block' : 'none';
-        document.getElementById('weekView').style.display = view === 'week' ? 'grid' : 'none';
+        document.getElementById('weekView').style.display = view === 'week' ? 'block' : 'none';
         document.getElementById('monthView').style.display = view === 'month' ? 'block' : 'none';
         document.getElementById('workshopView').style.display = view === 'workshop' ? 'block' : 'none';
         
