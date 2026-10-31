@@ -11,6 +11,8 @@ const peerRead = {};       // conversationId -> modtagers sidst laeste besked-id
 let typingTimer = null;
 let typingThrottle = 0;
 let typingStatusTimer = null;
+let chatFilter = 'alle';   // 'alle' | 'ulaeste'
+let convList = [];         // samtaler fra backend (med last_message + unread)
 
 function chatAuthHeaders() {
     return {
@@ -42,6 +44,7 @@ async function loadConversations() {
         const response = await fetch('/api/chat/conversations', { headers: chatAuthHeaders() });
         if (!response.ok) return;
         const convs = await response.json();
+        convList = convs;
         for (const c of convs) {
             unreadCounts[c.id] = c.unread || 0;
             peerRead[c.id] = c.peer_last_read || 0;
@@ -49,7 +52,46 @@ async function loadConversations() {
         }
         renderUserList();
         updateChatMenuBadge();
+        updateChatPageSubtitle();
     } catch (error) { /* listoen praever igen naeste gang */ }
+}
+
+// Fil-chips: Alle / Ulaeste
+function setChatFilter(f) {
+    chatFilter = f;
+    const a = document.getElementById('chatChipAlle');
+    const u = document.getElementById('chatChipUlaeste');
+    if (a) a.classList.toggle('active', f === 'alle');
+    if (u) u.classList.toggle('active', f === 'ulaeste');
+    renderUserList();
+}
+
+// "I dag" / "I gaar" / dato til besked-separatorer og liste-tider
+function chatDayLabel(d) {
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const that = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+    const diff = Math.round((that - today) / 86400000);
+    if (diff === 0) return 'I dag';
+    if (diff === -1) return 'I går';
+    return d.toLocaleDateString('da-DK', { day: 'numeric', month: 'short' });
+}
+
+function chatTimeLabel(iso) {
+    if (!iso) return '';
+    const d = new Date(iso);
+    if (isNaN(d)) return '';
+    return chatDayLabel(d) + ' ' + d.toLocaleTimeString('da-DK', { hour: '2-digit', minute: '2-digit' });
+}
+
+// "3 kolleger online · X ulaeste beskeder"
+function updateChatPageSubtitle() {
+    const el = document.getElementById('chatPageSubtitle');
+    if (!el) return;
+    const online = users.filter(u => u.online).length;
+    let unread = 0;
+    for (const k in unreadCounts) unread += unreadCounts[k] || 0;
+    el.textContent = online + ' kolleger online' + (unread > 0 ? ' · ' + unread + ' ulæste beskeder' : '');
 }
 
 // Presence: kolleger + online-status + sidst set
@@ -115,14 +157,29 @@ async function connectChatSse() {
 
         sse.addEventListener('chat_message', (e) => {
             const m = JSON.parse(e.data);
+            const isMine = m.sender_id === (myId || (window.currentUser ? window.currentUser.id : null));
             storeMessage(m);
-            if (currentConversationId && m.conversation_id === currentConversationId) {
+            // Opdater forhandsvisning i samtalelisten
+            const conv = convList.find(c => c.id === m.conversation_id);
+            if (conv) {
+                conv.last_message = m;
+            } else {
+                convList.unshift({ id: m.conversation_id, peer: null, last_message: m, unread: 0 });
+            }
+            if (!isMine && m.conversation_id === currentConversationId && currentChatUser) {
                 renderMessages();
                 markConversationRead();
-            } else {
+            } else if (!isMine) {
                 unreadCounts[m.conversation_id] = (unreadCounts[m.conversation_id] || 0) + 1;
                 renderUserList();
                 updateChatMenuBadge();
+                // Toast: find afsender (peer) for samtalen
+                const convId = m.conversation_id;
+                const peerEntry = Object.keys(conversationByPeer).find(k => conversationByPeer[k] === convId);
+                const peerUser = peerEntry ? users.find(u => u.id === Number(peerEntry)) : null;
+                showChatToast(m.sender_name || (peerUser ? peerUser.name : 'Ny besked'), m.body, peerUser ? peerUser.id : null);
+            } else {
+                renderUserList();
             }
         });
 
@@ -139,14 +196,15 @@ async function connectChatSse() {
             if (!currentChatUser || !currentConversationId || d.conversationId !== currentConversationId) return;
             if (d.userId !== (currentChatUser ? currentChatUser.id : null)) return;
             const el = document.getElementById('chatUserStatus');
-            if (!el) return;
+            const bubble = document.getElementById('chatTypingBubble');
             if (d.typing) {
-                el.textContent = 'skriver...';
-                el.style.color = 'var(--text-muted)';
+                if (el) { el.textContent = 'skriver...'; el.style.color = 'var(--text-muted)'; }
+                if (bubble) bubble.style.display = 'flex';
                 clearTimeout(typingStatusTimer);
                 typingStatusTimer = setTimeout(updateChatHeaderStatus, 3000);
             } else {
                 clearTimeout(typingStatusTimer);
+                if (bubble) bubble.style.display = 'none';
                 updateChatHeaderStatus();
             }
         });
@@ -177,6 +235,7 @@ function storeMessage(m) {
         sender_id: m.sender_id,
         sender_name: m.sender_name || '',
         text: m.body,
+        ts: new Date(m.created_at).getTime(),
         time: new Date(m.created_at).toLocaleTimeString('da-DK', { hour: '2-digit', minute: '2-digit' })
     });
     arr.sort((a, b) => (a.id || 0) - (b.id || 0));
@@ -228,39 +287,130 @@ if (typeof window !== 'undefined' && !window._chatAutoInit) {
     }
 }
 
-// Render bruger liste
+// Render bruger liste: kontaktrække + samtaleliste med forhandsvisning
 function renderUserList() {
+    renderContactsStrip();
+
     const userList = document.getElementById('userList');
     if (!userList) return;
 
-    userList.innerHTML = users.map(user => {
-        const statusClass = user.status;
-        const isActive = currentChatUser && currentChatUser.id === user.id ? 'active' : '';
-        const isOnline = user.online;
-        const convId = conversationByPeer[user.id];
-        const unread = convId ? (unreadCounts[convId] || 0) : 0;
-        const unreadBadge = unread > 0 ? `<span class="chat-unread-badge">${unread > 9 ? '9+' : unread}</span>` : '';
+    const query = (document.getElementById('userSearch') && document.getElementById('userSearch').value || '').toLowerCase();
 
+    // Byg liste-indsaeg: samtaler (med preview) + kolleger uden samtale
+    const items = [];
+
+    for (const c of convList) {
+        if (!c.peer) continue;
+        const user = users.find(u => u.id === c.peer.id);
+        const name = c.peer.name || '';
+        if (query && !name.toLowerCase().includes(query)) continue;
+        const unread = unreadCounts[c.id] || 0;
+        if (chatFilter === 'ulaeste' && unread === 0) continue;
+        items.push({
+            convId: c.id,
+            peerId: c.peer.id,
+            name: name,
+            initials: user ? user.initials : getInitials(name),
+            status: user ? user.status : 'offline',
+            online: c.peer_online,
+            lastSeenAt: c.peer.last_seen_at || '',
+            preview: c.last_message ? ((c.last_message.sender_id === myId ? 'Dig: ' : '') + (c.last_message.body || '')) : '',
+            time: c.last_message ? chatTimeLabel(c.last_message.created_at) : '',
+            unread: unread
+        });
+    }
+
+    for (const user of users) {
+        if (conversationByPeer[user.id]) continue; // allerede via samtaleliste
+        if (query && !user.name.toLowerCase().includes(query)) continue;
+        items.push({
+            convId: null,
+            peerId: user.id,
+            name: user.name,
+            initials: user.initials,
+            status: user.status,
+            online: user.online,
+            lastSeenAt: user.last_seen_at,
+            preview: getStatusText(user),
+            time: '',
+            unread: 0
+        });
+    }
+
+    userList.innerHTML = items.map(it => {
+        const isActive = currentChatUser && currentChatUser.id === it.peerId ? 'active' : '';
+        const unreadBadge = it.unread > 0 ? `<span class="chat-unread-badge">${it.unread > 9 ? '9+' : it.unread}</span>` : '';
         return `
-            <div class="user-item ${isActive}">
-                <div class="user-avatar-small" onclick="openChatWith(${user.id})" style="cursor: pointer;">
-                    ${user.initials}
-                    <div class="status-dot ${statusClass}"></div>
+            <div class="conv-item ${isActive}" onclick="openChatWith(${it.peerId})">
+                <div class="user-avatar-small">
+                    ${it.initials}
+                    <div class="status-dot ${it.status}"></div>
                 </div>
-                <div onclick="openChatWith(${user.id})" style="flex: 1; cursor: pointer;">
-                    <div style="font-weight: 500;">${escapeHtml(user.name)}</div>
-                    <div style="font-size: 12px; color: var(--text-muted);">${getStatusText(user)}</div>
+                <div class="conv-mid">
+                    <div class="conv-name">${escapeHtml(it.name)}</div>
+                    <div class="conv-preview">${escapeHtml(it.preview || '')}</div>
                 </div>
-                ${unreadBadge}
-                <button onclick="event.stopPropagation(); startVideoCall(${user.id}, '${escapeHtml(user.name).replace(/'/g, '&#39;')}');"
-                        style="padding: 6px 10px; background: ${isOnline ? 'var(--color-green)' : 'var(--border)'}; color: white; border: none; border-radius: 15px; cursor: ${isOnline ? 'pointer' : 'not-allowed'}; font-size: 12px;"
-                        ${!isOnline ? 'disabled' : ''}
-                        title="${isOnline ? 'Start videoopkald' : 'Bruger er offline'}">
-
-                </button>
+                <div class="conv-right">
+                    <div class="conv-time">${escapeHtml(it.time)}</div>
+                    ${unreadBadge}
+                </div>
             </div>
         `;
     }).join('');
+
+    updateChatPageSubtitle();
+}
+
+// Kontaktraekke (avatarer m. status-dot) ovenover listen
+function renderContactsStrip() {
+    const strip = document.getElementById('chatContactsStrip');
+    if (!strip) return;
+    strip.innerHTML = users.map(user => `
+        <div class="contact-chip" onclick="openChatWith(${user.id})" title="${escapeHtml(user.name)}">
+            <div class="user-avatar-small">
+                ${user.initials}
+                <div class="status-dot ${user.status}"></div>
+            </div>
+            <div class="contact-name">${escapeHtml(user.name.split(' ')[0])}</div>
+        </div>
+    `).join('');
+}
+
+// Video-knap i chathjornet (nuvaerende samtalepartner)
+function startVideoCallCurrent() {
+    if (currentChatUser) startVideoCall(currentChatUser.id, currentChatUser.name);
+}
+
+// Toast nederst til hojre ved indgaende besked
+function showChatToast(peerName, text, peerId) {
+    let wrap = document.getElementById('chatToastWrap');
+    if (!wrap) {
+        wrap = document.createElement('div');
+        wrap.id = 'chatToastWrap';
+        document.body.appendChild(wrap);
+    }
+    const toast = document.createElement('div');
+    toast.className = 'chat-toast';
+    toast.innerHTML = `
+        <div class="chat-toast-avatar">${getInitials(peerName)}</div>
+        <div class="chat-toast-mid">
+            <div class="chat-toast-name">${escapeHtml(peerName)}</div>
+            <div class="chat-toast-text">${escapeHtml(text)}</div>
+        </div>
+        <div class="chat-toast-close" title="Luk">✕</div>
+    `;
+    toast.querySelector('.chat-toast-close').addEventListener('click', function (e) {
+        e.stopPropagation();
+        toast.remove();
+    });
+    toast.addEventListener('click', function () {
+        toast.remove();
+        if (typeof showPage === 'function') showPage('chat');
+        openChatWith(peerId);
+    });
+    wrap.appendChild(toast);
+    setTimeout(() => { toast.classList.add('fade-out'); }, 5200);
+    setTimeout(() => { toast.remove(); }, 5600);
 }
 
 // Få status tekst
@@ -294,6 +444,8 @@ async function openChatWith(userId) {
     document.getElementById('chatUserAvatar').textContent = user.initials;
     document.getElementById('chatUserName').textContent = user.name;
     updateChatHeaderStatus();
+    const typingBubble = document.getElementById('chatTypingBubble');
+    if (typingBubble) typingBubble.style.display = 'none';
 
     renderUserList();
 
@@ -358,23 +510,35 @@ function renderMessages() {
         return;
     }
 
-    container.innerHTML = messages.map((msg, i) => {
+    let html = '';
+    let lastDay = '';
+
+    messages.forEach(msg => {
+        // Dato-separator: "I dag" / "I gaar" / dato
+        const day = msg.ts ? chatDayLabel(new Date(msg.ts)) : '';
+        if (day && day !== lastDay) {
+            lastDay = day;
+            html += `<div class="chat-date-separator"><span>${day}</span></div>`;
+        }
+
         const isOwn = msg.from === 'me';
-        // "Set" paa den sidste egen besked, hvis modtageren har laest den
-        const isLastOwn = isOwn && !messages.slice(i + 1).some(m => m.from === 'me');
+        // "Læst" paa den sidste egen besked, hvis modtageren har laest den
+        const isLastOwn = isOwn && !messages.slice(messages.indexOf(msg) + 1).some(m => m.from === 'me');
         const seen = isLastOwn && msg.id && (peerRead[currentConversationId] || 0) >= msg.id;
-        const seenLabel = seen ? '<div class="message-seen">Set</div>' : '';
-        return `
+        const meta = `
+            <div class="message-time">${msg.time}${seen ? ' <span class="message-seen">✓ Læst</span>' : ''}</div>
+        `;
+        html += `
             <div class="message ${isOwn ? 'own' : ''}">
                 <div class="message-bubble">
                     <div>${linkifyText(escapeHtml(msg.text))}</div>
-                    <div class="message-time">${msg.time}</div>
-                    ${seenLabel}
+                    ${meta}
                 </div>
             </div>
         `;
-    }).join('');
+    });
 
+    container.innerHTML = html;
     container.scrollTop = container.scrollHeight;
 }
 

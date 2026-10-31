@@ -1,6 +1,16 @@
+<div class="chat-page-header">
+    <div>
+        <h2>Chat &amp; Video</h2>
+        <div class="chat-page-subtitle" id="chatPageSubtitle">&nbsp;</div>
+    </div>
+</div>
 <div class="chat-container">
     <div class="chat-users">
-        <h3>Medarbejdere</h3>
+        <div class="chat-contacts-strip" id="chatContactsStrip"></div>
+        <div class="chat-filter-chips">
+            <button class="chat-chip active" id="chatChipAlle" onclick="setChatFilter('alle')">Alle</button>
+            <button class="chat-chip" id="chatChipUlaeste" onclick="setChatFilter('ulaeste')">Ulæste</button>
+        </div>
         <div class="user-search">
             <input type="text" placeholder="🔍 Søg..." id="userSearch" onkeyup="filterUsers()">
         </div>
@@ -25,15 +35,22 @@
                         <div class="chat-user-status" id="chatUserStatus">Online</div>
                     </div>
                 </div>
-                <button class="close-chat-btn" onclick="closeChat()">✕</button>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <button class="chat-video-btn" id="chatVideoBtn" onclick="startVideoCallCurrent()">📹 Start videomøde</button>
+                    <button class="close-chat-btn" onclick="closeChat()">✕</button>
+                </div>
             </div>
 
             <div class="chat-messages" id="chatMessages"></div>
 
+            <div class="chat-typing-bubble" id="chatTypingBubble" style="display: none;">
+                <span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span>
+            </div>
+
             <div class="chat-input-area">
                 <button class="emoji-btn" onclick="toggleEmojiPicker()">😊</button>
                 <textarea id="chatInput" placeholder="Skriv en besked..." rows="1" oninput="autoGrowTextarea(); handleTyping();" onkeypress="if(event.key==='Enter' && !event.shiftKey) { event.preventDefault(); sendMessage(); }"></textarea>
-                <button class="send-btn" onclick="sendMessage()">Send</button>
+                <button class="send-btn" onclick="sendMessage()">Send ➤</button>
             </div>
 
             <div class="emoji-picker" id="emojiPicker" style="display: none; max-height: 300px; overflow-y: auto;">
