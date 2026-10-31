@@ -5,11 +5,11 @@ import cors from 'cors';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import { createServer } from 'http';
-import { Server as SocketIOServer } from 'socket.io';
 import multer from 'multer';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import fs from 'fs';
+import crypto from 'crypto';
 import nodemailer from 'nodemailer';
 import ogs from 'open-graph-scraper';
 import { db } from './database-config.js';
@@ -21,9 +21,6 @@ const __dirname = path.dirname(__filename);
 
 const app = express();
 const httpServer = createServer(app);
-const io = new SocketIOServer(httpServer, {
-  cors: { origin: '*', methods: ['GET','POST','PUT','DELETE'] }
-});
 
 const PORT = process.env.PORT || 4000;
 const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-change-me';
@@ -557,7 +554,7 @@ app.post('/api/posts', auth, upload.single('image'), async (req, res) => {
       FROM posts p JOIN users u ON u.id = p.user_id WHERE p.id = ?
     `, [info.lastInsertRowid]);
     res.json(post);
-    io.emit('feed:new_post', post);
+    // Socket.IO realtid fjernet - klienter henter feed via almindelige kald
   } catch (error) {
     console.error('Create post error:', error);
     res.status(500).json({ error: 'Failed to create post' });
@@ -598,7 +595,7 @@ app.post('/api/posts/:id/like', auth, async (req, res) => {
     }
     const result = await db.get('SELECT COUNT(*) as cnt FROM reactions WHERE post_id = ?', [postId]);
     const likes = result.cnt;
-    io.emit('feed:like_updated', { postId, likes });
+    // Socket.IO realtid fjernet - klienter henter feed via almindelige kald
     res.json({ postId, likes });
   } catch {
     res.status(400).json({ error: 'Unable to like post' });
@@ -1689,119 +1686,322 @@ app.delete('/api/admin/users/:id', auth, adminAuth, async (req, res) => {
   res.json({ success: true, message: `User ${user.name} deleted` });
 });
 
-// --- Socket.IO: presence + 1:1 chat + WebRTC signaling ---
-const onlineUsers = new Map(); // userId -> socketId
-const activeVideoRooms = new Map(); // roomId -> Set of socketIds
+// ============================================================
+// CHAT & VIDEO - Trin 1: database-migration, SSE-realtid, API
+// ============================================================
 
-io.on('connection', (socket) => {
-  console.log('Socket connected:', socket.id);
-  
-  socket.on('auth', (token) => {
-    try {
-      const u = jwt.verify(token, JWT_SECRET);
-      socket.user = u;
-      onlineUsers.set(u.id, socket.id);
-      io.emit('presence:update', Array.from(onlineUsers.keys()));
-      console.log('User authenticated:', u.name);
-    } catch {
-      socket.emit('error', 'bad token');
+// --- Migration med automatisk backup foer foerste koersel ---
+// Backup: VACUUM INTO til backup-foer-chat.db (kun hvis filen ikke findes).
+// Fejler backuppen, koerer migrationen IKKE (tydelig fejl i loggen).
+async function initChatDatabase() {
+  if (db._isProduction) {
+    console.warn('[chat] PostgreSQL-mode: chat-migration ikke implementeret her (portalen koerer SQLite paa Render)');
+    return;
+  }
+  const raw = db._raw;
+  const dataDir = process.env.DATA_DIR || '';
+  const backupPath = dataDir ? path.join(dataDir, 'backup-foer-chat.db') : path.join(__dirname, 'backup-foer-chat.db');
+  try {
+    if (fs.existsSync(backupPath)) {
+      console.log('[chat] Backup findes allerede, springes over: ' + backupPath);
+    } else {
+      raw.exec("VACUUM INTO '" + backupPath.replace(/'/g, "''") + "'");
+      console.log('[chat] BACKUP OK: ' + backupPath);
     }
-  });
+  } catch (err) {
+    console.error('[chat] FEJL: Backup af databasen mislykkedes - CHAT-MIGRATION KOERER IKKE! Browseren besoeg ikke chatten foer backup er undersoegt:', err);
+    return;
+  }
+  raw.exec(
+    'CREATE TABLE IF NOT EXISTS chat_conversations (' +
+    ' id INTEGER PRIMARY KEY AUTOINCREMENT,' +
+    ' is_group INTEGER NOT NULL DEFAULT 0,' +
+    " name TEXT DEFAULT ''," +
+    ' created_by INTEGER REFERENCES users(id),' +
+    " created_at TEXT NOT NULL DEFAULT (datetime('now'))" +
+    ');' +
+    'CREATE TABLE IF NOT EXISTS chat_participants (' +
+    ' conversation_id INTEGER NOT NULL REFERENCES chat_conversations(id),' +
+    ' user_id INTEGER NOT NULL REFERENCES users(id),' +
+    " joined_at TEXT NOT NULL DEFAULT (datetime('now'))," +
+    ' PRIMARY KEY (conversation_id, user_id)' +
+    ');' +
+    'CREATE TABLE IF NOT EXISTS chat_messages (' +
+    ' id INTEGER PRIMARY KEY AUTOINCREMENT,' +
+    ' conversation_id INTEGER NOT NULL REFERENCES chat_conversations(id),' +
+    ' sender_id INTEGER NOT NULL REFERENCES users(id),' +
+    " body TEXT DEFAULT ''," +
+    ' file_id INTEGER,' +
+    " created_at TEXT NOT NULL DEFAULT (datetime('now'))" +
+    ');' +
+    'CREATE INDEX IF NOT EXISTS idx_chat_messages_conv ON chat_messages(conversation_id, id);' +
+    'CREATE INDEX IF NOT EXISTS idx_chat_messages_sender ON chat_messages(sender_id, created_at);' +
+    'CREATE TABLE IF NOT EXISTS chat_reads (' +
+    ' conversation_id INTEGER NOT NULL REFERENCES chat_conversations(id),' +
+    ' user_id INTEGER NOT NULL REFERENCES users(id),' +
+    ' last_read_message_id INTEGER NOT NULL DEFAULT 0,' +
+    ' PRIMARY KEY (conversation_id, user_id)' +
+    ');'
+  );
+  const cols = raw.prepare('PRAGMA table_info(users)').all();
+  if (!cols.some(function (c) { return c.name === 'last_seen_at'; })) {
+    raw.exec("ALTER TABLE users ADD COLUMN last_seen_at TEXT DEFAULT ''");
+    console.log('[chat] Kolonne users.last_seen_at tilfoejet');
+  }
+  console.log('[chat] Chat-database klar');
+}
+await initChatDatabase();
 
-  socket.on('chat:send', async ({ toUserId, text }) => {
-    if (!socket.user) return;
-    const info = await db.run('INSERT INTO messages (sender_id, recipient_id, text) VALUES (?, ?, ?)',
-      [socket.user.id, toUserId, String(text).slice(0, 2000)]);
-    const msg = await db.get('SELECT * FROM messages WHERE id = ?', [info.lastInsertRowid]);
-    const targetSocketId = onlineUsers.get(toUserId);
-    if (targetSocketId) io.to(targetSocketId).emit('chat:message', msg);
-    socket.emit('chat:message', msg); // echo
-  });
+// --- SSE-forbindelser (flere faner/enheder pr. bruger er tilladt) ---
+const chatSseClients = new Map();   // userId -> Set(res)
+const chatTickets = new Map();      // ticket -> { userId, expiresAt }
+const chatRate = new Map();         // userId -> [timestamps]
 
-  // --- WebRTC Video Call Signaling ---
-  
-  // Initiate call (notify target user)
-  socket.on('video:call-user', ({ targetUserId, roomId }) => {
-    console.log(`User ${socket.user?.name} calling user ${targetUserId}`);
-    const targetSocketId = onlineUsers.get(targetUserId);
-    
-    if (targetSocketId) {
-      // Send incoming call notification to target user
-      io.to(targetSocketId).emit('video:incoming-call', {
-        callerId: socket.user?.id,
-        callerName: socket.user?.name,
-        roomId: roomId
+function chatSseSend(userId, eventName, data) {
+  const set = chatSseClients.get(userId);
+  if (!set) return;
+  const payload = 'event: ' + eventName + '\ndata: ' + JSON.stringify(data) + '\n\n';
+  for (const res of set) {
+    try { res.write(payload); } catch (e) { /* forbindelsen er ved at lukke */ }
+  }
+}
+
+function chatBroadcast(eventName, data) {
+  for (const uid of Array.from(chatSseClients.keys())) chatSseSend(uid, eventName, data);
+}
+
+function chatOnline(userId) { return chatSseClients.has(userId); }
+
+// --- Engangs-ticket til SSE (saetter ALDRIG hele JWT i URL'en) ---
+app.post('/api/chat/events-ticket', auth, async (req, res) => {
+  const now = Date.now();
+  for (const [t, v] of chatTickets) { if (v.expiresAt < now) chatTickets.delete(t); }
+  const ticket = crypto.randomBytes(24).toString('hex');
+  chatTickets.set(ticket, { userId: req.user.id, expiresAt: now + 30000 }); // 30 sek., bruges 1 gang
+  res.json({ ticket });
+});
+
+// --- SSE-kanalen ---
+app.get('/api/chat/events', async (req, res) => {
+  const ticket = String(req.query.ticket || '');
+  const now = Date.now();
+  const entry = chatTickets.get(ticket);
+  chatTickets.delete(ticket); // engangsbrug
+  if (!entry || entry.expiresAt < now) {
+    return res.status(401).json({ error: 'Ugyldig eller udoebet chat-ticket' });
+  }
+  const userId = entry.userId;
+  res.writeHead(200, {
+    'Content-Type': 'text/event-stream',
+    'Cache-Control': 'no-cache',
+    'Connection': 'keep-alive',
+    'X-Accel-Buffering': 'no'
+  });
+  res.flushHeaders();
+  res.write('retry: 3000\n\n');
+  res.write('event: connected\ndata: ' + JSON.stringify({ userId: userId }) + '\n\n');
+  if (!chatSseClients.has(userId)) chatSseClients.set(userId, new Set());
+  chatSseClients.get(userId).add(res);
+  db.run("UPDATE users SET last_seen_at = datetime('now') WHERE id = ?", [userId]).catch(function () {});
+  chatBroadcast('chat_presence', Array.from(chatSseClients.keys()));
+  const ping = setInterval(function () {
+    try { res.write(': ping\n\n'); } catch (e) { /* ignoreret */ }
+  }, 25000);
+  req.on('close', function () {
+    clearInterval(ping);
+    const set = chatSseClients.get(userId);
+    if (set) {
+      set.delete(res);
+      if (set.size === 0) {
+        chatSseClients.delete(userId);
+        db.run("UPDATE users SET last_seen_at = datetime('now') WHERE id = ?", [userId]).catch(function () {});
+      }
+    }
+    chatBroadcast('chat_presence', Array.from(chatSseClients.keys()));
+  });
+});
+
+// --- Hjaelpere ---
+async function chatIsParticipant(conversationId, userId) {
+  const row = await db.get('SELECT 1 AS ok FROM chat_participants WHERE conversation_id = ? AND user_id = ?', [conversationId, userId]);
+  return !!row;
+}
+
+async function chatOtherParticipants(conversationId, userId) {
+  return await db.all('SELECT user_id FROM chat_participants WHERE conversation_id = ? AND user_id != ?', [conversationId, userId]);
+}
+
+async function chatGetOrCreateConversation(userId, peerId) {
+  const existing = await db.get(
+    'SELECT c.id FROM chat_conversations c ' +
+    'WHERE c.is_group = 0 ' +
+    'AND (SELECT COUNT(*) FROM chat_participants pc WHERE pc.conversation_id = c.id) = 2 ' +
+    'AND EXISTS (SELECT 1 FROM chat_participants p1 WHERE p1.conversation_id = c.id AND p1.user_id = ?) ' +
+    'AND EXISTS (SELECT 1 FROM chat_participants p2 WHERE p2.conversation_id = c.id AND p2.user_id = ?)',
+    [userId, peerId]
+  );
+  if (existing) return { id: existing.id, created: false };
+  const info = await db.run('INSERT INTO chat_conversations (is_group, created_by) VALUES (0, ?)', [userId]);
+  const convId = Number(info.lastInsertRowid);
+  await db.run('INSERT INTO chat_participants (conversation_id, user_id) VALUES (?, ?)', [convId, userId]);
+  await db.run('INSERT INTO chat_participants (conversation_id, user_id) VALUES (?, ?)', [convId, peerId]);
+  return { id: convId, created: true };
+}
+
+// --- Samtaleliste (seneste besked, ulaeste tal, online-status) ---
+app.get('/api/chat/conversations', auth, async (req, res) => {
+  try {
+    const convs = await db.all(
+      'SELECT c.id, c.is_group, c.name, c.created_at FROM chat_conversations c ' +
+      'JOIN chat_participants p ON p.conversation_id = c.id WHERE p.user_id = ?',
+      [req.user.id]
+    );
+    const out = [];
+    for (const c of convs) {
+      const peer = await db.get(
+        'SELECT u.id, u.name, u.position, u.last_seen_at FROM chat_participants p JOIN users u ON u.id = p.user_id ' +
+        'WHERE p.conversation_id = ? AND p.user_id != ?',
+        [c.id, req.user.id]
+      );
+      const last = await db.get(
+        'SELECT m.id, m.sender_id, m.body, m.created_at, u.name AS sender_name FROM chat_messages m JOIN users u ON u.id = m.sender_id ' +
+        'WHERE m.conversation_id = ? ORDER BY m.id DESC LIMIT 1',
+        [c.id]
+      );
+      const unread = await db.get(
+        'SELECT COUNT(*) AS n FROM chat_messages m WHERE m.conversation_id = ? AND m.sender_id != ? ' +
+        'AND m.id > COALESCE((SELECT last_read_message_id FROM chat_reads WHERE conversation_id = ? AND user_id = ?), 0)',
+        [c.id, req.user.id, c.id, req.user.id]
+      );
+      out.push({
+        id: c.id,
+        is_group: c.is_group,
+        name: c.name,
+        peer: peer || null,
+        peer_online: peer ? chatOnline(peer.id) : false,
+        last_message: last || null,
+        unread: unread ? unread.n : 0
       });
     }
-  });
-  
-  socket.on('video:join-room', (roomId) => {
-    console.log(`User ${socket.user?.name} joining video room: ${roomId}`);
-    socket.join(roomId);
-    
-    if (!activeVideoRooms.has(roomId)) {
-      activeVideoRooms.set(roomId, new Set());
-    }
-    activeVideoRooms.get(roomId).add(socket.id);
-    
-    // Notify other peers in room
-    socket.to(roomId).emit('video:user-joined', {
-      socketId: socket.id,
-      userId: socket.user?.id,
-      userName: socket.user?.name
+    out.sort(function (a, b) {
+      const ta = a.last_message ? a.last_message.id : 0;
+      const tb = b.last_message ? b.last_message.id : 0;
+      return tb - ta;
     });
-  });
+    res.json(out);
+  } catch (err) {
+    console.error('[chat] conversations error:', err);
+    res.status(500).json({ error: 'Kunne ikke hente samtaler' });
+  }
+});
 
-  socket.on('video:offer', ({ roomId, offer, targetSocketId }) => {
-    io.to(targetSocketId).emit('video:offer', {
-      offer,
-      senderSocketId: socket.id
-    });
-  });
+// --- Faa eller opret 1-til-1-samtale ---
+app.post('/api/chat/conversations', auth, async (req, res) => {
+  try {
+    const peerId = Number(req.body && req.body.peerId);
+    if (!peerId || peerId === req.user.id) return res.status(400).json({ error: 'Ugyldig modtager' });
+    const peer = await db.get('SELECT id FROM users WHERE id = ?', [peerId]);
+    if (!peer) return res.status(404).json({ error: 'Bruger findes ikke' });
+    const conv = await chatGetOrCreateConversation(req.user.id, peerId);
+    res.json({ conversationId: conv.id, created: conv.created });
+  } catch (err) {
+    console.error('[chat] create conversation error:', err);
+    res.status(500).json({ error: 'Kunne ikke oprette samtale' });
+  }
+});
 
-  socket.on('video:answer', ({ answer, targetSocketId }) => {
-    io.to(targetSocketId).emit('video:answer', {
-      answer,
-      senderSocketId: socket.id
-    });
-  });
+// --- Historik + "det man missede" (after = sidst sete besked-id) ---
+app.get('/api/chat/conversations/:id/messages', auth, async (req, res) => {
+  try {
+    const convId = Number(req.params.id);
+    if (!(await chatIsParticipant(convId, req.user.id))) return res.status(403).json({ error: 'Adgang naegtet' });
+    const after = Number(req.query.after || 0);
+    const rows = await db.all(
+      'SELECT m.id, m.conversation_id, m.sender_id, m.body, m.file_id, m.created_at, u.name AS sender_name ' +
+      'FROM chat_messages m JOIN users u ON u.id = m.sender_id ' +
+      'WHERE m.conversation_id = ? AND m.id > ? ORDER BY m.id ASC LIMIT 200',
+      [convId, after]
+    );
+    res.json(rows);
+  } catch (err) {
+    console.error('[chat] messages error:', err);
+    res.status(500).json({ error: 'Kunne ikke hente beskeder' });
+  }
+});
 
-  socket.on('video:ice-candidate', ({ candidate, targetSocketId }) => {
-    io.to(targetSocketId).emit('video:ice-candidate', {
-      candidate,
-      senderSocketId: socket.id
-    });
-  });
+// --- Send besked (maks 2000 tegn, rate-limit 30/min pr. bruger) ---
+app.post('/api/chat/messages', auth, async (req, res) => {
+  try {
+    const convId = Number(req.body && req.body.conversationId);
+    const body = String((req.body && req.body.body) || '').trim();
+    if (!convId || !(await chatIsParticipant(convId, req.user.id))) return res.status(403).json({ error: 'Adgang naegtet' });
+    if (!body) return res.status(400).json({ error: 'Beskeden er tom' });
+    if (body.length > 2000) return res.status(400).json({ error: 'Beskeden er for lang (maks 2000 tegn)' });
+    const now = Date.now();
+    const arr = (chatRate.get(req.user.id) || []).filter(function (t) { return t > now - 60000; });
+    if (arr.length >= 30) return res.status(429).json({ error: 'Du sender for hurtigt - vent et oejeblik' });
+    arr.push(now);
+    chatRate.set(req.user.id, arr);
+    const info = await db.run('INSERT INTO chat_messages (conversation_id, sender_id, body) VALUES (?, ?, ?)', [convId, req.user.id, body]);
+    const msg = await db.get(
+      'SELECT m.id, m.conversation_id, m.sender_id, m.body, m.file_id, m.created_at, u.name AS sender_name ' +
+      'FROM chat_messages m JOIN users u ON u.id = m.sender_id WHERE m.id = ?',
+      [Number(info.lastInsertRowid)]
+    );
+    const others = await chatOtherParticipants(convId, req.user.id);
+    for (const o of others) chatSseSend(o.user_id, 'chat_message', msg);
+    res.json(msg);
+  } catch (err) {
+    console.error('[chat] send error:', err);
+    res.status(500).json({ error: 'Kunne ikke sende besked' });
+  }
+});
 
-  socket.on('video:leave-room', (roomId) => {
-    socket.leave(roomId);
-    if (activeVideoRooms.has(roomId)) {
-      activeVideoRooms.get(roomId).delete(socket.id);
-      if (activeVideoRooms.get(roomId).size === 0) {
-        activeVideoRooms.delete(roomId);
-      }
-    }
-    socket.to(roomId).emit('video:user-left', socket.id);
-  });
+// --- Markoer som laest (ulaeste tal + "Set" paa modtagers beskeder) ---
+app.post('/api/chat/read', auth, async (req, res) => {
+  try {
+    const convId = Number(req.body && req.body.conversationId);
+    if (!convId || !(await chatIsParticipant(convId, req.user.id))) return res.status(403).json({ error: 'Adgang naegtet' });
+    const last = await db.get('SELECT MAX(id) AS maxId FROM chat_messages WHERE conversation_id = ?', [convId]);
+    const maxId = last && last.maxId ? Number(last.maxId) : 0;
+    await db.run(
+      'INSERT INTO chat_reads (conversation_id, user_id, last_read_message_id) VALUES (?, ?, ?) ' +
+      'ON CONFLICT(conversation_id, user_id) DO UPDATE SET last_read_message_id = excluded.last_read_message_id',
+      [convId, req.user.id, maxId]
+    );
+    const others = await chatOtherParticipants(convId, req.user.id);
+    for (const o of others) chatSseSend(o.user_id, 'chat_read', { conversationId: convId, userId: req.user.id, lastReadMessageId: maxId });
+    res.json({ ok: true, lastReadMessageId: maxId });
+  } catch (err) {
+    console.error('[chat] read error:', err);
+    res.status(500).json({ error: 'Kunne ikke markere laest' });
+  }
+});
 
-  socket.on('disconnect', () => {
-    if (socket.user) {
-      onlineUsers.delete(socket.user.id);
-      io.emit('presence:update', Array.from(onlineUsers.keys()));
-      console.log('User disconnected:', socket.user.name);
-    }
-    
-    // Clean up video rooms
-    activeVideoRooms.forEach((sockets, roomId) => {
-      if (sockets.has(socket.id)) {
-        sockets.delete(socket.id);
-        socket.to(roomId).emit('video:user-left', socket.id);
-        if (sockets.size === 0) {
-          activeVideoRooms.delete(roomId);
-        }
-      }
-    });
-  });
+// --- "Skriver..."-indikator ---
+app.post('/api/chat/typing', auth, async (req, res) => {
+  try {
+    const convId = Number(req.body && req.body.conversationId);
+    const typing = !!(req.body && req.body.typing);
+    if (!convId || !(await chatIsParticipant(convId, req.user.id))) return res.status(403).json({ error: 'Adgang naegtet' });
+    const others = await chatOtherParticipants(convId, req.user.id);
+    for (const o of others) chatSseSend(o.user_id, 'chat_typing', { conversationId: convId, userId: req.user.id, typing: typing });
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: 'Kunne ikke sende skriver-status' });
+  }
+});
+
+// --- Presence: kolleger med online-status og "sidst set" ---
+app.get('/api/chat/presence', auth, async (req, res) => {
+  try {
+    const users = await db.all('SELECT id, name, position, last_seen_at FROM users');
+    res.json(users.map(function (u) {
+      return { id: u.id, name: u.name, position: u.position, last_seen_at: u.last_seen_at || '', online: chatOnline(u.id) };
+    }));
+  } catch (err) {
+    res.status(500).json({ error: 'Kunne ikke hente presence' });
+  }
 });
 
 // --- QUOTES & CUSTOMERS API ---
