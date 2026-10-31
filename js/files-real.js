@@ -424,16 +424,81 @@ function renderBreadcrumb() {
     let html = '<span class="crumb-root" ondragover="handleFolderDragOver(event, null)" ondrop="handleFolderDrop(event, null)" ondragleave="handleFolderDragLeave(event)">Alle filer</span>';
     if (currentFilter === 'folder' && currentFolderId) {
         const path = getFolderPath(currentFolderId);
-        path.forEach((f, i) => {
-            const last = i === path.length - 1;
-            html += '<span class="crumb-sep">/</span>';
-            html += '<span class="crumb-item' + (last ? ' current' : '') + '" onclick="openFolder(' + f.id + ', \'' + folderDisplayName(f).replace(/'/g, "\\'") + '\')" ondragover="handleFolderDragOver(event, ' + f.id + ')" ondrop="handleFolderDrop(event, ' + f.id + ')" ondragleave="handleFolderDragLeave(event)">' + escapeFileName(folderDisplayName(f)) + '</span>';
+        const totalLen = path.reduce(function (s, f) { return s + folderDisplayName(f).length; }, 0);
+        const showAll = path.length <= 4 && totalLen <= 48;
+        // Standard: alle led. Ellers: foerste led + "..." + de to sidste led.
+        let visible = path.map(function (f, i) { return { f: f, i: i }; });
+        let hidden = [];
+        if (!showAll) {
+            const first = path[0], lastTwo = path.slice(Math.max(1, path.length - 2));
+            visible = [{ f: first, i: 0 }].concat(lastTwo.map(function (f) { return { f: f, i: path.indexOf(f) }; }));
+            hidden = path.slice(1, path.length - 1).filter(function (f) { return visible.every(function (v) { return v.f !== f; }); });
+            if (hidden.length === 0) visible = path.map(function (f, i) { return { f: f, i: i }; });
+        }
+        visible.forEach(function (v, k) {
+            if (k > 0) html += '<span class="crumb-sep">/</span>';
+            const last = v.i === path.length - 1;
+            const fullName = folderDisplayName(v.f);
+            const safeName = fullName.replace(/'/g, "\\'");
+            html += '<span class="crumb-item' + (last ? ' current' : '') + '" title="' + escapeFileName(fullName) + '" onclick="openFolder(' + v.f.id + ', \'' + safeName + '\')" ondragover="handleFolderDragOver(event, ' + v.f.id + ')" ondrop="handleFolderDrop(event, ' + v.f.id + ')" ondragleave="handleFolderDragLeave(event)">' + escapeFileName(fullName) + '</span>';
+            if (!showAll && v.i === 0 && hidden.length > 0) {
+                html += '<span class="crumb-sep">/</span>';
+                html += '<span class="crumb-ellipsis" title="Vis skjulte mapper" onclick="showCrumbOverflow(event)">...</span>';
+            }
         });
+        if (hidden.length > 0) window._crumbHiddenFolders = hidden;
+        else window._crumbHiddenFolders = [];
     } else {
         html += '<span class="crumb-sep">/</span><span class="crumb-item current">' + (names[currentFilter] || 'Alle filer') + '</span>';
+        window._crumbHiddenFolders = [];
     }
     crumb.innerHTML = html;
+    if (typeof refreshIcons === 'function') refreshIcons();
 }
+
+// Lille menu (samme stil som hojreklik-menuen) med de broedkrumme-led der er skjult bag "..."
+// Menuens punkter er ogsaa slip-maal (samme handlere som andre crumb-led).
+function showCrumbOverflow(event) {
+    event.preventDefault();
+    event.stopPropagation();
+    const hidden = window._crumbHiddenFolders || [];
+    if (hidden.length === 0) return;
+    let menu = document.getElementById('crumbOverflowMenu');
+    if (!menu) {
+        menu = document.createElement('div');
+        menu.id = 'crumbOverflowMenu';
+        menu.className = 'context-menu';
+        document.body.appendChild(menu);
+    }
+    menu.innerHTML = hidden.map(function (f) {
+        const fullName = folderDisplayName(f);
+        const safeName = fullName.replace(/'/g, "\\'");
+        return '<div class="context-menu-item" title="' + escapeFileName(fullName) + '" onclick="hideCrumbOverflow(); openFolder(' + f.id + ', \'' + safeName + '\')" ondragover="handleFolderDragOver(event, ' + f.id + ')" ondrop="handleFolderDrop(event, ' + f.id + '); hideCrumbOverflow()" ondragleave="handleFolderDragLeave(event)">' + escapeFileName(fullName) + '</div>';
+    }).join('');
+    menu.style.display = 'block';
+    const x = Math.min(event.clientX, window.innerWidth - 240);
+    const y = Math.min(event.clientY + 8, window.innerHeight - 40 - hidden.length * 36);
+    menu.style.left = x + 'px';
+    menu.style.top = y + 'px';
+}
+
+function hideCrumbOverflow() {
+    const menu = document.getElementById('crumbOverflowMenu');
+    if (menu) menu.style.display = 'none';
+}
+
+// Luk "..."-menuen ved klik udenfor (bortset fra selve knappen, der stopper propagation)
+document.addEventListener('click', function (e) {
+    const menu = document.getElementById('crumbOverflowMenu');
+    if (menu && !menu.contains(e.target)) hideCrumbOverflow();
+});
+
+// Genberegn broedkrummen ved vinduessize-aendring (debounce ~150 ms)
+let crumbResizeTimer = null;
+window.addEventListener('resize', function () {
+    clearTimeout(crumbResizeTimer);
+    crumbResizeTimer = setTimeout(function () { renderBreadcrumb(); }, 150);
+});
 
 function setFilesView(view) {
     currentFilesView = view;

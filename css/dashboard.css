@@ -1622,19 +1622,21 @@ body {
 
 .files-shell { height: calc(100vh - 150px); min-height: 520px; }
 
+/* Windows-stil: adressefeltet (broedkrumme) paa egen fuldbredde-raekke,
+   knapperne paa en fast raekke under - aldrig ustyret wrap */
 .files-toolbar {
     display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 12px;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
     padding: 10px 14px;
     border-bottom: 1px solid var(--border);
-    flex-wrap: wrap;
 }
-.files-toolbar-left,
-.files-toolbar-right { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.files-toolbar .btn { height: 36px; gap: 6px; }
+.files-addressbar { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.files-actionsbar { display: flex; align-items: center; gap: 12px; flex-wrap: nowrap; }
+.files-actionsbar .btn { flex-shrink: 0; height: 36px; gap: 6px; }
 .files-toolbar .btn .lucide { width: 16px; height: 16px; }
+.files-actionsbar .files-search { width: 240px; min-width: 160px; flex-shrink: 1; }
 .btn-icon { padding: 0; width: 36px; justify-content: center; }
 
 .files-crumb {
@@ -1643,16 +1645,37 @@ body {
     gap: 4px;
     font-size: 14px;
     color: var(--text-muted);
+    flex: 1 1 auto;
     min-width: 0;
     overflow: hidden;
     white-space: nowrap;
 }
-.files-crumb .crumb-root { color: var(--text-muted); font-weight: 600; }
-.files-crumb .crumb-sep { color: var(--text-muted); }
-.files-crumb .crumb-item { color: var(--text); cursor: pointer; padding: 4px 6px; border-radius: var(--radius-btn); }
+.files-crumb .crumb-root { color: var(--text-muted); font-weight: 600; flex-shrink: 0; }
+.files-crumb .crumb-sep { color: var(--text-muted); flex-shrink: 0; }
+.files-crumb .crumb-item {
+    color: var(--text);
+    cursor: pointer;
+    padding: 4px 6px;
+    border-radius: var(--radius-btn);
+    max-width: 24ch;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.files-crumb .crumb-item.current { max-width: 32ch; font-weight: 600; cursor: default; }
 .files-crumb .crumb-item:hover { background: var(--ghost-hover); }
-.files-crumb .crumb-item.current { font-weight: 600; cursor: default; }
 .files-crumb .crumb-item.current:hover { background: transparent; }
+/* "..."-knap der aabner menu med de skjulte led */
+.files-crumb .crumb-ellipsis {
+    flex-shrink: 0;
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: var(--radius-btn);
+    font-weight: 700;
+    letter-spacing: 1px;
+}
+.files-crumb .crumb-ellipsis:hover { background: var(--ghost-hover); }
+/* Skjulte led-menu: samme stil som hojreklik-menuen (.context-menu) */
 
 .files-search {
     display: flex;
@@ -2019,10 +2042,14 @@ svg.lucide-building-2 { color: var(--company-stroke); fill: var(--company-fill);
 .files-details .details-actions .btn { width: 100%; height: 36px; justify-content: flex-start; gap: 8px; }
 .files-details .details-actions .lucide { width: 15px; height: 15px; }
 
+@media (max-width: 1100px) {
+    /* Kun-ikon knapper i knapperaecken (tooltips via title) */
+    .files-actionsbar .btn .btn-text { display: none; }
+    .files-actionsbar .files-search { width: 180px; }
+}
 @media (max-width: 1024px) {
     .files-details { display: none; }
     .files-tree { width: 190px; flex-basis: 190px; }
-    .files-crumb .crumb-item { max-width: 120px; }
 }
 @media (max-width: 700px) {
     .files-shell { height: auto; }
@@ -2045,6 +2072,11 @@ svg.lucide-building-2 { color: var(--company-stroke); fill: var(--company-fill);
     }
     .files-search input { width: 110px; }
     .files-table thead th.col-type, .files-table tbody td.col-type { display: none; }
+    /* Mobil: broedkrummen kan scrolle vandret (uden scrollbar), knapper maa wrap'e */
+    .files-addressbar .files-crumb { overflow-x: auto; scrollbar-width: none; flex: 1 1 auto; }
+    .files-addressbar .files-crumb::-webkit-scrollbar { display: none; }
+    .files-actionsbar { flex-wrap: wrap; }
+    .files-actionsbar .files-search { flex: 1 1 auto; }
 }
 
 /* ===== Trin a2: flyt-dialog, træ-note ===== */

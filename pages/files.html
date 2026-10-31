@@ -1,11 +1,11 @@
 <div class="file-explorer files-shell">
     <div class="files-toolbar">
-        <div class="files-toolbar-left">
+        <div class="files-addressbar">
             <button class="btn btn-secondary btn-icon" onclick="navigateBack()" title="Tilbage" aria-label="Tilbage"><i data-lucide="arrow-left"></i></button>
             <button class="btn btn-secondary btn-icon" onclick="navigateUp()" title="Op ét niveau" aria-label="Op ét niveau"><i data-lucide="arrow-up"></i></button>
             <nav class="files-crumb" id="filesCrumb" aria-label="Placering"></nav>
         </div>
-        <div class="files-toolbar-right">
+        <div class="files-actionsbar">
             <div class="files-search">
                 <i data-lucide="search"></i>
                 <input type="search" id="filesSearch" placeholder="Søg filer..." oninput="onFilesSearchInput(event)">
@@ -14,10 +14,10 @@
                 <button class="btn btn-secondary btn-icon active" id="viewListBtn" onclick="setFilesView('list')" title="Listevisning" aria-label="Listevisning"><i data-lucide="list"></i></button>
                 <button class="btn btn-secondary btn-icon" id="viewGridBtn" onclick="setFilesView('images')" title="Billedvisning" aria-label="Billedvisning"><i data-lucide="layout-grid"></i></button>
             </div>
-            <button class="btn btn-secondary" onclick="showNewFolderDialog()"><i data-lucide="folder-plus"></i>Ny mappe</button>
+            <button class="btn btn-secondary" onclick="showNewFolderDialog()" title="Ny mappe"><i data-lucide="folder-plus"></i><span class="btn-text">Ny mappe</span></button>
             <button class="btn btn-secondary btn-icon" onclick="refreshExplorer()" title="Opdater" aria-label="Opdater"><i data-lucide="refresh-cw"></i></button>
-            <button class="btn btn-primary" onclick="document.getElementById('fileExplorerUpload').click()"><i data-lucide="upload"></i>Upload</button>
-            <button class="btn btn-secondary" id="uploadFolderBtn" onclick="onUploadFolderClick()" title="Upload en hel mappe"><i data-lucide="folder-up"></i>Upload mappe</button>
+            <button class="btn btn-primary" onclick="document.getElementById('fileExplorerUpload').click()" title="Upload filer"><i data-lucide="upload"></i><span class="btn-text">Upload</span></button>
+            <button class="btn btn-secondary" id="uploadFolderBtn" onclick="onUploadFolderClick()" title="Upload en hel mappe"><i data-lucide="folder-up"></i><span class="btn-text">Upload mappe</span></button>
             <input type="file" id="fileExplorerUpload" style="display: none;" onchange="uploadFileToExplorer(event)" multiple>
             <input type="file" id="fileExplorerFolderUpload" style="display: none;" onchange="uploadFolderFromExplorer(event)" webkitdirectory multiple>
         </div>
