@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SG Seest — Styleguide</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/design-system.css">
+<style>
+    /* Kun styleguide-layout (demo) — ikke en del af komponentsystemet */
+    .sg-wrap { max-width: 1100px; margin: 0 auto; padding: 24px 20px 64px; }
+    .sg-section { margin-top: 36px; }
+    .sg-section > h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: var(--text-muted); margin: 0 0 12px; }
+    .sg-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
+    .sg-swatches { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; }
+    .sg-swatch { border-radius: var(--radius-btn); border: 1px solid var(--border); overflow: hidden; background: var(--surface); }
+    .sg-swatch .chip { height: 48px; }
+    .sg-swatch .lbl { padding: 6px 8px; font-size: 11px; color: var(--text-muted); }
+    .sg-demo-menu { max-width: 260px; }
+    .sg-table-card { overflow-x: auto; border-radius: var(--radius-card); }
+    .sg-kpi-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+    .sg-timetypes { display: flex; gap: 10px; flex-wrap: wrap; }
+    .sg-timetypes .extra-work-card { font-size: 13px; font-weight: 600; }
+    .sg-mini-btn { height: 32px; padding: 0 10px; font-size: 13px; }
+    .sg-mini-icon { width: 32px !important; height: 32px !important; min-width: 32px !important; }
+    .sg-flex { display: flex; gap: 6px; }
+</style>
+</head>
+<body class="ds-body">
+
+<!-- HEADER (demo) -->
+<header class="app-header">
+    <div class="app-header-logo">
+        <i data-lucide="layout-grid" style="width:20px;height:20px;"></i>
+        SG Seest Gulvteknik
+    </div>
+    <div class="app-header-user">
+        <span class="user-name">Bjarke Svenningsen</span>
+        <span class="avatar" style="width:36px;height:36px;font-size:13px;" title="Bjarke Svenningsen">BS</span>
+        <button class="btn btn-light"><i data-lucide="log-out"></i> Log ud</button>
+    </div>
+</header>
+
+<div class="sg-wrap">
+    <div class="page-header">
+        <div class="page-header-title">
+            <span class="icon-box"><i data-lucide="palette"></i></span>
+            <div>
+                <h1>Styleguide</h1>
+                <p class="page-header-sub">Designsystem v1 · godkend komponenterne her</p>
+            </div>
+        </div>
+        <div class="page-header-actions">
+            <button class="btn btn-secondary sg-mini-btn"><i data-lucide="download"></i> Sekundær</button>
+            <button class="btn btn-primary"><i data-lucide="send"></i> Primær handling</button>
+        </div>
+    </div>
+<!-- SG-SECTIONS -->
+    <!-- FARVER -->
+    <div class="sg-section">
+        <h2>Farver</h2>
+        <div class="sg-swatches">
+            <div class="sg-swatch"><div class="chip" style="background:var(--bg-page);"></div><div class="lbl">--bg-page</div></div>
+            <div class="sg-swatch"><div class="chip" style="background:var(--bg-header);"></div><div class="lbl">--bg-header</div></div>
+            <div class="sg-swatch"><div class="chip" style="background:var(--surface);"></div><div class="lbl">--surface</div></div>
+            <div class="sg-swatch"><div class="chip" style="background:var(--surface-muted);"></div><div class="lbl">--surface-muted</div></div>
+            <div class="sg-swatch"><div class="chip" style="background:var(--accent);"></div><div class="lbl">--accent</div></div>
+            <div class="sg-swatch"><div class="chip" style="background:var(--accent-soft);"></div><div class="lbl">--accent-soft</div></div>
+            <div class="sg-swatch"><div class="chip" style="background:var(--success);"></div><div class="lbl">--success</div></div>
+            <div class="sg-swatch"><div class="chip" style="background:var(--danger);"></div><div class="lbl">--danger</div></div>
+            <div class="sg-swatch"><div class="chip" style="background:var(--info);"></div><div class="lbl">--info</div></div>
+        </div>
+    </div>
+
+    <!-- SIDEMENU -->
+    <div class="sg-section">
+        <h2>Sidemenu (hvidt kort, aktiv = accent-soft + gul venstrestreg)</h2>
+        <nav class="side-nav sg-demo-menu">
+            <a href="#" class="active"><i data-lucide="newspaper"></i> Feed</a>
+            <a href="#"><i data-lucide="clipboard-list"></i> Ordrestyring</a>
+            <a href="#"><i data-lucide="clock"></i> Min Tid</a>
+            <a href="#"><i data-lucide="users"></i> Kolleger</a>
+            <a href="#"><i data-lucide="message-square"></i> Chat &amp; Video</a>
+            <a href="#"><i data-lucide="settings"></i> Indstillinger</a>
+        </nav>
+    </div>
+
+    <!-- KNAPPER -->
+    <div class="sg-section">
+        <h2>Knapper (.btn, 40px, ikon + tekst)</h2>
+        <div class="sg-row">
+            <button class="btn btn-primary"><i data-lucide="send"></i> Send til Kunde</button>
+            <button class="btn btn-primary"><i data-lucide="receipt"></i> Opret Faktura</button>
+            <button class="btn btn-secondary"><i data-lucide="eye"></i> Se</button>
+            <button class="btn btn-secondary"><i data-lucide="pencil"></i> Rediger</button>
+            <button class="btn btn-secondary"><i data-lucide="download"></i> Download PDF</button>
+            <button class="btn btn-danger"><i data-lucide="trash-2"></i> Slet</button>
+            <button class="btn btn-icon" title="Mere"><i data-lucide="more-horizontal"></i></button>
+        </div>
+    </div>
+
+    <!-- BADGES -->
+    <div class="sg-section">
+        <h2>Status-badges (.badge med prik)</h2>
+        <div class="sg-row">
+            <span class="badge badge--draft">Udkast</span>
+            <span class="badge badge--sent">Sendt</span>
+            <span class="badge badge--accepted">Godkendt</span>
+            <span class="badge badge--invoiced">Faktureret</span>
+            <span class="badge badge--rejected">Afvist</span>
+        </div>
+    </div>
+
+    <!-- FANER + PILLS + SEGMENTED -->
+    <div class="sg-section">
+        <h2>Faner (.tabs/.tab — kun én aktiv, gul understregning), pills, segmented</h2>
+        <div class="tabs" style="margin-bottom:16px;">
+            <button class="tab active">Tilbud</button>
+            <button class="tab">Godkendte Ordre</button>
+            <button class="tab">Faktureret</button>
+            <button class="tab">Afvist</button>
+            <button class="tab">Kunder</button>
+        </div>
+        <div class="sg-row">
+            <button class="pill active">Alle</button>
+            <button class="pill">Udkast</button>
+            <button class="pill">Sendt</button>
+            <div class="segmented">
+                <button class="active">Dag</button>
+                <button>Uge</button>
+                <button>Måned</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- KPI -->
+    <div class="sg-section">
+        <h2>KPI-kort (.kpi-grid / .kpi)</h2>
+        <div class="kpi-grid">
+            <div class="kpi">
+                <div class="sg-kpi-head">
+                    <span class="kpi-label">Omsætning</span>
+                    <span class="kpi-icon kpi-icon--accent"><i data-lucide="trending-up"></i></span>
+                </div>
+                <div class="kpi-value">125.400 <small>kr.</small></div>
+            </div>
+            <div class="kpi">
+                <div class="sg-kpi-head">
+                    <span class="kpi-label">Udgifter</span>
+                    <span class="kpi-icon kpi-icon--danger"><i data-lucide="trending-down"></i></span>
+                </div>
+                <div class="kpi-value kpi-value--danger">48.900 <small>kr.</small></div>
+            </div>
+            <div class="kpi">
+                <div class="sg-kpi-head">
+                    <span class="kpi-label">Profit</span>
+                    <span class="kpi-icon kpi-icon--success"><i data-lucide="piggy-bank"></i></span>
+                </div>
+                <div class="kpi-value kpi-value--success">76.500 <small>kr.</small></div>
+            </div>
+            <div class="kpi">
+                <div class="sg-kpi-head">
+                    <span class="kpi-label">Margin</span>
+                    <span class="kpi-icon kpi-icon--info"><i data-lucide="percent"></i></span>
+                </div>
+                <div class="kpi-value">61%</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- TABEL -->
+    <div class="sg-section">
+        <h2>Tabel (.table — lyst hoved, uppercase, række-hover, tal højrejusteret)</h2>
+        <div class="card sg-table-card">
+            <table class="table">
+                <thead>
+                    <tr><th>Nr.</th><th>Kunde</th><th>Titel</th><th class="num">Total</th><th>Status</th><th>Handlinger</th></tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>1001</td>
+                        <td class="truncate" style="max-width:160px;" title="AAB Byg A/S">AAB Byg A/S</td>
+                        <td class="truncate" style="max-width:200px;" title="Gulvslibning stueetage">Gulvslibning stueetage</td>
+                        <td class="num">24.500 kr.</td>
+                        <td><span class="badge badge--accepted">Godkendt</span></td>
+                        <td><div class="sg-flex">
+                            <button class="btn btn-secondary sg-mini-btn"><i data-lucide="eye"></i> Se</button>
+                            <button class="btn btn-icon sg-mini-icon"><i data-lucide="more-horizontal"></i></button>
+                        </div></td>
+                    </tr>
+                    <tr>
+                        <td>1002</td>
+                        <td class="truncate" style="max-width:160px;" title="Bent Hougaard">Bent Hougaard</td>
+                        <td class="truncate" style="max-width:200px;" title="Linoleum køkken">Linoleum køkken</td>
+                        <td class="num">12.800 kr.</td>
+                        <td><span class="badge badge--sent">Sendt</span></td>
+                        <td><div class="sg-flex">
+                            <button class="btn btn-secondary sg-mini-btn"><i data-lucide="eye"></i> Se</button>
+                            <button class="btn btn-icon sg-mini-icon"><i data-lucide="more-horizontal"></i></button>
+                        </div></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- SEKTIONSTITLER, EKSTRAARBEJDE, TOM TILSTAND -->
+    <div class="sg-section">
+        <h2>Sektionstitler (.icon-box), ekstraarbejde, tom tilstand</h2>
+        <div class="card" style="padding:20px;">
+            <h3 class="section-title"><span class="icon-box"><i data-lucide="wrench"></i></span> Arbejdsbeskrivelse</h3>
+            <div class="sg-timetypes" style="margin-bottom:20px;">
+                <div class="extra-work-card">Ekstraarbejde — lys orange, 4px venstrekant</div>
+                <div class="extra-work-card" style="background:var(--time-alm-bg);border-left-color:var(--time-alm-border);color:var(--time-alm-text);">Alm. timer</div>
+                <div class="extra-work-card" style="background:var(--time-overtime-bg);border-left-color:var(--time-overtime-border);color:var(--time-overtime-text);">Overtid</div>
+                <div class="extra-work-card" style="background:var(--time-sick-bg);border-left-color:var(--time-sick-border);color:var(--time-sick-text);">Sygdom</div>
+            </div>
+            <div class="empty-state">
+                <i data-lucide="package"></i>
+                <span>Ingen beskrivelse endnu — tilføj en for at komme i gang.</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>lucide.createIcons();</script>
+</body>
+</html>
