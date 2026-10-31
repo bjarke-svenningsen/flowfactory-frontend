@@ -57,20 +57,22 @@ const materialsPage = {
                 <td>${material.name}</td>
                 <td>${this.renderCategoryBadge(material.category)}</td>
                 <td>${material.unit || 'stk'}</td>
-                <td class="price-cell">${parseFloat(material.cost_price).toFixed(2)} kr</td>
-                <td class="price-cell">${parseFloat(material.sales_price).toFixed(2)} kr</td>
+                <td class="price-cell">${this.formatPrice(material.cost_price)}</td>
+                <td class="price-cell">${this.formatPrice(material.sales_price)}</td>
                 <td>
                     <div class="actions-cell">
-                        <button class="btn-icon btn-edit" onclick="materialsPage.editMaterial(${material.id})" title="Rediger">
-                            
-                        </button>
-                        <button class="btn-icon btn-delete" onclick="materialsPage.deleteMaterial(${material.id})" title="Slet">
-                            
-                        </button>
+                        ${btn('icon', 'pencil', 'Rediger', { onclick: `materialsPage.editMaterial(${material.id})`, title: 'Rediger' })}
+                        ${btn('icon', 'trash-2', 'Slet', { onclick: `materialsPage.deleteMaterial(${material.id})`, title: 'Slet', danger: true })}
                     </div>
                 </td>
             </tr>
         `).join('');
+        refreshIcons();
+    },
+
+    formatPrice(value) {
+        const n = parseFloat(value) || 0;
+        return n.toLocaleString('da-DK', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' kr.';
     },
 
     renderCategoryBadge(category) {

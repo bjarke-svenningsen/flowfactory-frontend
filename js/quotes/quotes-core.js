@@ -924,6 +924,12 @@ async function rejectQuote(quoteId) {
 
 // Tab switching
 function switchOrderTab(tab) {
+    // Hvis et ordre-workspace er åbent, låses topfanerne: workspace skal lukkes
+    // ("Tilbage til Ordrer"), før man kan skifte fane. Undgår at lister som
+    // "Igangværende ordrer" dukker op oven på et åbent workspace.
+    if (typeof currentWorkspaceOrder !== 'undefined' && currentWorkspaceOrder && tab !== 'orders') {
+        return;
+    }
     currentOrderTab = tab;
     
     // Update URL hash to preserve tab on refresh

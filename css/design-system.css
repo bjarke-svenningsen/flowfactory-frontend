@@ -376,9 +376,10 @@ h1 { font-size: var(--font-size-title); }
 /* ---------- KPI ---------- */
 .kpi-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 16px;
 }
+.kpi { min-width: 0; }
 .kpi {
     background: var(--surface);
     border: 1px solid var(--border);
@@ -398,8 +399,10 @@ h1 { font-size: var(--font-size-title); }
     color: var(--text-muted);
 }
 .kpi-value {
-    font-size: 24px;
+    font-size: clamp(1.1rem, 1.4vw + 0.4rem, 1.6rem);
     font-weight: 700;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
     white-space: nowrap;
     font-variant-numeric: tabular-nums;
     overflow: hidden;

@@ -80,13 +80,17 @@
         }
 
         thead {
-            background: var(--color-dark);
-            color: white;
+            background: var(--surface-muted);
+            color: var(--text-muted);
         }
 
         thead th {
-            padding: 15px;
+            padding: 12px 15px;
             text-align: left;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
             font-weight: 600;
             font-size: 14px;
         }
@@ -97,7 +101,7 @@
         }
 
         tbody tr:hover {
-            background: var(--surface-muted);
+            background: var(--accent-hover-row);
         }
 
         tbody td {
@@ -107,7 +111,7 @@
 
         .material-number {
             font-weight: 600;
-            color: var(--color-accent-hover);
+            color: var(--text);
         }
 
         .category-badge {
@@ -116,60 +120,20 @@
             border-radius: 20px;
             font-size: 12px;
             font-weight: 600;
-        }
-
-        .category-arbejdstimer {
-            background: var(--accent-soft);
-            color: var(--info);
-        }
-
-        .category-materialer {
-            background: var(--accent-soft);
-            color: var(--info);
-        }
-
-        .category-intern {
-            background: var(--surface)3e0;
-            color: var(--accent);
+            background: var(--border-soft);
+            color: #4B5563;
         }
 
         .price-cell {
             font-weight: 600;
-            color: var(--success);
+            color: var(--text);
+            text-align: right;
+            font-variant-numeric: tabular-nums;
         }
 
         .actions-cell {
             display: flex;
-            gap: 8px;
-        }
-
-        .btn-icon {
-            padding: 6px 10px;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 14px;
-            transition: all 0.2s;
-        }
-
-        .btn-edit {
-            background: var(--accent-soft);
-            color: var(--info);
-        }
-
-        .btn-edit:hover {
-            background: var(--info);
-            color: white;
-        }
-
-        .btn-delete {
-            background: var(--danger-soft);
-            color: var(--danger);
-        }
-
-        .btn-delete:hover {
-            background: var(--danger);
-            color: white;
+            gap: 4px;
         }
 
         /* Modal styles */

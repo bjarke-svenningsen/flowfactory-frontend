@@ -940,7 +940,7 @@ function renderWorkspaceDocuments(container) {
                     <p style="margin: 0; color: var(--text-muted);">Dokumenter tilknyttet denne ordre (${workspaceDocuments.length})</p>
                 </div>
                 <button onclick="showUploadDocument()" class="btn btn-primary">
-                    Upload Dokument
+                    <i data-lucide="upload"></i> Upload Dokument
                 </button>
             </div>
             
@@ -1132,8 +1132,8 @@ async function uploadDocument() {
 
 // MIME-typer pr. filendelse (til at tvinge inline-visning i preview)
 const DOC_MIME_TYPES = {
-    jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', gif: 'image/gif',
-    bmp: 'image/bmp', webp: 'image/webp', svg: 'image/svg+xml', heic: 'image/heic',
+    jpg: 'image/jpeg', jpeg: 'image/jpeg', jfif: 'image/jpeg', pjpeg: 'image/jpeg', pjp: 'image/jpeg',
+    png: 'image/png', gif: 'image/gif', bmp: 'image/bmp', webp: 'image/webp', svg: 'image/svg+xml', heic: 'image/heic',
     pdf: 'application/pdf', txt: 'text/plain', csv: 'text/csv', md: 'text/plain',
     json: 'application/json', mp4: 'video/mp4', webm: 'video/webm', mov: 'video/quicktime',
     mp3: 'audio/mpeg', wav: 'audio/wav', ogg: 'audio/ogg',
@@ -1149,8 +1149,13 @@ function getDocMime(filename) {
 }
 
 // Hent fil som Blob og returner objekt-URL (garanterer inline-visning uanset server-headers)
-async function fetchDocBlobUrl(fileUrl, filename) {
-    const response = await fetch(fileUrl);
+async function fetchDocBlobUrl(fileUrl, filename, withAuth) {
+    const headers = {};
+    if (withAuth) {
+        const token = sessionStorage.getItem('token');
+        if (token) headers['Authorization'] = 'Bearer ' + token;
+    }
+    const response = await fetch(fileUrl, { headers });
     if (!response.ok) throw new Error('Kunne ikke hente filen (' + response.status + ')');
     const blob = await response.blob();
     const typedBlob = new Blob([blob], { type: getDocMime(filename) });
@@ -1168,12 +1173,8 @@ function openDocPreviewModal(filename, blobUrl, previewHtml) {
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex: 0 0 auto; gap: 8px;">
                 <h3 style="margin: 0; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${filename}</h3>
                 <div style="display: flex; gap: 8px; flex: 0 0 auto;">
-                    <a href="${blobUrl}" download="${filename}" class="btn btn-secondary">
-                        <i data-lucide="download"></i> Download
-                    </a>
-                    <button onclick="closePreviewModal()" class="btn btn-primary">
-                        Luk
-                    </button>
+                    ${blobUrl ? `<a href="${blobUrl}" download="${filename}" class="btn btn-secondary"><i data-lucide="download"></i> Download</a>` : ''}
+                    <button onclick="closePreviewModal()" class="btn btn-primary">Luk</button>
                 </div>
             </div>
             <div style="flex: 1; min-height: 0; overflow: auto;">${previewHtml}</div>
@@ -1183,33 +1184,81 @@ function openDocPreviewModal(filename, blobUrl, previewHtml) {
         if (e.target === modal) closePreviewModal();
     });
     document.body.appendChild(modal);
-    if (typeof lucide !== 'undefined' && lucide.createIcons) lucide.createIcons();
+    refreshIcons();
+}
+
+// Lightbox til billeder: mørk overlay, centreret billede, X/Escape/klik udenfor lukker
+function openDocImageLightbox(filename, blobUrl) {
+    closePreviewModal();
+    const modal = document.createElement('div');
+    modal.id = 'documentPreviewModal';
+    modal.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.88); z-index: 10001; display: flex; align-items: center; justify-content: center; cursor: pointer;';
+    modal.innerHTML = `
+        <div style="position: relative; max-width: 90%; max-height: 90%; cursor: default;" onclick="event.stopPropagation()">
+            <div style="position: absolute; top: 10px; right: 10px; display: flex; gap: 8px; z-index: 2;">
+                <a href="${blobUrl}" download="${filename}" class="btn btn-secondary" title="Download">
+                    <i data-lucide="download"></i>
+                </a>
+                <button onclick="closePreviewModal()" class="btn btn-primary" title="Luk" aria-label="Luk">
+                    <i data-lucide="x"></i>
+                </button>
+            </div>
+            <img src="${blobUrl}" alt="${filename}" style="max-width: 90vw; max-height: 85vh; display: block; margin: 0 auto; border-radius: 8px;">
+            <div style="text-align: center; color: white; margin-top: 14px; font-size: 14px;">${filename}</div>
+        </div>
+    `;
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) closePreviewModal();
+    });
+    const onKey = (e) => { if (e.key === 'Escape') closePreviewModal(); };
+    document.addEventListener('keydown', onKey);
+    modal._escHandler = onKey;
+    document.body.appendChild(modal);
+    refreshIcons();
+}
+
+// Indlæsnings-overlay (spinner) mens filen hentes
+function openDocLoadingModal() {
+    closePreviewModal();
+    const modal = document.createElement('div');
+    modal.id = 'documentPreviewModal';
+    modal.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(45,49,57,0.75); z-index: 10001; display: flex; align-items: center; justify-content: center;';
+    modal.innerHTML = `
+        <div style="background: var(--surface); border-radius: 14px; padding: 28px 36px; display: flex; align-items: center; gap: 14px;">
+            <div class="preview-spinner" style="width: 22px; height: 22px; border: 3px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: docSpin 0.8s linear infinite;"></div>
+            <span style="color: var(--text); font-weight: 500;">Indlæser preview…</span>
+        </div>
+    `;
+    const style = document.createElement('style');
+    style.textContent = '@keyframes docSpin { to { transform: rotate(360deg); } }';
+    modal.appendChild(style);
+    document.body.appendChild(modal);
 }
 
 // Preview document
 async function previewDocument(documentId, filename) {
+    const doc = workspaceDocuments.find(d => d.id === documentId);
+    if (!doc) {
+        alert('Dokument ikke fundet');
+        return;
+    }
+
+    const filePath = doc.file_path.startsWith('/') ? doc.file_path : '/' + doc.file_path;
+    const ext = (filename || '').split('.').pop().toLowerCase();
+    const imageExtensions = ['jpg', 'jpeg', 'jfif', 'pjpeg', 'pjp', 'png', 'gif', 'bmp', 'webp', 'svg'];
+    const pdfExtensions = ['pdf'];
+    const textExtensions = ['txt', 'csv', 'md', 'json'];
+    const videoExtensions = ['mp4', 'webm', 'mov'];
+    const audioExtensions = ['mp3', 'wav', 'ogg'];
+    const officeExtensions = ['doc', 'docx', 'xls', 'xlsx'];
+
+    openDocLoadingModal();
+
     try {
-        const doc = workspaceDocuments.find(d => d.id === documentId);
-        if (!doc) {
-            alert('Dokument ikke fundet');
-            return;
-        }
-
-        const filePath = doc.file_path.startsWith('/') ? doc.file_path : '/' + doc.file_path;
-        const ext = (filename || '').split('.').pop().toLowerCase();
-        const imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'svg'];
-        const pdfExtensions = ['pdf'];
-        const textExtensions = ['txt', 'csv', 'md', 'json'];
-        const videoExtensions = ['mp4', 'webm', 'mov'];
-        const audioExtensions = ['mp3', 'wav', 'ogg'];
-        const officeExtensions = ['doc', 'docx', 'xls', 'xlsx'];
-
-        const blobUrl = await fetchDocBlobUrl(filePath, filename);
+        const blobUrl = await fetchDocBlobUrl(filePath, filename, true);
 
         if (imageExtensions.includes(ext)) {
-            openDocPreviewModal(filename, blobUrl,
-                `<img src="${blobUrl}" alt="${filename}" style="max-width: 100%; max-height: 100%; margin: 0 auto; display: block; border-radius: 8px;">`
-            );
+            openDocImageLightbox(filename, blobUrl);
         } else if (pdfExtensions.includes(ext)) {
             openDocPreviewModal(filename, blobUrl,
                 `<iframe src="${blobUrl}" style="width: 100%; height: 100%; border: none; border-radius: 8px;"></iframe>`
@@ -1248,7 +1297,12 @@ async function previewDocument(documentId, filename) {
 
     } catch (error) {
         console.error('Preview error:', error);
-        alert('Kunne ikke vise preview: ' + error.message);
+        openDocPreviewModal(filename, null,
+            `<div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; gap: 16px; color: var(--text-muted);">
+                <i data-lucide="alert-circle" style="width: 48px; height: 48px;"></i>
+                <p style="margin: 0;">Kunne ikke indlæse preview. Prøv igen, eller download filen i stedet.</p>
+            </div>`
+        );
     }
 }
 
@@ -1260,6 +1314,7 @@ function closePreviewModal() {
         const url = el.src || el.href;
         if (url && url.startsWith('blob:')) URL.revokeObjectURL(url);
     });
+    if (modal._escHandler) document.removeEventListener('keydown', modal._escHandler);
     modal.remove();
 }
 
