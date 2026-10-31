@@ -6,6 +6,11 @@ const chatStore = {};            // conversationId -> [beskeder]
 const conversationByPeer = {};   // peerUserId -> conversationId
 let sse = null;
 let myId = null;
+const unreadCounts = {};   // conversationId -> antal ulaeste
+const peerRead = {};       // conversationId -> modtagers sidst laeste besked-id
+let typingTimer = null;
+let typingThrottle = 0;
+let typingStatusTimer = null;
 
 function chatAuthHeaders() {
     return {
@@ -23,11 +28,27 @@ function escapeHtml(str) {
 // Initialiser chat
 async function initChat() {
     await loadPresence();
+    await loadConversations();
     connectChatSse();
     // Opdater presence-listen jævnligt (fallback hvis SSE er nede)
     if (!window._chatPresenceTimer) {
         window._chatPresenceTimer = setInterval(loadPresence, 30000);
     }
+}
+
+// Samtaleliste: ulaeste-tal + modtagers laest-position
+async function loadConversations() {
+    try {
+        const response = await fetch('/api/chat/conversations', { headers: chatAuthHeaders() });
+        if (!response.ok) return;
+        const convs = await response.json();
+        for (const c of convs) {
+            unreadCounts[c.id] = c.unread || 0;
+            peerRead[c.id] = c.peer_last_read || 0;
+            if (c.peer) conversationByPeer[c.peer.id] = c.id;
+        }
+        renderUserList();
+    } catch (error) { /* listoen praever igen naeste gang */ }
 }
 
 // Presence: kolleger + online-status + sidst set
@@ -98,7 +119,33 @@ async function connectChatSse() {
                 renderMessages();
                 markConversationRead();
             } else {
-                loadPresence(); // holder liste og status opdateret
+                unreadCounts[m.conversation_id] = (unreadCounts[m.conversation_id] || 0) + 1;
+                renderUserList();
+            }
+        });
+
+        sse.addEventListener('chat_read', (e) => {
+            const d = JSON.parse(e.data);
+            peerRead[d.conversationId] = d.lastReadMessageId;
+            if (currentConversationId && d.conversationId === currentConversationId) {
+                renderMessages();
+            }
+        });
+
+        sse.addEventListener('chat_typing', (e) => {
+            const d = JSON.parse(e.data);
+            if (!currentChatUser || !currentConversationId || d.conversationId !== currentConversationId) return;
+            if (d.userId !== (currentChatUser ? currentChatUser.id : null)) return;
+            const el = document.getElementById('chatUserStatus');
+            if (!el) return;
+            if (d.typing) {
+                el.textContent = 'skriver...';
+                el.style.color = 'var(--text-muted)';
+                clearTimeout(typingStatusTimer);
+                typingStatusTimer = setTimeout(updateChatHeaderStatus, 3000);
+            } else {
+                clearTimeout(typingStatusTimer);
+                updateChatHeaderStatus();
             }
         });
 
@@ -154,6 +201,9 @@ function renderUserList() {
         const statusClass = user.status;
         const isActive = currentChatUser && currentChatUser.id === user.id ? 'active' : '';
         const isOnline = user.online;
+        const convId = conversationByPeer[user.id];
+        const unread = convId ? (unreadCounts[convId] || 0) : 0;
+        const unreadBadge = unread > 0 ? `<span class="chat-unread-badge">${unread > 9 ? '9+' : unread}</span>` : '';
 
         return `
             <div class="user-item ${isActive}">
@@ -165,7 +215,8 @@ function renderUserList() {
                     <div style="font-weight: 500;">${escapeHtml(user.name)}</div>
                     <div style="font-size: 12px; color: var(--text-muted);">${getStatusText(user)}</div>
                 </div>
-                <button onclick="event.stopPropagation(); if(typeof startVideoCall !== 'undefined') startVideoCall(${user.id}, '${escapeHtml(user.name).replace(/'/g, '&#39;')}');"
+                ${unreadBadge}
+                <button onclick="event.stopPropagation(); startVideoCall(${user.id}, '${escapeHtml(user.name).replace(/'/g, '&#39;')}');"
                         style="padding: 6px 10px; background: ${isOnline ? 'var(--color-green)' : 'var(--border)'}; color: white; border: none; border-radius: 15px; cursor: ${isOnline ? 'pointer' : 'not-allowed'}; font-size: 12px;"
                         ${!isOnline ? 'disabled' : ''}
                         title="${isOnline ? 'Start videoopkald' : 'Bruger er offline'}">
@@ -221,6 +272,8 @@ async function openChatWith(userId) {
         const data = await response.json();
         currentConversationId = data.conversationId;
         conversationByPeer[userId] = currentConversationId;
+        unreadCounts[currentConversationId] = 0;
+        renderUserList();
 
         // Hent hele historikken
         const msgResponse = await fetch('/api/chat/conversations/' + currentConversationId + '/messages?after=0', {
@@ -260,13 +313,18 @@ function renderMessages() {
         return;
     }
 
-    container.innerHTML = messages.map(msg => {
+    container.innerHTML = messages.map((msg, i) => {
         const isOwn = msg.from === 'me';
+        // "Set" paa den sidste egen besked, hvis modtageren har laest den
+        const isLastOwn = isOwn && !messages.slice(i + 1).some(m => m.from === 'me');
+        const seen = isLastOwn && msg.id && (peerRead[currentConversationId] || 0) >= msg.id;
+        const seenLabel = seen ? '<div class="message-seen">Set</div>' : '';
         return `
             <div class="message ${isOwn ? 'own' : ''}">
                 <div class="message-bubble">
                     <div>${escapeHtml(msg.text)}</div>
                     <div class="message-time">${msg.time}</div>
+                    ${seenLabel}
                 </div>
             </div>
         `;
@@ -340,4 +398,49 @@ function filterUsers() {
         const name = item.textContent.toLowerCase();
         item.style.display = name.includes(query) ? 'flex' : 'none';
     });
+}
+
+// "Skriver..." - sendes traekket (maeks. hvert 2. sekund)
+function handleTyping() {
+    if (!currentConversationId) return;
+    const now = Date.now();
+    if (now - typingThrottle > 2000) {
+        typingThrottle = now;
+        fetch('/api/chat/typing', {
+            method: 'POST',
+            headers: chatAuthHeaders(),
+            body: JSON.stringify({ conversationId: currentConversationId, typing: true })
+        }).catch(() => {});
+    }
+    clearTimeout(typingTimer);
+    typingTimer = setTimeout(() => {
+        if (!currentConversationId) return;
+        fetch('/api/chat/typing', {
+            method: 'POST',
+            headers: chatAuthHeaders(),
+            body: JSON.stringify({ conversationId: currentConversationId, typing: false })
+        }).catch(() => {});
+    }, 3000);
+}
+
+// Videoopkald via Jitsi (ingen konto/noegler - offentlig infrastruktur)
+async function startVideoCall(userId, userName) {
+    try {
+        let convId = conversationByPeer[userId];
+        if (!convId) {
+            const response = await fetch('/api/chat/conversations', {
+                method: 'POST',
+                headers: chatAuthHeaders(),
+                body: JSON.stringify({ peerId: userId })
+            });
+            if (!response.ok) throw new Error('kunne ikke oprette samtale');
+            const data = await response.json();
+            convId = data.conversationId;
+            conversationByPeer[userId] = convId;
+        }
+        const room = 'seest-conv' + convId + '-' + Math.random().toString(36).substring(2, 10);
+        window.open('https://meet.jit.si/' + room, '_blank');
+    } catch (error) {
+        alert('Videoopkald kunne ikke startes');
+    }
 }

@@ -32,7 +32,7 @@
 
             <div class="chat-input-area">
                 <button class="emoji-btn" onclick="toggleEmojiPicker()">😊</button>
-                <textarea id="chatInput" placeholder="Skriv en besked..." rows="1" oninput="autoGrowTextarea()" onkeypress="if(event.key==='Enter' && !event.shiftKey) { event.preventDefault(); sendMessage(); }"></textarea>
+                <textarea id="chatInput" placeholder="Skriv en besked..." rows="1" oninput="autoGrowTextarea(); handleTyping();" onkeypress="if(event.key==='Enter' && !event.shiftKey) { event.preventDefault(); sendMessage(); }"></textarea>
                 <button class="send-btn" onclick="sendMessage()">Send</button>
             </div>
 

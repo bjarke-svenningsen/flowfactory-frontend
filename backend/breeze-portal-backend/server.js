@@ -1873,12 +1873,17 @@ app.get('/api/chat/conversations', auth, async (req, res) => {
         'AND m.id > COALESCE((SELECT last_read_message_id FROM chat_reads WHERE conversation_id = ? AND user_id = ?), 0)',
         [c.id, req.user.id, c.id, req.user.id]
       );
+      const peerReadRow = await db.get(
+        'SELECT last_read_message_id AS v FROM chat_reads WHERE conversation_id = ? AND user_id = ?',
+        [c.id, peer ? peer.id : 0]
+      );
       out.push({
         id: c.id,
         is_group: c.is_group,
         name: c.name,
         peer: peer || null,
         peer_online: peer ? chatOnline(peer.id) : false,
+        peer_last_read: peerReadRow ? peerReadRow.v : 0,
         last_message: last || null,
         unread: unread ? unread.n : 0
       });
