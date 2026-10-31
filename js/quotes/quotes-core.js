@@ -723,22 +723,21 @@ function renderQuotePreview() {
     container.innerHTML = `
         <div class="quote-sheet-wrap">
             <div class="preview-actions">
-                <button onclick="editQuote(${currentQuote.id})" class="btn btn-secondary">
-                    <i data-lucide="pencil"></i> Rediger
-                </button>
                 <button onclick="sendQuote(${currentQuote.id})" class="btn btn-primary">
                     <i data-lucide="send"></i> Send til Kunde
+                </button>
+                <button onclick="editQuote(${currentQuote.id})" class="btn btn-secondary">
+                    <i data-lucide="pencil"></i> Rediger
                 </button>
                 <button onclick="downloadQuotePDF(${currentQuote.id})" class="btn btn-secondary">
                     <i data-lucide="download"></i> Download PDF
                 </button>
-                <button onclick="deleteQuote(${currentQuote.id})" class="btn btn-danger">
+                <button onclick="deleteQuote(${currentQuote.id})" class="btn btn-danger toolbar-end">
                     <i data-lucide="trash-2"></i> Slet
                 </button>
             </div>
 
             <div class="quote-sheet">
-                <div style="max-width: 900px; margin: 0 auto;">
                 <!-- Minimal Header -->
                 <div style="display: flex; justify-content: space-between; align-items: start; padding-bottom: 30px; border-bottom: 1px solid var(--text); margin-bottom: 40px;">
                     <div style="background: transparent !important; margin-top: 0; padding: 0;">
@@ -791,6 +790,7 @@ function renderQuotePreview() {
                 </div>
                 
                 <!-- Lines Table -->
+                <div class="doc-table-scroll">
                 <table style="width: 100%; border-collapse: collapse; margin-bottom: 40px;">
                     <thead>
                         <tr style="border-bottom: 2px solid var(--text);">
@@ -818,6 +818,7 @@ function renderQuotePreview() {
                         }).join('')}
                     </tbody>
                 </table>
+                </div>
                 
                 <!-- Totals -->
                 <div style="display: flex; justify-content: flex-end; margin-bottom: 40px;">
@@ -863,8 +864,8 @@ function renderQuotePreview() {
                 </div>
             </div>
         </div>
-    </div>
     `;
+    if (window.lucide) { try { lucide.createIcons(); } catch (e) { /* ignore */ } }
 }
 
 // Download PDF placeholder

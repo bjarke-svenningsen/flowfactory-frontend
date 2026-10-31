@@ -814,14 +814,16 @@ body, .dashboard { background: var(--bg-page); }
     pointer-events: none;
 }
 
-/* Tilbud: knapper flugter venstre kant + dokument som ark */
+/* Tilbud/Faktura: knapper flugter med papirets kanter + dokument som ark */
 .preview-actions {
     display: flex;
-    gap: 12px;
-    margin-bottom: 20px;
-    justify-content: flex-start;
-    margin-left: 0;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    max-width: 820px;
+    margin: 0 auto 20px;
 }
+.preview-actions .toolbar-end { margin-left: auto; }
 .quote-sheet-wrap {
     background: var(--surface-segmented);
     padding: 32px;
@@ -829,14 +831,31 @@ body, .dashboard { background: var(--bg-page); }
 }
 .quote-sheet {
     background: var(--surface);
+    width: 100%;
     max-width: 820px;
     margin: 0 auto;
+    padding: 56px 64px;
+    box-sizing: border-box;
     border-radius: 4px;
+    border: 1px solid var(--border);
     box-shadow: var(--shadow-soft);
+    /* Beloeb i dokumentet: tabular-nums saa tallene flugter */
+    font-variant-numeric: tabular-nums;
+}
+/* Tabellinjer og skillelinjer flugter med indholdskanterne */
+.quote-sheet table th:first-child,
+.quote-sheet table td:first-child { padding-left: 0; }
+.quote-sheet table th:last-child,
+.quote-sheet table td:last-child { padding-right: 0; }
+.doc-table-scroll { overflow-x: auto; }
+@media (max-width: 640px) {
+    .quote-sheet-wrap { padding: 12px; }
+    .quote-sheet { padding: 32px 20px; }
 }
 @media print {
     .quote-sheet-wrap { background: none; padding: 0; }
-    .quote-sheet { box-shadow: none; }
+    /* PDF/print: nulstil skærm-padding, kant og skygge så eksporten ser ud som foer */
+    .quote-sheet { padding: 0; border: none; box-shadow: none; }
     .preview-actions { display: none; }
 }
 

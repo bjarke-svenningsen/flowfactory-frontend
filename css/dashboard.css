@@ -539,26 +539,28 @@ body {
     color: #ccc;
 }
 
-/* FILE EXPLORER STYLING */
+/* FILE EXPLORER STYLING — designsystem: hvidt kort, tokens, ingen win95-look */
 .file-explorer {
-    background: #fff;
-    border: 1px solid #0054a6;
-    border-radius: 0;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-card);
     height: 650px;
     display: flex;
     flex-direction: column;
-    box-shadow: 2px 2px 5px rgba(0,0,0,0.3);
+    box-shadow: var(--shadow-soft);
+    overflow: hidden;
 }
 
 .explorer-title-bar {
-    background: var(--info);
-    color: white;
-    padding: 4px 8px;
-    font-size: 13px;
-    font-weight: bold;
+    background: var(--surface);
+    color: var(--text);
+    padding: 12px 16px;
+    font-size: 14px;
+    font-weight: 700;
     display: flex;
     justify-content: space-between;
     align-items: center;
+    border-bottom: 1px solid var(--border);
 }
 
 .title-buttons {
@@ -569,9 +571,9 @@ body {
 .title-btn {
     width: 20px;
     height: 18px;
-    background: #2d6fdd;
-    border: 1px solid #fff;
-    color: white;
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
     font-size: 11px;
     cursor: pointer;
     display: flex;
@@ -580,8 +582,8 @@ body {
 }
 
 .explorer-menubar {
-    background: #f0f0f0;
-    border-bottom: 1px solid #999;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
     padding: 2px 5px;
     font-size: 12px;
     display: flex;
@@ -591,25 +593,26 @@ body {
 .menu-item-text {
     padding: 3px 8px;
     cursor: pointer;
+    border-radius: 6px;
 }
 
 .menu-item-text:hover {
-    background: #e0e0f0;
+    background: var(--surface-muted);
 }
 
 .explorer-toolbar {
-    background: #f0f0f0;
-    border-bottom: 1px solid #999;
-    padding: 5px;
+    background: var(--surface-muted);
+    border-bottom: 1px solid var(--border);
+    padding: 8px;
     display: flex;
-    gap: 3px;
+    gap: 6px;
     align-items: center;
     flex-wrap: wrap;
 }
 
 .toolbar-left, .toolbar-right {
     display: flex;
-    gap: 2px;
+    gap: 6px;
     align-items: center;
 }
 
@@ -617,77 +620,85 @@ body {
     flex: 1;
     display: flex;
     align-items: center;
-    gap: 5px;
+    gap: 8px;
     margin: 0 10px;
 }
 
 .toolbar-btn {
-    padding: 4px 8px;
-    background: var(--border);
-    border: 1px solid #888;
+    padding: 6px 12px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-btn);
     cursor: pointer;
-    font-size: 11px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text);
     display: flex;
     align-items: center;
     gap: 4px;
-    min-height: 22px;
+    min-height: 34px;
 }
 
 .toolbar-btn:hover {
-    background: var(--border);
-    border-color: #666;
+    background: var(--surface-muted);
+    border-color: var(--border);
 }
 
 .toolbar-btn:active {
-    background: #c0c0c0;
-    border-style: inset;
+    background: var(--surface-muted);
 }
 
 .address-bar-label {
     font-size: 12px;
+    color: var(--text-muted);
 }
 
 .address-bar {
-    background: white;
-    border: 1px solid #7f9db9;
-    padding: 3px 8px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-btn);
+    padding: 6px 10px;
     font-size: 12px;
     flex: 1;
-    font-family: 'Courier New', monospace;
+    color: var(--text);
 }
 
 .explorer-body {
     display: flex;
     flex: 1;
     overflow: hidden;
-    border-top: 1px solid #fff;
+    border-top: 1px solid var(--border);
 }
 
 .explorer-tree {
     width: 200px;
-    background: white;
-    border-right: 1px solid #999;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
     overflow-y: auto;
     font-size: 12px;
-    padding: 5px 0;
+    padding: 8px 0;
 }
 
 .tree-item {
-    padding: 2px 5px 2px 20px;
+    padding: 6px 8px 6px 20px;
     cursor: pointer;
     display: flex;
     align-items: center;
     gap: 5px;
     user-select: none;
+    border-left: 3px solid transparent;
+    color: var(--text);
 }
 
 .tree-item:hover {
-    background: #e0e0f0;
+    background: var(--surface-muted);
 }
 
 .tree-item.selected {
-    background: #0a246a;
-    color: white;
+    background: var(--accent-soft);
+    border-left-color: var(--accent);
+    color: var(--text);
+    font-weight: 600;
 }
 
 .tree-expand {
@@ -697,7 +708,7 @@ body {
 
 .explorer-content {
     flex: 1;
-    background: white;
+    background: var(--surface);
     overflow: auto;
 }
 
@@ -709,16 +720,17 @@ body {
 }
 
 .file-list-view thead {
-    background: var(--border-soft);
-    border-bottom: 1px solid #999;
+    background: var(--surface-muted);
+    border-bottom: 1px solid var(--border);
 }
 
 .file-list-view th {
     text-align: left;
-    padding: 4px 8px;
-    border-right: 1px solid #ccc;
+    padding: 10px 12px;
+    border-right: 1px solid var(--border);
     cursor: pointer;
-    font-weight: normal;
+    font-weight: 600;
+    color: var(--text-muted);
     position: relative;
     user-select: none;
 }
@@ -734,25 +746,27 @@ body {
 }
 
 .file-list-view th .resize-handle:hover {
-    background: rgba(0, 84, 166, 0.3);
+    background: var(--accent);
 }
 
 .file-list-view th:hover {
-    background: #d0d0d0;
+    background: var(--surface-muted);
+    color: var(--text);
 }
 
 .file-list-view td {
-    padding: 2px 8px;
-    border-bottom: 1px solid #f0f0f0;
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--border-soft);
+    color: var(--text);
 }
 
 .file-list-view tr:hover {
-    background: #e0e0f0;
+    background: var(--accent-hover-row);
 }
 
 .file-list-view tr.selected {
-    background: #0a246a;
-    color: white;
+    background: var(--accent-soft);
+    color: var(--text);
 }
 
 .file-row {
@@ -765,18 +779,18 @@ body {
 }
 
 .explorer-statusbar {
-    background: #f0f0f0;
-    border-top: 1px solid #999;
-    padding: 3px 8px;
+    background: var(--surface-muted);
+    border-top: 1px solid var(--border);
+    padding: 6px 12px;
     font-size: 11px;
-    color: #000;
+    color: var(--text-muted);
     display: flex;
     gap: 20px;
 }
 
 .status-section {
     padding: 0 10px;
-    border-right: 1px solid #ccc;
+    border-right: 1px solid var(--border);
 }
 
 .status-section:last-child {
@@ -785,29 +799,33 @@ body {
 
 .context-menu {
     position: fixed;
-    background: #f0f0f0;
-    border: 1px solid #999;
-    box-shadow: 2px 2px 5px rgba(0,0,0,0.3);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-card);
+    box-shadow: var(--shadow-lift);
     z-index: 1000;
     display: none;
-    min-width: 150px;
+    min-width: 160px;
+    padding: 6px 0;
+    overflow: hidden;
 }
 
 .context-menu-item {
-    padding: 4px 30px 4px 20px;
+    padding: 8px 16px;
     font-size: 12px;
     cursor: pointer;
+    color: var(--text);
 }
 
 .context-menu-item:hover {
-    background: #0a246a;
-    color: white;
+    background: var(--accent-soft);
+    color: var(--text);
 }
 
 .context-menu-separator {
     height: 1px;
-    background: #999;
-    margin: 2px 0;
+    background: var(--border);
+    margin: 4px 0;
 }
 
 /* Tilføj dette til bunden af css/dashboard.css */

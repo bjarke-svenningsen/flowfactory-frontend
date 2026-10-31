@@ -170,25 +170,25 @@ function renderInvoicePreview(invoice) {
     const container = document.getElementById('invoicingContainer');
     
     container.innerHTML = `
-        <div style="max-width: 900px; margin: 0 auto;">
-            <div style="display: flex; gap: 15px; margin-bottom: 20px;">
+        <div class="quote-sheet-wrap">
+            <div class="preview-actions">
                 <button onclick="switchOrderTab('invoiced'); loadInvoiced();" class="btn btn-secondary">
-                    ◀ Tilbage
+                    <i data-lucide="arrow-left"></i> Tilbage
                 </button>
                 ${invoice.status === 'draft' ? `
-                    <button onclick="sendInvoice(${invoice.id})" style="padding: 10px 20px; background: var(--color-green); color: white; border: none; border-radius: 5px; cursor: pointer;">
-                        Send til Kunde
+                    <button onclick="sendInvoice(${invoice.id})" class="btn btn-primary">
+                        <i data-lucide="send"></i> Send til Kunde
                     </button>
                 ` : ''}
-                <button onclick="window.print()" style="padding: 10px 20px; background: var(--color-blue); color: white; border: none; border-radius: 5px; cursor: pointer;">
-                    Print / PDF
+                <button onclick="window.print()" class="btn btn-secondary">
+                    <i data-lucide="printer"></i> Print / PDF
                 </button>
-                <button onclick="deleteInvoiceFromPreview(${invoice.id})" style="padding: 10px 20px; background: var(--color-red); color: white; border: none; border-radius: 5px; cursor: pointer;">
-                    Slet Faktura
+                <button onclick="deleteInvoiceFromPreview(${invoice.id})" class="btn btn-danger toolbar-end">
+                    <i data-lucide="trash-2"></i> Slet
                 </button>
             </div>
             
-            <div style="background: var(--surface); padding: 60px; padding-top: 30px;">
+            <div class="quote-sheet">
                 <!-- Minimal Header -->
                 <div style="display: flex; justify-content: space-between; align-items: start; padding-bottom: 30px; border-bottom: 1px solid var(--text); margin-bottom: 40px;">
                     <div style="background: transparent !important; margin-top: 0; padding: 0;">
@@ -239,6 +239,7 @@ function renderInvoicePreview(invoice) {
                 ` : ''}
                 
                 <!-- Lines Table -->
+                <div class="doc-table-scroll">
                 <table style="width: 100%; border-collapse: collapse; margin-bottom: 40px;">
                     <thead>
                         <tr style="border-bottom: 2px solid var(--text);">
@@ -263,6 +264,7 @@ function renderInvoicePreview(invoice) {
                         `).join('')}
                     </tbody>
                 </table>
+                </div>
                 
                 <!-- Totals -->
                 <div style="display: flex; justify-content: flex-end; margin-bottom: 40px;">
@@ -305,6 +307,7 @@ function renderInvoicePreview(invoice) {
             </div>
         </div>
     `;
+    if (window.lucide) { try { lucide.createIcons(); } catch (e) { /* ignore */ } }
 }
 
 // Send invoice
