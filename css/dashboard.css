@@ -32,10 +32,9 @@ body {
     height: 90px;
     width: auto;
     margin-left: calc((100vw - 1600px) / 2 - 10px);
-    border: 1px solid var(--accent);
-    border-radius: 4px;
-    padding: 2px 4px;
-    background: var(--surface);
+    /* Logoet har selv gul ramme + moerk baggrund i billedet - ingen CSS-kant/baggrund her,
+       ellers kommer en hvid ring mellem den ekstra kant og logoets egen streg */
+    display: block;
     box-sizing: border-box;
 }
 

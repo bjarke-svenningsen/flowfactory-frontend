@@ -679,13 +679,7 @@ body, .dashboard { background: var(--bg-page); }
     box-shadow: none;
 }
 .top-nav, .top-nav .user-info span, .top-nav .nav-right { color: var(--surface); }
-.top-nav .logo-nav {
-    border: 1px solid var(--accent);
-    border-radius: 4px;
-    padding: 2px 4px;
-    background: var(--surface);
-    box-sizing: border-box;
-}
+/* .top-nav .logo-nav: ingen CSS-kant/baggrund - logoet har selv gul ramme + moerk baggrund i billedet */
 
 /* Log ud: lys knap */
 .logout-btn {
