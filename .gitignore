@@ -1,0 +1,9 @@
+# Hemmeligheder / miljø-filer
+.env
+.env.*
+!.env.example
+backend/breeze-portal-backend/.env.backup
+
+# Database
+*.db
+*.db-journal
