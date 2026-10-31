@@ -188,6 +188,8 @@ h1 { font-size: var(--font-size-title); }
     display: inline-flex;
     align-items: center;
     gap: 8px;
+    flex: 0 0 auto;          /* faner krymper/wrappes aldrig */
+    white-space: nowrap;
     transition: color var(--transition), border-color var(--transition);
 }
 .tab:hover:not(.active) { color: var(--text); border-bottom-color: var(--border); }
