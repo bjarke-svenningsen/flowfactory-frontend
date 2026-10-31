@@ -98,6 +98,38 @@ async function createCompanyFolder() {
 // Track expanded folders
 let expandedFolders = new Set();
 
+// --- Fælles filer-hjælpere ---
+// Primær firmamappe = top-level firmamappe med LAVESTE id (vises som "Fælles filer").
+// Robust: findes der flere øverste (fx fra gammel admin-knap + auto-oprettelse),
+// vises de øvrige med deres rigtige navn - intet slettes eller rettes i DB.
+function getPrimaryCompanyFolder() {
+    const tops = allFolders.filter(f => f.is_company_folder && !f.parent_id);
+    if (tops.length === 0) return null;
+    return tops.reduce((a, b) => (a.id <= b.id ? a : b));
+}
+
+function isTopCompanyFolder(folder) {
+    return !!(folder && folder.is_company_folder && !folder.parent_id);
+}
+
+function isInCompanyTreeClient(folder) {
+    let cur = folder;
+    const guard = new Set();
+    while (cur && !guard.has(cur.id)) {
+        guard.add(cur.id);
+        if (cur.is_company_folder) return true;
+        cur = cur.parent_id ? allFolders.find(f => f.id === cur.parent_id) : null;
+    }
+    return false;
+}
+
+// Visningsnavn: kun den primære top-firmamappe hedder "Fælles filer"
+function folderDisplayName(folder) {
+    const primary = getPrimaryCompanyFolder();
+    if (primary && folder.id === primary.id) return 'Fælles filer';
+    return folder.name || 'Mappe';
+}
+
 // Render folder tree: kun rigtige steder - Fælles filer, Mine filer (roden), Mine mapper
 function renderFolderTree() {
     const tree = document.getElementById('folderTree');
@@ -117,10 +149,17 @@ function renderFolderTree() {
     };
 
     // Fælles filer (firmamappe) - fast øverst
-    const companyFolders = allFolders.filter(f => f.is_company_folder && !f.parent_id).sort(bySortOrder);
+    const companyTops = allFolders.filter(f => isTopCompanyFolder(f)).sort((a, b) => a.id - b.id);
     html += '<div class="tree-section-label">Fælles filer</div>';
-    if (companyFolders.length > 0) {
-        html += renderFolderBranch(companyFolders, 0, true);
+    if (companyTops.length > 0) {
+        const primary = companyTops[0];
+        const rest = companyTops.slice(1);
+        let branch = renderFolderBranch([primary], 0, { companyTop: true });
+        if (rest.length > 0) {
+            // Flere øverste firmamapper: vis med rigtige navne indrykket under den primære
+            branch += renderFolderBranch(rest, 1);
+        }
+        html += branch;
     } else {
         html += '<div class="tree-empty-note">Oprettes automatisk</div>';
     }
@@ -148,7 +187,9 @@ function renderFolderTree() {
 }
 
 // Render folder branch recursively (tree-node markup m. Lucide-ikoner)
-function renderFolderBranch(folders, level, isCompany = false) {
+// opts.companyTop = sand KUN for den øverste "Fælles filer"-node; børn vises med rigtige navne
+function renderFolderBranch(folders, level, opts = {}) {
+    const companyTop = !!(opts && opts.companyTop);
     let html = '';
 
     folders.forEach(folder => {
@@ -163,13 +204,13 @@ function renderFolderBranch(folders, level, isCompany = false) {
         const hasChildren = childFolders.length > 0;
         const isExpanded = expandedFolders.has(folder.id);
         const isSelected = currentFolderId === folder.id;
-        const displayName = isCompany ? 'Fælles filer' : folder.name;
+        const displayName = companyTop ? 'Fælles filer' : folderDisplayName(folder);
         const safeName = displayName.replace(/'/g, "\\'");
         const indent = level * 16;
-        const canDragFolder = !isCompany;
+        const canDragFolder = !companyTop;
 
         html += `
-            <div class="tree-node ${isSelected ? 'active' : ''} ${isCompany ? 'company-node' : ''}" style="padding-left: ${indent}px;"
+            <div class="tree-node ${isSelected ? 'active' : ''} ${companyTop ? 'company-node' : ''}" style="padding-left: ${indent}px;"
                  onclick="openFolder(${folder.id}, '${safeName}')"
                  oncontextmenu="showFolderContextMenu(event, ${folder.id}, '${safeName}'); return false;"
                  data-folder-id="${folder.id}"
@@ -178,15 +219,15 @@ function renderFolderBranch(folders, level, isCompany = false) {
                  ondragover="handleFolderDragOver(event)"
                  ondragleave="handleFolderDragLeave(event)">
                 <span class="tree-chevron" onclick="toggleFolder(event, ${folder.id})">${hasChildren ? '<i data-lucide="' + (isExpanded ? 'chevron-down' : 'chevron-right') + '"></i>' : ''}</span>
-                <i data-lucide="${isCompany ? 'building-2' : 'folder'}"></i>
-                <span class="tree-label">${displayName}</span>
+                <i data-lucide="${companyTop ? 'building-2' : 'folder'}"></i>
+                <span class="tree-label">${escapeFileName(displayName)}</span>
                 ${fileCount > 0 ? '<span class="tree-count">' + fileCount + '</span>' : ''}
             </div>
         `;
 
         // Render children if expanded
         if (hasChildren && isExpanded) {
-            html += renderFolderBranch(childFolders, level + 1, isCompany);
+            html += renderFolderBranch(childFolders, level + 1);
         }
     });
 
@@ -366,7 +407,7 @@ function renderBreadcrumb() {
         path.forEach((f, i) => {
             const last = i === path.length - 1;
             html += '<span class="crumb-sep">/</span>';
-            html += '<span class="crumb-item' + (last ? ' current' : '') + '" onclick="openFolder(' + f.id + ', \'' + (f.is_company_folder ? 'Fælles filer' : f.name).replace(/'/g, "\\'") + '\')">' + escapeFileName(f.is_company_folder ? 'Fælles filer' : f.name) + '</span>';
+            html += '<span class="crumb-item' + (last ? ' current' : '') + '" onclick="openFolder(' + f.id + ', \'' + folderDisplayName(f).replace(/'/g, "\\'") + '\')">' + escapeFileName(folderDisplayName(f)) + '</span>';
         });
     } else {
         html += '<span class="crumb-sep">/</span><span class="crumb-item current">' + (names[currentFilter] || 'Alle filer') + '</span>';
@@ -958,6 +999,23 @@ function showFolderContextMenu(event, folderId, folderName) {
     selectedFolderId = folderId;
     selectedFolderName = folderName;
     
+    // Rettigheder: top-"Fælles filer" må kun omdøbes/flyttes/slettes af admins.
+    // Undermapper i Fælles filer: kun creator eller admin.
+    const folder = allFolders.find(f => f.id === folderId);
+    const me = JSON.parse(sessionStorage.getItem('user') || '{}');
+    const isAdmin = !!me.is_admin;
+    const isOwner = !!(folder && folder.created_by === getCurrentUserId());
+    const isPrimaryTop = folder && folder.id === (getPrimaryCompanyFolder() || {}).id;
+    const canManage = folder ? (isAdmin || (isPrimaryTop ? false : isOwner)) : true;
+    
+    const setItem = (id, show) => {
+        const el = document.getElementById(id);
+        if (el) el.style.display = show ? '' : 'none';
+    };
+    setItem('ctxFolderRename', canManage);
+    setItem('ctxFolderDelete', canManage);
+    setItem('ctxFolderMove', canManage);
+    
     const folderContextMenu = document.getElementById('folderContextMenu');
     folderContextMenu.style.display = 'block';
     folderContextMenu.style.left = event.pageX + 'px';
@@ -1041,7 +1099,12 @@ async function deleteFolderSelected() {
     const folderContextMenu = document.getElementById('folderContextMenu');
     if (folderContextMenu) folderContextMenu.style.display = 'none';
     
-    if (!await winConfirm(`Er du sikker på, at du vil slette mappen "${selectedFolderName}"?`, 'Slet mappe')) return;
+    const folder = allFolders.find(f => f.id === selectedFolderId);
+    const isEmpty = folder && !allFiles.some(x => x.folder_id === folder.id) && !allFolders.some(x => x.parent_id === folder.id);
+    const confirmMsg = isEmpty
+        ? `Er du sikker på, at du vil slette mappen "${selectedFolderName}"?`
+        : `Mappen "${selectedFolderName}" er ikke tom.\nFiler og undermapper slettes ikke automatisk - tom mappen først.\nPrøv at slette alligevel?`;
+    if (!await winConfirm(confirmMsg, 'Slet mappe')) return;
     
     try {
         const token = sessionStorage.getItem('token');
@@ -1208,11 +1271,11 @@ function cancelCut() {
 function currentPasteTarget() {
     if (selectedFolderId !== null && selectedFolderId !== undefined) {
         const f = allFolders.find(function (x) { return x.id === selectedFolderId; });
-        return { id: selectedFolderId, name: f ? (f.is_company_folder ? "Fælles filer" : f.name) : selectedFolderName, company: !!(f && f.is_company_folder) };
+        return { id: selectedFolderId, name: f ? folderDisplayName(f) : selectedFolderName, company: !!(f && isInCompanyTreeClient(f)) };
     }
     if (currentFilter === "folder" && currentFolderId) {
         const f2 = allFolders.find(function (x) { return x.id === currentFolderId; });
-        return { id: currentFolderId, name: f2 ? (f2.is_company_folder ? "Fælles filer" : f2.name) : "mappen", company: !!(f2 && f2.is_company_folder) };
+        return { id: currentFolderId, name: f2 ? folderDisplayName(f2) : "mappen", company: !!(f2 && isInCompanyTreeClient(f2)) };
     }
     return { id: null, name: "Mine filer", company: false };
 }
@@ -1533,7 +1596,7 @@ async function handleFolderDrop(event, folderId) {
 
         const target = allFolders.find(f => f.id === folderId);
         if (!target) return;
-        if (target.is_company_folder) return; // Fælles filer holder sin plads
+        if (isTopCompanyFolder(target)) return; // top-"Fælles filer" holder sin plads
 
         const rect = event.currentTarget.getBoundingClientRect();
         const inTopHalf = (event.clientY - rect.top) < rect.height / 2;
@@ -1727,6 +1790,63 @@ function initResizableColumns() {
 
 // ===== Trin a2: helpers, flyt-dialog og deling =====
 
+// "Flyt mappe til..."-dialog (mapper kan flyttes til en anden mappe).
+// Top-"Fælles filer" kan ikke flyttes (håndteres i backend).
+async function moveFolderSelected() {
+    if (selectedFolderId === null || selectedFolderId === undefined) return;
+    const folder = allFolders.find(f => f.id === selectedFolderId);
+    if (!folder) return;
+    if (isTopCompanyFolder(folder)) {
+        await winAlert('"Fælles filer" kan ikke flyttes.', 'Ikke tilladt');
+        return;
+    }
+
+    const opts = [{ id: null, name: 'Mine filer (roden)', indent: 0 }];
+    const primary = getPrimaryCompanyFolder();
+    allFolders
+        .filter(f => f.id !== folder.id && !(primary && f.id === primary.id))
+        .forEach(f => {
+            // Undgå at flytte ind i egen efterkommer (ville skabe løkke)
+            let cur = f;
+            const guard = new Set();
+            let isDescendant = false;
+            while (cur && !guard.has(cur.id)) {
+                guard.add(cur.id);
+                if (cur.id === folder.id) { isDescendant = true; break; }
+                cur = cur.parent_id ? allFolders.find(x => x.id === cur.parent_id) : null;
+            }
+            if (isDescendant) return;
+            opts.push({ id: f.id, name: folderDisplayName(f), indent: getFolderPath(f.id).length - 1 });
+        });
+
+    const listText = opts.map((o, i) => `${i + 1}) ${'　'.repeat(o.indent)}${o.name}`).join('\n');
+    const answer = await winPrompt(`Vælg destination for "${folderDisplayName(folder)}" (indtast nummer):\n\n${listText}`, '', 'Flyt mappe');
+    if (answer === null || !answer.trim()) return;
+    const pick = parseInt(answer, 10);
+    if (isNaN(pick) || pick < 1 || pick > opts.length) {
+        await winAlert('Ugyldigt valg.', 'Fejl');
+        return;
+    }
+    const chosen = opts[pick - 1];
+
+    const token = sessionStorage.getItem('token');
+    try {
+        const resp = await fetch(`${API_BASE}/folders/${folder.id}/position`, {
+            method: 'PUT',
+            headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ parent_id: chosen.id === null ? null : chosen.id, before_id: null })
+        });
+        if (!resp.ok) {
+            const err = await resp.json().catch(() => ({}));
+            throw new Error(err.error || 'Kunne ikke flytte mappen');
+        }
+        await loadFolders();
+        await winAlert(`Mappen er flyttet.`, 'Flyttet');
+    } catch (e) {
+        await winAlert(e.message, 'Fejl');
+    }
+}
+
 // Indlogget bruger-id (null hvis ukendt)
 function getCurrentUserId() {
     try {
@@ -1751,15 +1871,14 @@ function moveSelectedToFolder() {
     const file = findFileAnywhere(selectedFileId);
     if (!file) return;
 
-    const companyFolder = allFolders.find(f => f.is_company_folder && !f.parent_id);
+    const primary = getPrimaryCompanyFolder();
     const opts = [{ id: null, name: 'Mine filer', company: false, indent: 0 }];
-    allFolders.filter(f => !f.is_company_folder).forEach(f => {
-        const depth = getFolderPath(f.id).length - 1;
-        opts.push({ id: f.id, name: f.name, company: false, indent: depth });
-    });
-    if (companyFolder) {
-        opts.push({ id: companyFolder.id, name: 'Fælles filer', company: true, indent: 0 });
-    }
+    allFolders
+        .filter(f => !(primary && f.id === primary.id)) // top-"Fælles filer" selv er ikke mål
+        .forEach(f => {
+            const depth = getFolderPath(f.id).length - 1;
+            opts.push({ id: f.id, name: folderDisplayName(f), company: isInCompanyTreeClient(f), indent: depth });
+        });
 
     const old = document.getElementById('moveFileDialog');
     if (old) old.remove();

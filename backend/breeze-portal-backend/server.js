@@ -229,6 +229,29 @@ function canAccessCompanyFolder(user) {
   return !!user;
 }
 
+// SQL-fragment: alle mapper i Fælles filer-træet (top-firmamapper + alle efterkommere).
+// Virker uanset om børn har arvet is_company_folder-flaget eller ej.
+const COMPANY_TREE_SQL = `
+  WITH RECURSIVE company_tree AS (
+    SELECT id FROM folders WHERE is_company_folder = 1
+    UNION
+    SELECT f.id FROM folders f JOIN company_tree ct ON f.parent_id = ct.id
+  )`;
+
+// Sandt hvis mappen ligger i Fælles filer-træet (top-firmamappe ELLER efterkommer)
+async function isInCompanyTree(folder) {
+  if (!folder) return false;
+  let cur = folder;
+  const guard = new Set();
+  while (cur && !guard.has(cur.id)) {
+    guard.add(cur.id);
+    if (cur.is_company_folder) return true;
+    if (!cur.parent_id) return false;
+    cur = await db.get('SELECT id, parent_id, is_company_folder FROM folders WHERE id = ?', [cur.parent_id]);
+  }
+  return false;
+}
+
 async function deleteR2ObjectIfUnused(storageKey, excludeTable, excludeId) {
   if (!storageKey) return;
   for (const table of R2_KEY_TABLES) {
@@ -729,7 +752,7 @@ app.post('/api/files/upload', auth, upload.single('file'), async (req, res) => {
         return res.status(404).json({ error: 'Folder not found' });
       }
       const actorUser = await db.get('SELECT is_admin FROM users WHERE id = ?', [req.user.id]);
-      if (targetFolder.created_by !== req.user.id && !(targetFolder.is_company_folder && canAccessCompanyFolder(req.user)) && !actorUser.is_admin) {
+      if (targetFolder.created_by !== req.user.id && !((await isInCompanyTree(targetFolder)) && canAccessCompanyFolder(req.user)) && !actorUser.is_admin) {
         return res.status(403).json({ error: 'Permission denied - folder access' });
       }
     }
@@ -786,21 +809,26 @@ app.post('/api/folders', auth, async (req, res) => {
   const { name, parent_id, is_company_folder } = req.body;
   if (!name) return res.status(400).json({ error: 'Folder name required' });
   
-  // Check if parent folder is a company folder - inherit that status
+  const actor = await db.get('SELECT is_admin FROM users WHERE id = ?', [req.user.id]);
+
+  // Kun eksplicitte top-firmamapper får flaget - børn nedarver IKKE.
+  // Tilhørsforhold til Fælles filer bestemmes af parent_id-kæden (isInCompanyTree).
   let finalIsCompanyFolder = is_company_folder ? 1 : 0;
-  
+
   if (parent_id) {
-    const parentFolder = await db.get('SELECT is_company_folder FROM folders WHERE id = ?', [parent_id]);
-    if (parentFolder && parentFolder.is_company_folder) {
-      // Inherit company folder status from parent
-      finalIsCompanyFolder = 1;
+    const parentFolder = await db.get('SELECT * FROM folders WHERE id = ?', [parent_id]);
+    if (!parentFolder) {
+      return res.status(404).json({ error: 'Parent folder not found' });
+    }
+    // Skriveadgang til parent: ejer, Fælles filer-træet (via canAccessCompanyFolder) eller admin
+    if (!(parentFolder.created_by === req.user.id || ((await isInCompanyTree(parentFolder)) && canAccessCompanyFolder(req.user)) || actor.is_admin)) {
+      return res.status(403).json({ error: 'Permission denied - folder access' });
     }
   }
-  
+
   // Only admins can create top-level company folders
   if (is_company_folder && !parent_id) {
-    const user = await db.get('SELECT is_admin FROM users WHERE id = ?', [req.user.id]);
-    if (!user || !user.is_admin) {
+    if (!actor.is_admin) {
       return res.status(403).json({ error: 'Only admins can create company folders' });
     }
   }
@@ -822,12 +850,13 @@ app.post('/api/folders', auth, async (req, res) => {
 
 // Get all folders (user-specific + company folders)
 app.get('/api/folders', auth, async (req, res) => {
-  // Get user's personal folders + company folders
+  // Get user's personal folders + everything in the Fælles filer tree
   const folders = await db.all(`
+    ${COMPANY_TREE_SQL}
     SELECT f.*, u.name as creator_name
     FROM folders f
     JOIN users u ON f.created_by = u.id
-    WHERE f.created_by = ? OR f.is_company_folder = 1
+    WHERE f.created_by = ? OR f.id IN (SELECT id FROM company_tree)
     ORDER BY f.is_company_folder DESC, f.name ASC
   `, [req.user.id]);
   
@@ -851,6 +880,10 @@ app.put('/api/folders/:id', auth, async (req, res) => {
   
   // Check if user owns folder or is admin
   const user = await db.get('SELECT is_admin FROM users WHERE id = ?', [req.user.id]);
+  // Top-"Fælles filer" kan kun omdøbes af admins
+  if (folder.is_company_folder && !folder.parent_id && !user.is_admin) {
+    return res.status(403).json({ error: 'Fælles filer kan ikke omdøbes' });
+  }
   if (folder.created_by !== req.user.id && !user.is_admin) {
     return res.status(403).json({ error: 'Permission denied' });
   }
@@ -880,14 +913,41 @@ app.put('/api/folders/:id/position', auth, async (req, res) => {
     if (folder.created_by !== req.user.id && !user.is_admin) {
       return res.status(403).json({ error: 'Permission denied' });
     }
-    if (folder.is_company_folder) {
+    if (folder.is_company_folder && !folder.parent_id) {
       return res.status(400).json({ error: 'Fælles filer kan ikke flyttes' });
+    }
+
+    // Valgfri flytning til ny parent: { parent_id: <id|null> }
+    let currentParent = folder.parent_id;
+    if (Object.prototype.hasOwnProperty.call(req.body, 'parent_id')) {
+      const newParentId = req.body.parent_id === null || req.body.parent_id === '' ? null : Number(req.body.parent_id);
+      if (newParentId !== folder.parent_id) {
+        if (newParentId !== null) {
+          const target = await db.get('SELECT * FROM folders WHERE id = ?', [newParentId]);
+          if (!target) return res.status(404).json({ error: 'Destination folder not found' });
+          // Løkke-vagt: destination må ikke være folder selv eller en efterkommer
+          let cur = target;
+          const guard = new Set();
+          while (cur && !guard.has(cur.id)) {
+            guard.add(cur.id);
+            if (cur.id === folderId) return res.status(400).json({ error: 'Kan ikke flytte en mappe ind i sig selv eller en undermappe' });
+            if (!cur.parent_id) break;
+            cur = await db.get('SELECT id, parent_id FROM folders WHERE id = ?', [cur.parent_id]);
+          }
+          // Skriveadgang til destination: ejer, Fælles filer-træet eller admin
+          if (!(target.created_by === req.user.id || ((await isInCompanyTree(target)) && canAccessCompanyFolder(req.user)) || user.is_admin)) {
+            return res.status(403).json({ error: 'Permission denied - destination folder' });
+          }
+        }
+        await db.run('UPDATE folders SET parent_id = ? WHERE id = ?', [newParentId, folderId]);
+        currentParent = newParentId;
+      }
     }
 
     // Søskende i samme parent (sorteres om samlet)
     const siblings = await db.all(
       'SELECT * FROM folders WHERE parent_id IS ? AND id != ? ORDER BY COALESCE(sort_order, 2147483647), name ASC',
-      [folder.parent_id, folderId]
+      [currentParent, folderId]
     );
 
     let list = siblings.slice();
@@ -923,6 +983,10 @@ app.delete('/api/folders/:id', auth, async (req, res) => {
   
   // Check if user owns folder or is admin
   const user = await db.get('SELECT is_admin FROM users WHERE id = ?', [req.user.id]);
+  // Top-"Fælles filer" kan kun slettes af admins
+  if (folder.is_company_folder && !folder.parent_id && !user.is_admin) {
+    return res.status(403).json({ error: 'Fælles filer kan ikke slettes' });
+  }
   if (folder.created_by !== req.user.id && !user.is_admin) {
     return res.status(403).json({ error: 'Permission denied' });
   }
@@ -974,14 +1038,15 @@ app.get('/api/files', auth, async (req, res) => {
     return res.json(files);
   }
   
-  // Default: Get files owned by this user OR in company folders
+  // Default: Get files owned by this user OR in the Fælles filer tree
   let query = `
+    ${COMPANY_TREE_SQL}
     SELECT f.*, u.name as uploader_name, o.name as owner_name
     FROM files f
     JOIN users u ON f.uploaded_by = u.id
     LEFT JOIN users o ON f.owner_id = o.id
     LEFT JOIN folders folder ON f.folder_id = folder.id
-    WHERE (f.owner_id = ? OR folder.is_company_folder = 1)
+    WHERE (f.owner_id = ? OR folder.id IN (SELECT id FROM company_tree))
   `;
   
   const params = [req.user.id];
@@ -1092,7 +1157,7 @@ app.put('/api/files/:id/move', auth, async (req, res) => {
     }
     
     // Check if user has access to folder (owner, company folder via canAccessCompanyFolder, or admin)
-    if (folder.created_by !== req.user.id && !(folder.is_company_folder && canAccessCompanyFolder(user)) && !user.is_admin) {
+    if (folder.created_by !== req.user.id && !((await isInCompanyTree(folder)) && canAccessCompanyFolder(user)) && !user.is_admin) {
       return res.status(403).json({ error: 'Permission denied - folder access' });
     }
   }
@@ -1126,7 +1191,7 @@ app.post("/api/files/:id/copy", auth, async (req, res) => {
     // Læseadgang: egen fil, delt med mig, fil i firmamappen eller admin
     const sharedWithMe = await db.get("SELECT id FROM file_shares WHERE file_id = ? AND shared_with_user_id = ?", [fileId, me]);
     const srcFolder = file.folder_id ? await db.get("SELECT * FROM folders WHERE id = ?", [file.folder_id]) : null;
-    const fromCompany = !!(srcFolder && srcFolder.is_company_folder);
+    const fromCompany = !!(srcFolder && (await isInCompanyTree(srcFolder)));
     const canRead = file.uploaded_by === me || file.owner_id === me || user.is_admin || !!sharedWithMe || (fromCompany && canAccessCompanyFolder(user));
     if (!canRead) return res.status(403).json({ error: "Permission denied" });
 
@@ -1134,7 +1199,7 @@ app.post("/api/files/:id/copy", auth, async (req, res) => {
     if (targetFolderId) {
       const targetFolder = await db.get("SELECT * FROM folders WHERE id = ?", [targetFolderId]);
       if (!targetFolder) return res.status(404).json({ error: "Folder not found" });
-      const canWrite = targetFolder.created_by === me || (targetFolder.is_company_folder && canAccessCompanyFolder(user)) || user.is_admin;
+      const canWrite = targetFolder.created_by === me || ((await isInCompanyTree(targetFolder)) && canAccessCompanyFolder(user)) || user.is_admin;
       if (!canWrite) return res.status(403).json({ error: "Permission denied - folder access" });
     }
 
