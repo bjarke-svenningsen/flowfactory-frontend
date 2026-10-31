@@ -1286,8 +1286,6 @@ body {
 }
 
 .conv-time { font-size: 11px; color: var(--text-muted); white-space: nowrap; }
-    position: relative;
-}
 
 #chatInput {
     flex: 1;
