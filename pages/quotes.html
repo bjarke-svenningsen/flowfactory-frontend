@@ -11,11 +11,12 @@
 
 <!-- Tab Navigation -->
 <div class="tabs" style="margin-bottom: 20px;">
-    <button id="tabQuotes" onclick="switchOrderTab('quotes')" class="tab">Tilbud</button>
-    <button id="tabOrders" onclick="switchOrderTab('orders')" class="tab">Godkendte Ordre</button>
-    <button id="tabInvoiced" onclick="switchOrderTab('invoiced')" class="tab">Faktureret</button>
-    <button id="tabRejected" onclick="switchOrderTab('rejected')" class="tab">Afvist</button>
-    <button id="tabCustomers" onclick="switchOrderTab('customers')" class="tab">Kunder</button>
+    <button id="tabQuotes" onclick="switchOrderTab('quotes')" class="tab">Tilbud <span class="tab-count" id="tabCountQuotes"></span></button>
+    <button id="tabOrders" onclick="switchOrderTab('orders')" class="tab">Godkendte Ordre <span class="tab-count" id="tabCountOrders"></span></button>
+    <button id="tabInProgress" onclick="switchOrderTab('in_progress')" class="tab">Igangværende <span class="tab-count" id="tabCountInProgress"></span></button>
+    <button id="tabInvoiced" onclick="switchOrderTab('invoiced')" class="tab">Faktureret <span class="tab-count" id="tabCountInvoiced"></span></button>
+    <button id="tabRejected" onclick="switchOrderTab('rejected')" class="tab">Afvist <span class="tab-count" id="tabCountRejected"></span></button>
+    <button id="tabCustomers" onclick="switchOrderTab('customers')" class="tab">Kunder <span class="tab-count" id="tabCountCustomers"></span></button>
 </div>
 
 <!-- TAB 1: TILBUD -->
@@ -39,22 +40,27 @@
     </div>
 </div>
 
-<!-- TAB 2: ORDRE -->
+<!-- TAB 2: ORDRE (godkendt, ikke startet) -->
 <div id="orderTabOrders" class="order-tab-content" style="display: none;">
     <div id="ordersContainer"></div>
 </div>
 
-<!-- TAB 3: FAKTURERET -->
+<!-- TAB 3: IGANGVÆRENDE -->
+<div id="orderTabInProgress" class="order-tab-content" style="display: none;">
+    <div id="inProgressContainer"></div>
+</div>
+
+<!-- TAB 4: FAKTURERET -->
 <div id="orderTabInvoiced" class="order-tab-content" style="display: none;">
     <div id="invoicingContainer"></div>
 </div>
 
-<!-- TAB 4: AFVIST -->
+<!-- TAB 5: AFVIST -->
 <div id="orderTabRejected" class="order-tab-content" style="display: none;">
     <div id="rejectedContainer"></div>
 </div>
 
-<!-- TAB 5: KUNDER -->
+<!-- TAB 6: KUNDER -->
 <div id="orderTabCustomers" class="order-tab-content" style="display: none;">
     <div class="page-header">
         <div></div>

@@ -523,6 +523,40 @@ h1 { font-size: var(--font-size-title); }
 }
 .field-input:focus { outline: 2px solid var(--accent); outline-offset: -1px; border-color: var(--accent); }
 
+/* ---------- Fase 2: Igangværende-fane, antal-badges og ordre-stepper ---------- */
+.tab-count {
+    display: inline-block; min-width: 20px; padding: 1px 7px;
+    margin-left: 6px; border-radius: 999px;
+    background: var(--accent); color: var(--accent-contrast, #1F2933);
+    font-size: 11px; font-weight: 700; text-align: center; vertical-align: 1px;
+}
+.tab.active .tab-count { background: #1F2933; color: #FFFFFF; }
+
+.order-stepper {
+    display: flex; align-items: center; gap: 0;
+    margin-bottom: 18px; flex-wrap: wrap;
+}
+.order-stepper-step {
+    display: flex; align-items: center; gap: 8px;
+    padding: 8px 14px; border-radius: 999px;
+    font-size: 13px; font-weight: 600;
+    color: var(--text-muted); background: var(--bg, #F4F6F8);
+    border: 1px solid var(--border);
+}
+.order-stepper-step .lucide, .order-stepper-step svg { width: 15px; height: 15px; }
+.order-stepper-step.done { color: var(--color-green); background: var(--success-soft); border-color: var(--color-green); }
+.order-stepper-step.current { color: #1E40AF; background: #DBEAFE; border-color: #1E40AF; }
+.order-stepper-line {
+    width: 28px; height: 2px; margin: 0 6px;
+    background: var(--border); flex-shrink: 0;
+}
+.order-stepper-line.done { background: var(--color-green); }
+
+.start-order-modal { max-width: 480px; }
+.start-order-info { margin: 0 0 8px 0; color: var(--text-muted); font-size: 14px; }
+.start-order-info strong { color: var(--text); }
+.start-order-fields { display: grid; gap: 14px; margin-top: 16px; }
+
 /* ---------- Trin 2: kompatibilitetslag — gamle klasser får det nye look ---------- */
 :root {
     --success-soft: #E6F4EA;

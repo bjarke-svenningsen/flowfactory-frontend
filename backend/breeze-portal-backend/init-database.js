@@ -413,6 +413,32 @@ export async function initializeDatabase() {
         console.log('ℹ️  order_city column already exists in quotes table');
       }
     }
+
+    // Arbejdsstatus for ordrer (fase 2: Igangværende) — 'approved' | 'in_progress'
+    try {
+      await db.run(`ALTER TABLE quotes ADD COLUMN order_stage TEXT DEFAULT NULL`);
+      console.log('✅ Added order_stage column to quotes table');
+    } catch (error) {
+      if (error.message.includes('duplicate column') || error.message.includes('already exists')) {
+        console.log('ℹ️  order_stage column already exists in quotes table');
+      }
+    }
+    try {
+      await db.run(`ALTER TABLE quotes ADD COLUMN started_at TIMESTAMP DEFAULT NULL`);
+      console.log('✅ Added started_at column to quotes table');
+    } catch (error) {
+      if (error.message.includes('duplicate column') || error.message.includes('already exists')) {
+        console.log('ℹ️  started_at column already exists in quotes table');
+      }
+    }
+    try {
+      await db.run(`ALTER TABLE quotes ADD COLUMN started_by INTEGER DEFAULT NULL`);
+      console.log('✅ Added started_by column to quotes table');
+    } catch (error) {
+      if (error.message.includes('duplicate column') || error.message.includes('already exists')) {
+        console.log('ℹ️  started_by column already exists in quotes table');
+      }
+    }
     
     // Migrate old customer contact data to customer_contacts table
     try {

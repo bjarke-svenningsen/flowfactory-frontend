@@ -725,21 +725,33 @@ const timePage = {
             });
             const data = await response.json();
             
-            // Filter for accepted orders (status = 'accepted')
-            // Exclude extra work orders to prevent duplicates (only show main orders)
-            const acceptedOrders = data.filter(q => q.status === 'accepted' && !q.is_extra_work && !q.parent_order_id);
-            
+            // Filtrer: kun IGANGVÆRENDE ordrer kan vælges til tidsregistrering.
+            // Godkendte men ikke-startede ordrer vises låste ("Ikke startet").
+            const allOrders = data.filter(q => q.status === 'accepted' && !q.is_extra_work && !q.parent_order_id);
+            const startedOrders = allOrders.filter(q => q.order_stage === 'in_progress');
+            const notStartedOrders = allOrders.filter(q => q.order_stage !== 'in_progress');
+
             orderSelect.innerHTML = '<option value="">Vælg ordre</option>';
-            
-            if (acceptedOrders.length > 0) {
-                acceptedOrders.forEach(order => {
+
+            if (startedOrders.length > 0 || notStartedOrders.length > 0) {
+                startedOrders.forEach(order => {
                     const option = document.createElement('option');
                     option.value = order.id;
                     option.textContent = `${order.order_number || order.quote_number} - ${order.customer_name}`;
                     orderSelect.appendChild(option);
                 });
+                notStartedOrders.forEach(order => {
+                    const option = document.createElement('option');
+                    option.value = order.id;
+                    option.disabled = true;
+                    option.textContent = `${order.order_number || order.quote_number} - ${order.customer_name} (Ikke startet)`;
+                    orderSelect.appendChild(option);
+                });
+                if (startedOrders.length === 0) {
+                    orderSelect.value = '';
+                }
             } else {
-                orderSelect.innerHTML = '<option value="">Ingen accepterede ordre (accepter først en ordre)</option>';
+                orderSelect.innerHTML = '<option value="">Ingen godkendte ordrer</option>';
             }
         } catch (error) {
             console.error('Error loading orders:', error);

@@ -934,7 +934,7 @@ function switchOrderTab(tab) {
     customersView.style.display = 'none';
     
     // Update button styles
-    const tabs = ['quotes', 'orders', 'invoiced', 'rejected', 'customers'];
+    const tabs = ['quotes', 'orders', 'in_progress', 'invoiced', 'rejected', 'customers'];
     tabs.forEach(t => {
         const btn = document.getElementById(`tab${t.charAt(0).toUpperCase() + t.slice(1)}`);
         const content = document.getElementById(`orderTab${t.charAt(0).toUpperCase() + t.slice(1)}`);
@@ -952,6 +952,8 @@ function switchOrderTab(tab) {
         loadQuotes();
     } else if (tab === 'orders') {
         loadOrders();
+    } else if (tab === 'in_progress') {
+        loadInProgress();
     } else if (tab === 'invoiced') {
         loadInvoiced();
     } else if (tab === 'rejected') {
@@ -978,25 +980,54 @@ function filterQuotesByStatus(status) {
     renderQuotesList();
 }
 
-// Load orders tab (accepted quotes not yet invoiced)
+// Load orders tab (accepted quotes not yet started)
 async function loadOrders() {
     try {
         const token = sessionStorage.getItem('token');
         const response = await fetch('/api/quotes', {
             headers: { 'Authorization': `Bearer ${token}` }
         });
-        
+
         if (!response.ok) throw new Error('Failed to load quotes');
-        
+
         const allQuotes = await response.json();
-        // Filter: only accepted orders that are NOT extra work (main orders only)
-        const orders = allQuotes.filter(q => q.status === 'accepted' && !q.is_extra_work);
-        
+        // Filter: godkendte ordrer der IKKE er startet endnu (order_stage = 'approved')
+        // Fallback: ordrer uden order_stage (gamle rækker) behandles som godkendte
+        const orders = allQuotes.filter(q => q.status === 'accepted' && !q.is_extra_work && (q.order_stage !== 'in_progress'));
+
+        setTabCount('Orders', orders.length);
         renderOrdersContent(orders);
     } catch (error) {
         console.error('Error loading orders:', error);
         alert('Kunne ikke indlæse ordrer: ' + error.message);
     }
+}
+
+// Load in-progress tab (started orders)
+async function loadInProgress() {
+    try {
+        const token = sessionStorage.getItem('token');
+        const response = await fetch('/api/quotes', {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+
+        if (!response.ok) throw new Error('Failed to load quotes');
+
+        const allQuotes = await response.json();
+        const inProgress = allQuotes.filter(q => q.status === 'accepted' && !q.is_extra_work && q.order_stage === 'in_progress');
+
+        setTabCount('InProgress', inProgress.length);
+        renderInProgressContent(inProgress);
+    } catch (error) {
+        console.error('Error loading in-progress orders:', error);
+        alert('Kunne ikke indlæse igangværende ordrer: ' + error.message);
+    }
+}
+
+// Set antal-badge på en fane
+function setTabCount(tabName, count) {
+    const el = document.getElementById(`tabCount${tabName}`);
+    if (el) el.textContent = count > 0 ? String(count) : '';
 }
 
 // Render orders content
@@ -1036,7 +1067,8 @@ function renderOrdersContent(orders) {
                     <div class="list-card-total"><span class="label">Total</span>${formatCurrency(order.total)}</div>
                 </div>
                 <div class="list-card-actions">
-                    ${btn('primary', 'eye', 'Se Ordre', { onclick: `viewQuote(${order.id})` })}
+                    ${btn('primary', 'play', 'Start Ordre', { onclick: `startOrder(${order.id})` })}
+                    ${btn('ghost', 'eye', 'Se Ordre', { onclick: `viewQuote(${order.id})` })}
                     ${btn('secondary', 'undo-2', 'Flyt til Tilbud', { onclick: `moveOrderBackToQuote(${order.id})` })}
                 </div>
             </div>
@@ -1047,7 +1079,180 @@ function renderOrdersContent(orders) {
     if (window.lucide) lucide.createIcons();
 }
 
-// Load rejected tab
+// Render in-progress content
+function renderInProgressContent(orders) {
+    const container = document.getElementById('inProgressContainer');
+
+    if (orders.length === 0) {
+        container.innerHTML = `
+            <div class="list-empty">
+                <div class="icon-box"><i data-lucide="loader"></i></div>
+                <h3>Ingen igangværende ordrer</h3>
+                <p>Start en godkendt ordre i fanen "Godkendte Ordre"</p>
+            </div>
+        `;
+        return;
+    }
+
+    let html = `<div class="list-section-head"><span class="title">Igangværende ordrer</span><span class="badge badge--sent">${orders.length}</span></div>`;
+    orders.forEach(order => {
+        const displayNumber = order.order_number || order.quote_number || 'N/A';
+        const fullOrderNumber = order.is_extra_work && order.parent_order_id
+            ? `${displayNumber}-${String(order.sub_number).padStart(2, '0')}`
+            : displayNumber;
+        const startedDate = order.started_at ? new Date(order.started_at).toLocaleDateString('da-DK') : '';
+
+        html += `
+            <div class="list-card list-card--sent">
+                <div class="list-card-head">
+                    <h4 class="list-card-title">Ordre ${fullOrderNumber}</h4>
+                    <span class="badge badge--sent">Igangværende</span>
+                    ${startedDate ? `<span class="list-card-sub">Startet ${startedDate}</span>` : ''}
+                </div>
+                <div class="list-card-grid">
+                    <div class="list-card-field"><span class="label">Kunde</span><span class="value">${order.customer_name}</span></div>
+                    <div class="list-card-field"><span class="label">Titel</span><span class="value">${order.title}</span></div>
+                    <div class="list-card-field"><span class="label">Oprettet af</span><span class="value">${order.created_by_name || 'Ukendt'}</span></div>
+                    <div class="list-card-total"><span class="label">Total</span>${formatCurrency(order.total)}</div>
+                </div>
+                <div class="list-card-actions">
+                    ${btn('primary', 'eye', 'Se Ordre', { onclick: `viewQuote(${order.id})` })}
+                    ${btn('secondary', 'receipt', 'Opret Faktura', { onclick: `createInvoiceFromOrder(${order.id})` })}
+                    ${btn('secondary', 'undo-2', 'Sæt tilbage til Godkendt', { onclick: `pauseOrder(${order.id})` })}
+                </div>
+            </div>
+        `;
+    });
+
+    container.innerHTML = html;
+    if (window.lucide) lucide.createIcons();
+}
+
+// "Start ordre"-dialog (manuel start af godkendt ordre)
+async function startOrder(orderId) {
+    try {
+        const token = sessionStorage.getItem('token');
+        const quoteRes = await fetch(`/api/quotes/${orderId}`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (!quoteRes.ok) throw new Error('Kunne ikke hente ordren');
+        const order = await quoteRes.json();
+
+        // Hent brugere til "ansvarlig"-vælgeren
+        let userOptions = '<option value="">— Vælg ansvarlig —</option>';
+        try {
+            const usersRes = await fetch('/api/users', {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (usersRes.ok) {
+                const users = await usersRes.json();
+                let currentUserId = null;
+                try {
+                    const me = JSON.parse(sessionStorage.getItem('currentUser') || 'null');
+                    currentUserId = me ? me.id : null;
+                } catch (e) { /* ingen gemt bruger */ }
+                users.forEach(u => {
+                    const selected = String(u.id) === String(currentUserId) ? ' selected' : '';
+                    userOptions += `<option value="${u.id}"${selected}>${u.name}</option>`;
+                });
+            }
+        } catch (e) { /* vælger forbliver med pladsholder */ }
+
+        // Dato = i dag (ISO, tidszone-sikker)
+        const today = new Date();
+        const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+
+        const overlay = document.createElement('div');
+        overlay.className = 'modal-overlay active';
+        overlay.id = 'startOrderModal';
+        overlay.innerHTML = `
+            <div class="modal-card start-order-modal">
+                <div class="modal-head">
+                    <h2><i data-lucide="play"></i> Start Ordre</h2>
+                    ${btn('ghost', 'x', '', { onclick: 'closeStartOrderModal()' })}
+                </div>
+                <p class="start-order-info"><strong>Ordre ${order.order_number || order.quote_number}</strong> — ${order.customer_name}</p>
+                <p class="start-order-info">Når ordren startes, kan der registreres tid, udgifter og materialer på den.</p>
+                <div class="start-order-fields">
+                    <div>
+                        <label class="field-label" for="startOrderDate">Startdato</label>
+                        <input type="date" id="startOrderDate" class="field-input" value="${todayStr}">
+                    </div>
+                    <div>
+                        <label class="field-label" for="startOrderResponsible">Ansvarlig</label>
+                        <select id="startOrderResponsible" class="field-input">${userOptions}</select>
+                    </div>
+                </div>
+                <div class="modal-actions" style="margin-top: 20px;">
+                    ${btn('secondary', 'x', 'Annuller', { onclick: 'closeStartOrderModal()' })}
+                    ${btn('primary', 'play', 'Start Ordre', { onclick: `submitStartOrder(${orderId})` })}
+                </div>
+            </div>
+        `;
+        document.body.appendChild(overlay);
+        if (window.lucide) lucide.createIcons();
+    } catch (error) {
+        console.error('Error opening start-order dialog:', error);
+        alert('Kunne ikke åbne start-dialogen: ' + error.message);
+    }
+}
+
+function closeStartOrderModal() {
+    const overlay = document.getElementById('startOrderModal');
+    if (overlay) overlay.remove();
+}
+
+async function submitStartOrder(orderId) {
+    const startDate = document.getElementById('startOrderDate')?.value;
+    const responsible = document.getElementById('startOrderResponsible')?.value;
+
+    try {
+        const token = sessionStorage.getItem('token');
+        const response = await fetch(`/api/quotes/${orderId}/start`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                start_date: startDate || null,
+                responsible_user_id: responsible ? Number(responsible) : null
+            })
+        });
+
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(data.error || 'Kunne ikke starte ordren');
+
+        closeStartOrderModal();
+        loadOrders();
+        loadInProgress();
+    } catch (error) {
+        console.error('Error starting order:', error);
+        alert('Kunne ikke starte ordren: ' + error.message);
+    }
+}
+
+// Sæt igangværende ordre tilbage til godkendt
+async function pauseOrder(orderId) {
+    if (!confirm('Sæt denne ordre tilbage til godkendt? Der kan ikke længere registreres tid på den.')) return;
+
+    try {
+        const token = sessionStorage.getItem('token');
+        const response = await fetch(`/api/quotes/${orderId}/pause`, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(data.error || 'Kunne ikke sætte ordren tilbage');
+
+        loadOrders();
+        loadInProgress();
+    } catch (error) {
+        console.error('Error pausing order:', error);
+        alert('Kunne ikke sætte ordren tilbage: ' + error.message);
+    }
+}
 async function loadRejected() {
     try {
         const token = sessionStorage.getItem('token');
@@ -1207,6 +1412,11 @@ window.saveAndPreviewQuote = saveAndPreviewQuote;
 window.downloadQuotePDF = downloadQuotePDF;
 window.switchOrderTab = switchOrderTab;
 window.filterQuotesByStatus = filterQuotesByStatus;
+window.startOrder = startOrder;
+window.closeStartOrderModal = closeStartOrderModal;
+window.submitStartOrder = submitStartOrder;
+window.pauseOrder = pauseOrder;
+window.loadInProgress = loadInProgress;
 window.loadOrders = loadOrders;
 window.loadRejected = loadRejected;
 window.acceptQuote = acceptQuote;

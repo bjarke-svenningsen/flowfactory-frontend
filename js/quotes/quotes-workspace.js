@@ -129,6 +129,8 @@ function renderWorkspace(data) {
     
     container.innerHTML = `
         <div style="max-width: 1400px; margin: 0 auto;">
+            <!-- Ordre-stepper: Godkendt → Igangværende → Faktureret -->
+            ${renderStageStepper(data.order)}
             <!-- Back button -->
             <div style="margin-bottom: 20px;">
                 <button onclick="closeWorkspace()" class="btn-secondary" style="min-height: 40px;">
@@ -402,7 +404,7 @@ function renderWorkspaceOverview(container) {
                         ` : ''}
                         <div style="padding-bottom: 15px; border-bottom: 1px solid var(--border);">
                             <div style="color: var(--text-muted); font-size: 13px; margin-bottom: 5px;">Status</div>
-                            ${getStatusBadge(currentWorkspaceOrder.status)}
+                            ${getStageBadge(currentWorkspaceOrder)}
                         </div>
                         ${currentWorkspaceOrder.accepted_at ? `
                         <div style="padding-bottom: 15px; border-bottom: 1px solid var(--border);">
@@ -1852,6 +1854,41 @@ if (document.readyState === 'loading') {
     }
 }
 
+// Ordre-stepper: viser arbejdsstatus Godkendt → Igangværende → Faktureret
+function renderStageStepper(order) {
+    const steps = [
+        { key: 'approved', icon: 'check-circle-2', label: 'Godkendt' },
+        { key: 'in_progress', icon: 'loader', label: 'Igangværende' },
+        { key: 'invoiced', icon: 'receipt', label: 'Faktureret' }
+    ];
+
+    let current = 0; // 0 = godkendt, 1 = igangværende, 2 = faktureret
+    if (order.order_stage === 'in_progress') current = 1;
+    if (order.has_approved_invoice) current = 2;
+
+    let html = '<div class="order-stepper">';
+    steps.forEach((step, i) => {
+        const cls = i < current ? 'done' : (i === current ? 'current' : '');
+        html += `<div class="order-stepper-step ${cls}"><i data-lucide="${step.icon}"></i> ${step.label}</div>`;
+        if (i < steps.length - 1) {
+            html += `<div class="order-stepper-line ${i < current ? 'done' : ''}"></div>`;
+        }
+    });
+    html += '</div>';
+    return html;
+}
+
+// Status-badge for ordre: viser arbejdsstatus (Faktureret/Igangværende) eller quote-status
+function getStageBadge(order) {
+    if (order.has_approved_invoice) {
+        return '<div style="font-weight: 600; font-size: 16px; color: var(--color-green);">Faktureret</div>';
+    }
+    if (order.order_stage === 'in_progress') {
+        return '<div style="font-weight: 600; font-size: 16px; color: #1E40AF;">Igangværende</div>';
+    }
+    return getStatusBadge(order.status);
+}
+
 // Helper function to get status badge HTML
 function getStatusBadge(status) {
     const statusConfig = {
@@ -1926,6 +1963,8 @@ window.toggleOrderDetailsEdit = toggleOrderDetailsEdit;
 window.cancelOrderDetailsEdit = cancelOrderDetailsEdit;
 window.saveOrderDetails = saveOrderDetails;
 window.getStatusBadge = getStatusBadge;
+window.getStageBadge = getStageBadge;
+window.renderStageStepper = renderStageStepper;
 window.filterMaterialSearch = filterMaterialSearch;
 window.selectExpenseMaterial = selectExpenseMaterial;
 window.recalcExpenseAmount = recalcExpenseAmount;

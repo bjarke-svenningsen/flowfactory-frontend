@@ -1754,7 +1754,12 @@ app.get('/api/quotes/:id', auth, async (req, res) => {
     JOIN users u ON qa.uploaded_by = u.id
     WHERE qa.quote_id = ?
   `, [quoteId]);
-  
+
+  // Flag: har ordren en godkendt (ikke-kladde) faktura? (bruges af stepper/badges)
+  const approvedInvoice = await db.get("SELECT id, status FROM invoices WHERE order_id = ? AND status != 'draft' LIMIT 1", [quoteId]);
+  quote.has_approved_invoice = !!approvedInvoice;
+  if (approvedInvoice) quote.approved_invoice_status = approvedInvoice.status;
+
   quote.lines = lines;
   quote.attachments = attachments;
   
@@ -2105,6 +2110,89 @@ app.post('/api/quotes/:id/revert', auth, async (req, res) => {
   res.json(updated);
 });
 
+// Start order (approved -> in_progress). MANUEL handling — ordren bliver
+// aldrig igangværende af sig selv (tidsregistrering, udgift, upload mv.
+// aendrer ALDRIG status — kun dette endpoint goer).
+app.post('/api/quotes/:id/start', auth, async (req, res) => {
+  const quoteId = Number(req.params.id);
+  const { start_date, responsible_user_id } = req.body || {};
+
+  const quote = await db.get('SELECT * FROM quotes WHERE id = ?', [quoteId]);
+  if (!quote) {
+    return res.status(404).json({ error: 'Ordre findes ikke' });
+  }
+  if (quote.status !== 'accepted') {
+    return res.status(400).json({ error: 'Ordren er ikke godkendt og kan derfor ikke startes' });
+  }
+  if (quote.order_stage === 'in_progress') {
+    return res.status(400).json({ error: 'Ordren er allerede igangværende' });
+  }
+
+  const startedBy = Number(responsible_user_id) || req.user.id;
+  const startedAt = start_date || null;
+
+  if (startedAt) {
+    await db.run('UPDATE quotes SET order_stage = ?, started_at = ?, started_by = ? WHERE id = ?', ['in_progress', startedAt, startedBy, quoteId]);
+  } else if (db._isProduction) {
+    await db.run('UPDATE quotes SET order_stage = ?, started_at = CURRENT_TIMESTAMP, started_by = ? WHERE id = ?', ['in_progress', startedBy, quoteId]);
+  } else {
+    await db.run("UPDATE quotes SET order_stage = ?, started_at = datetime('now'), started_by = ? WHERE id = ?", ['in_progress', startedBy, quoteId]);
+  }
+
+  let responsibleName = null;
+  if (Number(responsible_user_id)) {
+    const u = await db.get('SELECT name FROM users WHERE id = ?', [Number(responsible_user_id)]);
+    responsibleName = u ? u.name : null;
+  }
+
+  const desc = responsibleName
+    ? `Ordre startet (ansvarlig: ${responsibleName})`
+    : 'Ordre startet';
+  await logOrderEvent(quoteId, 'order_started', desc, req.user.id);
+
+  const updated = await db.get(`
+    SELECT q.*, c.company_name as customer_name, u.name as created_by_name
+    FROM quotes q
+    JOIN customers c ON q.customer_id = c.id
+    JOIN users u ON q.created_by = u.id
+    WHERE q.id = ?
+  `, [quoteId]);
+  updated.full_order_number = await getFullOrderNumber(updated);
+  res.json(updated);
+});
+
+// Set order back to approved (in_progress -> approved)
+app.post('/api/quotes/:id/pause', auth, async (req, res) => {
+  const quoteId = Number(req.params.id);
+
+  const quote = await db.get('SELECT * FROM quotes WHERE id = ?', [quoteId]);
+  if (!quote) {
+    return res.status(404).json({ error: 'Ordre findes ikke' });
+  }
+  if (quote.order_stage !== 'in_progress') {
+    return res.status(400).json({ error: 'Kun igangværende ordrer kan sættes tilbage til godkendt' });
+  }
+
+  // Bloker hvis ordren har en godkendt (ikke-kladde) faktura
+  const approvedInvoice = await db.get("SELECT id FROM invoices WHERE order_id = ? AND status != 'draft'", [quoteId]);
+  if (approvedInvoice) {
+    return res.status(400).json({ error: 'Ordren har en godkendt faktura og kan ikke sættes tilbage til godkendt' });
+  }
+
+  await db.run("UPDATE quotes SET order_stage = 'approved' WHERE id = ?", [quoteId]);
+  await logOrderEvent(quoteId, 'order_paused', 'Ordre sat tilbage til godkendt', req.user.id);
+
+  const updated = await db.get(`
+    SELECT q.*, c.company_name as customer_name, u.name as created_by_name
+    FROM quotes q
+    JOIN customers c ON q.customer_id = c.id
+    JOIN users u ON q.created_by = u.id
+    WHERE q.id = ?
+  `, [quoteId]);
+  updated.full_order_number = await getFullOrderNumber(updated);
+  res.json(updated);
+});
+
 // Create extra work on existing order
 app.post('/api/quotes/:id/extra-work', auth, async (req, res) => {
   const parentOrderId = Number(req.params.id);
@@ -2229,6 +2317,9 @@ app.post('/api/invoices/from-order/:orderId', auth, async (req, res) => {
   
   if (order.status !== 'accepted') {
     return res.status(400).json({ error: 'Order must be accepted before creating invoice' });
+  }
+  if (order.order_stage !== 'in_progress') {
+    return res.status(400).json({ error: 'Ordren skal være startet (igangværende), før der kan oprettes faktura' });
   }
   
   // Check if order already has an invoice (prevent duplicates)
@@ -2999,6 +3090,18 @@ app.post('/api/time-entries', auth, async (req, res) => {
     }
     // Kun ordre-registreringer må pege på en ordre
     const finalOrderId = entryType === 'order' ? order_id : null;
+
+    // Hård regel: der må KUN registreres timer på igangværende ordrer.
+    // En godkendt-men-ikke-startet ordre (order_stage='approved') afvises.
+    if (finalOrderId) {
+      const targetOrder = await db.get('SELECT status, order_stage FROM quotes WHERE id = ?', [finalOrderId]);
+      if (!targetOrder) {
+        return res.status(400).json({ error: 'Valgt ordre findes ikke' });
+      }
+      if (targetOrder.status !== 'accepted' || targetOrder.order_stage !== 'in_progress') {
+        return res.status(400).json({ error: 'Ordren er ikke startet endnu. Start ordren i Ordrestyring („Start ordre“), før du kan registrere timer på den.' });
+      }
+    }
 
     // Sikr at kolonnen findes (Postgres og SQLite) - som posts.image_url-mønsteret
     try {
