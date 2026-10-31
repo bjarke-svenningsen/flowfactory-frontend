@@ -1007,20 +1007,54 @@ app.delete('/api/folders/:id', auth, async (req, res) => {
     return res.status(403).json({ error: 'Permission denied' });
   }
   
-  // Check if folder has files
-  const fileCountResult = await db.get('SELECT COUNT(*) as cnt FROM files WHERE folder_id = ?', [folderId]);
-  if (fileCountResult.cnt > 0) {
-    return res.status(400).json({ error: 'Folder contains files. Delete files first.' });
+  const recursive = req.query.recursive === 'true';
+
+  // Saml hele mappe-traet (mappen + alle undermapper, alle niveauer)
+  const folderIds = [];
+  const stack = [folderId];
+  while (stack.length) {
+    const id = stack.pop();
+    folderIds.push(id);
+    const kids = await db.all('SELECT id FROM folders WHERE parent_id = ?', [id]);
+    kids.forEach(k => stack.push(k.id));
   }
-  
-  // Check if folder has subfolders
-  const subfolderCountResult = await db.get('SELECT COUNT(*) as cnt FROM folders WHERE parent_id = ?', [folderId]);
-  if (subfolderCountResult.cnt > 0) {
-    return res.status(400).json({ error: 'Folder contains subfolders. Delete subfolders first.' });
+
+  const placeholders = folderIds.map(() => '?').join(',');
+  const filesInTree = await db.all(`SELECT * FROM files WHERE folder_id IN (${placeholders})`, folderIds);
+
+  if (!recursive) {
+    if (filesInTree.length > 0) {
+      return res.status(400).json({ error: 'Folder contains files. Delete files first.' });
+    }
+    if (folderIds.length > 1) {
+      return res.status(400).json({ error: 'Folder contains subfolders. Delete subfolders first.' });
+    }
   }
-  
-  await db.run('DELETE FROM folders WHERE id = ?', [folderId]);
-  res.json({ success: true });
+
+  // Slet filer i traet (disk + R2-oprydning, som ved enkeltvis sletning)
+  for (const f of filesInTree) {
+    const otherDiskUser = await db.get(
+      "SELECT id FROM files WHERE filename = ? AND id != ? AND (storage_provider IS NULL OR storage_provider != ?) LIMIT 1",
+      [f.filename, f.id, "r2"]
+    );
+    if (!otherDiskUser) {
+      try {
+        const filePath = path.join(UPLOADS_DIR, f.filename);
+        if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+      } catch (e) {
+        console.error('Folder delete - disk cleanup error:', e);
+      }
+    }
+    await db.run('DELETE FROM file_shares WHERE file_id = ?', [f.id]);
+    await db.run('DELETE FROM files WHERE id = ?', [f.id]);
+    await deleteR2ObjectIfUnused(f.storage_key, 'files', f.id);
+  }
+
+  // Slet mapperne boern foerst
+  for (const id of folderIds.slice().reverse()) {
+    await db.run('DELETE FROM folders WHERE id = ?', [id]);
+  }
+  res.json({ success: true, deletedFolders: folderIds.length, deletedFiles: filesInTree.length });
 });
 
 // Get all files (user-specific + shared + company folders)

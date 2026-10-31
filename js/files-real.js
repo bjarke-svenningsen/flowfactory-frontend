@@ -95,8 +95,17 @@ async function createCompanyFolder() {
     }
 }
 
-// Track expanded folders
+// Track expanded folders (tilstand gemmes i localStorage, sa traeet bevarer fold-ud/fold-sammen efter F5)
 let expandedFolders = new Set();
+(function loadExpandedFolders() {
+    try {
+        const saved = JSON.parse(localStorage.getItem('filesTreeExpanded') || '[]');
+        if (Array.isArray(saved)) saved.forEach(function (id) { expandedFolders.add(id); });
+    } catch (e) { /* ignore */ }
+})();
+function persistExpandedFolders() {
+    try { localStorage.setItem('filesTreeExpanded', JSON.stringify(Array.from(expandedFolders))); } catch (e) { /* ignore */ }
+}
 
 // --- Fælles filer-hjælpere ---
 // Primær firmamappe = top-level firmamappe med LAVESTE id (vises som "Fælles filer").
@@ -243,7 +252,8 @@ function toggleFolder(event, folderId) {
     } else {
         expandedFolders.add(folderId);
     }
-    
+    persistExpandedFolders();
+
     renderFolderTree();
 }
 
@@ -807,6 +817,7 @@ async function handleExternalDrop(event, folderId) {
             const entry = items[i].webkitGetAsEntry && items[i].webkitGetAsEntry();
             if (entry) entries.push(entry);
         }
+        console.debug('[upload-drop] entries fundet:', entries.map(function (e) { return e.name + '(' + e.kind + ')'; }).join(', ') || 'INGEN');
         if (entries.length > 0) {
             const tree = { dirs: [], files: [] };
             const skipped = { count: 0 };
@@ -1463,21 +1474,35 @@ async function renameFolderSelected() {
     }
 }
 
+// Taeller mapper og filer i et helt mappe-trae (bruges foer rekursiv sletning)
+function countFolderTreeContents(rootId) {
+    let folders = 0, files = 0;
+    const stack = [rootId];
+    while (stack.length) {
+        const id = stack.pop();
+        folders++;
+        allFolders.forEach(function (f) { if (f.parent_id === id) stack.push(f.id); });
+        files += allFiles.filter(function (x) { return x.folder_id === id; }).length;
+    }
+    return { folders: folders, files: files };
+}
+
 // Delete folder
 async function deleteFolderSelected() {
     const folderContextMenu = document.getElementById('folderContextMenu');
     if (folderContextMenu) folderContextMenu.style.display = 'none';
     
-    const folder = allFolders.find(f => f.id === selectedFolderId);
-    const isEmpty = folder && !allFiles.some(x => x.folder_id === folder.id) && !allFolders.some(x => x.parent_id === folder.id);
+        const folder = allFolders.find(f => f.id === selectedFolderId);
+    const counts = folder ? countFolderTreeContents(folder.id) : { folders: 0, files: 0 };
+    const isEmpty = folder && counts.folders <= 1 && counts.files === 0;
     const confirmMsg = isEmpty
         ? `Er du sikker på, at du vil slette mappen "${selectedFolderName}"?`
-        : `Mappen "${selectedFolderName}" er ikke tom.\nFiler og undermapper slettes ikke automatisk - tom mappen først.\nPrøv at slette alligevel?`;
+        : `Vil du virkelig slette mappen "${selectedFolderName}" og ALT indhold?\n\n${counts.folders - 1} undermapper og ${counts.files} filer slettes permanent.\nDette kan ikke fortrydes.`;
     if (!await winConfirm(confirmMsg, 'Slet mappe')) return;
-    
+
     try {
         const token = sessionStorage.getItem('token');
-        const response = await fetch(`/api/folders/${selectedFolderId}`, {
+        const response = await fetch(`/api/folders/${selectedFolderId}?recursive=true`, {
             method: 'DELETE',
             headers: { 'Authorization': `Bearer ${token}` }
         });
@@ -1984,6 +2009,7 @@ function scheduleExpand(folderId) {
     hoverExpandTimer = setTimeout(function () {
         hoverExpandTimer = null;
         expandedFolders.add(folderId);
+        persistExpandedFolders();
         renderFolderTree();
     }, 600);
 }
@@ -2036,6 +2062,7 @@ function handleFolderDragOver(event, folderId, opts) {
     const isExternal = !draggedKind && !!dt && ((dt.files && dt.files.length > 0) ||
         (dt.items && dt.items.length > 0 && typeof dt.items[0].webkitGetAsEntry === 'function'));
     if (isExternal) {
+        console.debug('[drag] dragover: eksternt traek genkendt over mappe', folderId);
         event.preventDefault();
         event.stopPropagation();
         if (dt) dt.dropEffect = 'copy';
@@ -2082,6 +2109,10 @@ async function handleFolderDrop(event, folderId, opts) {
     // Filer/mapper trukket ind fra computeren → upload (trin B).
     // Tjekkes FØRST, da eksterne træk har ingen intern drag-state.
     const dt = event.dataTransfer;
+    console.debug('[drag] drop modtaget paa mappe', folderId,
+        '| files:', dt && dt.files ? dt.files.length : 0,
+        '| items:', dt && dt.items ? dt.items.length : 0,
+        '| intern drag:', draggedKind);
     const hasExternalFiles = !!(dt && ((dt.files && dt.files.length > 0) ||
         (dt.items && dt.items.length > 0 && typeof dt.items[0].webkitGetAsEntry === 'function')));
     if (hasExternalFiles) {
