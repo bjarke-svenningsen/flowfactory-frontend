@@ -2684,3 +2684,128 @@ svg.lucide-building-2 { color: var(--company-stroke); fill: var(--company-fill);
     font-size: 34px;
     background: linear-gradient(135deg, #f7b731, #f5a623);
 }
+
+/* ============================================================
+   CHAT v2 - komplet styling (ny chat.js/chat.html struktur)
+   Design: #2D3139 (moerk), #DADDE2 (baggrund), #F5B800 (accent),
+   bobler #FFF3CC (mine) / #fff (andres). Inter, Lucide-ikoner.
+   ============================================================ */
+
+/* Soegefelt med Lucide-ikon */
+.chat-users .user-search { position: relative; padding: 10px 14px; }
+.user-search-icon { position: absolute; left: 26px; top: 50%; transform: translateY(-50%); width: 16px; height: 16px; color: #8a8f98; pointer-events: none; }
+.chat-users .user-search input { width: 100%; padding: 9px 12px 9px 36px; border: 1px solid #DADDE2; border-radius: 10px; font-size: 14px; background: #fff; outline: none; box-sizing: border-box; }
+.chat-users .user-search input:focus { border-color: #F5B800; }
+
+/* Online-raekke (kontakt-chips) */
+.chat-contacts-strip { display: flex; gap: 10px; padding: 4px 14px 10px; overflow-x: auto; }
+.contact-chip { position: relative; flex: 0 0 auto; cursor: pointer; }
+.strip-empty { font-size: 11px; color: #8a8f98; padding: 2px 0; }
+.chat-empty-note { padding: 24px 16px; text-align: center; color: #8a8f98; font-size: 13px; }
+
+/* Samtaleliste-elementer */
+.conv-item { display: flex; align-items: center; gap: 10px; padding: 10px 14px; cursor: pointer; border-bottom: 1px solid #f0f1f3; }
+.conv-item:hover { background: #f7f7f8; }
+.conv-item.selected { background: #FFF3CC; }
+.conv-avatar-wrap { position: relative; flex: 0 0 auto; }
+.conv-avatar-wrap .status-dot { position: absolute; right: -1px; bottom: -1px; width: 11px; height: 11px; border-radius: 50%; background: #b9bdc4; border: 2px solid #fff; }
+.conv-avatar-wrap .status-dot.online { background: #22c55e; }
+.conv-text { flex: 1; min-width: 0; }
+.conv-name { font-weight: 600; font-size: 14px; color: #2D3139; }
+.conv-item.has-unread .conv-name { font-weight: 700; }
+.conv-preview { font-size: 12px; color: #8a8f98; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 2px; }
+.conv-preview.unread { color: #2D3139; font-weight: 600; }
+.conv-time { font-size: 11px; color: #8a8f98; white-space: nowrap; align-self: flex-start; margin-top: 4px; }
+.conv-unread-badge { position: absolute; right: -6px; top: -6px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; background: #F5B800; color: #2D3139; font-size: 11px; font-weight: 700; display: flex; align-items: center; justify-content: center; }
+
+/* Chat-header knapper */
+.chat-back-btn { display: none; border: none; background: transparent; cursor: pointer; color: #2D3139; padding: 6px; border-radius: 8px; }
+.chat-back-btn svg { width: 20px; height: 20px; }
+.chat-menu-btn { border: none; background: transparent; cursor: pointer; color: #2D3139; padding: 6px; border-radius: 8px; }
+.chat-menu-btn:hover, .chat-back-btn:hover { background: #f0f1f3; }
+.chat-menu-btn svg { width: 20px; height: 20px; }
+.chat-menu { position: absolute; right: 0; top: 42px; background: #fff; border: 1px solid #DADDE2; border-radius: 12px; box-shadow: 0 8px 24px rgba(45,49,57,.15); min-width: 220px; z-index: 2200; overflow: hidden; }
+.chat-menu button { display: flex; align-items: center; gap: 10px; width: 100%; padding: 10px 14px; border: none; background: transparent; text-align: left; font-size: 13px; color: #2D3139; cursor: pointer; }
+.chat-menu button:hover { background: #f7f7f8; }
+.chat-menu button svg { width: 16px; height: 16px; color: #5a606b; }
+.chat-video-btn-label { font-size: 13px; font-weight: 600; }
+
+/* Besked-bobler */
+.chat-bubble { max-width: 72%; padding: 9px 13px; border-radius: 16px; background: #fff; border: 1px solid #e7e8ea; font-size: 14px; line-height: 1.45; word-break: break-word; }
+.chat-bubble.mine { background: #FFF3CC; border-color: #f2df9a; border-bottom-right-radius: 4px; }
+.chat-bubble:not(.mine) { border-bottom-left-radius: 4px; }
+.chat-msg-row { display: flex; align-items: flex-end; gap: 8px; margin-bottom: 10px; }
+.chat-msg-row.mine { justify-content: flex-end; }
+.chat-msg-row .user-avatar-small { width: 28px; height: 28px; font-size: 11px; flex: 0 0 auto; }
+.chat-msg-meta { font-size: 10px; color: #9aa0a8; margin-top: 3px; text-align: right; }
+.chat-read-check { color: #2D6CDF; font-weight: 700; }
+.chat-sent-check { opacity: .6; }
+.chat-system-msg { text-align: center; font-size: 12px; color: #8a8f98; background: #eceef0; border-radius: 10px; padding: 5px 12px; margin: 10px auto; width: fit-content; max-width: 80%; }
+.chat-loading { text-align: center; color: #8a8f98; padding: 30px; font-size: 13px; }
+.no-chat-icon { width: 56px; height: 56px; color: #c4c8ce; margin-bottom: 8px; }
+
+/* Toast (nederst til hoejre; laegger ALDRIG oven paa videovinduet) */
+.chat-toast-wrap { position: fixed; right: 16px; bottom: 16px; display: flex; flex-direction: column; gap: 8px; z-index: 2400; }
+.chat-toast { display: flex; align-items: center; gap: 10px; background: #2D3139; color: #fff; border-radius: 14px; padding: 10px 14px; box-shadow: 0 10px 28px rgba(0,0,0,.25); cursor: pointer; min-width: 240px; max-width: 340px; opacity: 1; transition: opacity .4s, transform .2s; }
+.chat-toast.fade { opacity: 0; transform: translateY(6px); }
+.chat-toast .user-avatar-small { width: 36px; height: 36px; font-size: 13px; flex: 0 0 auto; }
+.chat-toast-name { font-weight: 700; font-size: 13px; }
+.chat-toast-msg { font-size: 12px; color: #c9cdd3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+
+/* Indgaaende opkald (fuldskaerm-overlay, vises paa alle sider) */
+.incoming-call { position: fixed; inset: 0; background: rgba(45,49,57,.55); display: flex; align-items: center; justify-content: center; z-index: 3000; }
+.incoming-call-card { background: #2D3139; color: #fff; border-radius: 20px; padding: 28px 32px; text-align: center; box-shadow: 0 20px 60px rgba(0,0,0,.4); animation: incomingPop .2s ease-out; }
+@keyframes incomingPop { from { transform: scale(.92); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+.incoming-call-avatar { width: 72px; height: 72px; border-radius: 50%; margin: 0 auto 12px; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 24px; background: linear-gradient(135deg, #2D6CDF, #1B4DBF); }
+.incoming-call-avatar img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; }
+.incoming-call-name { font-size: 18px; font-weight: 700; }
+.incoming-call-text { font-size: 13px; color: #c9cdd3; margin-top: 4px; }
+.incoming-call-buttons { display: flex; gap: 22px; justify-content: center; margin-top: 22px; }
+.incoming-call-accept, .incoming-call-reject { width: 60px; height: 60px; border-radius: 50%; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; color: #fff; }
+.incoming-call-accept { background: #22c55e; }
+.incoming-call-reject { background: #ef4444; }
+.incoming-call-accept svg, .incoming-call-reject svg { width: 26px; height: 26px; }
+
+/* Video-flydende vindue - z-index under indgaaende opkald, over toasts */
+#videoDock { position: fixed; z-index: 2500; display: none; flex-direction: column; background: #2D3139; border-radius: 14px; overflow: hidden; box-shadow: 0 16px 44px rgba(0,0,0,.4); }
+.video-dock-header { display: flex; align-items: center; justify-content: space-between; background: #2D3139; color: #fff; padding: 8px 12px; cursor: move; user-select: none; font-size: 13px; font-weight: 600; }
+.video-dock-header .vd-buttons { display: flex; gap: 6px; }
+.video-dock-header button { background: rgba(255,255,255,.12); color: #fff; border: none; border-radius: 6px; width: 26px; height: 26px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+.video-dock-header button:hover { background: rgba(255,255,255,.22); }
+.video-dock-header button svg { width: 14px; height: 14px; }
+.video-dock-body { position: relative; flex: 1; background: #1a1c20; overflow: hidden; }
+#videoDock video.remote { width: 100%; height: 100%; object-fit: cover; }
+#videoDock video.local { position: absolute; right: 10px; bottom: 10px; width: 120px; border-radius: 10px; border: 2px solid rgba(255,255,255,.3); }
+.video-dock-status { position: absolute; left: 0; right: 0; top: 40%; text-align: center; color: #fff; font-size: 14px; text-shadow: 0 1px 4px rgba(0,0,0,.6); }
+.video-dock-controls { display: flex; gap: 10px; justify-content: center; padding: 10px; background: #2D3139; }
+.video-dock-controls button { width: 42px; height: 42px; border-radius: 50%; border: none; cursor: pointer; color: #fff; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,.12); }
+.video-dock-controls button.off { background: #ef4444; }
+.video-dock-controls button.hangup { background: #ef4444; width: 52px; }
+.video-dock-controls button svg { width: 20px; height: 20px; }
+#videoDock.minimized { width: 84px !important; height: 84px !important; border-radius: 50%; cursor: pointer; }
+#videoDock.minimized .video-dock-header,
+#videoDock.minimized .video-dock-body,
+#videoDock.minimized .video-dock-controls { display: none; }
+#videoDock .vd-resize { position: absolute; right: 2px; bottom: 2px; width: 18px; height: 18px; cursor: nwse-resize; color: rgba(255,255,255,.6); }
+.video-dock-error { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 13px; padding: 20px; text-align: center; background: rgba(26,28,32,.9); }
+
+/* Mobil: to skkaerme med tilbage-knap */
+@media (max-width: 700px) {
+    .chat-container { flex-direction: column; }
+    .chat-users { width: 100%; flex: 1; }
+    .chat-main { display: none; }
+    .chat-container.show-conversation .chat-users { display: none; }
+    .chat-container.show-conversation .chat-main { display: flex; flex: 1; }
+    .chat-back-btn { display: block; }
+    .chat-video-btn .chat-video-btn-label { display: none; }
+    .chat-video-btn { padding: 8px; }
+    .chat-header { padding: 10px 12px; }
+    /* Videoopkald i fuld skaerm paa mobil */
+    #videoDock { inset: 0 !important; width: 100% !important; height: 100% !important; border-radius: 0; }
+    #videoDock .vd-resize { display: none; }
+    .video-dock-controls button { width: 56px; height: 56px; }
+    .video-dock-controls button.hangup { width: 68px; }
+    #videoDock video.local { width: 90px; }
+}
+
