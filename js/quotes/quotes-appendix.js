@@ -158,15 +158,12 @@
 
             <div class="bilag-note">De angivne tolerancer gælder, hvis intet andet er aftalt. Planhedsmålinger foretages med 2 m retlineal, og arbejdet afregnes særskilt, hvis underlaget kræver opretning ud over tilbuddets omfang.</div>
 
-            <img class="bilag-diagram" src="assets/forbehold/rethed-og-tolerancer.png" alt="Tolerancetabel: krav til planhed for belægningstyper">
-
-            <p class="bilag-foot">Baggrund: Gulvbranchens Oplysnings-Kasser (GOK) — Planhed af gulve. Toleranceangivelserne følger gulvbranchens retningslinjer.</p>
+            <p class="bilag-foot">Baggrund: Gulvbranchens Oplysnings-Kasser (GOK). Toleranceangivelserne følger gulvbranchens retningslinjer.</p>
         </div>`;
     }
 
     // ---- Bilag 3: GOK-dokumenterne indlejret som sider (renderes med pdf.js) ----
     var GOK_DOCS = [
-        { title: 'Planhed af gulve', org: 'Gulvbranchens Oplysnings-Kasser (GOK)', file: 'assets/forbehold/ok-p_-planhed-af-gulve.pdf' },
         { title: 'Forventninger til fugefrie gulve', org: 'Gulvbranchens Oplysnings-Kasser (GOK)', file: 'assets/forbehold/forventninger til fugefrie gulve.pdf' }
     ];
     var PDFJS_URL = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
