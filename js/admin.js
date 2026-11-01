@@ -396,7 +396,7 @@ async function editUser(userId) {
         </div>
     `;
     document.body.appendChild(modal);
-    modal.addEventListener('click', (e) => { if (e.target === modal) modal.remove(); });
+    // OBS: klik uden for vinduet lukker IKKE - kun Annuller/Gem (undgaa at miste tastet input)
 }
 
 async function saveUserEdit(userId) {
