@@ -238,20 +238,20 @@ function renderHeaderEconomy(data) {
     // Donut-segmenter: timer + materialer + overskud (profit) som rest
     const parts = [
         { label: 'Timer', value: Math.max(timeCost, 0), color: '#7C2D12' },
-        { label: 'Materialer', value: Math.max(materialCost, 0), color: '#9333EA' },
+        { label: 'Materialer', value: Math.max(materialCost, 0), color: '#9F86C0' },
         { label: 'Profit', value: Math.max(profit, 0), color: '#8BB8E8' }
     ];
     const total = parts.reduce((sum, p) => sum + p.value, 0);
-    const R = 38, C = 2 * Math.PI * R;
+    const R = 34, C = 2 * Math.PI * R;
     let offset = 0, segs = '';
     if (total > 0) {
         parts.forEach(p => {
             const frac = p.value / total;
-            segs += `<circle cx="50" cy="50" r="${R}" fill="none" stroke="${p.color}" stroke-width="20" stroke-dasharray="${(frac * C).toFixed(2)} ${C.toFixed(2)}" stroke-dashoffset="${(-offset * C).toFixed(2)}" transform="rotate(-90 50 50)"></circle>`;
+            segs += `<circle cx="50" cy="50" r="${R}" fill="none" stroke="${p.color}" stroke-width="30" stroke-dasharray="${(frac * C).toFixed(2)} ${C.toFixed(2)}" stroke-dashoffset="${(-offset * C).toFixed(2)}" transform="rotate(-90 50 50)"></circle>`;
             offset += frac;
         });
     } else {
-        segs = `<circle cx="50" cy="50" r="${R}" fill="none" stroke="#E5E7EB" stroke-width="20"></circle>`;
+        segs = `<circle cx="50" cy="50" r="${R}" fill="none" stroke="#E5E7EB" stroke-width="30"></circle>`;
     }
     const legend = parts.map(p => `<span style="display: inline-flex; align-items: center; gap: 5px; font-size: 12px; color: var(--text-muted);"><span style="width: 9px; height: 9px; border-radius: 50%; background: ${p.color}; display: inline-block;"></span>${p.label}</span>`).join('');
     return `
