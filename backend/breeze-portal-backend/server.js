@@ -318,7 +318,17 @@ function auth(req, res, next) {
   try {
     const payload = jwt.verify(token, JWT_SECRET);
     req.user = payload;
-    next();
+    // v88: is_admin slaas ALTID op i DB (ikke kun gamle tokens), saa rolleaendringer
+    // fra Ledelsen slaar igennem med det samme - uden at brugeren skal logge ind igen.
+    db.get('SELECT is_admin FROM users WHERE id = ?', [req.user.id])
+      .then(function (u) {
+        req.user.is_admin = u ? !!u.is_admin : false;
+        next();
+      })
+      .catch(function () {
+        req.user.is_admin = false;
+        next();
+      });
   } catch {
     return res.status(401).json({ error: 'Invalid token' });
   }
@@ -425,15 +435,14 @@ function montorGuard(req, res, next) {
   } catch (e) {
     return res.status(403).json({ error: 'Adgang nægtet' });
   }
-  // gamle tokens (foer v80) mangler is_admin - sla op i DB
+  // v88: is_admin slaas altid op i DB (tidligere kun for gamle tokens), saa
+  // rolleaendringer virker uden ny login.
   (async function () {
-    if (req.user.is_admin === undefined || req.user.is_admin === null) {
-      try {
-        const u = await db.get('SELECT is_admin FROM users WHERE id = ?', [req.user.id]);
-        req.user.is_admin = u ? !!u.is_admin : false;
-      } catch (e) {
-        req.user.is_admin = false;
-      }
+    try {
+      const u = await db.get('SELECT is_admin FROM users WHERE id = ?', [req.user.id]);
+      req.user.is_admin = u ? !!u.is_admin : false;
+    } catch (e) {
+      req.user.is_admin = false;
     }
     if (isMontor(req)) return res.status(403).json({ error: 'Adgang nægtet - din afdeling har ikke adgang til denne funktion' });
     next();
