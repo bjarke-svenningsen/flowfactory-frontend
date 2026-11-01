@@ -175,7 +175,14 @@ async function showPage(pageName, updateHash = true) {
     }
     
     // Save current page to remember after refresh
+    const prevPage = sessionStorage.getItem('currentPage');
     sessionStorage.setItem('currentPage', pageName);
+    
+    // v106.1: nulstil ordrestyring-tilstand naar man navigerer vaek fra siden,
+    // saet et tidligere aabent workspace ikke laaser fanerne naeste gang.
+    if (pageName !== 'quotes' && prevPage === 'quotes' && typeof window.resetQuotesNavState === 'function') {
+        try { window.resetQuotesNavState(); } catch (e) { /* ignore */ }
+    }
     
     // Update URL hash (unless coming from hashchange event)
     // Use replaceState to avoid triggering hashchange event (which would cause double-load)

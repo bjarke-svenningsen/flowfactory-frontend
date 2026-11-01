@@ -2489,6 +2489,13 @@ window.filterRegisterMaterials = filterRegisterMaterials;
 window.selectRegisterMaterial = selectRegisterMaterial;
 window.clearRegisterMaterialSelection = clearRegisterMaterialSelection;
 window.saveInlineMaterialLine = saveInlineMaterialLine;
+// v106.1: nulstil SPA-tilstand naar man forlader Ordrestyring - pageLoader tømmer
+// DOM'et, men JS-variablerne bestaar og laaser ellers faneskift i switchOrderTab.
+window.resetQuotesNavState = function () {
+    currentWorkspaceOrder = null;
+    parentOrderId = null;
+    currentWorkspaceInvoice = null;
+};
 window.saveRegisterMaterial = saveRegisterMaterial;
 window.closeWorkspace = closeWorkspace;
 window.viewInvoiceFromWorkspace = viewInvoiceFromWorkspace;

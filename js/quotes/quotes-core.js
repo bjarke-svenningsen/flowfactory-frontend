@@ -1718,7 +1718,8 @@ async function moveRejectedBackToQuote(quoteId) {
 
 // Initialize quotes page
 async function initQuotesPage() {
-    await loadCustomers();
+    // v106.1: fejler kunde-hentningen, maa faneskiftet alligevel koere
+    try { await loadCustomers(); } catch (e) { console.warn('loadCustomers fejlede:', e); }
     // Don't call loadQuotes() here - let switchOrderTab() handle all data loading
     // This prevents visual "hop" from showing Tilbud tab before switching to correct tab
     
