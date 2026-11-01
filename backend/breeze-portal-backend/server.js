@@ -1,4 +1,4 @@
-// server.js
+﻿// server.js
 import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
@@ -1736,6 +1736,7 @@ async function initChatDatabase() {
     ');' +
     'CREATE INDEX IF NOT EXISTS idx_chat_messages_conv ON chat_messages(conversation_id, id);' +
     'CREATE INDEX IF NOT EXISTS idx_chat_messages_sender ON chat_messages(sender_id, created_at);' +
+    'CREATE INDEX IF NOT EXISTS idx_chat_participants_user ON chat_participants(user_id);' +
     'CREATE TABLE IF NOT EXISTS chat_reads (' +
     ' conversation_id INTEGER NOT NULL REFERENCES chat_conversations(id),' +
     ' user_id INTEGER NOT NULL REFERENCES users(id),' +
@@ -1747,6 +1748,11 @@ async function initChatDatabase() {
   if (!cols.some(function (c) { return c.name === 'last_seen_at'; })) {
     raw.exec("ALTER TABLE users ADD COLUMN last_seen_at TEXT DEFAULT ''");
     console.log('[chat] Kolonne users.last_seen_at tilfoejet');
+  }
+  const mcols = raw.prepare('PRAGMA table_info(chat_messages)').all();
+  if (!mcols.some(function (c) { return c.name === 'is_system'; })) {
+    raw.exec('ALTER TABLE chat_messages ADD COLUMN is_system INTEGER NOT NULL DEFAULT 0');
+    console.log('[chat] Kolonne chat_messages.is_system tilfoejet');
   }
   console.log('[chat] Chat-database klar');
 }
@@ -1771,6 +1777,11 @@ function chatBroadcast(eventName, data) {
 }
 
 function chatOnline(userId) { return chatSseClients.has(userId); }
+
+// Presence-snapshot broadcast hvert 60. sekund, saa alle kunder holder status frisk
+setInterval(function () {
+  if (chatSseClients.size > 0) chatBroadcast('chat_presence', Array.from(chatSseClients.keys()));
+}, 60000);
 
 // --- Engangs-ticket til SSE (saetter ALDRIG hele JWT i URL'en) ---
 app.post('/api/chat/events-ticket', auth, async (req, res) => {
@@ -1859,7 +1870,7 @@ app.get('/api/chat/conversations', auth, async (req, res) => {
     const out = [];
     for (const c of convs) {
       const peer = await db.get(
-        'SELECT u.id, u.name, u.position, u.last_seen_at FROM chat_participants p JOIN users u ON u.id = p.user_id ' +
+        'SELECT u.id, u.name, u.position, u.last_seen_at, u.avatar_url FROM chat_participants p JOIN users u ON u.id = p.user_id ' +
         'WHERE p.conversation_id = ? AND p.user_id != ?',
         [c.id, req.user.id]
       );
@@ -1869,7 +1880,7 @@ app.get('/api/chat/conversations', auth, async (req, res) => {
         [c.id]
       );
       const unread = await db.get(
-        'SELECT COUNT(*) AS n FROM chat_messages m WHERE m.conversation_id = ? AND m.sender_id != ? ' +
+        'SELECT COUNT(*) AS n FROM chat_messages m WHERE m.conversation_id = ? AND m.sender_id != ? AND m.is_system = 0 ' +
         'AND m.id > COALESCE((SELECT last_read_message_id FROM chat_reads WHERE conversation_id = ? AND user_id = ?), 0)',
         [c.id, req.user.id, c.id, req.user.id]
       );
@@ -1922,7 +1933,7 @@ app.get('/api/chat/conversations/:id/messages', auth, async (req, res) => {
     if (!(await chatIsParticipant(convId, req.user.id))) return res.status(403).json({ error: 'Adgang naegtet' });
     const after = Number(req.query.after || 0);
     const rows = await db.all(
-      'SELECT m.id, m.conversation_id, m.sender_id, m.body, m.file_id, m.created_at, u.name AS sender_name ' +
+      'SELECT m.id, m.conversation_id, m.sender_id, m.body, m.file_id, m.is_system, m.created_at, u.name AS sender_name ' +
       'FROM chat_messages m JOIN users u ON u.id = m.sender_id ' +
       'WHERE m.conversation_id = ? AND m.id > ? ORDER BY m.id ASC LIMIT 200',
       [convId, after]
@@ -1949,7 +1960,7 @@ app.post('/api/chat/messages', auth, async (req, res) => {
     chatRate.set(req.user.id, arr);
     const info = await db.run('INSERT INTO chat_messages (conversation_id, sender_id, body) VALUES (?, ?, ?)', [convId, req.user.id, body]);
     const msg = await db.get(
-      'SELECT m.id, m.conversation_id, m.sender_id, m.body, m.file_id, m.created_at, u.name AS sender_name ' +
+      'SELECT m.id, m.conversation_id, m.sender_id, m.body, m.file_id, m.is_system, m.created_at, u.name AS sender_name ' +
       'FROM chat_messages m JOIN users u ON u.id = m.sender_id WHERE m.id = ?',
       [Number(info.lastInsertRowid)]
     );
