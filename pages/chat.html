@@ -5,39 +5,53 @@
     </div>
 </div>
 <div class="chat-container">
-    <div class="chat-users">
+    <div class="chat-users" id="chatListPane">
+        <div class="user-search">
+            <i data-lucide="search" class="user-search-icon"></i>
+            <input type="text" placeholder="Søg..." id="userSearch" oninput="filterUsers()">
+        </div>
         <div class="chat-contacts-strip" id="chatContactsStrip"></div>
         <div class="chat-filter-chips">
             <button class="chat-chip active" id="chatChipAlle" onclick="setChatFilter('alle')">Alle</button>
-            <button class="chat-chip" id="chatChipUlaeste" onclick="setChatFilter('ulaeste')">Ulæste</button>
-        </div>
-        <div class="user-search">
-            <input type="text" placeholder="🔍 Søg..." id="userSearch" onkeyup="filterUsers()">
+            <button class="chat-chip" id="chatChipUlaeste" onclick="setChatFilter('ulaeste')">Ul&aelig;ste</button>
+            <button class="chat-chip" id="chatChipOnline" onclick="setChatFilter('online')">Online</button>
         </div>
         <div id="userList"></div>
     </div>
 
     <div class="chat-main">
         <div class="no-chat-selected" id="noChatSelected">
-            <div style="text-align: center; color: var(--text-muted);">
-                <div style="font-size: 60px;">💬</div>
-                <h3>Vælg en medarbejder</h3>
-                <p>Vælg en person fra listen for at starte en chat</p>
+            <div style="text-align: center; color: var(--text-muted, #8a8f98);">
+                <i data-lucide="message-square" class="no-chat-icon"></i>
+                <h3>V&aelig;lg en medarbejder</h3>
+                <p>V&aelig;lg en person fra listen for at starte en chat</p>
             </div>
         </div>
 
         <div class="chat-active" id="chatActive" style="display: none;">
             <div class="chat-header">
-                <div style="display: flex; align-items: center; gap: 10px;">
-                    <div class="user-avatar-small" id="chatUserAvatar">AB</div>
-                    <div>
-                        <div class="chat-user-name" id="chatUserName">Anders Berg</div>
-                        <div class="chat-user-status" id="chatUserStatus">Online</div>
+                <button class="chat-back-btn" id="chatBackBtn" onclick="closeChat()" title="Tilbage">
+                    <i data-lucide="arrow-left"></i>
+                </button>
+                <div style="display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0;">
+                    <div class="user-avatar-small" id="chatUserAvatar">?</div>
+                    <div style="min-width: 0;">
+                        <div class="chat-user-name" id="chatUserName">&nbsp;</div>
+                        <div class="chat-user-status" id="chatUserStatus">&nbsp;</div>
                     </div>
                 </div>
-                <div style="display: flex; align-items: center; gap: 8px;">
-                    <button class="chat-video-btn" id="chatVideoBtn" onclick="startVideoCallCurrent()">📹 Start videomøde</button>
-                    <button class="close-chat-btn" onclick="closeChat()">✕</button>
+                <div style="display: flex; align-items: center; gap: 8px; position: relative;">
+                    <button class="chat-video-btn" id="chatVideoBtn" onclick="startVideoCallCurrent()" title="Start videoopkald">
+                        <i data-lucide="video"></i><span class="chat-video-btn-label">Videoopkald</span>
+                    </button>
+                    <button class="chat-menu-btn" onclick="toggleChatMenu(event)" title="Mere">
+                        <i data-lucide="more-vertical"></i>
+                    </button>
+                    <div class="chat-menu" id="chatMenu" style="display: none;">
+                        <button onclick="toggleChatSound()"><i data-lucide="volume-2"></i><span id="chatSoundMenuLabel">Lyd: til</span></button>
+                        <button onclick="enableChatNotifications()"><i data-lucide="bell"></i>Sl&aring; browsernotifikation til</button>
+                        <button onclick="closeChat()"><i data-lucide="x"></i>Luk samtale</button>
+                    </div>
                 </div>
             </div>
 
@@ -48,100 +62,22 @@
             </div>
 
             <div class="chat-input-area">
-                <button class="emoji-btn" onclick="toggleEmojiPicker()">😊</button>
-                <textarea id="chatInput" placeholder="Skriv en besked..." rows="1" oninput="autoGrowTextarea(); handleTyping();" onkeypress="if(event.key==='Enter' && !event.shiftKey) { event.preventDefault(); sendMessage(); }"></textarea>
-                <button class="send-btn" onclick="sendMessage()">Send ➤</button>
+                <textarea id="chatInput" placeholder="Skriv en besked..." rows="1" oninput="autoGrowTextarea(); handleTyping();" onkeydown="if(event.key==='Enter' && !event.shiftKey) { event.preventDefault(); sendMessage(); }"></textarea>
+                <button class="send-btn" onclick="sendMessage()" title="Send"><i data-lucide="send"></i></button>
             </div>
+        </div>
+    </div>
+</div>
 
-            <div class="emoji-picker" id="emojiPicker" style="display: none; max-height: 300px; overflow-y: auto;">
-                <div class="emoji-grid">
-                    <!-- Ansigter og følelser -->
-                    <span class="emoji-item" onclick="insertEmoji('😊')">😊</span>
-                    <span class="emoji-item" onclick="insertEmoji('😂')">😂</span>
-                    <span class="emoji-item" onclick="insertEmoji('🤣')">🤣</span>
-                    <span class="emoji-item" onclick="insertEmoji('😍')">😍</span>
-                    <span class="emoji-item" onclick="insertEmoji('😘')">😘</span>
-                    <span class="emoji-item" onclick="insertEmoji('😎')">😎</span>
-                    <span class="emoji-item" onclick="insertEmoji('🥳')">🥳</span>
-                    <span class="emoji-item" onclick="insertEmoji('🤗')">🤗</span>
-                    <span class="emoji-item" onclick="insertEmoji('🥰')">🥰</span>
-                    <span class="emoji-item" onclick="insertEmoji('😇')">😇</span>
-                    <span class="emoji-item" onclick="insertEmoji('🙃')">🙃</span>
-                    <span class="emoji-item" onclick="insertEmoji('😉')">😉</span>
-                    <span class="emoji-item" onclick="insertEmoji('😋')">😋</span>
-                    <span class="emoji-item" onclick="insertEmoji('😛')">😛</span>
-                    <span class="emoji-item" onclick="insertEmoji('😜')">😜</span>
-                    <span class="emoji-item" onclick="insertEmoji('😝')">😝</span>
-                    <span class="emoji-item" onclick="insertEmoji('🤪')">🤪</span>
-                    <span class="emoji-item" onclick="insertEmoji('😁')">😁</span>
-                    <span class="emoji-item" onclick="insertEmoji('😏')">😏</span>
-                    <span class="emoji-item" onclick="insertEmoji('😌')">😌</span>
-                    <span class="emoji-item" onclick="insertEmoji('😔')">😔</span>
-                    <span class="emoji-item" onclick="insertEmoji('😢')">😢</span>
-                    <span class="emoji-item" onclick="insertEmoji('😭')">😭</span>
-                    <span class="emoji-item" onclick="insertEmoji('😤')">😤</span>
-                    <span class="emoji-item" onclick="insertEmoji('😡')">😡</span>
-                    <span class="emoji-item" onclick="insertEmoji('🤬')">🤬</span>
-                    <span class="emoji-item" onclick="insertEmoji('😱')">😱</span>
-                    <span class="emoji-item" onclick="insertEmoji('😨')">😨</span>
-                    <span class="emoji-item" onclick="insertEmoji('🥺')">🥺</span>
-                    <span class="emoji-item" onclick="insertEmoji('🤔')">🤔</span>
-                    <span class="emoji-item" onclick="insertEmoji('🤨')">🤨</span>
-                    <span class="emoji-item" onclick="insertEmoji('😐')">😐</span>
-                    <span class="emoji-item" onclick="insertEmoji('😑')">😑</span>
-                    <span class="emoji-item" onclick="insertEmoji('🙄')">🙄</span>
-                    <span class="emoji-item" onclick="insertEmoji('😴')">😴</span>
-                    <span class="emoji-item" onclick="insertEmoji('🤤')">🤤</span>
-                    <span class="emoji-item" onclick="insertEmoji('🥱')">🥱</span>
-                    <!-- Hænder og gestus -->
-                    <span class="emoji-item" onclick="insertEmoji('👍')">👍</span>
-                    <span class="emoji-item" onclick="insertEmoji('👎')">👎</span>
-                    <span class="emoji-item" onclick="insertEmoji('👏')">👏</span>
-                    <span class="emoji-item" onclick="insertEmoji('🙌')">🙌</span>
-                    <span class="emoji-item" onclick="insertEmoji('🤝')">🤝</span>
-                    <span class="emoji-item" onclick="insertEmoji('✋')">✋</span>
-                    <span class="emoji-item" onclick="insertEmoji('🤚')">🤚</span>
-                    <span class="emoji-item" onclick="insertEmoji('👋')">👋</span>
-                    <span class="emoji-item" onclick="insertEmoji('🤟')">🤟</span>
-                    <span class="emoji-item" onclick="insertEmoji('✌')">✌</span>
-                    <span class="emoji-item" onclick="insertEmoji('🤞')">🤞</span>
-                    <span class="emoji-item" onclick="insertEmoji('🫰')">🫰</span>
-                    <span class="emoji-item" onclick="insertEmoji('💪')">💪</span>
-                    <span class="emoji-item" onclick="insertEmoji('🙏')">🙏</span>
-                    <!-- Hjerter -->
-                    <span class="emoji-item" onclick="insertEmoji('❤')">❤</span>
-                    <span class="emoji-item" onclick="insertEmoji('🧡')">🧡</span>
-                    <span class="emoji-item" onclick="insertEmoji('💛')">💛</span>
-                    <span class="emoji-item" onclick="insertEmoji('💚')">💚</span>
-                    <span class="emoji-item" onclick="insertEmoji('💙')">💙</span>
-                    <span class="emoji-item" onclick="insertEmoji('💜')">💜</span>
-                    <span class="emoji-item" onclick="insertEmoji('🖤')">🖤</span>
-                    <span class="emoji-item" onclick="insertEmoji('🤍')">🤍</span>
-                    <span class="emoji-item" onclick="insertEmoji('🤎')">🤎</span>
-                    <span class="emoji-item" onclick="insertEmoji('💕')">💕</span>
-                    <span class="emoji-item" onclick="insertEmoji('💖')">💖</span>
-                    <span class="emoji-item" onclick="insertEmoji('💗')">💗</span>
-                    <span class="emoji-item" onclick="insertEmoji('💓')">💓</span>
-                    <span class="emoji-item" onclick="insertEmoji('💞')">💞</span>
-                    <!-- Andre populære -->
-                    <span class="emoji-item" onclick="insertEmoji('🔥')">🔥</span>
-                    <span class="emoji-item" onclick="insertEmoji('✨')">✨</span>
-                    <span class="emoji-item" onclick="insertEmoji('💯')">💯</span>
-                    <span class="emoji-item" onclick="insertEmoji('⭐')">⭐</span>
-                    <span class="emoji-item" onclick="insertEmoji('🎉')">🎉</span>
-                    <span class="emoji-item" onclick="insertEmoji('🎊')">🎊</span>
-                    <span class="emoji-item" onclick="insertEmoji('🎈')">🎈</span>
-                    <span class="emoji-item" onclick="insertEmoji('👀')">👀</span>
-                    <span class="emoji-item" onclick="insertEmoji('💀')">💀</span>
-                    <span class="emoji-item" onclick="insertEmoji('💩')">💩</span>
-                    <span class="emoji-item" onclick="insertEmoji('👻')">👻</span>
-                    <span class="emoji-item" onclick="insertEmoji('🤡')">🤡</span>
-                    <span class="emoji-item" onclick="insertEmoji('🦄')">🦄</span>
-                    <span class="emoji-item" onclick="insertEmoji('✅')">✅</span>
-                    <span class="emoji-item" onclick="insertEmoji('❌')">❌</span>
-                    <span class="emoji-item" onclick="insertEmoji('⚠')">⚠</span>
-                </div>
-            </div>
+<!-- Indgaaende opkald (vises paa alle sider via chatcall.js) -->
+<div class="incoming-call" id="incomingCall" style="display: none;">
+    <div class="incoming-call-card">
+        <div class="incoming-call-avatar" id="incomingCallAvatar">?</div>
+        <div class="incoming-call-name" id="incomingCallName">...</div>
+        <div class="incoming-call-text">Videoopkald...</div>
+        <div class="incoming-call-buttons">
+            <button class="incoming-call-reject" id="incomingCallReject" title="Afvis"><i data-lucide="phone-off"></i></button>
+            <button class="incoming-call-accept" id="incomingCallAccept" title="Besvar"><i data-lucide="phone"></i></button>
         </div>
     </div>
 </div>
