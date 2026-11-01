@@ -917,10 +917,13 @@ async function acceptQuote(quoteId) {
         }
         
         const order = await response.json();
-        
+
         alert(`Tilbud accepteret som ordre ${order.order_number}!`);
+        // v97: hop direkte over paa Godkendte Ordre-fanen, saa ordren ses med det samme
         await loadQuotes();
-        
+        await loadOrders();
+        switchOrderTab('orders');
+
     } catch (error) {
         console.error('Accept quote error:', error);
         alert('Kunne ikke acceptere tilbud: ' + error.message);
