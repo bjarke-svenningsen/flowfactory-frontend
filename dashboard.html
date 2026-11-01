@@ -69,35 +69,6 @@
         <img id="modalImage" src="" alt="">
     </div>
 
-    <!-- Floating Video Call Overlay (Discord/Teams style) -->
-    <div class="floating-video-call" id="floatingVideoCall">
-        <div class="floating-video-header" id="floatingVideoHeader">
-            <h4 id="floatingCallTitle">Videoopkald</h4>
-            <div class="floating-video-header-buttons">
-                <button onclick="toggleFloatingMinimize()" title="Minimer">−</button>
-                <button onclick="endFloatingCall()" title="Luk">×</button>
-            </div>
-        </div>
-        
-        <div class="floating-video-body" id="floatingVideoBody">
-            <div class="floating-video-placeholder" id="floatingPlaceholder">
-                <div class="initials" style="display:flex;justify-content:center;"><i data-lucide="video" style="width:40px;height:40px;"></i></div>
-                <p>Forbinder...</p>
-            </div>
-        </div>
-        
-        <div class="floating-local-video" id="floatingLocalVideo" style="display: none;">
-            <video autoplay muted playsinline></video>
-        </div>
-        
-        <div class="floating-video-controls">
-            <button class="floating-control-btn floating-mic-btn" id="floatingMicBtn" onclick="toggleFloatingMic()" title="Mikrofon"><i data-lucide="mic"></i></button>
-            <button class="floating-control-btn floating-cam-btn" id="floatingCamBtn" onclick="toggleFloatingCam()" title="Kamera"><i data-lucide="video"></i></button>
-            <button class="floating-control-btn floating-share-btn" id="floatingShareBtn" onclick="floatingShareScreen()" title="Del skærm"><i data-lucide="monitor-up"></i></button>
-            <button class="floating-control-btn floating-end-btn" onclick="endFloatingCall()" title="Læg på"><i data-lucide="phone-off"></i></button>
-        </div>
-    </div>
-
     <!-- Windows Style Dialog -->
     <div class="windows-dialog-overlay" id="windowsDialogOverlay"></div>
     <div class="windows-dialog" id="windowsDialog">
@@ -114,7 +85,7 @@
 
     <!-- Load all JavaScript modules -->
     <script src="js/pwa-init.js"></script>
-    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    
     <script src="https://cdn.jsdelivr.net/npm/lucide@0.462.0/dist/umd/lucide.min.js"></script>
     <script src="js/ui.js"></script>
     <script src="js/page-loader.js"></script>
