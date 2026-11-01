@@ -1,5 +1,10 @@
 // js/quotes/quotes-workspace.js - Order workspace management
 
+// Montor-rolle: Ledelsen = is_admin, alle andre = Montor (laesetilstand uden oekonomi)
+function isQuotesMontor() {
+    return window.currentUser && !window.currentUser.is_admin;
+}
+
 let currentWorkspaceOrder = null;
 let currentWorkspaceInvoice = null;
 let workspaceExpenses = [];
@@ -144,7 +149,7 @@ function renderWorkspace(data) {
                     <h1 style="margin: 0 0 6px 0;">Ordre ${fullOrderNumber}</h1>
                     <p style="margin: 0; color: var(--color-text-muted);">${data.order.title} • ${data.order.company_name}</p>
                 </div>
-                <div class="kpi-grid" style="flex: 1 1 420px; min-width: 0;">
+                <div class="kpi-grid" style="flex: 1 1 420px; min-width: 0; display: ${isQuotesMontor() ? 'none' : 'flex'};">
                     <div class="kpi-card">
                         <div class="kpi-label">Omsætning</div>
                         <div class="kpi-value">${formatCurrency(data.financials.revenue)}</div>
@@ -168,7 +173,7 @@ function renderWorkspace(data) {
             <!-- Tabs (underline-stil) -->
             <div class="tab-underline" style="margin-bottom: 28px;">
                 <button onclick="switchWorkspaceTab('overview')" id="workspaceTabOverview" class="tab-underline-btn active">Oversigt</button>
-                <button onclick="switchWorkspaceTab('expenses')" id="workspaceTabExpenses" class="tab-underline-btn">Udgifter (${workspaceExpenses.length})</button>
+                ${isQuotesMontor() ? '' : `<button onclick="switchWorkspaceTab('expenses')" id="workspaceTabExpenses" class="tab-underline-btn">Udgifter (${workspaceExpenses.length})</button>`}
                 <button onclick="switchWorkspaceTab('materials')" id="workspaceTabMaterials" class="tab-underline-btn">Timer & Materialer (${workspaceMaterials.length})</button>
                 <button onclick="switchWorkspaceTab('documents')" id="workspaceTabDocuments" class="tab-underline-btn">Dokumenter (${workspaceDocuments.length})</button>
                 <button onclick="switchWorkspaceTab('timeline')" id="workspaceTabTimeline" class="tab-underline-btn">Timeline (${workspaceTimeline.length})</button>
@@ -217,6 +222,16 @@ function switchWorkspaceTab(tab) {
 
 // Render overview tab with pie chart
 function renderWorkspaceOverview(container) {
+    // Montoer: ingen oekonomi i oversigten (backend har allerede fjernet tallene)
+    if (isQuotesMontor()) {
+        container.innerHTML = `
+            <div style="background: var(--surface); padding: 25px; border-radius: 10px; border: 2px solid var(--border); margin: 0 0 30px 0;">
+                <h3 style="margin: 0 0 10px 0;">Økonomi</h3>
+                <p style="margin: 0; color: var(--text-muted);">Økonomiske tal er kun tilgængelige for Ledelsen.</p>
+            </div>
+        `;
+        return;
+    }
     // Use aggregated financials from backend (includes main order + extra work)
     const revenue = workspaceFinancials ? workspaceFinancials.revenue : (currentWorkspaceOrder.total || 0);
     const totalExpenses = workspaceFinancials ? workspaceFinancials.expenses : workspaceExpenses.reduce((sum, exp) => sum + exp.amount, 0);
@@ -319,7 +334,7 @@ function renderWorkspaceOverview(container) {
                 <div style="background: var(--surface); padding: 20px; border-radius: 10px; border: 2px solid var(--border); margin: 0; min-height: 250px;">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
                         <h3 style="margin: 0;">Ordre Detaljer</h3>
-                        <button id="orderDetailsEditBtn" onclick="toggleOrderDetailsEdit()" class="btn btn-primary btn-sm">
+                        <button id="orderDetailsEditBtn" onclick="toggleOrderDetailsEdit()" class="btn btn-primary btn-sm" style="display: ${isQuotesMontor() ? 'none' : ''};">
                             Rediger
                         </button>
                     </div>

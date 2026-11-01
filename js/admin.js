@@ -265,6 +265,7 @@ async function loadAllUsers() {
         const users = Array.isArray(usersData) ? usersData : (usersData.users || []);
         
         const container = document.getElementById('allUsersList');
+        window._adminUsers = users; // bruges af Rediger-dialogen
         container.innerHTML = `
             <table style="width: 100%; border-collapse: collapse;">
                 <thead>
@@ -287,7 +288,10 @@ async function loadAllUsers() {
                             <td style="padding: 10px; text-align: center;">${user.is_admin ? ' Ja' : '-'}</td>
                             <td style="padding: 10px; text-align: center;">
                                 ${user.id !== window.currentUser.id ? `
-                                    <div style="display: flex; gap: 5px; justify-content: center;">
+                                    <div style="display: flex; gap: 5px; justify-content: center; flex-wrap: wrap;">
+                                        <button onclick="editUser(${user.id})" class="btn btn-secondary" style="padding: 5px 10px; font-size: 12px;">
+                                            Rediger
+                                        </button>
                                         ${!user.is_admin ? `
                                             <button onclick="makeAdmin(${user.id})" class="btn btn-secondary" style="padding: 5px 10px; font-size: 12px;">
                                                 Gør til admin
@@ -342,6 +346,80 @@ async function removeAdmin(userId) {
         });
         
         alert(' Admin rettigheder fjernet');
+        loadAllUsers();
+    } catch (error) {
+        alert('Fejl: ' + error.message);
+    }
+}
+
+// ===== Rediger bruger (admin) =====
+async function editUser(userId) {
+    const user = (window._adminUsers || []).find(u => u.id === userId);
+    if (!user) return alert('Brugeren blev ikke fundet');
+
+    const existing = document.getElementById('editUserModal');
+    if (existing) existing.remove();
+
+    const modal = document.createElement('div');
+    modal.id = 'editUserModal';
+    modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:10000;';
+    modal.innerHTML = `
+        <div style="background:var(--surface,#fff);border-radius:12px;padding:24px;width:420px;max-width:90vw;max-height:90vh;overflow:auto;">
+            <h3 style="margin:0 0 16px 0;">Rediger bruger: ${user.name}</h3>
+            <div style="display:flex;flex-direction:column;gap:10px;">
+                <label style="font-size:13px;font-weight:600;">Fornavn
+                    <input id="editUserFirstName" value="${(user.name || '').split(' ')[0] || ''}" style="width:100%;padding:8px;margin-top:4px;border:1px solid var(--border,#ddd);border-radius:6px;">
+                </label>
+                <label style="font-size:13px;font-weight:600;">Efternavn
+                    <input id="editUserLastName" value="${(user.name || '').split(' ').slice(1).join(' ') || ''}" style="width:100%;padding:8px;margin-top:4px;border:1px solid var(--border,#ddd);border-radius:6px;">
+                </label>
+                <label style="font-size:13px;font-weight:600;">E-mail
+                    <input id="editUserEmail" value="${user.email || ''}" style="width:100%;padding:8px;margin-top:4px;border:1px solid var(--border,#ddd);border-radius:6px;">
+                </label>
+                <label style="font-size:13px;font-weight:600;">Stilling
+                    <input id="editUserPosition" value="${user.position || ''}" style="width:100%;padding:8px;margin-top:4px;border:1px solid var(--border,#ddd);border-radius:6px;">
+                </label>
+                <label style="font-size:13px;font-weight:600;">Afdeling (bestemmer adgang: Ledelsen = admin)
+                    <select id="editUserDepartment" style="width:100%;padding:8px;margin-top:4px;border:1px solid var(--border,#ddd);border-radius:6px;">
+                        <option value="Montører" ${user.department !== 'Ledelsen' ? 'selected' : ''}>Montører</option>
+                        <option value="Ledelsen" ${user.department === 'Ledelsen' ? 'selected' : ''}>Ledelsen</option>
+                    </select>
+                </label>
+                <label style="font-size:13px;font-weight:600;">Nyt kodeord (valgfri - efterlad tom for at beholde nuværende)
+                    <input id="editUserPassword" type="password" placeholder="Mindst 6 tegn" style="width:100%;padding:8px;margin-top:4px;border:1px solid var(--border,#ddd);border-radius:6px;">
+                </label>
+            </div>
+            <div style="display:flex;gap:10px;margin-top:18px;justify-content:flex-end;">
+                <button onclick="document.getElementById('editUserModal').remove()" class="btn btn-secondary">Annuller</button>
+                <button onclick="saveUserEdit(${userId})" class="btn btn-primary">Gem</button>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+    modal.addEventListener('click', (e) => { if (e.target === modal) modal.remove(); });
+}
+
+async function saveUserEdit(userId) {
+    const firstName = document.getElementById('editUserFirstName').value.trim();
+    const lastName = document.getElementById('editUserLastName').value.trim();
+    const email = document.getElementById('editUserEmail').value.trim();
+    const position = document.getElementById('editUserPosition').value.trim();
+    const department = document.getElementById('editUserDepartment').value;
+    const password = document.getElementById('editUserPassword').value;
+
+    try {
+        const token = sessionStorage.getItem('token');
+        const response = await fetch(`/api/admin/users/${userId}`, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name: (firstName + ' ' + lastName).trim(), email, position, department, password: password || undefined })
+        });
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error || 'Kunne ikke gemme');
+        }
+        document.getElementById('editUserModal')?.remove();
+        alert('✅ Brugeren er opdateret');
         loadAllUsers();
     } catch (error) {
         alert('Fejl: ' + error.message);

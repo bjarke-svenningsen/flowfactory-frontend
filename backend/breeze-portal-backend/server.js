@@ -25,6 +25,15 @@ const httpServer = createServer(app);
 const PORT = process.env.PORT || 4000;
 const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-change-me';
 
+// Globalt sikkerhedsnet: en ukontrolleret async-fejl maal ALDRIG nedtage hele portalen.
+// Logges tydeligt saa fejlen kan rettes, men processen overlever (tidligere: crash -> 502 paa alt).
+process.on('unhandledRejection', function (reason) {
+  console.error('[FATAL-RECOVERY] Uhandteret promise-fejl (serveren fortsaetter):', reason && reason.stack ? reason.stack : reason);
+});
+process.on('uncaughtException', function (err) {
+  console.error('[FATAL-RECOVERY] Uhaandteret undtagelse (serveren fortsaetter):', err && err.stack ? err.stack : err);
+});
+
 // CORS configuration - Allow specific origins
 const allowedOrigins = [
   'https://flowfactory-frontend-20zs.onrender.com',
@@ -298,7 +307,8 @@ const upload = multer({
 
 // --- Helpers ---
 function signToken(user) {
-  return jwt.sign({ id: user.id, email: user.email, name: user.name }, JWT_SECRET, { expiresIn: '7d' });
+  // is_admin skal vaere i tokenet (montor-routes bruger det til rolletjek)
+  return jwt.sign({ id: user.id, email: user.email, name: user.name, is_admin: !!user.is_admin }, JWT_SECRET, { expiresIn: '7d' });
 }
 
 function auth(req, res, next) {
@@ -362,8 +372,86 @@ app.post('/api/link-preview', auth, async (req, res) => {
 });
 
 // Auth - Registration with invite code OR pending approval
+// Faelles validering af brugerdata (register + admin opret/rediger)
+function validateUserData({ name, email, password, requirePassword }) {
+  const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[A-Za-z]{2,}$/;
+  if (!name || String(name).trim().length < 5 || !String(name).trim().includes(' ')) {
+    return 'Fornavn og efternavn skal udfyldes (mindst 2 tegn hver).';
+  }
+  const parts = String(name).trim().split(/\s+/);
+  if (parts[0].length < 2 || parts[parts.length - 1].length < 2) {
+    return 'Fornavn og efternavn skal hver være mindst 2 tegn.';
+  }
+  if (!email || !EMAIL_RE.test(String(email).trim())) {
+    return 'Indtast en gyldig e-mailadresse (fx mail@firma.dk).';
+  }
+  if (requirePassword && (!password || String(password).length < 6)) {
+    return 'Adgangskoden skal være mindst 6 tegn.';
+  }
+  return null;
+}
+
+// ===== Rolle-hjaelpere: Ledelsen = is_admin, alle andre = Montoer =====
+const ECON_FIELDS = ['subtotal', 'vat_rate', 'vat_amount', 'total', 'revenue', 'revenue_main', 'revenue_extra', 'expenses', 'expenses_main', 'expenses_extra', 'profit', 'profit_main', 'profit_extra', 'profit_margin'];
+const ECON_LINE_FIELDS = ['unit_price', 'discount_percent', 'discount_amount', 'line_total'];
+
+function isMontor(req) {
+  return !req.user || !req.user.is_admin;
+}
+
+// Er ordren "igangvaerende"? (status accepted + order_stage in_progress, hovedordre)
+function isInProgressOrder(q) {
+  return q && q.status === 'accepted' && q.order_stage === 'in_progress' && !q.is_extra_work && !q.parent_order_id;
+}
+
+// Fjern alle oekonomifelter fra et quote-objekt (rekursivt for lines)
+function stripEconomy(quote) {
+  if (!quote) return quote;
+  ECON_FIELDS.forEach(function (f) { delete quote[f]; });
+  if (Array.isArray(quote.lines)) {
+    quote.lines.forEach(function (l) { ECON_LINE_FIELDS.forEach(function (f) { delete l[f]; }); });
+  }
+  return quote;
+}
+
+// Blokerade for montorer: filer, email, materialer, fakturaer, kunder m.m.
+function montorGuard(req, res, next) {
+  // Dekod JWT selv (koerer foer route-auth)
+  try {
+    const hdr = req.headers.authorization || '';
+    const token = hdr.startsWith('Bearer ') ? hdr.slice(7) : null;
+    if (!token) return res.status(403).json({ error: 'Adgang nægtet' });
+    req.user = jwt.verify(token, JWT_SECRET);
+  } catch (e) {
+    return res.status(403).json({ error: 'Adgang nægtet' });
+  }
+  // gamle tokens (foer v80) mangler is_admin - sla op i DB
+  (async function () {
+    if (req.user.is_admin === undefined || req.user.is_admin === null) {
+      try {
+        const u = await db.get('SELECT is_admin FROM users WHERE id = ?', [req.user.id]);
+        req.user.is_admin = u ? !!u.is_admin : false;
+      } catch (e) {
+        req.user.is_admin = false;
+      }
+    }
+    if (isMontor(req)) return res.status(403).json({ error: 'Adgang nægtet - din afdeling har ikke adgang til denne funktion' });
+    next();
+  })();
+}
+
+app.use('/api/files', montorGuard);
+app.use('/api/folders', montorGuard);
+app.use('/api/email', montorGuard);
+app.use('/api/materials', montorGuard);
+app.use('/api/invoices', montorGuard);
+app.use('/api/customers', montorGuard);
+
 app.post('/api/auth/register', async (req, res) => {
-  const { name, email, password, inviteCode, position, department, phone } = req.body;
+  const { firstName, lastName, name, email, password, inviteCode, position, department, phone } = req.body;
+  const fullName = (firstName && lastName) ? (String(firstName).trim() + ' ' + String(lastName).trim()) : name;
+  const validationError = validateUserData({ name: fullName, email: email, password: password, requirePassword: true });
+  if (validationError) return res.status(400).json({ error: validationError });
   if (!name || !email || !password) return res.status(400).json({ error: 'Missing fields' });
   
   try {
@@ -1640,6 +1728,46 @@ app.get('/api/admin/users', auth, adminAuth, async (req, res) => {
   res.json(users);
 });
 
+// Update user (admin: ret navn, email, stilling, afdeling; evt. nyt kodeord)
+app.post('/api/admin/users/:id', auth, adminAuth, async (req, res) => {
+  const userId = Number(req.params.id);
+  const { name, email, position, department, phone, password } = req.body;
+
+  if (!userId) return res.status(400).json({ error: 'Ugyldigt bruger-id' });
+  const validationError = validateUserData({ name: name, email: email, requirePassword: false });
+  if (validationError) return res.status(400).json({ error: validationError });
+  if (password && String(password).length > 0 && String(password).length < 6) {
+    return res.status(400).json({ error: 'Adgangskoden skal være mindst 6 tegn.' });
+  }
+
+  try {
+    const user = await db.get('SELECT id FROM users WHERE id = ?', [userId]);
+    if (!user) return res.status(404).json({ error: 'User not found' });
+
+    const dup = await db.get('SELECT id FROM users WHERE email = ? AND id != ?', [String(email).trim().toLowerCase(), userId]);
+    if (dup && dup.id) return res.status(409).json({ error: 'Email already in use' });
+
+    await db.run('UPDATE users SET name = ?, email = ?, position = ?, department = ?, phone = ? WHERE id = ?', [
+      String(name).trim(),
+      String(email).trim().toLowerCase(),
+      position || '',
+      department || '',
+      phone || '',
+      userId
+    ]);
+
+    if (password && String(password).length >= 6) {
+      await db.run('UPDATE users SET password_hash = ? WHERE id = ?', [bcrypt.hashSync(String(password), 10), userId]);
+    }
+
+    console.log('[admin] Bruger ' + userId + ' opdateret af ' + req.user.id);
+    res.json({ success: true });
+  } catch (err) {
+    console.error('[admin] Opdatering af bruger ' + userId + ' fejlede:', err && err.message ? err.message : err);
+    return res.status(500).json({ error: 'Kunne ikke opdatere brugeren (databasefejl - se serverlog)' });
+  }
+});
+
 // Make user admin
 app.post('/api/admin/make-admin/:id', auth, adminAuth, async (req, res) => {
   await db.run('UPDATE users SET is_admin = 1 WHERE id = ?', [Number(req.params.id)]);
@@ -1673,16 +1801,37 @@ app.delete('/api/admin/users/:id', auth, adminAuth, async (req, res) => {
     return res.status(404).json({ error: 'User not found' });
   }
   
-  // Delete user's data
-  await db.run('DELETE FROM messages WHERE sender_id = ? OR recipient_id = ?', [userId, userId]);
-  await db.run('DELETE FROM posts WHERE user_id = ?', [userId]);
-  await db.run('DELETE FROM reactions WHERE user_id = ?', [userId]);
-  await db.run('DELETE FROM files WHERE uploaded_by = ?', [userId]);
-  await db.run('DELETE FROM folders WHERE created_by = ?', [userId]);
+  // FK-sikker rækkefølge i transaktion: først rødder, derefter indhold, til sidst brugeren.
+  // Chat-tabellerne og customers/quotes refererer til users(id) - de SKAL væk eller nulstilles,
+  // ellers fejler sletningen (tidligere: ukontrolleret fejl -> server-crash -> 502 på alt).
+  try {
+    // Chat: læsekvitteringer -> deltagere -> beskeder -> tomøre-samtaler
+    await db.run('DELETE FROM chat_reads WHERE user_id = ?', [userId]);
+    await db.run('DELETE FROM chat_participants WHERE user_id = ?', [userId]);
+    await db.run('DELETE FROM chat_messages WHERE sender_id = ?', [userId]);
+    await db.run('DELETE FROM chat_conversations WHERE id NOT IN (SELECT DISTINCT conversation_id FROM chat_participants)');
+    // Feed: reaktioner/kommentarer på brugerens opslag, derefter brugerens egne
+    await db.run('DELETE FROM reactions WHERE post_id IN (SELECT id FROM posts WHERE user_id = ?)', [userId]);
+    await db.run('DELETE FROM comments WHERE post_id IN (SELECT id FROM posts WHERE user_id = ?)', [userId]);
+    await db.run('DELETE FROM reactions WHERE user_id = ?', [userId]);
+    await db.run('DELETE FROM comments WHERE user_id = ?', [userId]);
+    await db.run('DELETE FROM posts WHERE user_id = ?', [userId]);
+    // Intern mail (beskeder)
+    await db.run('DELETE FROM messages WHERE sender_id = ? OR recipient_id = ?', [userId, userId]);
+    // Filer/mapper ejes af brugeren
+    await db.run('DELETE FROM files WHERE uploaded_by = ?', [userId]);
+    await db.run('DELETE FROM folders WHERE created_by = ?', [userId]);
+    // Kunder/tilbud: bevar forretningsdata, nulstil blot ejerskabet (kolonner er nullable)
+    await db.run('UPDATE customers SET created_by = NULL WHERE created_by = ?', [userId]);
+    await db.run('UPDATE quotes SET created_by = NULL WHERE created_by = ?', [userId]);
+    // Til sidst brugeren selv
+    await db.run('DELETE FROM users WHERE id = ?', [userId]);
+  } catch (err) {
+    console.error('[admin] Sletning af bruger ' + userId + ' fejlede:', err && err.message ? err.message : err);
+    return res.status(500).json({ error: 'Kunne ikke slette brugeren (databasefejl - se serverlog)' });
+  }
   
-  // Finally delete the user
-  await db.run('DELETE FROM users WHERE id = ?', [userId]);
-  
+  console.log('[admin] Bruger ' + userId + ' (' + user.name + ') slettet af ' + req.user.id);
   res.json({ success: true, message: `User ${user.name} deleted` });
 });
 
@@ -2461,7 +2610,12 @@ app.get('/api/quotes', auth, async (req, res) => {
     });
   }
   
-  res.json(enrichedQuotes);
+  // Montoer: kun igangvaerende hovedordrer, uden oekonomi
+  if (isMontor(req)) {
+    res.json(enrichedQuotes.filter(isInProgressOrder).map(stripEconomy));
+  } else {
+    res.json(enrichedQuotes);
+  }
 });
 
 app.get('/api/quotes/:id', auth, async (req, res) => {
@@ -2479,6 +2633,11 @@ app.get('/api/quotes/:id', auth, async (req, res) => {
   
   if (!quote) {
     return res.status(404).json({ error: 'Quote not found' });
+  }
+  
+  // Montoer: kun igangvaerende ordrer, laesetilstand uden oekonomi
+  if (isMontor(req)) {
+    if (!isInProgressOrder(quote)) return res.status(403).json({ error: 'Adgang nægtet' });
   }
   
   // If contact_person_id is set, get contact person details
@@ -2510,11 +2669,16 @@ app.get('/api/quotes/:id', auth, async (req, res) => {
   quote.lines = lines;
   quote.attachments = attachments;
   
+  // Montoer: fjern alle oekonomifelter inden svaret sendes
+  if (isMontor(req)) stripEconomy(quote);
+  
   res.json(quote);
 });
 
 app.post('/api/quotes', auth, async (req, res) => {
   try {
+    // Montoer kan ikke oprette tilbud/ordrer
+    if (isMontor(req)) return res.status(403).json({ error: 'Adgang nægtet - kun Ledelsen kan oprette ordrer' });
     const { customer_id, title, valid_until, notes, terms, lines, requisition_number, contact_person_id } = req.body;
     
     if (!customer_id || !title || !lines || lines.length === 0) {
@@ -2577,6 +2741,8 @@ app.post('/api/quotes', auth, async (req, res) => {
 });
 
 app.put('/api/quotes/:id', auth, async (req, res) => {
+  // Montoer kan ikke redigere ordrer (laesetilstand)
+  if (isMontor(req)) return res.status(403).json({ error: 'Adgang nægtet - kun Ledelsen kan redigere ordrer' });
   const quoteId = Number(req.params.id);
   const { customer_id, title, valid_until, notes, terms, lines, status, contact_person_id } = req.body;
   

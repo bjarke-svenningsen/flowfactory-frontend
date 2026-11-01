@@ -49,8 +49,13 @@
 
       <form id="registerForm">
         <div class="form-group">
-          <label for="regName">Fulde navn:</label>
-          <input type="text" id="regName" placeholder="Dit fulde navn" required />
+          <label for="regFirstName">Fornavn:</label>
+          <input type="text" id="regFirstName" placeholder="Fornavn" required minlength="2" />
+        </div>
+
+        <div class="form-group">
+          <label for="regLastName">Efternavn:</label>
+          <input type="text" id="regLastName" placeholder="Efternavn" required minlength="2" />
         </div>
 
         <div class="form-group">
@@ -60,7 +65,8 @@
 
         <div class="form-group">
           <label for="regPassword">Adgangskode:</label>
-          <input type="password" id="regPassword" placeholder="Mindst 6 tegn" required />
+          <input type="password" id="regPassword" placeholder="Mindst 6 tegn" required minlength="6" />
+          <small style="display: block; margin-top: 5px; color: #666;">Stilling og afdeling sættes af en administrator.</small>
         </div>
 
         <div class="form-group">
@@ -104,11 +110,20 @@
       msgEl.style.display = 'block';
       
       const data = {
-        name: document.getElementById('regName').value.trim(),
+        firstName: document.getElementById('regFirstName').value.trim(),
+        lastName: document.getElementById('regLastName').value.trim(),
         email: document.getElementById('regEmail').value.trim(),
         password: document.getElementById('regPassword').value,
         inviteCode: document.getElementById('regInviteCode').value.trim()
       };
+      
+      // Frontend-validering (backend validerer ogsaa)
+      const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[A-Za-z]{2,}$/;
+      if (data.firstName.length < 2) { msgEl.textContent = 'Fornavn skal være mindst 2 tegn.'; msgEl.className = 'message error'; return; }
+      if (data.lastName.length < 2) { msgEl.textContent = 'Efternavn skal være mindst 2 tegn.'; msgEl.className = 'message error'; return; }
+      if (!EMAIL_RE.test(data.email)) { msgEl.textContent = 'Indtast en gyldig e-mailadresse (fx mail@firma.dk).'; msgEl.className = 'message error'; return; }
+      if (data.password.length < 6) { msgEl.textContent = 'Adgangskoden skal være mindst 6 tegn.'; msgEl.className = 'message error'; return; }
+      data.name = data.firstName + ' ' + data.lastName;
       
       try {
         const response = await fetch('/api/auth/register', {

@@ -120,6 +120,18 @@ function renderUserData(currentUser) {
     document.getElementById('navUserName').textContent = currentUser.name;
     window.currentUser = currentUser;
     
+    // Rolle-gating: Ledelsen = is_admin, alle andre = Montor.
+    // Montorer: Feed, Min Profil, Chat & Video, Ordrestyring (igangvaerende, laesetilstand), Min Tid, Indstillinger.
+    // Skjul Ledelsen-menuer (backend blokerer ogsaa med 403).
+    const montorBlockedPages = ['files', 'colleagues', 'email', 'materials', 'admin'];
+    document.querySelectorAll('.menu-item').forEach(item => {
+        const page = item.dataset.page;
+        if (page === 'materials') return; // MaterialsMenuItem styres nedenfor (admin-only som foer)
+        if (!currentUser.is_admin && montorBlockedPages.includes(page)) {
+            item.style.display = 'none';
+        }
+    });
+    
     // Show Materialer menu item only for admins
     if (currentUser.is_admin) {
         document.getElementById('materialsMenuItem').style.display = 'block';
@@ -152,6 +164,14 @@ async function showPage(pageName, updateHash = true) {
     // Redirect videocall to chat (after removing videocall page)
     if (pageName === 'videocall') {
         pageName = 'chat';
+    }
+    
+    // Montor-guard: blokerede sider redirectes til Feed (backend blokerer ogsaa API'erne med 403)
+    const montorBlockedPages = ['files', 'colleagues', 'email', 'materials', 'admin'];
+    if (window.currentUser && !window.currentUser.is_admin && montorBlockedPages.includes(pageName)) {
+        console.warn('[rolle] Side "' + pageName + '" er kun for Ledelsen - sender til Feed');
+        pageName = 'feed';
+        updateHash = true;
     }
     
     // Save current page to remember after refresh
