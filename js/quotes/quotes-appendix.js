@@ -46,7 +46,15 @@
                 padding: 10px 14px; font-size: 10.5px; color: #444; margin: 12px 0; line-height: 1.6;
             }
             .bilag-foot { font-size: 9.5px; color: #888; margin-top: 18px; font-style: italic; }
-            .bilag-diagram { width: 100%; max-width: 420px; margin: 14px auto; display: block; border: 1px solid #e5e0d5; padding: 8px; box-sizing: border-box; }
+            .bilag-diagram { width: 100%; max-width: 640px; margin: 14px auto; display: block; border: 1px solid #e5e0d5; padding: 8px; box-sizing: border-box; }
+            .bilag-pdfpages { margin: 6px 0 10px 0; }
+            .bilag-pdf-canvas {
+                width: 100%; height: auto; display: block;
+                border: 1px solid #e5e0d5; margin: 10px 0; background: #fff;
+                page-break-inside: avoid; break-inside: avoid;
+            }
+            .bilag-pdf-loading, .bilag-pdf-fallback { font-size: 10.5px; color: #888; padding: 10px 0; }
+            .bilag-pdf-fallback a { color: ${GOLD}; font-weight: 600; }
             .bilag-list-row {
                 display: flex; align-items: center; gap: 12px; padding: 12px 0;
                 border-bottom: 1px solid #e5e0d5; font-size: 11px; color: #222;
@@ -150,42 +158,105 @@
 
             <div class="bilag-note">De angivne tolerancer gælder, hvis intet andet er aftalt. Planhedsmålinger foretages med 2 m retlineal, og arbejdet afregnes særskilt, hvis underlaget kræver opretning ud over tilbuddets omfang.</div>
 
-            <img class="bilag-diagram" src="assets/forbehold/planhed-1.jpg" alt="Princip for måling af lunker og forhøjninger med 2 m retlineal">
+            <img class="bilag-diagram" src="assets/forbehold/rethed-og-tolerancer.png" alt="Tolerancetabel: krav til planhed for belægningstyper">
 
             <p class="bilag-foot">Baggrund: Gulvbranchens Oplysnings-Kasser (GOK) — Planhed af gulve. Toleranceangivelserne følger gulvbranchens retningslinjer.</p>
         </div>`;
     }
 
-    // ---- Bilag 3: Vedlagte GOK-dokumenter (bilagsliste med links) ----
+    // ---- Bilag 3: GOK-dokumenterne indlejret som sider (renderes med pdf.js) ----
+    var GOK_DOCS = [
+        { title: 'Planhed af gulve', org: 'Gulvbranchens Oplysnings-Kasser (GOK)', file: 'assets/forbehold/ok-p_-planhed-af-gulve.pdf' },
+        { title: 'Forventninger til fugefrie gulve', org: 'Gulvbranchens Oplysnings-Kasser (GOK)', file: 'assets/forbehold/forventninger til fugefrie gulve.pdf' }
+    ];
+    var PDFJS_URL = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+    var PDFJS_WORKER = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
     function bilag3() {
-        var docs = [
-            { title: 'Planhed af gulve', org: 'Gulvbranchens Oplysnings-Kasser (GOK)', file: 'assets/forbehold/ok-p_-planhed-af-gulve.pdf' },
-            { title: 'Forventninger til fugefrie gulve', org: 'Gulvbranchens Oplysnings-Kasser (GOK)', file: 'assets/forbehold/forventninger til fugefrie gulve.pdf' }
-        ];
         return `
         <div class="quote-sheet quote-sheet--bilag">
             <p class="bilag-kicker">Bilag 3</p>
             <h2 class="bilag-title">Vedlagte dokumenter — Gulvbranchens vejledninger</h2>
-            <p class="bilag-sub" style="margin-bottom: 14px;">Følgende vejledninger fra Gulvbranchens Oplysnings-Kasser er en del af tilbuddets grundlag og følger med som selvstændige bilag.</p>
-            ${docs.map(function (d, i) {
+            <p class="bilag-sub" style="margin-bottom: 14px;">Følgende vejledninger fra Gulvbranchens Oplysnings-Kasser er en del af tilbuddets grundlag og er indlejret i sin fulde længde nedenfor.</p>
+            <div class="bilag-note">Gulvbranchens Standardforbehold af maj 2008 for fugefrie gulve er gældende for fugefrie gulvbelægninger, jf. Handelsbetingelserne (Bilag 1, punkt 3).</div>
+            ${GOK_DOCS.map(function (d, i) {
                 return `
-            <div class="bilag-list-row">
-                <span class="bilag-num">${i + 1}</span>
-                <div style="flex: 1;">
-                    <strong>${d.title}</strong><br>
-                    <span style="color: #777; font-size: 10px;">${d.org}</span>
-                </div>
-                <a href="${d.file}" target="_blank" rel="noopener">Åbn PDF</a>
+            <h3 class="bilag-h" style="margin-top: 26px;">Dokument ${i + 1}: ${d.title} <span style="font-weight: 400; color: #888;">(${d.org})</span></h3>
+            <div class="bilag-pdfpages" id="bilagPdfPages${i + 1}" data-file="${d.file}">
+                <div class="bilag-pdf-loading">Indlæser dokumentet…</div>
             </div>`;
             }).join('')}
-            <div class="bilag-note">Gulvbranchens Standardforbehold af maj 2008 for fugefrie gulve er gældende for fugefrie gulvbelægninger, jf. Handelsbetingelserne (Bilag 1, punkt 3).</div>
             <p class="bilag-foot">Dokumenterne kan altid fremsendes igen på anmodning — kontakt SG Seest Gulvteknik ApS.</p>
         </div>`;
+    }
+
+    // Render GOK-PDF'erne til <canvas> (kanves printes som almindeligt indhold)
+    function renderPdfPagesInto(containerId, file) {
+        var host = document.getElementById(containerId);
+        if (!host) return;
+        window.pdfjsLib.GlobalWorkerOptions.workerSrc = PDFJS_WORKER;
+        // Emnede URL'er (mellemrum i filnavne)
+        var url = file.split('/').map(encodeURIComponent).join('/');
+        window.pdfjsLib.getDocument(url).promise.then(function (pdf) {
+            host.innerHTML = '';
+            var pageNum;
+            function next() {
+                if (pageNum > pdf.numPages) return;
+                var current = pageNum++;
+                pdf.getPage(current).then(function (page) {
+                    var scale = 1.6;
+                    var vp = page.getViewport({ scale: scale });
+                    var canvas = document.createElement('canvas');
+                    canvas.className = 'bilag-pdf-canvas';
+                    canvas.width = vp.width;
+                    canvas.height = vp.height;
+                    host.appendChild(canvas);
+                    page.render({ canvasContext: canvas.getContext('2d'), viewport: vp }).promise.then(next);
+                }).catch(function (e) { console.error('PDF-side:', e); });
+            }
+            pageNum = 1;
+            next();
+        }).catch(function (err) {
+            console.error('Kunne ikke indlæse PDF (' + file + '):', err);
+            // Fallback: dokumentliste med links
+            host.innerHTML = '<div class="bilag-pdf-fallback">Vejledningen kunne ikke vises her — ' +
+                '<a href="' + encodeURI(file) + '" target="_blank" rel="noopener">Åbn som PDF</a></div>';
+        });
+    }
+
+    function loadPdfJs(cb) {
+        if (window.pdfjsLib) { cb(); return; }
+        var s = document.createElement('script');
+        s.src = PDFJS_URL;
+        s.onload = cb;
+        s.onerror = function () {
+            // pdf.js kunne ikke hentes: vis fallback-links i alle hosts
+            GOK_DOCS.forEach(function (d, i) {
+                var host = document.getElementById('bilagPdfPages' + (i + 1));
+                if (host) host.innerHTML = '<div class="bilag-pdf-fallback">Vejledningen kunne ikke vises her — ' +
+                    '<a href="' + encodeURI(d.file) + '" target="_blank" rel="noopener">Åbn som PDF</a></div>';
+            });
+        };
+        document.head.appendChild(s);
+    }
+
+    // Kaldes efter HTML'en er sat ind i DOM'et
+    function schedulePdfRender() {
+        setTimeout(function () {
+            var anyHost = document.getElementById('bilagPdfPages1');
+            if (!anyHost) return; // ikke (længer) i DOM
+            loadPdfJs(function () {
+                GOK_DOCS.forEach(function (d, i) {
+                    renderPdfPagesInto('bilagPdfPages' + (i + 1), d.file);
+                });
+            });
+        }, 0);
     }
 
     // Public: HTML for alle bilag (kun tilbud – ikke ordrevisning)
     window.renderQuoteAppendix = function () {
         ensureStyles();
+        schedulePdfRender(); // Bilag 3: render PDF-siderne naar HTML'en er i DOM
         return bilag1() + bilag2() + bilag3();
     };
 })();
