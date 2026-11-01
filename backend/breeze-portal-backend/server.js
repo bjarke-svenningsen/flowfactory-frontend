@@ -2301,18 +2301,22 @@ app.get('/api/chat/presence', auth, async (req, res) => {
 // --- QUOTES & CUSTOMERS API ---
 
 // Helper function to generate order number for main orders
+// v101: Kollisionssikker - finder hoejeste numeriske nummer og proever naeste
+// indtil et ledigt nummer findes. Kombineret med UNIQUE-index paa order_number
+// kan dubletter (som "0001 findes allerede") aldrig laengere opstaa.
 async function generateOrderNumber() {
-  const lastQuote = await db.get(`
-    SELECT order_number FROM quotes 
-    WHERE parent_order_id IS NULL 
-    ORDER BY id DESC LIMIT 1
-  `);
-  
-  let nextNum = 1;
-  if (lastQuote) {
-    nextNum = parseInt(lastQuote.order_number) + 1;
+  const rows = await db.all(`SELECT order_number FROM quotes WHERE parent_order_id IS NULL`);
+  const used = new Set(rows.map(r => String(r.order_number)));
+
+  let maxNum = 0;
+  for (const num of used) {
+    const n = parseInt(num, 10);
+    if (!isNaN(n) && n > maxNum) maxNum = n;
   }
-  
+
+  let nextNum = maxNum + 1;
+  while (used.has(String(nextNum).padStart(4, '0'))) nextNum++;
+
   return String(nextNum).padStart(4, '0'); // 0001, 0002, 0003...
 }
 

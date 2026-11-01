@@ -605,6 +605,42 @@ export async function initializeDatabase() {
       console.error('Kunne ikke sikre firmamappe:', companyErr.message);
     }
 
+    // --- v101: Unik ordrenummer-garanti (dubletter kan aldrig ske igen) ---
+    try {
+      await db.run('CREATE UNIQUE INDEX IF NOT EXISTS idx_quotes_order_number_unique ON quotes(order_number)');
+      console.log('✅ Unik index på quotes.order_number klar');
+    } catch (e) {
+      console.warn('⚠️ Kunne ikke oprette unik index på order_number (dubletter i gamle data?):', e.message);
+    }
+
+    // --- v101: Ren slaede - slet ALLE sags-relaterede data ved opstart ---
+    // Aktiveres KUN med miljoevariabel RESET_ORDERS=1 (saettes i Render Environment,
+    // og FJERNES igen efter foerste opstart - ellers slettes nye ordrer ved hver deploy!)
+    if (String(process.env.RESET_ORDERS || '').trim() === '1') {
+      console.log('🧹 RESET_ORDERS=1 - sletter alle tilbud/ordrer og tilhoerende data...');
+      const tables = [
+        'order_timeline',      // ordre-historik
+        'order_materials',     // tids-/materialeforbrug
+        'order_expenses',      // udgifter
+        'invoice_lines',       // fakturalinjer
+        'invoices',            // fakturaer
+        'quote_attachments',   // tilbud-filer
+        'quote_lines',         // tilbudslinjer
+        'quotes'               // tilbud/ordrer selv
+      ];
+      for (const t of tables) {
+        try {
+          const r = await db.run(`DELETE FROM ${t}`);
+          console.log(`   🗑️  ${t}: ${r.changes ?? 'ok'} rækker slettet`);
+        } catch (e) {
+          console.warn(`   ⚠️ ${t}: ${e.message}`);
+        }
+      }
+      // SQLite: nulstil autoincrement, saa foerste ordre igen bliver 0001
+      try { await db.run("DELETE FROM sqlite_sequence WHERE name IN ('quotes','quote_lines','quote_attachments','invoices','invoice_lines','order_expenses','order_materials','order_timeline')"); } catch (e) { /* Postgres eller tabel findes ikke */ }
+      console.log('✅ Ren slaede gennemfoert - næste ordre får nummer 0001');
+    }
+
     console.log('✅ All database tables initialized successfully!');
   } catch (error) {
     console.error('❌ Database initialization failed:', error);

@@ -955,32 +955,23 @@ async function acceptQuote(quoteId) {
         }
 
         alert(`Tilbud accepteret som ordre ${order.order_number}!`);
+        // v101: Gem permanent override (localStorage) - bruges af loadQuotes,
+        // loadOrders og updateTabCountsFromQuotes, saa sagen ENDELIG ligger
+        // rigtigt uanset foralet listesvar fra serveren
+        const acceptedRow = (order && order.id) ? order : { id: quoteId, status: 'accepted', order_stage: 'approved' };
+        saveAcceptOverride(acceptedRow);
+
         // v97: hop direkte over paa Godkendte Ordre-fanen, saa ordren ses med det samme
         await loadQuotes();
         await loadOrders();
 
-        // v100: Sikkerhedsnet - verificeringen ovenfor har bevist at DB har status
-        // 'accepted', saa hvis listerne ALLIGEVEL viser gammel data (forhaalet cache/
-        // laese-svar), retter vi dem lokalt: fjern fra Tilbud, laeg ind i Godkendte Ordre
-        const acceptedRow = (order && order.id) ? order : { id: quoteId, status: 'accepted', order_stage: 'approved' };
-        saveAcceptOverride(acceptedRow);
-        const ghost = allQuotes.find(q => q.id === quoteId);
-        if (ghost) {
-            console.warn('acceptQuote: liste svarede stadig med gammel status - retter lokalt', quoteId);
-            allQuotes = allQuotes.filter(q => q.id !== quoteId);
-            renderQuotesList();
+        // v101: sikr at ordren ligger i fane-cachen, saa den overlever faneskift
+        if (!orderTabCache.orders.some(q => q.id === acceptedRow.id)) {
+            orderTabCache.orders = [acceptedRow, ...orderTabCache.orders];
+            renderTabSlice('orders', orderTabCache.orders, renderOrdersContent);
         }
-        const ordersCache = orderTabCache.orders || [];
-        if (!ordersCache.some(q => q.id === acceptedRow.id)) {
-            renderTabSlice('orders', [acceptedRow, ...ordersCache], renderOrdersContent);
-        }
-        // Ret fanetaellinger lokalt hvis de var forhaalede
-        const quotesEl = document.getElementById('tabCountQuotes');
-        const ordersEl = document.getElementById('tabCountOrders');
-        if (ghost && quotesEl) setTabCount('Quotes', Math.max(0, (parseInt(quotesEl.textContent, 10) || 0) - 1));
-        if (ordersEl && !ordersCache.some(q => q.id === acceptedRow.id)) {
-            setTabCount('Orders', (parseInt(ordersEl.textContent, 10) || 0) + 1);
-        }
+        // Taellerne er allerede rettet af loadQuotes/loadOrders via
+        // updateTabCountsFromQuotes (som tager hojde for overrides)
 
         switchOrderTab('orders');
 
@@ -1315,10 +1306,25 @@ function setTabCountHidden(tabName) {
 }
 
 // Beregn alle fanetællinger ud fra ét /api/quotes-svar (uafhængigt af aktiv fane)
+// v101: Lokale godkendelses-overrides taelles altid med, uanset hvornaar denne
+// funktion kaldes - saa taellerne kan aldrig "skifte tilbage" pga. foralet listesvar
 function updateTabCountsFromQuotes(allQuotes) {
     const isOrder = q => q.status === 'accepted' && !q.is_extra_work;
-    setTabCount('Quotes', allQuotes.filter(q => q.status === 'draft' || q.status === 'sent').length);
-    setTabCount('Orders', allQuotes.filter(q => isOrder(q) && q.order_stage !== 'in_progress').length);
+    const overrideRows = getAcceptOverrides().map(o => o.row).filter(r => r && !r.is_extra_work);
+
+    // Tilbud: serverens udkast/sendte MINUS sager vi lokalt ved er godkendte
+    const overrideIds = new Set(overrideRows.map(r => r.id));
+    const quotesCount = allQuotes.filter(q => (q.status === 'draft' || q.status === 'sent') && !overrideIds.has(q.id)).length;
+
+    // Godkendte Ordre: serverens accepted (ikke igangvaerende) PLUS overrides som
+    // serveren hverken taeller som godkendt ordre eller som igangvaerende
+    const serverOrders = allQuotes.filter(q => isOrder(q) && q.order_stage !== 'in_progress');
+    const serverInProgressIds = new Set(allQuotes.filter(q => isOrder(q) && q.order_stage === 'in_progress').map(q => q.id));
+    const extraOrders = overrideRows.filter(r => !serverOrders.some(q => q.id === r.id) && !serverInProgressIds.has(r.id));
+    const ordersCount = serverOrders.length + extraOrders.length;
+
+    setTabCount('Quotes', quotesCount);
+    setTabCount('Orders', ordersCount);
     setTabCount('InProgress', allQuotes.filter(q => isOrder(q) && q.order_stage === 'in_progress').length);
     setTabCount('Rejected', allQuotes.filter(q => q.status === 'rejected').length);
 }
@@ -1669,7 +1675,13 @@ async function moveOrderBackToQuote(quoteId) {
         }
         
         await response.json(); // Wait for response
-        
+
+        // v101: fjern lokal godkendelses-override, saa sagen folger serverens status igen
+        try {
+            const remaining = getAcceptOverrides().filter(x => x.id !== quoteId);
+            localStorage.setItem(ACCEPT_OVERRIDES_KEY, JSON.stringify(remaining));
+        } catch (e) { /* ignore */ }
+
         alert('Ordre rykket tilbage til tilbud!');
         await loadOrders(); // Reload orders tab
         
