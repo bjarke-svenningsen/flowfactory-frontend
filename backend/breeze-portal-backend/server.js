@@ -1758,12 +1758,18 @@ app.post('/api/admin/users/:id', auth, adminAuth, async (req, res) => {
     const dup = await db.get('SELECT id FROM users WHERE email = ? AND id != ?', [String(email).trim().toLowerCase(), userId]);
     if (dup && dup.id) return res.status(409).json({ error: 'Email already in use' });
 
-    await db.run('UPDATE users SET name = ?, email = ?, position = ?, department = ?, phone = ? WHERE id = ?', [
+    // v88: Afdeling bestemmer rollen - "Ledelsen" = admin (matcher edit-modalens
+    // "Afdeling (bestemmer adgang: Ledelsen = admin)"). Tidligere blev is_admin
+    // aldrig opdateret her, saa rettighedsaendringer slog ikke igennem.
+    const isAdmin = String(department || '').trim() === 'Ledelsen' ? 1 : 0;
+
+    await db.run('UPDATE users SET name = ?, email = ?, position = ?, department = ?, phone = ?, is_admin = ? WHERE id = ?', [
       String(name).trim(),
       String(email).trim().toLowerCase(),
       position || '',
       department || '',
       phone || '',
+      isAdmin,
       userId
     ]);
 
