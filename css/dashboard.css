@@ -2093,8 +2093,10 @@ svg.lucide-building-2 { color: var(--company-stroke); fill: var(--company-fill);
 .btn-company-create:hover { color: var(--text); background: var(--hover-fill); }
 .btn-company-create .lucide { width: 13px; height: 13px; }
 
-.files-main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
-.files-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.files-main { flex: 1; min-width: 0; display: flex; flex-direction: column; overflow: hidden; }
+/* v94: table-layout fixed - tabellen kan aldrig loebe ud over sit omraade (lange filnavne
+   ellipser i stedet for at skubbe Stoorrelse/Type/Aendret ud af skærmen) */
+.files-table { width: 100%; max-width: 100%; table-layout: fixed; border-collapse: collapse; font-size: 14px; }
 .files-table thead th {
     text-align: left;
     font-size: 12px;
@@ -2109,8 +2111,10 @@ svg.lucide-building-2 { color: var(--company-stroke); fill: var(--company-fill);
     user-select: none;
 }
 .files-table thead th.col-check { width: 36px; cursor: default; }
-.files-table thead th.col-size { text-align: right; }
-.files-table thead th.col-date { width: 220px; }
+.files-table thead th.col-name { width: auto; }
+.files-table thead th.col-size { width: 110px; text-align: right; }
+.files-table thead th.col-type { width: 130px; }
+.files-table thead th.col-date { width: 150px; }
 .files-table tbody td {
     padding: 8px 10px;
     border-bottom: 1px solid var(--border);
