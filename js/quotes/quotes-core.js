@@ -833,7 +833,7 @@ function renderQuotePreview() {
                 
                 <!-- Title/Description -->
                 <div style="margin-bottom: 30px;">
-                    <h3 style="margin: 0; font-size: 14px; color: var(--text); font-weight: 700;">Tilbud på: ${currentQuote.title}</h3>
+                    <h3 style="margin: 0; font-size: 14px; color: var(--text); font-weight: 700;">${currentQuote.is_order_view ? currentQuote.title : 'Tilbud på: ' + currentQuote.title}</h3>
                     ${currentQuote.requisition_number ? `<p style="margin: 5px 0 0 0; font-size: 12px; color: var(--text-muted);">Rekvisitionsnummer: ${currentQuote.requisition_number}</p>` : ''}
                 </div>
                 

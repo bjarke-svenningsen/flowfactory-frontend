@@ -1572,7 +1572,7 @@ function renderWorkspaceMaterials(container) {
         
         const editable = !montor && line.source !== 'time_entry';
         const descriptionHtml = isTime
-            ? `⏱ Timeregistrering (${line.material_number || '?'})`
+            ? timeLineLabel(line)
             : (line.notes
                 ? `${line.notes} <em style="color: var(--text-muted); font-size: 12px;">(uspecificeret)</em>`
                 : ` ${line.material_name || 'Materiale'} (${line.material_number || '?'})`);
@@ -1691,6 +1691,16 @@ function isTimeLine(l) {
     if (l.source === 'time_entry') return true;
     const num = String(l.material_number || '');
     return num === '8000' || num === '8001';
+}
+// v105.1: kundevenligt navn paa timelinjer (8000 = alm., 8001 = weekend/overarbejde)
+function timeLineLabel(l) {
+    const num = String((l && l.material_number) || '');
+    let name = num === '8001' ? 'Montørtimer weekend/overarbejde' : num === '8000' ? 'Montørtimer alm.' : 'Timeregistrering';
+    if (l && l.source === 'time_entry' && l.time_entry_date) {
+        const d = new Date(l.time_entry_date);
+        if (!isNaN(d)) name += ` (${d.toLocaleDateString('da-DK')})`;
+    }
+    return name;
 }
 
 // ===== v103: inline-gem af materialelinje (alooser rediger-modal) =====
@@ -2447,7 +2457,7 @@ async function viewOriginalQuote(orderId) {
         // (inkl. rabat), ikke fra det oprindelige tilbud.
         const mats = workspaceMaterials || [];
         quote.lines = mats.map(l => ({
-            description: isTimeLine(l) ? `⏱ Timeregistrering (${l.material_number || '8000'})` : (l.notes || l.material_name || 'Materiale'),
+            description: isTimeLine(l) ? timeLineLabel(l) : (l.notes || l.material_name || 'Materiale'),
             quantity: parseFloat(l.quantity) || 0,
             unit: isTimeLine(l) ? 't' : (l.unit || 'stk'),
             unit_price: parseFloat(l.unit_sale) || 0,
