@@ -2809,3 +2809,9 @@ svg.lucide-building-2 { color: var(--company-stroke); fill: var(--company-fill);
     #videoDock video.local { width: 90px; }
 }
 
+
+/* Klokke (globale chat-notifikationer) i top-nav */
+.chat-bell-btn { position: relative; border: none; background: transparent; cursor: pointer; color: #2D3139; padding: 8px; border-radius: 10px; display: flex; align-items: center; }
+.chat-bell-btn:hover { background: #f0f1f3; }
+.chat-bell-btn svg { width: 20px; height: 20px; }
+.chat-bell-badge { position: absolute; top: 0; right: 0; min-width: 17px; height: 17px; padding: 0 4px; border-radius: 9px; background: #ef4444; color: #fff; font-size: 10px; font-weight: 700; display: flex; align-items: center; justify-content: center; }

@@ -170,6 +170,12 @@ async function loadConversations() {
     } catch (error) { /* listoen proever igen naeste gang */ }
 }
 
+function openChatFromBell() {
+    if (typeof showPage === 'function') showPage('chat');
+    const conv = convList.find(c => (unreadCounts[c.id] || 0) > 0 && c.peer);
+    if (conv && conv.peer) setTimeout(function () { openChatWith(conv.peer.id); }, 150);
+}
+
 function setChatFilter(f) {
     chatFilter = f;
     const ids = { alle: 'chatChipAlle', ulaeste: 'chatChipUlaeste', online: 'chatChipOnline' };
