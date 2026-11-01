@@ -300,10 +300,10 @@ function renderWorkspaceOverview(container) {
             <div style="background: var(--surface); padding: 20px; border-radius: 10px; border: 2px solid var(--border); margin-top: 30px;">
                 <h3 style="margin: 0 0 15px 0;">Arbejdsbeskrivelse</h3>
                 <div style="min-height: 60px; padding: 15px; background: var(--surface-muted); border-radius: 5px; border: 1px solid var(--border); font-size: 14px;">
-                    ${currentWorkspaceOrder.work_description || '<em style="color: var(--text-muted);">Ingen beskrivelse endnu — Ledelsen udfylder den.</em>'}
+                    ${currentWorkspaceOrder.work_description || '<em style="color: var(--text-muted);">Ingen beskrivelse endnu...</em>'}
                 </div>
             </div>
-            <p style="font-size: 12px; color: var(--text-muted); margin-top: 20px;">Økonomi, dokumenter og timeline er kun tilgængelige for Ledelsen. Registrér timer via "Min Tid" og materialer/kørsel under "Timer & Materialer".</p>
+            <p style="font-size: 12px; color: var(--text-muted); margin-top: 20px;">Økonomi og dokumenter er ikke synlige her. Registrér timer via "Min Tid" og materialer/kørsel under "Timer & Materialer".</p>
         `;
         return;
     }
@@ -1615,7 +1615,7 @@ async function openRegisterMaterialModal() {
     modal.innerHTML = `
         <div style="background: var(--surface); border-radius: 10px; padding: 30px; max-width: 600px; width: 90%; max-height: 90vh; overflow-y: auto; margin: 20px;">
             <h2 style="margin: 0 0 20px 0;">Registrer Materiale</h2>
-            <p style="color: var(--text-muted); margin: 0 0 20px 0;">Ordre #${currentWorkspaceOrder.order_number} — priserne håndteres af Ledelsen.</p>
+            <p style="color: var(--text-muted); margin: 0 0 20px 0;">Ordre #${currentWorkspaceOrder.order_number} — vælg et materiale fra kataloget, eller skriv det selv, hvis det ikke findes.</p>
             <form onsubmit="event.preventDefault(); saveRegisterMaterial(${currentWorkspaceOrder.id});">
                 <div style="margin-bottom: 20px;">
                     <label style="display: block; margin-bottom: 8px; font-weight: 600;">Søg materiale</label>
@@ -1624,7 +1624,7 @@ async function openRegisterMaterialModal() {
                 <div id="registerMaterialList" style="max-height: 260px; overflow-y: auto; border: 1px solid var(--border); border-radius: 5px; margin-bottom: 20px;"></div>
                 <div style="margin-bottom: 20px; padding: 15px; background: var(--surface-muted); border-radius: 5px; border: 1px dashed var(--border);">
                     <label style="display: block; margin-bottom: 8px; font-weight: 600;">Kan du ikke finde materialet? Skriv det her</label>
-                    <input type="text" id="registerMaterialFreeText" oninput="clearRegisterMaterialSelection()" placeholder="F.eks. Epoxy primer — Ledelsen retter det senere" style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 5px; font-size: 14px;">
+                    <input type="text" id="registerMaterialFreeText" oninput="clearRegisterMaterialSelection()" placeholder="F.eks. Epoxy primer" style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 5px; font-size: 14px;">
                 </div>
                 <div style="margin-bottom: 30px;">
                     <label style="display: block; margin-bottom: 8px; font-weight: 600;">Antal *</label>
@@ -1740,7 +1740,7 @@ async function saveRegisterMaterial(orderId) {
         });
         if (!response.ok) {
             const errData = await response.json().catch(() => ({}));
-            throw new Error(errData.error || 'Kunne ikke registrere materialet. Prøv igen.');
+            throw new Error(errData.details ? `${errData.error}: ${errData.details}` : (errData.error || 'Kunne ikke registrere materialet. Prøv igen.'));
         }
         closeRegisterMaterialModal();
         await openOrderWorkspace(orderId);

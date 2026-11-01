@@ -4323,6 +4323,18 @@ app.get('/api/orders/:orderId/materials', auth, async (req, res) => {
 // notes-feltet, saa Ledelsen senere kan ombooge til det korrekte materiale).
 const UNSPECIFIED_MATERIAL_NAME = 'Uspecificeret materiale';
 
+// v84: Soerg for at notes-kolonnen findes (aeldre produktions-databaser kan mangle den)
+let orderMaterialsNotesReady = false;
+async function ensureOrderMaterialsNotesColumn() {
+  if (orderMaterialsNotesReady) return;
+  try {
+    await db.run('ALTER TABLE order_materials ADD COLUMN notes TEXT');
+  } catch (e) {
+    // Kolonnen findes allerede - ignorer
+  }
+  orderMaterialsNotesReady = true;
+}
+
 async function getOrCreateUnspecifiedMaterial() {
   let m = await db.get('SELECT * FROM materials WHERE name = ?', [UNSPECIFIED_MATERIAL_NAME]);
   if (!m) {
@@ -4368,13 +4380,32 @@ app.post('/api/orders/:orderId/materials', auth, async (req, res) => {
     const totalCost = parseFloat(quantity) * parseFloat(material.cost_price);
     const totalSale = parseFloat(quantity) * parseFloat(material.sales_price);
 
-    const result = await db.run(`
-      INSERT INTO order_materials (order_id, material_id, quantity, unit_cost, unit_sale, total_cost, total_sale, added_by, source, notes)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'manual', ?)
-    `, [orderId, material.id, quantity, material.cost_price, material.sales_price, totalCost, totalSale, req.user.id, notes]);
+    await ensureOrderMaterialsNotesColumn();
+
+    let insertResult, insertedId;
+    try {
+      insertResult = await db.run(`
+        INSERT INTO order_materials (order_id, material_id, quantity, unit_cost, unit_sale, total_cost, total_sale, added_by, source, notes)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'manual', ?)
+      `, [orderId, material.id, quantity, material.cost_price, material.sales_price, totalCost, totalSale, req.user.id, notes]);
+    } catch (insertError) {
+      // Fallback: aeldre DB uden notes-kolonne - gem uden notes
+      console.warn('[materials] Insert med notes fejlede, proever uden:', insertError.message);
+      insertResult = await db.run(`
+        INSERT INTO order_materials (order_id, material_id, quantity, unit_cost, unit_sale, total_cost, total_sale, added_by, source)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'manual')
+      `, [orderId, material.id, quantity, material.cost_price, material.sales_price, totalCost, totalSale, req.user.id]);
+      notes = null;
+    }
 
     // Kompatibelt med bade SQLite og PostgreSQL (v84 fix: result.lastID fandtes ikke)
-    const insertedId = result.lastInsertRowid || result.lastID || result.id;
+    insertedId = insertResult.lastInsertRowid || insertResult.lastID || insertResult.id;
+
+    if (!insertedId) {
+      // Sidste fallback (Postgres uden RETURNING): find seneste linje for ordren
+      const latest = await db.get('SELECT id FROM order_materials WHERE order_id = ? ORDER BY id DESC LIMIT 1', [orderId]);
+      insertedId = latest ? latest.id : null;
+    }
 
     // Add to timeline
     const user = await db.get('SELECT name FROM users WHERE id = ?', [req.user.id]);
@@ -4384,13 +4415,17 @@ app.post('/api/orders/:orderId/materials', auth, async (req, res) => {
       VALUES (?, 'material_added', ?, ?)
     `, [orderId, `${user.name} tilføjede ${quantity} ${material.unit || ''} ${displayName}`.trim(), req.user.id]);
 
-    const orderMaterial = await db.get(`
+    const orderMaterial = insertedId ? await db.get(`
       SELECT om.*, m.name as material_name, m.material_number
       FROM order_materials om
       LEFT JOIN materials m ON om.material_id = m.id
       WHERE om.id = ?
-    `, [insertedId]);
+    `, [insertedId]) : null;
 
+    if (!orderMaterial) {
+      // Linjen er gemt, men kunne ikke laeses tilbage - succes uden detaljer
+      return res.json({ success: true });
+    }
     // v83: Montor maa ikke se priser i svaret
     if (isMontor(req)) {
       const { unit_cost, unit_sale, total_cost, total_sale, ...rest } = orderMaterial;
@@ -4400,7 +4435,7 @@ app.post('/api/orders/:orderId/materials', auth, async (req, res) => {
     res.json(orderMaterial);
   } catch (error) {
     console.error('Error adding material to order:', error);
-    res.status(500).json({ error: 'Failed to add material to order' });
+    res.status(500).json({ error: 'Failed to add material to order', details: error.message });
   }
 });
 
