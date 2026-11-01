@@ -376,11 +376,12 @@ async function renderPosts() {
             });
         }
 
-        // Rediger/slet knapper kun for egne opslag
-        const optionsHTML = isOwnPost ? `
+        // v90: Rediger kun for egne opslag; Slet for egne opslag OG Ledelsen (admin)
+        const isAdminUser = !!(window.currentUser && window.currentUser.is_admin);
+        const optionsHTML = (isOwnPost || isAdminUser) ? `
             <div class="post-options">
-                <button class="post-option-btn" onclick="editPost(${post.id})">Rediger</button>
-                <button class="post-option-btn delete" onclick="deletePost(${post.id})">Slet</button>
+                ${isOwnPost ? `<button class="post-option-btn" onclick="editPost(${post.id})">Rediger</button>` : ''}
+                <button class="post-option-btn delete" onclick="deletePost(${post.id})" title="${isOwnPost ? '' : 'Slet som Ledelsen'}">Slet</button>
             </div>
         ` : '';
         
@@ -761,10 +762,11 @@ function cancelEdit(postId, originalContent) {
     contentDiv.textContent = originalContent;
 }
 
-// Slet opslag
+// Slet opslag (v90: Ledelsen/admin maaske ogsaa slette andres opslag)
 async function deletePost(postId) {
     const post = posts.find(p => p.id === postId);
-    if (!post || post.author !== window.currentUser.name) return;
+    const isAdminUser = !!(window.currentUser && window.currentUser.is_admin);
+    if (!post || (post.author !== window.currentUser.name && !isAdminUser)) return;
 
     if (confirm('Er du sikker på at du vil slette dette opslag?')) {
         try {
