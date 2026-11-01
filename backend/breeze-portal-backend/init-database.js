@@ -579,7 +579,19 @@ export async function initializeDatabase() {
       time_entry_id INTEGER,
       notes TEXT${db._isProduction ? '' : ',\n  FOREIGN KEY(order_id) REFERENCES quotes(id) ON DELETE CASCADE,\n  FOREIGN KEY(material_id) REFERENCES materials(id),\n  FOREIGN KEY(added_by) REFERENCES users(id),\n  FOREIGN KEY(time_entry_id) REFERENCES time_entries(id) ON DELETE CASCADE'}
     )`);
-    
+
+    // v105: rabat-procent paa ordrematerialelinjer (Minuba-stil: 125 kr. - 20% = 100 kr./stk)
+    try {
+      await db.run(`ALTER TABLE order_materials ADD COLUMN discount_percent REAL DEFAULT 0`);
+      console.log('✅ Added discount_percent column to order_materials table');
+    } catch (error) {
+      if (error.message.includes('duplicate column') || error.message.includes('already exists')) {
+        console.log('ℹ️  order_materials.discount_percent column already exists');
+      } else {
+        throw error;
+      }
+    }
+
     // Add order_type column to quotes table (for calculation vs consumption)
     try {
       await db.run(`ALTER TABLE quotes ADD COLUMN order_type TEXT DEFAULT 'calculation'`);

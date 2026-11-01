@@ -3345,14 +3345,18 @@ app.post('/api/invoices/from-order/:orderId', auth, async (req, res) => {
     let sortIdx = 0;
     for (const reg of regs) {
       const unitSale = reg.unit_sale != null ? reg.unit_sale : (reg.quantity ? reg.total_sale / reg.quantity : reg.total_sale);
+      const disc = parseFloat(reg.discount_percent) || 0;
       const lineTotal = reg.total_sale || 0;
       const desc = reg.notes || reg.material_name || 'Registrering';
       const unit = reg.material_unit || 'stk';
-      
+      const gross = (reg.quantity || 1) * unitSale;
+      const discAmount = Math.max(gross - lineTotal, 0);
+
+      // v105: rabat foelger med paa fakturalinjen, saa kunden kan se rabatten
       await db.run(`
         INSERT INTO invoice_lines (invoice_id, description, quantity, unit, unit_price, discount_percent, discount_amount, line_total, sort_order)
-        VALUES (?, ?, ?, ?, ?, 0, 0, ?, ?)
-      `, [invoiceId, desc, reg.quantity || 1, unit, unitSale, lineTotal, sortIdx]);
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `, [invoiceId, desc, reg.quantity || 1, unit, unitSale, disc, discAmount, lineTotal, sortIdx]);
       
       autoSubtotal += lineTotal;
       sortIdx++;
@@ -4545,7 +4549,7 @@ app.put('/api/orders/:orderId/materials/:materialId', auth, async (req, res) => 
 
     const orderId = Number(req.params.orderId);
     const materialId = Number(req.params.materialId);
-    const { notes, quantity, unit_cost, unit_sale } = req.body;
+    const { notes, quantity, unit_cost, unit_sale, discount_percent } = req.body;
 
     const orderMaterial = await db.get('SELECT * FROM order_materials WHERE id = ? AND order_id = ?', [materialId, orderId]);
     if (!orderMaterial) {
@@ -4564,11 +4568,18 @@ app.put('/api/orders/:orderId/materials/:materialId', auth, async (req, res) => 
 
     const newNotes = notes !== undefined ? (notes && String(notes).trim() ? String(notes).trim() : null) : orderMaterial.notes;
 
+    // v105: rabat (Minuba-stil) - rabatten gaelder pr. enhed: 125 kr. - 20% = 100 kr./stk.
+    // unit_sale bevares som listepris; total_sale beregnes paa rabatteret beloeb.
+    let disc = discount_percent !== undefined ? parseFloat(discount_percent) : parseFloat(orderMaterial.discount_percent);
+    if (isNaN(disc) || disc < 0) disc = 0;
+    if (disc > 100) disc = 100;
+
     await db.run(`
       UPDATE order_materials
-      SET quantity = ?, unit_cost = ?, unit_sale = ?, total_cost = ROUND(? * ?, 2), total_sale = ROUND(? * ?, 2), notes = ?
+      SET quantity = ?, unit_cost = ?, unit_sale = ?, discount_percent = ?,
+          total_cost = ROUND(? * ?, 2), total_sale = ROUND(? * ? * (1 - ? / 100.0), 2), notes = ?
       WHERE id = ?
-    `, [qty, cost, sale, qty, cost, qty, sale, newNotes, materialId]);
+    `, [qty, cost, sale, disc, qty, cost, qty, sale, disc, newNotes, materialId]);
 
     await db.run(`
       INSERT INTO order_timeline (order_id, activity_type, description, user_id)

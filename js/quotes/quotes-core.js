@@ -765,7 +765,7 @@ function renderQuotePreview() {
     // Professional PDF-style preview matching invoice design
     container.innerHTML = `
         <div class="quote-sheet-wrap">
-            <div class="preview-actions">
+            <div class="preview-actions" ${currentQuote.is_order_view ? 'style="display: none;"' : ''}>
                 ${currentQuote.status === 'draft' || currentQuote.status === 'sent' ? `
                 <button onclick="acceptQuote(${currentQuote.id})" class="btn btn-primary">
                     <i data-lucide="check"></i> Godkend
@@ -792,14 +792,14 @@ function renderQuotePreview() {
                         <img src="seestlogo.png" alt="SG Seest Gulvteknik ApS" style="height: 80px; width: auto; display: block; background: transparent !important; background-color: transparent !important; margin: 0; padding: 0;">
                     </div>
                     <div style="text-align: right;">
-                        <h2 style="margin: 0 0 15px 0; font-size: 24px; font-weight: 700; color: var(--text);">TILBUD</h2>
+                        <h2 style="margin: 0 0 15px 0; font-size: 24px; font-weight: 700; color: var(--text);">${currentQuote.is_order_view ? 'ORDRE' : 'TILBUD'}</h2>
                         <table style="border-collapse: collapse; margin-left: auto;">
                             <tr>
                                 <td style="padding: 3px 10px 3px 0; font-size: 12px; color: var(--text-muted);">Kundenummer:</td>
                                 <td style="padding: 3px 0; font-size: 12px; color: var(--text); font-weight: 600;">${currentQuote.customer_id || 'N/A'}</td>
                             </tr>
                             <tr>
-                                <td style="padding: 3px 10px 3px 0; font-size: 12px; color: var(--text-muted);">Tilbud nr.:</td>
+                                <td style="padding: 3px 10px 3px 0; font-size: 12px; color: var(--text-muted);">${currentQuote.is_order_view ? 'Ordre nr.:' : 'Tilbud nr.:'}</td>
                                 <td style="padding: 3px 0; font-size: 12px; color: var(--text); font-weight: 600;">${currentQuote.quote_number}</td>
                             </tr>
                             <tr>
@@ -873,15 +873,15 @@ function renderQuotePreview() {
                     <div style="min-width: 320px;">
                         <div style="display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--border);">
                             <span style="font-size: 12px; color: var(--text);">Subtotal:</span>
-                            <strong style="font-size: 12px; color: var(--text);">${formatCurrency(currentQuote.subtotal)}</strong>
+                            <strong style="font-size: 12px; color: var(--text);">${formatCurrency(currentQuote.is_order_view ? currentQuote.lines.reduce((a, l) => a + (parseFloat(l.line_total) || 0), 0) : currentQuote.subtotal)}</strong>
                         </div>
                         <div style="display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--border);">
                             <span style="font-size: 12px; color: var(--text);">Moms (25%):</span>
-                            <strong style="font-size: 12px; color: var(--text);">${formatCurrency(currentQuote.vat_amount)}</strong>
+                            <strong style="font-size: 12px; color: var(--text);">${formatCurrency(currentQuote.is_order_view ? currentQuote.lines.reduce((a, l) => a + (parseFloat(l.line_total) || 0), 0) * ((parseFloat(currentQuote.vat_rate) || 25) / 100) : currentQuote.vat_amount)}</strong>
                         </div>
                         <div style="display: flex; justify-content: space-between; padding: 15px 0; border-top: 2px solid var(--text); margin-top: 10px;">
                             <span style="font-size: 14px; font-weight: 700; color: var(--text);">TOTAL:</span>
-                            <strong style="font-size: 16px; font-weight: 700; color: var(--text);">${formatCurrency(currentQuote.total)}</strong>
+                            <strong style="font-size: 16px; font-weight: 700; color: var(--text);">${formatCurrency(currentQuote.is_order_view ? currentQuote.lines.reduce((a, l) => a + (parseFloat(l.line_total) || 0), 0) * (1 + (parseFloat(currentQuote.vat_rate) || 25) / 100) : currentQuote.total)}</strong>
                         </div>
                     </div>
                 </div>

@@ -565,10 +565,10 @@ function renderWorkspaceOverview(container) {
                     <h3 style="margin: 0 0 15px 0; display: flex; align-items: center; gap: 8px;"><i data-lucide="zap"></i> Hurtige Handlinger</h3>
                     <div class="quick-actions-grid">
                         <button onclick="viewOriginalQuote(${currentWorkspaceOrder.id})" class="quick-action-btn">
-                            <i data-lucide="file-text"></i> Se Tilbud (PDF)
+                            <i data-lucide="file-text"></i> Se Ordre
                         </button>
-                        <button onclick="switchWorkspaceTab('expenses')" class="quick-action-btn">
-                            <i data-lucide="plus"></i> Tilføj Udgift
+                        <button onclick="switchWorkspaceTab('materials')" class="quick-action-btn">
+                            <i data-lucide="plus"></i> Tilføj Materiale
                         </button>
                         <button onclick="switchWorkspaceTab('documents')" class="quick-action-btn">
                             <i data-lucide="paperclip"></i> Upload Dokument
@@ -1570,7 +1570,7 @@ function renderWorkspaceMaterials(container) {
         totalSale += sale;
         if (isTime) totalHours += parseFloat(line.quantity) || 0;
         
-        const editable = !montor && !isTime;
+        const editable = !montor && line.source !== 'time_entry';
         const descriptionHtml = isTime
             ? `⏱ Timeregistrering (${line.material_number || '?'})`
             : (line.notes
@@ -1604,7 +1604,14 @@ function renderWorkspaceMaterials(container) {
             : `<td style="padding: 10px 12px; font-size: 13px; text-align: right;">${cost.toFixed(2)} kr</td>`;
         const saleCell = editable
             ? `<td style="padding: 6px 8px; font-size: 13px; text-align: right;"><input type="number" step="0.01" min="0" value="${parseFloat(line.unit_sale) || 0}" data-field="unit_sale" onchange="${save}" style="${inp} color: var(--success);"></td>`
-            : `<td style="padding: 10px 12px; font-size: 13px; text-align: right; color: var(--success);">${sale.toFixed(2)} kr</td>`;
+            : `<td style="padding: 10px 12px; font-size: 13px; text-align: right; color: var(--success);">${(parseFloat(line.unit_sale) || 0).toFixed(2)} kr</td>`;
+        // v105: rabat (Minuba-stil) - rabatten gaelder pr. enhed (125 kr. - 20% = 100 kr./stk);
+        // total_sale er allerede rabatteret af backenden.
+        const disc = parseFloat(line.discount_percent) || 0;
+        const discCell = editable
+            ? `<td style="padding: 6px 8px; font-size: 13px; text-align: right;"><input type="number" step="0.1" min="0" max="100" value="${disc}" data-field="discount_percent" onchange="${save}" style="${inp}"></td>`
+            : `<td style="padding: 10px 12px; font-size: 13px; text-align: right;">${disc > 0 ? disc + '%' : '-'}</td>`;
+        const totalCell = `<td style="padding: 10px 12px; font-size: 13px; text-align: right; font-weight: 600; color: var(--success);">${sale.toFixed(2)} kr</td>`;
         return `
             <tr style="border-bottom: 1px solid var(--border-soft);">
                 <td style="padding: 10px 12px; font-size: 13px; white-space: nowrap;">${date}</td>
@@ -1613,6 +1620,8 @@ function renderWorkspaceMaterials(container) {
                 ${qtyCell}
                 ${costCell}
                 ${saleCell}
+                ${discCell}
+                ${totalCell}
             </tr>
         `;
     }).join('');
@@ -1631,7 +1640,9 @@ function renderWorkspaceMaterials(container) {
                             <th style="padding: 10px 12px; font-size: 12px; color: var(--text-muted); text-transform: uppercase;">Registreret af</th>
                             <th style="padding: 10px 12px; font-size: 12px; color: var(--text-muted); text-transform: uppercase; text-align: right;">Antal</th>
                             <th style="padding: 10px 12px; font-size: 12px; color: var(--text-muted); text-transform: uppercase; text-align: right;">Udgift</th>
-                            <th style="padding: 10px 12px; font-size: 12px; color: var(--text-muted); text-transform: uppercase; text-align: right;">Salg</th>
+                            <th style="padding: 10px 12px; font-size: 12px; color: var(--text-muted); text-transform: uppercase; text-align: right;">Salgspris</th>
+                            <th style="padding: 10px 12px; font-size: 12px; color: var(--text-muted); text-transform: uppercase; text-align: right;">Rbt%</th>
+                            <th style="padding: 10px 12px; font-size: 12px; color: var(--text-muted); text-transform: uppercase; text-align: right;">Total</th>
                         </tr>
 `;
 
@@ -1645,9 +1656,10 @@ function renderWorkspaceMaterials(container) {
 ` : `
                     <tfoot>
                         <tr style="border-top: 2px solid var(--border); font-weight: 700;">
-                            <td colspan="3" style="padding: 12px; font-size: 13px;">I alt${totalHours > 0 ? ` (${totalHours.toFixed(2)} timer)` : ''}</td>
-                            <td></td>
+                            <td colspan="4" style="padding: 12px; font-size: 13px;">I alt${totalHours > 0 ? ` (${totalHours.toFixed(2)} timer)` : ''}</td>
                             <td style="padding: 12px; font-size: 13px; text-align: right; color: var(--danger);">${totalCost.toFixed(2)} kr</td>
+                            <td></td>
+                            <td></td>
                             <td style="padding: 12px; font-size: 13px; text-align: right; color: var(--success);">${totalSale.toFixed(2)} kr</td>
                         </tr>
                     </tfoot>
@@ -1690,7 +1702,8 @@ async function saveInlineMaterialLine(orderId, lineId, input) {
         notes: (get('notes')?.value || '').trim() || null,
         quantity: parseFloat(get('quantity')?.value),
         unit_cost: parseFloat(get('unit_cost')?.value),
-        unit_sale: parseFloat(get('unit_sale')?.value)
+        unit_sale: parseFloat(get('unit_sale')?.value),
+        discount_percent: parseFloat(get('discount_percent')?.value) || 0
     };
     if (!body.quantity || body.quantity <= 0) {
         alert('Indtast et gyldigt antal.');
@@ -2430,8 +2443,18 @@ async function viewOriginalQuote(orderId) {
         
         const quote = await response.json();
         
-        // Store current quote and render preview
-        // We need to temporarily use the quote preview from quotes-core.js
+        // v105: det her er nu ORDRen - linjerne kommer fra ordrens timer/materialer
+        // (inkl. rabat), ikke fra det oprindelige tilbud.
+        const mats = workspaceMaterials || [];
+        quote.lines = mats.map(l => ({
+            description: isTimeLine(l) ? `⏱ Timeregistrering (${l.material_number || '8000'})` : (l.notes || l.material_name || 'Materiale'),
+            quantity: parseFloat(l.quantity) || 0,
+            unit: isTimeLine(l) ? 't' : (l.unit || 'stk'),
+            unit_price: parseFloat(l.unit_sale) || 0,
+            discount_percent: parseFloat(l.discount_percent) || 0,
+            line_total: parseFloat(l.total_sale) || 0
+        }));
+        quote.is_order_view = true;
         currentQuote = quote;
         
         // Call the renderQuotePreview function from quotes-core.js
