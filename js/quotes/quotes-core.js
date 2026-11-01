@@ -744,7 +744,12 @@ function renderQuotePreview() {
     container.innerHTML = `
         <div class="quote-sheet-wrap">
             <div class="preview-actions">
-                <button onclick="sendQuote(${currentQuote.id})" class="btn btn-primary">
+                ${currentQuote.status === 'draft' || currentQuote.status === 'sent' ? `
+                <button onclick="acceptQuote(${currentQuote.id})" class="btn btn-primary">
+                    <i data-lucide="check"></i> Godkend
+                </button>
+                ` : ''}
+                <button onclick="sendQuote(${currentQuote.id})" class="btn btn-secondary">
                     <i data-lucide="send"></i> Send til Kunde
                 </button>
                 <button onclick="editQuote(${currentQuote.id})" class="btn btn-secondary">
