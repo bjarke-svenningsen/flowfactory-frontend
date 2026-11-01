@@ -618,6 +618,12 @@ export async function initializeDatabase() {
     // og FJERNES igen efter foerste opstart - ellers slettes nye ordrer ved hver deploy!)
     if (String(process.env.RESET_ORDERS || '').trim() === '1') {
       console.log('🧹 RESET_ORDERS=1 - sletter alle tilbud/ordrer og tilhoerende data...');
+      // v101.1: Slaa fremmednoegle-tjek fra under sletningen, ellers afvises
+      // quotes-sletningen af tabeller der stadig peger paa ordrerne
+      try {
+        if (db._raw && typeof db._raw.pragma === 'function') db._raw.pragma('foreign_keys = OFF');
+        else await db.run('PRAGMA foreign_keys = OFF');
+      } catch (e) { /* Postgres: noegler haandteres af slette-raekkefoelgen */ }
       const tables = [
         'order_timeline',      // ordre-historik
         'order_materials',     // tids-/materialeforbrug
@@ -636,6 +642,10 @@ export async function initializeDatabase() {
           console.warn(`   ⚠️ ${t}: ${e.message}`);
         }
       }
+      try {
+        if (db._raw && typeof db._raw.pragma === 'function') db._raw.pragma('foreign_keys = ON');
+        else await db.run('PRAGMA foreign_keys = ON');
+      } catch (e) { /* ignore */ }
       // SQLite: nulstil autoincrement, saa foerste ordre igen bliver 0001
       try { await db.run("DELETE FROM sqlite_sequence WHERE name IN ('quotes','quote_lines','quote_attachments','invoices','invoice_lines','order_expenses','order_materials','order_timeline')"); } catch (e) { /* Postgres eller tabel findes ikke */ }
       console.log('✅ Ren slaede gennemfoert - næste ordre får nummer 0001');
