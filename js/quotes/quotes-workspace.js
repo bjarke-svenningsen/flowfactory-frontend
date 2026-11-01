@@ -647,12 +647,12 @@ function renderInvoiceButton() {
         return `
             <button onclick="viewInvoiceFromWorkspace(${currentWorkspaceInvoice.id})" class="quick-action-btn accent-blue">
                 <i data-lucide="receipt"></i> Se Faktura ${currentWorkspaceInvoice.invoice_number}
-            </button>`,
+            </button>`;
     } else {
         return `
             <button onclick="createInvoiceFromOrder(${currentWorkspaceOrder.id})" class="quick-action-btn accent-green">
                 <i data-lucide="receipt-text"></i> Opret Faktura
-            </button>`,
+            </button>`;
     }
 }
 
