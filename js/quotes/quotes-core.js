@@ -911,6 +911,7 @@ function renderQuotePreview() {
                     </p>
                 </div>
             </div>
+            ${currentQuote.is_order_view ? '' : (typeof window.renderQuoteAppendix === 'function' ? window.renderQuoteAppendix() : '')}
         </div>
     `;
     if (window.lucide) { try { lucide.createIcons(); } catch (e) { /* ignore */ } }
@@ -1008,11 +1009,18 @@ async function rejectQuote(quoteId) {
 
 // Tab switching
 function switchOrderTab(tab) {
-    // Hvis et ordre-workspace er åbent, låses topfanerne: workspace skal lukkes
-    // ("Tilbage til Ordrer"), før man kan skifte fane. Undgår at lister som
-    // "Igangværende ordrer" dukker op oven på et åbent workspace.
-    if (typeof currentWorkspaceOrder !== 'undefined' && currentWorkspaceOrder && tab !== 'orders') {
-        return;
+    // v106.4: topfanerne er ALDRIG laaste. Klikker man en anden fane mens et
+    // ordre-workspace er aabent (ogsaa efter back-button/hash-restore, hvor
+    // currentWorkspaceOrder kan vaere "hlaengende"), lukkes workspace'et stille
+    // og roligt foerst, og faneskiftet koerer derefter normalt.
+    if (typeof currentWorkspaceOrder !== 'undefined' && currentWorkspaceOrder) {
+        if (typeof window.resetQuotesNavState === 'function') {
+            try { window.resetQuotesNavState(); } catch (e) { /* ignore */ }
+        } else {
+            currentWorkspaceOrder = null;
+            if (typeof parentOrderId !== 'undefined') parentOrderId = null;
+            if (typeof currentWorkspaceInvoice !== 'undefined') currentWorkspaceInvoice = null;
+        }
     }
     currentOrderTab = tab;
     
@@ -1366,9 +1374,16 @@ async function loadOrderTabCounts() {
         }
     } catch (err) {
         console.error('Fanetælling:', err);
-        ['Quotes', 'Orders', 'InProgress', 'Rejected'].forEach(setTabCountHidden);
-        setTabCountHidden('Invoiced');
-        setTabCountHidden('Customers');
+    } finally {
+        // v106.4: badges maa ALDRIG haenge som skeleton (graa/gul), uanset om
+        // hentningen fejler, tiden går ud eller svaret er ugyldigt.
+        ['Quotes', 'Orders', 'InProgress', 'Invoiced', 'Rejected', 'Customers'].forEach(tabName => {
+            const el = document.getElementById(`tabCount${tabName}`);
+            if (el && el.classList.contains('skeleton')) {
+                el.classList.add('hidden');
+                el.classList.remove('skeleton');
+            }
+        });
     }
 }
 
@@ -1718,6 +1733,16 @@ async function moveRejectedBackToQuote(quoteId) {
 
 // Initialize quotes page
 async function initQuotesPage() {
+    // v106.4: defensiv oprydning - hvis URL-hashen IKKE er et workspace, maa
+    // hjaernetilstanden (currentWorkspaceOrder/parentOrderId/currentWorkspace-
+    // Invoice) vaere tom. Back-button/hash-restore kan ellers efterlade et
+    // "gendet" workspace, der laaser faner og lister.
+    const __hash = window.location.hash || '';
+    const __isWorkspaceHash = /^#\/orders\/\d+\/workspace$/.test(__hash);
+    if (!__isWorkspaceHash && typeof window.resetQuotesNavState === 'function') {
+        try { window.resetQuotesNavState(); } catch (e) { /* ignore */ }
+    }
+
     // v106.1: fejler kunde-hentningen, maa faneskiftet alligevel koere
     try { await loadCustomers(); } catch (e) { console.warn('loadCustomers fejlede:', e); }
     // Don't call loadQuotes() here - let switchOrderTab() handle all data loading
@@ -1734,7 +1759,7 @@ async function initQuotesPage() {
         
         if (hash.startsWith('#quotes/')) {
             const tabName = hash.substring(8); // Remove "#quotes/"
-            if (['quotes', 'orders', 'invoiced', 'rejected', 'customers'].includes(tabName)) {
+            if (['quotes', 'orders', 'in_progress', 'invoiced', 'rejected', 'customers'].includes(tabName)) {
                 tabToLoad = tabName;
             }
         }
