@@ -10,7 +10,7 @@ let currentOrderTab = 'quotes';
 async function loadQuotes() {
     try {
         const token = sessionStorage.getItem('token');
-        const response = await fetch('/api/quotes', {
+        const response = await fetch('/api/quotes?_=' + Date.now(), {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         
@@ -903,20 +903,34 @@ function downloadQuotePDF(quoteId) {
 // Accept quote (convert to order)
 async function acceptQuote(quoteId) {
     if (!confirm('Acceptér dette tilbud som ordre?')) return;
-    
+
     try {
         const token = sessionStorage.getItem('token');
         const response = await fetch(`/api/quotes/${quoteId}/accept`, {
             method: 'POST',
             headers: { 'Authorization': `Bearer ${token}` }
         });
-        
+
         if (!response.ok) {
             const error = await response.json();
             throw new Error(error.error || 'Failed to accept quote');
         }
-        
+
         const order = await response.json();
+
+        // v98: verificer at status faktisk blev gemt i databasen (afslor om backenden
+        // paa serveren er for gammel / en anden database bliver skrevet i)
+        const verifyRes = await fetch(`/api/quotes/${quoteId}?_=${Date.now()}`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (verifyRes.ok) {
+            const verify = await verifyRes.json();
+            if (verify.status !== 'accepted') {
+                alert('ADVARSEL: Serveren svarede succes, men tilbuddet har stadig status "' +
+                    verify.status + '" i databasen.\n\nBackend-på Render er sandsynligvis ikke deployet med nyeste kode. Deploy og prøv igen.');
+                return;
+            }
+        }
 
         alert(`Tilbud accepteret som ordre ${order.order_number}!`);
         // v97: hop direkte over paa Godkendte Ordre-fanen, saa ordren ses med det samme
