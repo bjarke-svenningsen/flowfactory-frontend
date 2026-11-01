@@ -31,6 +31,7 @@ async function loadRealFiles() {
         
         // Initialize resizable columns
         initResizableColumns();
+        initFilesResizers();
     } catch (error) {
         console.error('Error loading files:', error);
         await winAlert('Kunne ikke indlæse filer: ' + error.message, 'Fejl');
@@ -2440,11 +2441,67 @@ function sortFiles(column) {
 
 window.sortFiles = sortFiles;
 
+// v95: Traekbare lodrette streger (som Stifinder) - mappe-trae og detaljes-panel.
+// Bredde gemmes i localStorage og gendannes ved indlaesning (kun paa store skærme).
+function initFilesResizers() {
+    if (window.matchMedia('(max-width: 1024px)').matches) return;
+    setupPanelResizer('treeResizer', 'folderTree', 'left');
+    setupPanelResizer('detailsResizer', 'filesDetails', 'right');
+    restorePanelWidth('folderTree', 'filesTreeWidth', 150, 420);
+    restorePanelWidth('filesDetails', 'filesDetailsWidth', 200, 480);
+}
+
+function restorePanelWidth(panelId, storageKey, min, max) {
+    const panel = document.getElementById(panelId);
+    if (!panel) return;
+    const saved = parseInt(localStorage.getItem(storageKey), 10);
+    if (!isNaN(saved) && saved >= min && saved <= max) {
+        panel.style.width = saved + 'px';
+        panel.style.flexBasis = saved + 'px';
+    }
+}
+
+function setupPanelResizer(resizerId, panelId, side) {
+    const resizer = document.getElementById(resizerId);
+    const panel = document.getElementById(panelId);
+    if (!resizer || !panel) return;
+
+    let startX = 0;
+    let startWidth = 0;
+
+    function onMove(e) {
+        const min = 150, max = 480;
+        const diff = side === 'left' ? (e.pageX - startX) : (startX - e.pageX);
+        const newWidth = Math.min(max, Math.max(min, startWidth + diff));
+        panel.style.width = newWidth + 'px';
+        panel.style.flexBasis = newWidth + 'px';
+    }
+
+    function onUp() {
+        resizer.classList.remove('dragging');
+        document.body.classList.remove('resizing-panels');
+        document.removeEventListener('mousemove', onMove);
+        document.removeEventListener('mouseup', onUp);
+        const storageKey = side === 'left' ? 'filesTreeWidth' : 'filesDetailsWidth';
+        localStorage.setItem(storageKey, String(panel.offsetWidth));
+    }
+
+    resizer.addEventListener('mousedown', function (e) {
+        e.preventDefault();
+        startX = e.pageX;
+        startWidth = panel.offsetWidth;
+        resizer.classList.add('dragging');
+        document.body.classList.add('resizing-panels');
+        document.addEventListener('mousemove', onMove);
+        document.addEventListener('mouseup', onUp);
+    });
+}
+
 // Resizable columns functionality with localStorage persistence
 function initResizableColumns() {
     const table = document.getElementById('fileTable');
     if (!table) return;
-    
+
     const headers = table.querySelectorAll('th');
     let currentResizer = null;
     let currentHeader = null;
