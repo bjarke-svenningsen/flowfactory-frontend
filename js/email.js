@@ -56,6 +56,14 @@ const emailClient = {
 
   // Initialize the email client
   async init() {
+    // Montoer (ikke-Ledelsen) har ikke adgang til email - spring init over for at undga 403-fejl
+    try {
+      const cu = JSON.parse(sessionStorage.getItem('currentUser') || sessionStorage.getItem('user') || 'null');
+      if (!cu || cu.is_admin !== true) {
+        console.log('[email] Init sprunget over (kun Ledelsen har adgang til email)');
+        return;
+      }
+    } catch (e) { /* fortsaet hvis sessionStorage ikke kan laeses */ }
     console.log('Initializing Windows 95 email client...');
     
     // Load email accounts
@@ -2396,11 +2404,10 @@ const emailClient = {
 // Make emailClient globally available
 window.emailClient = emailClient;
 
-// Initialize when DOM is ready
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', () => emailClient.init());
-} else {
-  emailClient.init();
+// Auto-init er fjernet: init() kaldes eksplicit fra dashboard.js (showPage('email')),
+// sa montoer ikke trigger 403-kald ved boot. Se guardoen i init() ovenfor.
+if (typeof emailClient.initGuarded !== 'function') {
+  emailClient.initGuarded = () => emailClient.init();
 }
 
 // Add CSS animations
