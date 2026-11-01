@@ -224,7 +224,7 @@ function renderHeaderEconomy(data) {
     let timeCost = 0, materialCost = 0, totalHours = 0;
     lines.forEach(l => {
         const cost = parseFloat(l.total_cost) || 0;
-        if (l.source === 'time_entry') {
+        if (isTimeLine(l)) {
             timeCost += cost;
             totalHours += parseFloat(l.quantity) || 0;
         } else {
@@ -239,7 +239,7 @@ function renderHeaderEconomy(data) {
     const parts = [
         { label: 'Timer', value: Math.max(timeCost, 0), color: '#7C2D12' },
         { label: 'Materialer', value: Math.max(materialCost, 0), color: '#9333EA' },
-        { label: 'Profit', value: Math.max(profit, 0), color: '#3B82F6' }
+        { label: 'Profit', value: Math.max(profit, 0), color: '#8BB8E8' }
     ];
     const total = parts.reduce((sum, p) => sum + p.value, 0);
     const R = 38, C = 2 * Math.PI * R;
@@ -247,11 +247,11 @@ function renderHeaderEconomy(data) {
     if (total > 0) {
         parts.forEach(p => {
             const frac = p.value / total;
-            segs += `<circle cx="50" cy="50" r="${R}" fill="none" stroke="${p.color}" stroke-width="14" stroke-dasharray="${(frac * C).toFixed(2)} ${C.toFixed(2)}" stroke-dashoffset="${(-offset * C).toFixed(2)}" transform="rotate(-90 50 50)"></circle>`;
+            segs += `<circle cx="50" cy="50" r="${R}" fill="none" stroke="${p.color}" stroke-width="20" stroke-dasharray="${(frac * C).toFixed(2)} ${C.toFixed(2)}" stroke-dashoffset="${(-offset * C).toFixed(2)}" transform="rotate(-90 50 50)"></circle>`;
             offset += frac;
         });
     } else {
-        segs = `<circle cx="50" cy="50" r="${R}" fill="none" stroke="#E5E7EB" stroke-width="14"></circle>`;
+        segs = `<circle cx="50" cy="50" r="${R}" fill="none" stroke="#E5E7EB" stroke-width="20"></circle>`;
     }
     const legend = parts.map(p => `<span style="display: inline-flex; align-items: center; gap: 5px; font-size: 12px; color: var(--text-muted);"><span style="width: 9px; height: 9px; border-radius: 50%; background: ${p.color}; display: inline-block;"></span>${p.label}</span>`).join('');
     return `
@@ -1563,7 +1563,7 @@ function renderWorkspaceMaterials(container) {
     let totalHours = 0;
     
     const rows = lines.map(line => {
-        const isTime = line.source === 'time_entry';
+        const isTime = isTimeLine(line);
         const cost = parseFloat(line.total_cost) || 0;
         const sale = parseFloat(line.total_sale) || 0;
         totalCost += cost;
@@ -1589,17 +1589,30 @@ function renderWorkspaceMaterials(container) {
             </tr>
         `;
         }
+        // v103: inline-redigering direkte i raekken (beskrivelse, antal, udgift, salg)
+        const esc = v => String(v || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
+        const inp = 'width: 100%; min-width: 70px; padding: 6px 8px; border: 1px solid var(--border); border-radius: 5px; font-size: 13px; text-align: right; background: var(--surface);';
+        const save = `saveInlineMaterialLine(${currentWorkspaceOrder.id}, ${line.id}, this)`;
         const descCell = editable
-            ? `<td style="padding: 10px 12px; font-size: 13px;"><a href="javascript:void(0)" onclick="openEditMaterialLineModal(${currentWorkspaceOrder.id}, ${line.id})" title="Klik for at redigere beskrivelse og tal" style="color: inherit; text-decoration: underline dotted;">${descriptionHtml}</a></td>`
+            ? `<td style="padding: 6px 8px; font-size: 13px; min-width: 220px;"><input type="text" value="${esc(line.notes || line.material_name)}" data-field="notes" onchange="${save}" title="${esc(line.material_number)}" style="${inp} text-align: left; min-width: 200px;"></td>`
             : `<td style="padding: 10px 12px; font-size: 13px;">${descriptionHtml}</td>`;
+        const qtyCell = editable
+            ? `<td style="padding: 6px 8px; font-size: 13px; text-align: right;"><input type="number" step="0.01" min="0.01" value="${line.quantity}" data-field="quantity" onchange="${save}" style="${inp}"></td>`
+            : `<td style="padding: 10px 12px; font-size: 13px; text-align: right;">${line.quantity} ${isTime ? 't' : ''}</td>`;
+        const costCell = editable
+            ? `<td style="padding: 6px 8px; font-size: 13px; text-align: right;"><input type="number" step="0.01" min="0" value="${parseFloat(line.unit_cost) || 0}" data-field="unit_cost" onchange="${save}" style="${inp}"></td>`
+            : `<td style="padding: 10px 12px; font-size: 13px; text-align: right;">${cost.toFixed(2)} kr</td>`;
+        const saleCell = editable
+            ? `<td style="padding: 6px 8px; font-size: 13px; text-align: right;"><input type="number" step="0.01" min="0" value="${parseFloat(line.unit_sale) || 0}" data-field="unit_sale" onchange="${save}" style="${inp} color: var(--success);"></td>`
+            : `<td style="padding: 10px 12px; font-size: 13px; text-align: right; color: var(--success);">${sale.toFixed(2)} kr</td>`;
         return `
             <tr style="border-bottom: 1px solid var(--border-soft);">
                 <td style="padding: 10px 12px; font-size: 13px; white-space: nowrap;">${date}</td>
                 ${descCell}
                 <td style="padding: 10px 12px; font-size: 13px;">${line.added_by_name || '-'}</td>
-                <td style="padding: 10px 12px; font-size: 13px; text-align: right;">${line.quantity} ${isTime ? 't' : ''}</td>
-                <td style="padding: 10px 12px; font-size: 13px; text-align: right;">${cost.toFixed(2)} kr</td>
-                <td style="padding: 10px 12px; font-size: 13px; text-align: right; color: var(--success);">${sale.toFixed(2)} kr</td>
+                ${qtyCell}
+                ${costCell}
+                ${saleCell}
             </tr>
         `;
     }).join('');
@@ -1660,71 +1673,24 @@ function renderWorkspaceMaterials(container) {
     `;
 }
 
-// ===== v87: Ledelsen kan redigere manuelle materialelinjer (beskrivelse + tal) =====
-function openEditMaterialLineModal(orderId, lineId) {
-    const line = (workspaceMaterials || []).find(l => l.id === lineId);
-    if (!line) return;
-
-    let modal = document.getElementById('editMaterialLineModal');
-    if (modal) modal.remove();
-    modal = document.createElement('div');
-    modal.id = 'editMaterialLineModal';
-    modal.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); z-index: 10000; display: flex; align-items: center; justify-content: center;';
-    modal.innerHTML = `
-        <div style="background: var(--surface); border-radius: 10px; padding: 30px; max-width: 520px; width: 90%; max-height: 90vh; overflow-y: auto;">
-            <h2 style="margin: 0 0 8px 0;">Rediger Materialelinje</h2>
-            <p style="color: var(--text-muted); margin: 0 0 20px 0; font-size: 13px;">Ret beskrivelsen og tallene — de slår direkte igennem i sagens regnskab.</p>
-            <form onsubmit="event.preventDefault(); saveEditMaterialLine(${orderId}, ${lineId});">
-                <label style="display: block; margin-bottom: 6px; font-weight: 600;">Beskrivelse</label>
-                <input type="text" id="editLineNotes" value="${(line.notes || line.material_name || '').replace(/"/g, '&quot;')}" style="width: 100%; padding: 10px; margin-bottom: 16px; border: 1px solid var(--border); border-radius: 5px; font-size: 14px;">
-
-                <div style="display: flex; gap: 12px;">
-                    <div style="flex: 1;">
-                        <label style="display: block; margin-bottom: 6px; font-weight: 600;">Antal</label>
-                        <input type="number" step="0.01" min="0.01" id="editLineQty" value="${line.quantity}" oninput="updateEditLineTotals()" style="width: 100%; padding: 10px; margin-bottom: 16px; border: 1px solid var(--border); border-radius: 5px; font-size: 14px;">
-                    </div>
-                    <div style="flex: 1;">
-                        <label style="display: block; margin-bottom: 6px; font-weight: 600;">Udgift pr. stk</label>
-                        <input type="number" step="0.01" min="0" id="editLineCost" value="${parseFloat(line.unit_cost) || 0}" oninput="updateEditLineTotals()" style="width: 100%; padding: 10px; margin-bottom: 16px; border: 1px solid var(--border); border-radius: 5px; font-size: 14px;">
-                    </div>
-                    <div style="flex: 1;">
-                        <label style="display: block; margin-bottom: 6px; font-weight: 600;">Salg pr. stk</label>
-                        <input type="number" step="0.01" min="0" id="editLineSale" value="${parseFloat(line.unit_sale) || 0}" oninput="updateEditLineTotals()" style="width: 100%; padding: 10px; margin-bottom: 16px; border: 1px solid var(--border); border-radius: 5px; font-size: 14px;">
-                    </div>
-                </div>
-
-                <div style="display: flex; justify-content: space-between; padding: 12px 15px; background: var(--surface-muted); border-radius: 5px; margin-bottom: 20px; font-size: 14px;">
-                    <span>Total udgift: <strong id="editLineTotalCost" style="color: var(--danger);"></strong></span>
-                    <span>Total salg: <strong id="editLineTotalSale" style="color: var(--success);"></strong></span>
-                </div>
-
-                <div style="display: flex; justify-content: flex-end; gap: 12px;">
-                    <button type="button" onclick="document.getElementById('editMaterialLineModal').remove()" class="btn btn-secondary">Annuller</button>
-                    <button type="submit" class="btn btn-primary">Gem ændringer</button>
-                </div>
-            </form>
-        </div>
-    `;
-    document.body.appendChild(modal);
-    updateEditLineTotals();
+// ===== v103: hjaelper - taeller en linje som timeforbrug? (Min Tid eller materiale 8000/8001) =====
+function isTimeLine(l) {
+    if (!l) return false;
+    if (l.source === 'time_entry') return true;
+    const num = String(l.material_number || '');
+    return num === '8000' || num === '8001';
 }
 
-function updateEditLineTotals() {
-    const qty = parseFloat(document.getElementById('editLineQty')?.value) || 0;
-    const cost = parseFloat(document.getElementById('editLineCost')?.value) || 0;
-    const sale = parseFloat(document.getElementById('editLineSale')?.value) || 0;
-    const tc = document.getElementById('editLineTotalCost');
-    const ts = document.getElementById('editLineTotalSale');
-    if (tc) tc.textContent = (qty * cost).toFixed(2) + ' kr';
-    if (ts) ts.textContent = (qty * sale).toFixed(2) + ' kr';
-}
-
-async function saveEditMaterialLine(orderId, lineId) {
+// ===== v103: inline-gem af materialelinje (alooser rediger-modal) =====
+async function saveInlineMaterialLine(orderId, lineId, input) {
+    const row = input.closest('tr');
+    if (!row) return;
+    const get = f => row.querySelector(`[data-field="${f}"]`);
     const body = {
-        notes: document.getElementById('editLineNotes')?.value?.trim() || null,
-        quantity: parseFloat(document.getElementById('editLineQty')?.value),
-        unit_cost: parseFloat(document.getElementById('editLineCost')?.value),
-        unit_sale: parseFloat(document.getElementById('editLineSale')?.value)
+        notes: (get('notes')?.value || '').trim() || null,
+        quantity: parseFloat(get('quantity')?.value),
+        unit_cost: parseFloat(get('unit_cost')?.value),
+        unit_sale: parseFloat(get('unit_sale')?.value)
     };
     if (!body.quantity || body.quantity <= 0) {
         alert('Indtast et gyldigt antal.');
@@ -1741,8 +1707,7 @@ async function saveEditMaterialLine(orderId, lineId) {
             const errData = await response.json().catch(() => ({}));
             throw new Error(errData.details ? `${errData.error}: ${errData.details}` : (errData.error || 'Kunne ikke gemme ændringerne.'));
         }
-        document.getElementById('editMaterialLineModal')?.remove();
-        // Genindlaes workspace, saa regnskab og tabeller opdateres
+        // Genindlaes workspace, saa regnskab, donut og tabeller opdateres
         await openOrderWorkspace(orderId);
         switchWorkspaceTab('materials');
     } catch (error) {
@@ -2490,9 +2455,7 @@ window.closeRegisterMaterialModal = closeRegisterMaterialModal;
 window.filterRegisterMaterials = filterRegisterMaterials;
 window.selectRegisterMaterial = selectRegisterMaterial;
 window.clearRegisterMaterialSelection = clearRegisterMaterialSelection;
-window.openEditMaterialLineModal = openEditMaterialLineModal;
-window.updateEditLineTotals = updateEditLineTotals;
-window.saveEditMaterialLine = saveEditMaterialLine;
+window.saveInlineMaterialLine = saveInlineMaterialLine;
 window.saveRegisterMaterial = saveRegisterMaterial;
 window.closeWorkspace = closeWorkspace;
 window.viewInvoiceFromWorkspace = viewInvoiceFromWorkspace;
