@@ -2457,6 +2457,44 @@ svg.lucide-building-2 { color: var(--company-stroke); fill: var(--company-fill);
     font-weight: 600;
     font-size: 13px;
     cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    flex: none;
+    white-space: nowrap;
+}
+
+.chat-video-btn svg,
+.chat-video-btn i {
+    width: 16px;
+    height: 16px;
+    flex: none;
+    display: block;
+}
+
+/* Emoji-knap + vaelger i chat-input-feltet */
+.chat-input-area .emoji-btn {
+    padding: 6px 10px;
+    background: none;
+    border: none;
+    border-radius: 8px;
+    font-size: 20px;
+    line-height: 1;
+    cursor: pointer;
+    flex: none;
+}
+
+.chat-input-area .emoji-btn:hover {
+    background: rgba(45, 49, 57, 0.08);
+}
+
+.chat-input-area .emoji-picker {
+    position: absolute;
+    bottom: calc(100% + 8px);
+    left: 15px;
+    right: auto;
+    z-index: 900;
 }
 
 .chat-video-btn:hover { filter: brightness(0.95); }

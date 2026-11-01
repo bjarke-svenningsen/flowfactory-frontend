@@ -61,7 +61,11 @@
                 <span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span>
             </div>
 
-            <div class="chat-input-area">
+            <div class="chat-input-area" style="position: relative;">
+                <button class="emoji-btn" id="chatEmojiBtn" onclick="toggleEmojiPicker(event)" title="Emoji">😊</button>
+                <div class="emoji-picker" id="emojiPicker" style="display: none;">
+                    <div class="emoji-grid" id="emojiGrid"></div>
+                </div>
                 <textarea id="chatInput" placeholder="Skriv en besked..." rows="1" oninput="autoGrowTextarea(); handleTyping();" onkeydown="if(event.key==='Enter' && !event.shiftKey) { event.preventDefault(); sendMessage(); }"></textarea>
                 <button class="send-btn" onclick="sendMessage()" title="Send"><i data-lucide="send"></i></button>
             </div>

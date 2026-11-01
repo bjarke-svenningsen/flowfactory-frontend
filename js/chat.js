@@ -600,3 +600,44 @@ window.addEventListener('beforeunload', function () {
     if (window.ChatCall) try { ChatCall.cleanupOnUnload(); } catch (e) { /* ignoreres */ }
 });
 
+// ===== Emoji-vaelger =====
+var CHAT_EMOJIS = ['😀','😁','😂','🤣','😊','😍','😘','😎','🤔','😴','😢','😭','😡','🥳','🙃','😇','👍','👎','👏','🙏','💪','🤝','✌️','👋','❤️','🔥','⭐','🎉','🎂','☕','🍕','⚽'];
+var _emojiGridInited = false;
+
+function toggleEmojiPicker(ev) {
+    if (ev) ev.stopPropagation();
+    var picker = document.getElementById('emojiPicker');
+    if (!picker) return;
+    var show = picker.style.display === 'none';
+    if (show && !_emojiGridInited) {
+        var grid = document.getElementById('emojiGrid');
+        if (grid) {
+            grid.innerHTML = CHAT_EMOJIS.map(function (e) {
+                return '<span class="emoji-item" onclick="insertEmoji(\'' + e + '\')">' + e + '</span>';
+            }).join('');
+            _emojiGridInited = true;
+        }
+    }
+    picker.style.display = show ? 'block' : 'none';
+}
+
+function insertEmoji(emoji) {
+    var input = document.getElementById('chatInput');
+    if (!input) return;
+    var start = input.selectionStart !== null ? input.selectionStart : input.value.length;
+    var end = input.selectionEnd !== null ? input.selectionEnd : input.value.length;
+    input.value = input.value.slice(0, start) + emoji + input.value.slice(end);
+    input.focus();
+    var pos = start + emoji.length;
+    try { input.setSelectionRange(pos, pos); } catch (e) { /* ignoreres */ }
+    autoGrowTextarea();
+}
+
+// Luk emoji-vaelger ved klik udenfor
+document.addEventListener('click', function (ev) {
+    var picker = document.getElementById('emojiPicker');
+    if (!picker || picker.style.display === 'none') return;
+    if (ev.target && ev.target.closest && (ev.target.closest('#emojiPicker') || ev.target.closest('#chatEmojiBtn'))) return;
+    picker.style.display = 'none';
+});
+
