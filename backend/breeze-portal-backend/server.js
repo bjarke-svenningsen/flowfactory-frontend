@@ -4335,11 +4335,11 @@ async function ensureOrderMaterialsNotesColumn() {
   orderMaterialsNotesReady = true;
 }
 
-async function getOrCreateUnspecifiedMaterial() {
+async function getOrCreateUnspecifiedMaterial(userId) {
   let m = await db.get('SELECT * FROM materials WHERE name = ?', [UNSPECIFIED_MATERIAL_NAME]);
   if (!m) {
     await db.run(`INSERT INTO materials (material_number, name, description, category, unit, cost_price, sales_price, created_by)
-      VALUES ('USPEC', ?, ?, 'Øvrigt', 'stk', 0, 0, ?)`, [UNSPECIFIED_MATERIAL_NAME, 'Autogenereret post til fri-tekst registreringer fra montorer', null]);
+      VALUES ('USPEC', ?, ?, 'Øvrigt', 'stk', 0, 0, ?)`, [UNSPECIFIED_MATERIAL_NAME, 'Autogenereret post til fri-tekst registreringer fra montorer', userId || 0]);
     m = await db.get('SELECT * FROM materials WHERE name = ?', [UNSPECIFIED_MATERIAL_NAME]);
   }
   return m;
@@ -4373,7 +4373,7 @@ app.post('/api/orders/:orderId/materials', auth, async (req, res) => {
         return res.status(400).json({ error: 'Material not found' });
       }
     } else {
-      material = await getOrCreateUnspecifiedMaterial();
+      material = await getOrCreateUnspecifiedMaterial(req.user.id);
       notes = String(description).trim();
     }
 
