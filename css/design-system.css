@@ -853,7 +853,15 @@ body, .dashboard { background: var(--bg-page); }
     .quote-sheet { padding: 32px 20px; }
 }
 @media print {
-    .quote-sheet-wrap { background: none; padding: 0; }
+    /* v106.3: print KUN dokument-arket - alt app-UI (topbar, faner, soegning) skjules */
+    body * { visibility: hidden; }
+    .quote-sheet-wrap, .quote-sheet-wrap * { visibility: visible; }
+    .quote-sheet-wrap {
+        position: absolute !important;
+        left: 0; top: 0; width: 100%;
+        background: none; padding: 0;
+    }
+    .quote-sheet-wrap .preview-actions { display: none !important; }
     /* PDF/print: nulstil skærm-padding, kant og skygge så eksporten ser ud som foer */
     .quote-sheet { padding: 0; border: none; box-shadow: none; }
     .preview-actions { display: none; }
