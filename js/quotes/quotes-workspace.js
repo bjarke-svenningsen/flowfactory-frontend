@@ -2502,7 +2502,7 @@ async function moveMaterialLine(orderId, lineId, direction) {
     try {
         const res = await fetch(`${API_URL}/api/orders/${orderId}/materials/reorder`, {
             method: 'POST',
-            headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}`, 'Content-Type': 'application/json' },
+            headers: { 'Authorization': `Bearer ${sessionStorage.getItem('token')}`, 'Content-Type': 'application/json' },
             body: JSON.stringify({ order: ids })
         });
         if (!res.ok) throw new Error('Kunne ikke gemme roekkefoelgen');
