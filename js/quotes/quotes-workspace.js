@@ -1517,7 +1517,8 @@ function renderWorkspaceMaterials(container) {
         totalSale += sale;
         if (isTime) totalHours += parseFloat(line.quantity) || 0;
         
-        const description = isTime
+        const editable = !montor && !isTime;
+        const descriptionHtml = isTime
             ? `⏱ Timeregistrering (${line.material_number || '?'})`
             : (line.notes
                 ? `${line.notes} <em style="color: var(--text-muted); font-size: 12px;">(uspecificeret)</em>`
@@ -1529,16 +1530,19 @@ function renderWorkspaceMaterials(container) {
             return `
             <tr style="border-bottom: 1px solid var(--border-soft);">
                 <td style="padding: 10px 12px; font-size: 13px; white-space: nowrap;">${date}</td>
-                <td style="padding: 10px 12px; font-size: 13px;">${description}</td>
+                <td style="padding: 10px 12px; font-size: 13px;">${descriptionHtml}</td>
                 <td style="padding: 10px 12px; font-size: 13px;">${line.added_by_name || '-'}</td>
                 <td style="padding: 10px 12px; font-size: 13px; text-align: right;">${line.quantity} ${isTime ? 't' : (line.unit || '')}</td>
             </tr>
         `;
         }
+        const descCell = editable
+            ? `<td style="padding: 10px 12px; font-size: 13px;"><a href="javascript:void(0)" onclick="openEditMaterialLineModal(${currentWorkspaceOrder.id}, ${line.id})" title="Klik for at redigere beskrivelse og tal" style="color: inherit; text-decoration: underline dotted;">${descriptionHtml}</a></td>`
+            : `<td style="padding: 10px 12px; font-size: 13px;">${descriptionHtml}</td>`;
         return `
             <tr style="border-bottom: 1px solid var(--border-soft);">
                 <td style="padding: 10px 12px; font-size: 13px; white-space: nowrap;">${date}</td>
-                <td style="padding: 10px 12px; font-size: 13px;">${description}</td>
+                ${descCell}
                 <td style="padding: 10px 12px; font-size: 13px;">${line.added_by_name || '-'}</td>
                 <td style="padding: 10px 12px; font-size: 13px; text-align: right;">${line.quantity} ${isTime ? 't' : ''}</td>
                 <td style="padding: 10px 12px; font-size: 13px; text-align: right;">${cost.toFixed(2)} kr</td>
@@ -1601,6 +1605,96 @@ function renderWorkspaceMaterials(container) {
             }
         </div>
     `;
+}
+
+// ===== v87: Ledelsen kan redigere manuelle materialelinjer (beskrivelse + tal) =====
+function openEditMaterialLineModal(orderId, lineId) {
+    const line = (workspaceMaterials || []).find(l => l.id === lineId);
+    if (!line) return;
+
+    let modal = document.getElementById('editMaterialLineModal');
+    if (modal) modal.remove();
+    modal = document.createElement('div');
+    modal.id = 'editMaterialLineModal';
+    modal.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); z-index: 10000; display: flex; align-items: center; justify-content: center;';
+    modal.innerHTML = `
+        <div style="background: var(--surface); border-radius: 10px; padding: 30px; max-width: 520px; width: 90%; max-height: 90vh; overflow-y: auto;">
+            <h2 style="margin: 0 0 8px 0;">Rediger Materialelinje</h2>
+            <p style="color: var(--text-muted); margin: 0 0 20px 0; font-size: 13px;">Ret beskrivelsen og tallene — de slår direkte igennem i sagens regnskab.</p>
+            <form onsubmit="event.preventDefault(); saveEditMaterialLine(${orderId}, ${lineId});">
+                <label style="display: block; margin-bottom: 6px; font-weight: 600;">Beskrivelse</label>
+                <input type="text" id="editLineNotes" value="${(line.notes || line.material_name || '').replace(/"/g, '&quot;')}" style="width: 100%; padding: 10px; margin-bottom: 16px; border: 1px solid var(--border); border-radius: 5px; font-size: 14px;">
+
+                <div style="display: flex; gap: 12px;">
+                    <div style="flex: 1;">
+                        <label style="display: block; margin-bottom: 6px; font-weight: 600;">Antal</label>
+                        <input type="number" step="0.01" min="0.01" id="editLineQty" value="${line.quantity}" oninput="updateEditLineTotals()" style="width: 100%; padding: 10px; margin-bottom: 16px; border: 1px solid var(--border); border-radius: 5px; font-size: 14px;">
+                    </div>
+                    <div style="flex: 1;">
+                        <label style="display: block; margin-bottom: 6px; font-weight: 600;">Udgift pr. stk</label>
+                        <input type="number" step="0.01" min="0" id="editLineCost" value="${parseFloat(line.unit_cost) || 0}" oninput="updateEditLineTotals()" style="width: 100%; padding: 10px; margin-bottom: 16px; border: 1px solid var(--border); border-radius: 5px; font-size: 14px;">
+                    </div>
+                    <div style="flex: 1;">
+                        <label style="display: block; margin-bottom: 6px; font-weight: 600;">Salg pr. stk</label>
+                        <input type="number" step="0.01" min="0" id="editLineSale" value="${parseFloat(line.unit_sale) || 0}" oninput="updateEditLineTotals()" style="width: 100%; padding: 10px; margin-bottom: 16px; border: 1px solid var(--border); border-radius: 5px; font-size: 14px;">
+                    </div>
+                </div>
+
+                <div style="display: flex; justify-content: space-between; padding: 12px 15px; background: var(--surface-muted); border-radius: 5px; margin-bottom: 20px; font-size: 14px;">
+                    <span>Total udgift: <strong id="editLineTotalCost" style="color: var(--danger);"></strong></span>
+                    <span>Total salg: <strong id="editLineTotalSale" style="color: var(--success);"></strong></span>
+                </div>
+
+                <div style="display: flex; justify-content: flex-end; gap: 12px;">
+                    <button type="button" onclick="document.getElementById('editMaterialLineModal').remove()" class="btn btn-secondary">Annuller</button>
+                    <button type="submit" class="btn btn-primary">Gem ændringer</button>
+                </div>
+            </form>
+        </div>
+    `;
+    document.body.appendChild(modal);
+    updateEditLineTotals();
+}
+
+function updateEditLineTotals() {
+    const qty = parseFloat(document.getElementById('editLineQty')?.value) || 0;
+    const cost = parseFloat(document.getElementById('editLineCost')?.value) || 0;
+    const sale = parseFloat(document.getElementById('editLineSale')?.value) || 0;
+    const tc = document.getElementById('editLineTotalCost');
+    const ts = document.getElementById('editLineTotalSale');
+    if (tc) tc.textContent = (qty * cost).toFixed(2) + ' kr';
+    if (ts) ts.textContent = (qty * sale).toFixed(2) + ' kr';
+}
+
+async function saveEditMaterialLine(orderId, lineId) {
+    const body = {
+        notes: document.getElementById('editLineNotes')?.value?.trim() || null,
+        quantity: parseFloat(document.getElementById('editLineQty')?.value),
+        unit_cost: parseFloat(document.getElementById('editLineCost')?.value),
+        unit_sale: parseFloat(document.getElementById('editLineSale')?.value)
+    };
+    if (!body.quantity || body.quantity <= 0) {
+        alert('Indtast et gyldigt antal.');
+        return;
+    }
+    try {
+        const token = sessionStorage.getItem('token');
+        const response = await fetch(`/api/orders/${orderId}/materials/${lineId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            body: JSON.stringify(body)
+        });
+        if (!response.ok) {
+            const errData = await response.json().catch(() => ({}));
+            throw new Error(errData.details ? `${errData.error}: ${errData.details}` : (errData.error || 'Kunne ikke gemme ændringerne.'));
+        }
+        document.getElementById('editMaterialLineModal')?.remove();
+        // Genindlaes workspace, saa regnskab og tabeller opdateres
+        await openOrderWorkspace(orderId);
+        switchWorkspaceTab('materials');
+    } catch (error) {
+        alert('Fejl: ' + error.message);
+    }
 }
 
 // ===== v83: Montor - registrer materiale (inkl. kilometer/koersel) paa sag =====
@@ -2318,6 +2412,9 @@ window.closeRegisterMaterialModal = closeRegisterMaterialModal;
 window.filterRegisterMaterials = filterRegisterMaterials;
 window.selectRegisterMaterial = selectRegisterMaterial;
 window.clearRegisterMaterialSelection = clearRegisterMaterialSelection;
+window.openEditMaterialLineModal = openEditMaterialLineModal;
+window.updateEditLineTotals = updateEditLineTotals;
+window.saveEditMaterialLine = saveEditMaterialLine;
 window.saveRegisterMaterial = saveRegisterMaterial;
 window.closeWorkspace = closeWorkspace;
 window.viewInvoiceFromWorkspace = viewInvoiceFromWorkspace;

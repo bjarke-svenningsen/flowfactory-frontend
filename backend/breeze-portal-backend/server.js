@@ -4439,6 +4439,61 @@ app.post('/api/orders/:orderId/materials', auth, async (req, res) => {
   }
 });
 
+// v87: Rediger manuel materialelinje (Ledelsen) - beskrivelse (notes), antal og priser.
+// Regnskabet (sagens udgifter/overskud) beregnes ud fra total_cost/total_sale, saa
+// aendringer her slaar direkte igennem i oekonomien.
+app.put('/api/orders/:orderId/materials/:materialId', auth, async (req, res) => {
+  try {
+    if (isMontor(req)) {
+      return res.status(403).json({ error: 'Kun Ledelsen kan redigere materialelinjer' });
+    }
+
+    const orderId = Number(req.params.orderId);
+    const materialId = Number(req.params.materialId);
+    const { notes, quantity, unit_cost, unit_sale } = req.body;
+
+    const orderMaterial = await db.get('SELECT * FROM order_materials WHERE id = ? AND order_id = ?', [materialId, orderId]);
+    if (!orderMaterial) {
+      return res.status(404).json({ error: 'Material not found' });
+    }
+    if (orderMaterial.source === 'time_entry') {
+      return res.status(400).json({ error: 'Timer-linjer redigeres via materiale-kataloget (priserne følger kataloget)' });
+    }
+
+    const qty = quantity !== undefined ? parseFloat(quantity) : parseFloat(orderMaterial.quantity);
+    const cost = unit_cost !== undefined ? parseFloat(unit_cost) : parseFloat(orderMaterial.unit_cost);
+    const sale = unit_sale !== undefined ? parseFloat(unit_sale) : parseFloat(orderMaterial.unit_sale);
+    if (!qty || qty <= 0 || isNaN(cost) || isNaN(sale)) {
+      return res.status(400).json({ error: 'Angiv gyldigt antal og priser' });
+    }
+
+    const newNotes = notes !== undefined ? (notes && String(notes).trim() ? String(notes).trim() : null) : orderMaterial.notes;
+
+    await db.run(`
+      UPDATE order_materials
+      SET quantity = ?, unit_cost = ?, unit_sale = ?, total_cost = ROUND(? * ?, 2), total_sale = ROUND(? * ?, 2), notes = ?
+      WHERE id = ?
+    `, [qty, cost, sale, qty, cost, qty, sale, newNotes, materialId]);
+
+    await db.run(`
+      INSERT INTO order_timeline (order_id, activity_type, description, user_id)
+      VALUES (?, 'material_updated', ?, ?)
+    `, [orderId, 'Materialelinje rettet af Ledelsen', req.user.id]);
+
+    const updated = await db.get(`
+      SELECT om.*, m.name as material_name, m.material_number, m.unit
+      FROM order_materials om
+      LEFT JOIN materials m ON om.material_id = m.id
+      WHERE om.id = ?
+    `, [materialId]);
+
+    res.json(updated);
+  } catch (error) {
+    console.error('Error updating order material:', error);
+    res.status(500).json({ error: 'Failed to update material line', details: error.message });
+  }
+});
+
 // Remove material from order (only manual entries, not time_entry sourced)
 app.delete('/api/orders/:orderId/materials/:materialId', auth, async (req, res) => {
   try {
