@@ -139,6 +139,7 @@ body {
 
 .content-area {
     flex: 1;
+    min-width: 0;
     background: white;
     border-radius: 10px;
     padding: 30px;
@@ -1822,7 +1823,7 @@ body {
    FILHÅNDTERING — nyt layout (trin a)
    ============================================================ */
 
-.files-shell { height: calc(100vh - 150px); min-height: 520px; }
+.files-shell { height: calc(100vh - 150px); min-height: 520px; min-width: 0; max-width: 100%; overflow: hidden; }
 
 /* Windows-stil: adressefeltet (broedkrumme) paa egen fuldbredde-raekke,
    knapperne paa en fast raekke under - aldrig ustyret wrap */
@@ -1835,7 +1836,8 @@ body {
     border-bottom: 1px solid var(--border);
 }
 .files-addressbar { display: flex; align-items: center; gap: 8px; min-width: 0; }
-.files-actionsbar { display: flex; align-items: center; justify-content: flex-end; gap: 12px; flex-wrap: nowrap; }
+.files-actionsbar { display: flex; align-items: center; justify-content: flex-end; gap: 12px; flex-wrap: nowrap; min-width: 0; overflow-x: auto; scrollbar-width: none; }
+.files-actionsbar::-webkit-scrollbar { display: none; }
 .files-actionsbar .btn { flex-shrink: 0; height: 36px; gap: 6px; }
 .files-toolbar .btn .lucide { width: 16px; height: 16px; }
 .files-actionsbar .files-search { width: 240px; min-width: 160px; flex-shrink: 1; }
@@ -1951,8 +1953,9 @@ body {
 .files-tree {
     width: 230px;
     flex: 0 0 230px;
+    min-width: 0;
     border-right: 1px solid var(--border);
-    overflow-y: auto;
+    overflow: hidden auto;
     padding: 10px 6px;
 }
 .tree-node {
