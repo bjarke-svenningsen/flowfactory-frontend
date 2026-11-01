@@ -3905,7 +3905,8 @@ app.post('/api/materials', auth, adminAuth, async (req, res) => {
       VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     `, [material_number, name, description || null, category || null, unit || 'stk', cost_price, sales_price, req.user.id]);
 
-    const material = await db.get('SELECT * FROM materials WHERE id = ?', [result.lastID]);
+    // v84 fix: result.lastID fandtes ikke (db.run returnerer lastInsertRowid)
+    const material = await db.get('SELECT * FROM materials WHERE id = ?', [result.lastInsertRowid || result.lastID || result.id]);
     res.json(material);
   } catch (error) {
     console.error('Error creating material:', error);
@@ -4317,21 +4318,35 @@ app.get('/api/orders/:orderId/materials', auth, async (req, res) => {
 });
 
 // Add material to order (manual)
+// v84: Accepterer enten material_id (katalog) ELLER description (fri tekst,
+// fx "epoxy primer" - gemmes paa en fast "Uspecificeret materiale"-post i
+// notes-feltet, saa Ledelsen senere kan ombooge til det korrekte materiale).
+const UNSPECIFIED_MATERIAL_NAME = 'Uspecificeret materiale';
+
+async function getOrCreateUnspecifiedMaterial() {
+  let m = await db.get('SELECT * FROM materials WHERE name = ?', [UNSPECIFIED_MATERIAL_NAME]);
+  if (!m) {
+    await db.run(`INSERT INTO materials (material_number, name, description, category, unit, cost_price, sales_price, created_by)
+      VALUES ('USPEC', ?, ?, 'Øvrigt', 'stk', 0, 0, ?)`, [UNSPECIFIED_MATERIAL_NAME, 'Autogenereret post til fri-tekst registreringer fra montorer', null]);
+    m = await db.get('SELECT * FROM materials WHERE name = ?', [UNSPECIFIED_MATERIAL_NAME]);
+  }
+  return m;
+}
+
 app.post('/api/orders/:orderId/materials', auth, async (req, res) => {
   try {
     const orderId = Number(req.params.orderId);
-    const { material_id, quantity } = req.body;
+    const { material_id, quantity, description } = req.body;
+    const hasCatalogMaterial = material_id && Number(material_id) > 0;
+    const hasFreeText = description && String(description).trim().length > 0;
 
-    if (!material_id || !quantity || quantity <= 0) {
-      return res.status(400).json({ error: 'Invalid material or quantity' });
+    if (!quantity || quantity <= 0 || (!hasCatalogMaterial && !hasFreeText)) {
+      return res.status(400).json({ error: 'Angiv materiale (eller fritekst) og et gyldigt antal' });
     }
 
-    // Get material and order info
-    const material = await db.get('SELECT * FROM materials WHERE id = ?', [material_id]);
     const order = await db.get('SELECT * FROM quotes WHERE id = ?', [orderId]);
-
-    if (!material || !order) {
-      return res.status(400).json({ error: 'Material or order not found' });
+    if (!order) {
+      return res.status(400).json({ error: 'Order not found' });
     }
 
     // v83: Montorer maa kun registrere materialer paa IGANGVAERENDE ordrer
@@ -4339,27 +4354,42 @@ app.post('/api/orders/:orderId/materials', auth, async (req, res) => {
       return res.status(403).json({ error: 'Materialer kan kun registreres på igangværende ordrer' });
     }
 
+    let material, notes = null;
+    if (hasCatalogMaterial) {
+      material = await db.get('SELECT * FROM materials WHERE id = ?', [material_id]);
+      if (!material) {
+        return res.status(400).json({ error: 'Material not found' });
+      }
+    } else {
+      material = await getOrCreateUnspecifiedMaterial();
+      notes = String(description).trim();
+    }
+
     const totalCost = parseFloat(quantity) * parseFloat(material.cost_price);
     const totalSale = parseFloat(quantity) * parseFloat(material.sales_price);
 
     const result = await db.run(`
-      INSERT INTO order_materials (order_id, material_id, quantity, unit_cost, unit_sale, total_cost, total_sale, added_by, source)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'manual')
-    `, [orderId, material_id, quantity, material.cost_price, material.sales_price, totalCost, totalSale, req.user.id]);
+      INSERT INTO order_materials (order_id, material_id, quantity, unit_cost, unit_sale, total_cost, total_sale, added_by, source, notes)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'manual', ?)
+    `, [orderId, material.id, quantity, material.cost_price, material.sales_price, totalCost, totalSale, req.user.id, notes]);
+
+    // Kompatibelt med bade SQLite og PostgreSQL (v84 fix: result.lastID fandtes ikke)
+    const insertedId = result.lastInsertRowid || result.lastID || result.id;
 
     // Add to timeline
     const user = await db.get('SELECT name FROM users WHERE id = ?', [req.user.id]);
+    const displayName = hasCatalogMaterial ? material.name : `"${notes}"`;
     await db.run(`
       INSERT INTO order_timeline (order_id, activity_type, description, user_id)
       VALUES (?, 'material_added', ?, ?)
-    `, [orderId, `${user.name} tilføjede ${quantity} ${material.unit} ${material.name}`, req.user.id]);
+    `, [orderId, `${user.name} tilføjede ${quantity} ${material.unit || ''} ${displayName}`.trim(), req.user.id]);
 
     const orderMaterial = await db.get(`
       SELECT om.*, m.name as material_name, m.material_number
       FROM order_materials om
       LEFT JOIN materials m ON om.material_id = m.id
       WHERE om.id = ?
-    `, [result.lastID]);
+    `, [insertedId]);
 
     // v83: Montor maa ikke se priser i svaret
     if (isMontor(req)) {

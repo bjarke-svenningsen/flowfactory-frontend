@@ -297,6 +297,12 @@ function renderWorkspaceOverview(container) {
                     </div>
                 </div>
             </div>
+            <div style="background: var(--surface); padding: 20px; border-radius: 10px; border: 2px solid var(--border); margin-top: 30px;">
+                <h3 style="margin: 0 0 15px 0;">Arbejdsbeskrivelse</h3>
+                <div style="min-height: 60px; padding: 15px; background: var(--surface-muted); border-radius: 5px; border: 1px solid var(--border); font-size: 14px;">
+                    ${currentWorkspaceOrder.work_description || '<em style="color: var(--text-muted);">Ingen beskrivelse endnu — Ledelsen udfylder den.</em>'}
+                </div>
+            </div>
             <p style="font-size: 12px; color: var(--text-muted); margin-top: 20px;">Økonomi, dokumenter og timeline er kun tilgængelige for Ledelsen. Registrér timer via "Min Tid" og materialer/kørsel under "Timer & Materialer".</p>
         `;
         return;
@@ -1513,7 +1519,9 @@ function renderWorkspaceMaterials(container) {
         
         const description = isTime
             ? `⏱ Timeregistrering (${line.material_number || '?'})`
-            : ` ${line.material_name || 'Materiale'} (${line.material_number || '?'})`;
+            : (line.notes
+                ? `${line.notes} <em style="color: var(--text-muted); font-size: 12px;">(uspecificeret)</em>`
+                : ` ${line.material_name || 'Materiale'} (${line.material_number || '?'})`);
         const date = line.time_entry_date || (line.added_at ? line.added_at.substring(0, 10) : '');
         
         if (montor) {
@@ -1614,6 +1622,10 @@ async function openRegisterMaterialModal() {
                     <input type="text" id="registerMaterialSearch" oninput="filterRegisterMaterials()" placeholder="Søg efter navn eller nummer..." style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 5px; font-size: 14px;">
                 </div>
                 <div id="registerMaterialList" style="max-height: 260px; overflow-y: auto; border: 1px solid var(--border); border-radius: 5px; margin-bottom: 20px;"></div>
+                <div style="margin-bottom: 20px; padding: 15px; background: var(--surface-muted); border-radius: 5px; border: 1px dashed var(--border);">
+                    <label style="display: block; margin-bottom: 8px; font-weight: 600;">Kan du ikke finde materialet? Skriv det her</label>
+                    <input type="text" id="registerMaterialFreeText" oninput="clearRegisterMaterialSelection()" placeholder="F.eks. Epoxy primer — Ledelsen retter det senere" style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 5px; font-size: 14px;">
+                </div>
                 <div style="margin-bottom: 30px;">
                     <label style="display: block; margin-bottom: 8px; font-weight: 600;">Antal *</label>
                     <input type="number" id="registerMaterialQty" step="0.01" min="0.01" placeholder="F.eks. 500 (km) eller 10 (kg)" style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 5px; font-size: 14px;">
@@ -1684,14 +1696,28 @@ function selectRegisterMaterial(id) {
     document.querySelectorAll('.register-material-item').forEach(el => {
         el.style.background = Number(el.dataset.id) === id ? 'var(--surface-muted)' : '';
     });
+    // Rydder fritekst, saa der ikke registreres to ting paa én linje
+    const freeTextEl = document.getElementById('registerMaterialFreeText');
+    if (freeTextEl) freeTextEl.value = '';
+}
+
+function clearRegisterMaterialSelection() {
+    if (selectedRegisterMaterial) {
+        selectedRegisterMaterial = null;
+        document.querySelectorAll('.register-material-item').forEach(el => {
+            el.style.background = '';
+        });
+    }
 }
 
 async function saveRegisterMaterial(orderId) {
     const qtyEl = document.getElementById('registerMaterialQty');
+    const freeTextEl = document.getElementById('registerMaterialFreeText');
     const quantity = parseFloat(qtyEl ? qtyEl.value : '');
+    const freeText = freeTextEl ? freeTextEl.value.trim() : '';
 
-    if (!selectedRegisterMaterial) {
-        alert('Vælg først et materiale fra listen.');
+    if (!selectedRegisterMaterial && !freeText) {
+        alert('Vælg et materiale fra listen — eller skriv materialet i fritekstfeltet.');
         return;
     }
     if (!quantity || quantity <= 0) {
@@ -1701,16 +1727,16 @@ async function saveRegisterMaterial(orderId) {
 
     try {
         const token = sessionStorage.getItem('token');
+        const body = selectedRegisterMaterial
+            ? { material_id: selectedRegisterMaterial.id, quantity }
+            : { description: freeText, quantity };
         const response = await fetch(`/api/orders/${orderId}/materials`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${token}`
             },
-            body: JSON.stringify({
-                material_id: selectedRegisterMaterial.id,
-                quantity
-            })
+            body: JSON.stringify(body)
         });
         if (!response.ok) {
             const errData = await response.json().catch(() => ({}));
@@ -2291,6 +2317,7 @@ window.openRegisterMaterialModal = openRegisterMaterialModal;
 window.closeRegisterMaterialModal = closeRegisterMaterialModal;
 window.filterRegisterMaterials = filterRegisterMaterials;
 window.selectRegisterMaterial = selectRegisterMaterial;
+window.clearRegisterMaterialSelection = clearRegisterMaterialSelection;
 window.saveRegisterMaterial = saveRegisterMaterial;
 window.closeWorkspace = closeWorkspace;
 window.viewInvoiceFromWorkspace = viewInvoiceFromWorkspace;
