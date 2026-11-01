@@ -13,18 +13,40 @@ async function loadQuotes() {
         const response = await fetch('/api/quotes?_=' + Date.now(), {
             headers: { 'Authorization': `Bearer ${token}` }
         });
-        
+
         if (!response.ok) throw new Error('Failed to load quotes');
-        
+
         const allFetchedQuotes = await response.json();
         // Filter to only show draft and sent quotes (not accepted or rejected)
         allQuotes = allFetchedQuotes.filter(q => q.status === 'draft' || q.status === 'sent');
+        // v100: lokale godkendelses-overrides - hvis serveren svarer med gammel status,
+        // holder vi alligevel godkendte sager ude af Tilbud-listen
+        const overrides = getAcceptOverrides();
+        if (overrides.length) {
+            const overrideIds = new Set(overrides.map(o => o.id));
+            allQuotes = allQuotes.filter(q => !overrideIds.has(q.id));
+        }
         updateTabCountsFromQuotes(allFetchedQuotes);
         renderQuotesList();
     } catch (error) {
         console.error('Error loading quotes:', error);
         alert('Kunne ikke indlæse tilbud: ' + error.message);
     }
+}
+
+// ---------- v100: lokale godkendelses-overrides (localStorage) ----------
+const ACCEPT_OVERRIDES_KEY = 'acceptedQuoteOverrides';
+function getAcceptOverrides() {
+    try { return JSON.parse(localStorage.getItem(ACCEPT_OVERRIDES_KEY) || '[]'); }
+    catch (e) { return []; }
+}
+function saveAcceptOverride(quoteRow) {
+    if (!quoteRow || !quoteRow.id) return;
+    try {
+        const list = getAcceptOverrides().filter(o => o.id !== quoteRow.id);
+        list.unshift({ id: quoteRow.id, row: quoteRow, ts: Date.now() });
+        localStorage.setItem(ACCEPT_OVERRIDES_KEY, JSON.stringify(list.slice(0, 20)));
+    } catch (e) { console.warn('Kunne ikke gemme accept-override', e); }
 }
 
 // Render quotes list
@@ -936,6 +958,30 @@ async function acceptQuote(quoteId) {
         // v97: hop direkte over paa Godkendte Ordre-fanen, saa ordren ses med det samme
         await loadQuotes();
         await loadOrders();
+
+        // v100: Sikkerhedsnet - verificeringen ovenfor har bevist at DB har status
+        // 'accepted', saa hvis listerne ALLIGEVEL viser gammel data (forhaalet cache/
+        // laese-svar), retter vi dem lokalt: fjern fra Tilbud, laeg ind i Godkendte Ordre
+        const acceptedRow = (order && order.id) ? order : { id: quoteId, status: 'accepted', order_stage: 'approved' };
+        saveAcceptOverride(acceptedRow);
+        const ghost = allQuotes.find(q => q.id === quoteId);
+        if (ghost) {
+            console.warn('acceptQuote: liste svarede stadig med gammel status - retter lokalt', quoteId);
+            allQuotes = allQuotes.filter(q => q.id !== quoteId);
+            renderQuotesList();
+        }
+        const ordersCache = orderTabCache.orders || [];
+        if (!ordersCache.some(q => q.id === acceptedRow.id)) {
+            renderTabSlice('orders', [acceptedRow, ...ordersCache], renderOrdersContent);
+        }
+        // Ret fanetaellinger lokalt hvis de var forhaalede
+        const quotesEl = document.getElementById('tabCountQuotes');
+        const ordersEl = document.getElementById('tabCountOrders');
+        if (ghost && quotesEl) setTabCount('Quotes', Math.max(0, (parseInt(quotesEl.textContent, 10) || 0) - 1));
+        if (ordersEl && !ordersCache.some(q => q.id === acceptedRow.id)) {
+            setTabCount('Orders', (parseInt(ordersEl.textContent, 10) || 0) + 1);
+        }
+
         switchOrderTab('orders');
 
     } catch (error) {
@@ -1066,6 +1112,28 @@ async function loadOrders() {
         // Filter: godkendte ordrer der IKKE er startet endnu (order_stage = 'approved')
         // Fallback: ordrer uden order_stage (gamle rækker) behandles som godkendte
         const orders = allQuotes.filter(q => q.status === 'accepted' && !q.is_extra_work && (q.order_stage !== 'in_progress'));
+
+        // v100: lokale godkendelses-overrides - injicer godkendte sager serveren
+        // eventuel svarer med gammel status paa
+        const overrides = getAcceptOverrides();
+        for (const o of overrides) {
+            const row = o.row || {};
+            if (row.is_extra_work) continue;
+            const serverRow = allQuotes.find(q => q.id === o.id);
+            // Fjern server-række der stadig lyver om status, og brug override i stedet
+            const idx = orders.findIndex(q => q.id === o.id);
+            if (idx !== -1 && serverRow && serverRow.status !== 'accepted') orders.splice(idx, 1);
+            if (idx === -1 && !orders.some(q => q.id === o.id)) {
+                orders.unshift(serverRow && serverRow.status === 'accepted' ? serverRow : { ...row, status: 'accepted', order_stage: row.order_stage || 'approved' });
+            }
+            // Hvis serveren ENDELIG svarer korrekt, drop override (den er nu overfloedig)
+            if (serverRow && serverRow.status === 'accepted') {
+                try {
+                    const remaining = getAcceptOverrides().filter(x => x.id !== o.id);
+                    localStorage.setItem(ACCEPT_OVERRIDES_KEY, JSON.stringify(remaining));
+                } catch (e) { /* ignore */ }
+            }
+        }
 
         updateTabCountsFromQuotes(allQuotes);
         renderTabSlice('orders', orders, renderOrdersContent);
