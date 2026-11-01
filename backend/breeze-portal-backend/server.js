@@ -2713,18 +2713,20 @@ app.post('/api/quotes', auth, async (req, res) => {
     if (isMontor(req)) return res.status(403).json({ error: 'Adgang nægtet - kun Ledelsen kan oprette ordrer' });
     const { customer_id, title, valid_until, notes, terms, lines, requisition_number, contact_person_id, order_type } = req.body;
     
-    if (!customer_id || !title || !lines || lines.length === 0) {
+    // v92: Linjer er kun paakraevet for Kalkulation - Forbrugssager kan oprettes uden linjer (forbrug kommer fra registreringer)
+    const safeOrderType = order_type === 'calculation' ? 'calculation' : 'consumption';
+    const safeLines = Array.isArray(lines) ? lines : [];
+    
+    if (!customer_id || !title || (safeOrderType === 'calculation' && safeLines.length === 0)) {
       return res.status(400).json({ error: 'Missing required fields' });
     }
     
-    // v91: Sagstype - 'consumption' (Forbrug, default) eller 'calculation' (Kalkulation)
-    const safeOrderType = order_type === 'calculation' ? 'calculation' : 'consumption';
-    
+
     const order_number = await generateOrderNumber(); // 0001, 0002...
   
   // Calculate totals
   let subtotal = 0;
-  lines.forEach(line => {
+  safeLines.forEach(line => {
     const discount_amount = (line.unit_price * line.quantity * (line.discount_percent || 0)) / 100;
     const line_total = (line.unit_price * line.quantity) - discount_amount;
     subtotal += line_total;
@@ -2744,7 +2746,7 @@ app.post('/api/quotes', auth, async (req, res) => {
   const quoteId = quoteInfo.lastInsertRowid;
   
   // Create lines
-  for (const [index, line] of lines.entries()) {
+  for (const [index, line] of safeLines.entries()) {
     const discount_amount = (line.unit_price * line.quantity * (line.discount_percent || 0)) / 100;
     const line_total = (line.unit_price * line.quantity) - discount_amount;
     
@@ -3163,12 +3165,14 @@ app.post('/api/quotes/:id/extra-work', auth, async (req, res) => {
   const parentOrderId = Number(req.params.id);
   const { title, notes, terms, lines, order_type } = req.body;
   
-  if (!title || !lines || lines.length === 0) {
+  // v92: Linjer er kun paakraevet for Kalkulation - Forbrug kan oprettes uden linjer
+  const safeOrderType = order_type === 'calculation' ? 'calculation' : 'consumption';
+  const safeLines = Array.isArray(lines) ? lines : [];
+  
+  if (!title || (safeOrderType === 'calculation' && safeLines.length === 0)) {
     return res.status(400).json({ error: 'Missing required fields' });
   }
   
-  // v91: Ekstraarbejde har egen sagstype (Forbrug default - kan vaere aftalt pris = Kalkulation)
-  const safeOrderType = order_type === 'calculation' ? 'calculation' : 'consumption';
   
   const parentOrder = await db.get('SELECT * FROM quotes WHERE id = ?', [parentOrderId]);
   if (!parentOrder) {
@@ -3186,7 +3190,7 @@ app.post('/api/quotes/:id/extra-work', auth, async (req, res) => {
   
   // Calculate totals
   let subtotal = 0;
-  lines.forEach(line => {
+  safeLines.forEach(line => {
     const discount_amount = (line.unit_price * line.quantity * (line.discount_percent || 0)) / 100;
     const line_total = (line.unit_price * line.quantity) - discount_amount;
     subtotal += line_total;
@@ -3208,7 +3212,7 @@ app.post('/api/quotes/:id/extra-work', auth, async (req, res) => {
   const extraWorkId = info.lastInsertRowid;
   
   // Create lines
-  for (const [index, line] of lines.entries()) {
+  for (const [index, line] of safeLines.entries()) {
     const discount_amount = (line.unit_price * line.quantity * (line.discount_percent || 0)) / 100;
     const line_total = (line.unit_price * line.quantity) - discount_amount;
     
@@ -3318,12 +3322,61 @@ app.post('/api/invoices/from-order/:orderId', auth, async (req, res) => {
   const invoiceId = info.lastInsertRowid;
   
   // Copy lines from order
+  // v92: Forbrugssager - fakturalinjer bygges automatisk fra registreringer (order_materials),
+  // herunder timer og koersel. Kalkulationssager bruger stadig de faste tilbudslinjer.
+  let subtotalFinal = order.subtotal;
+  let vatFinal = order.vat_amount;
+  let totalFinal = order.total;
+  
+  const isConsumption = String(order.order_type || 'calculation') === 'consumption';
+  if (isConsumption) {
+    const regs = await db.all(`
+      SELECT om.*, m.name as material_name, m.unit as material_unit
+      FROM order_materials om
+      LEFT JOIN materials m ON om.material_id = m.id
+      WHERE om.order_id = ?
+      ORDER BY om.id
+    `, [orderId]);
+    
+    let autoSubtotal = 0;
+    let sortIdx = 0;
+    for (const reg of regs) {
+      const unitSale = reg.unit_sale != null ? reg.unit_sale : (reg.quantity ? reg.total_sale / reg.quantity : reg.total_sale);
+      const lineTotal = reg.total_sale || 0;
+      const desc = reg.notes || reg.material_name || 'Registrering';
+      const unit = reg.material_unit || 'stk';
+      
+      await db.run(`
+        INSERT INTO invoice_lines (invoice_id, description, quantity, unit, unit_price, discount_percent, discount_amount, line_total, sort_order)
+        VALUES (?, ?, ?, ?, ?, 0, 0, ?, ?)
+      `, [invoiceId, desc, reg.quantity || 1, unit, unitSale, lineTotal, sortIdx]);
+      
+      autoSubtotal += lineTotal;
+      sortIdx++;
+    }
+    
+    if (autoSubtotal > 0) {
+      subtotalFinal = autoSubtotal;
+      vatFinal = subtotalFinal * 0.25;
+      totalFinal = subtotalFinal + vatFinal;
+      
+      // Hold ordrens totals i soejle med fakturaen
+      await db.run('UPDATE quotes SET subtotal = ?, vat_amount = ?, total = ? WHERE id = ?', [subtotalFinal, vatFinal, totalFinal, orderId]);
+      await db.run(`
+        UPDATE invoices SET subtotal = ?, vat_amount = ?, total = ? WHERE id = ?
+      `, [subtotalFinal, vatFinal, totalFinal, invoiceId]);
+    }
+  }
+  
   const orderLines = await db.all('SELECT * FROM quote_lines WHERE quote_id = ? ORDER BY sort_order, id', [orderId]);
-  for (const line of orderLines) {
-    await db.run(`
-      INSERT INTO invoice_lines (invoice_id, description, quantity, unit, unit_price, discount_percent, discount_amount, line_total, sort_order)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `, [invoiceId, line.description, line.quantity, line.unit, line.unit_price, line.discount_percent, line.discount_amount, line.line_total, line.sort_order]);
+  // For Forbrugssager med registreringer bruges de automatiske linjer ovenfor - spring manuelle linjer over
+  if (!(isConsumption && subtotalFinal !== order.subtotal)) {
+    for (const line of orderLines) {
+      await db.run(`
+        INSERT INTO invoice_lines (invoice_id, description, quantity, unit, unit_price, discount_percent, discount_amount, line_total, sort_order)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `, [invoiceId, line.description, line.quantity, line.unit, line.unit_price, line.discount_percent, line.discount_amount, line.line_total, line.sort_order]);
+    }
   }
   
   const invoice = await db.get(`

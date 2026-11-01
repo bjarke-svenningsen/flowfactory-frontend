@@ -2094,14 +2094,19 @@ async function saveExtraWork(parentOrderId) {
         return;
     }
     
-    if (!extraWorkLines || extraWorkLines.length === 0) {
+    // v92: Linjer er kun paakraevet for Kalkulation - tomme linjer filtreres fra
+    const filledLines = (extraWorkLines || []).filter(line =>
+        (line.description && line.description.trim()) || (line.quantity && line.quantity > 0)
+    );
+    
+    if (order_type === 'calculation' && filledLines.length === 0) {
         alert('Tilføj mindst én linje');
         return;
     }
     
     // Validate lines
-    for (let i = 0; i < extraWorkLines.length; i++) {
-        const line = extraWorkLines[i];
+    for (let i = 0; i < filledLines.length; i++) {
+        const line = filledLines[i];
         if (!line.description || !line.description.trim()) {
             alert(`Linje ${i + 1}: Beskrivelse mangler`);
             return;
@@ -2120,7 +2125,7 @@ async function saveExtraWork(parentOrderId) {
         title,
         notes: notes || null,
         order_type,
-        lines: extraWorkLines
+        lines: filledLines
     };
     
     try {

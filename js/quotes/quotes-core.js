@@ -636,14 +636,21 @@ async function saveQuote(status = 'draft') {
         return;
     }
     
-    if (!currentQuote.lines || currentQuote.lines.length === 0) {
+    // v92: Linjer er kun paakraevet for Kalkulation - Forbrugssager kan vaere uden linjer
+    // (tomme linjer filtreres fra; forbruget kommer automatisk fra registreringer)
+    const isCalculation = order_type === 'calculation';
+    const filledLines = (currentQuote.lines || []).filter(line =>
+        (line.description && line.description.trim()) || (line.quantity && line.quantity > 0)
+    );
+    
+    if (isCalculation && filledLines.length === 0) {
         alert('Tilføj mindst én linje');
         return;
     }
     
     // Validate lines
-    for (let i = 0; i < currentQuote.lines.length; i++) {
-        const line = currentQuote.lines[i];
+    for (let i = 0; i < filledLines.length; i++) {
+        const line = filledLines[i];
         if (!line.description || !line.description.trim()) {
             alert(`Linje ${i + 1}: Beskrivelse mangler`);
             return;
@@ -667,7 +674,7 @@ async function saveQuote(status = 'draft') {
         notes: notes || null,
         terms: terms || null,
         order_type,
-        lines: currentQuote.lines,
+        lines: filledLines,
         status
     };
     
