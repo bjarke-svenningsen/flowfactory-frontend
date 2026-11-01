@@ -3338,7 +3338,7 @@ app.post('/api/invoices/from-order/:orderId', auth, async (req, res) => {
       FROM order_materials om
       LEFT JOIN materials m ON om.material_id = m.id
       WHERE om.order_id = ?
-      ORDER BY om.id
+      ORDER BY CASE WHEN om.sort_order > 0 THEN om.sort_order ELSE 1000000 + om.id END
     `, [orderId]);
     
     let autoSubtotal = 0;
@@ -4398,7 +4398,7 @@ app.get('/api/orders/:orderId/materials', auth, async (req, res) => {
       LEFT JOIN users u ON om.added_by = u.id
       LEFT JOIN time_entries te ON om.time_entry_id = te.id
       WHERE om.order_id = ?
-      ORDER BY om.added_at DESC
+      ORDER BY CASE WHEN om.sort_order > 0 THEN om.sort_order ELSE 1000000 + om.id END
     `, [orderId]);
 
     // v83: Montorer ser linjerne uden oeconomi (kostpris/salg udgik)
@@ -4600,6 +4600,27 @@ app.put('/api/orders/:orderId/materials/:materialId', auth, async (req, res) => 
   }
 });
 
+// v106.2: gem manuel roekkefoelge af linjer (Minuba-stil \u25b2\u25bc-piler)
+app.post('/api/orders/:orderId/materials/reorder', auth, async (req, res) => {
+  try {
+    if (isMontor(req)) {
+      return res.status(403).json({ error: 'Kun Ledelsen kan aendre roekkefoelgen' });
+    }
+    const orderId = Number(req.params.orderId);
+    const { order } = req.body;
+    if (!Array.isArray(order) || order.length === 0) {
+      return res.status(400).json({ error: 'Angiv en roekkefoelge-liste' });
+    }
+    for (let i = 0; i < order.length; i++) {
+      await db.run('UPDATE order_materials SET sort_order = ? WHERE id = ? AND order_id = ?', [i + 1, order[i], orderId]);
+    }
+    res.json({ message: 'Roekkefoelge gemt' });
+  } catch (error) {
+    console.error('Error reordering order materials:', error);
+    res.status(500).json({ error: 'Failed to reorder materials', details: error.message });
+  }
+});
+
 // Remove material from order (only manual entries, not time_entry sourced)
 app.delete('/api/orders/:orderId/materials/:materialId', auth, async (req, res) => {
   try {
@@ -4757,7 +4778,7 @@ app.get('/api/orders/:orderId/workspace', auth, async (req, res) => {
     LEFT JOIN users u ON om.added_by = u.id
     LEFT JOIN time_entries te ON om.time_entry_id = te.id
     WHERE om.order_id = ?
-    ORDER BY om.added_at DESC
+    ORDER BY CASE WHEN om.sort_order > 0 THEN om.sort_order ELSE 1000000 + om.id END
   `, [orderId]);
   
   // Check if order has an invoice

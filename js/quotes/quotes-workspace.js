@@ -1614,6 +1614,10 @@ function renderWorkspaceMaterials(container) {
         const totalCell = `<td style="padding: 10px 12px; font-size: 13px; text-align: right; font-weight: 600; color: var(--success);">${sale.toFixed(2)} kr</td>`;
         return `
             <tr style="border-bottom: 1px solid var(--border-soft);">
+                <td style="padding: 10px 2px; white-space: nowrap;">
+                    <button onclick="moveMaterialLine(${currentWorkspaceOrder.id}, ${line.id}, -1)" title="Flyt op" style="padding: 2px 5px; font-size: 11px; border: 1px solid var(--border); background: var(--surface); border-radius: 4px; cursor: pointer; line-height: 1;" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">▲</button>
+                    <button onclick="moveMaterialLine(${currentWorkspaceOrder.id}, ${line.id}, 1)" title="Flyt ned" style="padding: 2px 5px; font-size: 11px; border: 1px solid var(--border); background: var(--surface); border-radius: 4px; cursor: pointer; line-height: 1;" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">▼</button>
+                </td>
                 <td style="padding: 10px 12px; font-size: 13px; white-space: nowrap;">${date}</td>
                 ${descCell}
                 <td style="padding: 10px 12px; font-size: 13px;">${line.added_by_name || '-'}</td>
@@ -1635,7 +1639,8 @@ function renderWorkspaceMaterials(container) {
                         </tr>
 ` : `
                         <tr style="border-bottom: 2px solid var(--border); text-align: left;">
-                            <th style="padding: 10px 12px; font-size: 12px; color: var(--text-muted); text-transform: uppercase;">Dato</th>
+                            <th style="padding: 10px 12px; font-size: 12px; color: var(--text-muted); <th style="padding: 10px 6px; width: 44px;"></th>
+text-transform: uppercase;">Dato</th>
                             <th style="padding: 10px 12px; font-size: 12px; color: var(--text-muted); text-transform: uppercase;">Beskrivelse</th>
                             <th style="padding: 10px 12px; font-size: 12px; color: var(--text-muted); text-transform: uppercase;">Registreret af</th>
                             <th style="padding: 10px 12px; font-size: 12px; color: var(--text-muted); text-transform: uppercase; text-align: right;">Antal</th>
@@ -1656,7 +1661,7 @@ function renderWorkspaceMaterials(container) {
 ` : `
                     <tfoot>
                         <tr style="border-top: 2px solid var(--border); font-weight: 700;">
-                            <td colspan="4" style="padding: 12px; font-size: 13px;">I alt${totalHours > 0 ? ` (${totalHours.toFixed(2)} timer)` : ''}</td>
+                            <td colspan="5" style="padding: 12px; font-size: 13px;">I alt${totalHours > 0 ? ` (${totalHours.toFixed(2)} timer)` : ''}</td>
                             <td style="padding: 12px; font-size: 13px; text-align: right; color: var(--danger);">${totalCost.toFixed(2)} kr</td>
                             <td></td>
                             <td></td>
@@ -2489,6 +2494,28 @@ window.filterRegisterMaterials = filterRegisterMaterials;
 window.selectRegisterMaterial = selectRegisterMaterial;
 window.clearRegisterMaterialSelection = clearRegisterMaterialSelection;
 window.saveInlineMaterialLine = saveInlineMaterialLine;
+window.moveMaterialLine = moveMaterialLine;
+
+// v106.2: flyt linje op/ned og gem roekkefoelgen
+async function moveMaterialLine(orderId, lineId, direction) {
+    const ids = workspaceMaterials.map(l => l.id);
+    const idx = ids.indexOf(lineId);
+    const target = idx + direction;
+    if (idx < 0 || target < 0 || target >= ids.length) return;
+    [ids[idx], ids[target]] = [ids[target], ids[idx]];
+    try {
+        const res = await fetch(`${API_URL}/api/orders/${orderId}/materials/reorder`, {
+            method: 'POST',
+            headers: getAuthHeaders(),
+            body: JSON.stringify({ order: ids })
+        });
+        if (!res.ok) throw new Error('Kunne ikke gemme roekkefoelgen');
+        await openOrderWorkspace(orderId);
+        switchWorkspaceTab('materials');
+    } catch (e) {
+        alert(e.message || 'Fejl ved flytning af linje');
+    }
+}
 // v106.1: nulstil SPA-tilstand naar man forlader Ordrestyring - pageLoader tømmer
 // DOM'et, men JS-variablerne bestaar og laaser ellers faneskift i switchOrderTab.
 window.resetQuotesNavState = function () {

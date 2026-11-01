@@ -592,6 +592,20 @@ export async function initializeDatabase() {
       }
     }
 
+    // v106.2: sort_order til manuel roekkefoelge af linjer (Minuba-stil \u25b2\u25bc)
+    try {
+      await db.run(`ALTER TABLE order_materials ADD COLUMN sort_order INTEGER DEFAULT 0`);
+      // Engangs-backfill: existinger linjer faar deres id som start-roekkefoelge
+      await db.run(`UPDATE order_materials SET sort_order = id WHERE sort_order = 0 OR sort_order IS NULL`);
+      console.log('✅ Added sort_order column to order_materials table');
+    } catch (error) {
+      if (error.message.includes('duplicate column') || error.message.includes('already exists')) {
+        console.log('ℹ️  order_materials.sort_order column already exists');
+      } else {
+        throw error;
+      }
+    }
+
     // Add order_type column to quotes table (for calculation vs consumption)
     try {
       await db.run(`ALTER TABLE quotes ADD COLUMN order_type TEXT DEFAULT 'calculation'`);

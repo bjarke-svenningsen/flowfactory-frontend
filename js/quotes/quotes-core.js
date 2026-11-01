@@ -806,7 +806,7 @@ function renderQuotePreview() {
                                 <td style="padding: 3px 10px 3px 0; font-size: 12px; color: var(--text-muted);">Dato:</td>
                                 <td style="padding: 3px 0; font-size: 12px; color: var(--text);">${new Date(currentQuote.date).toLocaleDateString('da-DK')}</td>
                             </tr>
-                            ${currentQuote.valid_until ? `
+                            ${currentQuote.valid_until && !currentQuote.is_order_view ? `
                             <tr>
                                 <td style="padding: 3px 10px 3px 0; font-size: 12px; color: var(--text-muted);">Gyldig til:</td>
                                 <td style="padding: 3px 0; font-size: 12px; color: var(--text);">${new Date(currentQuote.valid_until).toLocaleDateString('da-DK')}</td>
