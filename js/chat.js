@@ -704,37 +704,53 @@ async function loadJitsiScript() {
 }
 
 // Videoopkald via Jitsi (ingen konto/noegler - offentlig infrastruktur)
+// Robust: docket aabnes altid; hvis samtale-oprettelse fejler, bruges et
+// midlertidigt rum og linket deles ikke. Alle fejl logges til konsollen.
 async function startChatVideoCall(userId, userName) {
-    try {
-        let convId = conversationByPeer[userId];
-        if (!convId) {
+    console.log('[chat-video] starter opkald til', userName, 'id', userId);
+    let convId = conversationByPeer[userId];
+    if (!convId) {
+        try {
             const response = await fetch('/api/chat/conversations', {
                 method: 'POST',
                 headers: chatAuthHeaders(),
                 body: JSON.stringify({ peerId: userId })
             });
-            if (!response.ok) throw new Error('kunne ikke oprette samtale');
-            const data = await response.json();
-            convId = data.conversationId;
-            conversationByPeer[userId] = convId;
+            if (response.ok) {
+                const data = await response.json();
+                convId = data.conversationId;
+                conversationByPeer[userId] = convId;
+            } else {
+                console.error('[chat-video] samtale-oprettelse fejlede:', response.status);
+            }
+        } catch (e) {
+            console.error('[chat-video] samtale-oprettelse netvaerksfejl:', e);
         }
-        const room = 'seest-conv' + convId + '-' + Math.random().toString(36).substring(2, 10);
-        const url = 'https://meet.jit.si/' + room;
-        // Aflut evt. igangvaerende opkald og aabn docket video
+    }
+    const room = 'seest-conv' + (convId || ('u' + userId)) + '-' + Math.random().toString(36).substring(2, 10);
+    const url = 'https://meet.jit.si/' + room;
+    try {
+        // Afslut evt. igangvaerende opkald og aabn docket video
         if (videoDockApi) closeVideoDock();
         ensureVideoDock(userName);
-        try {
-            await loadJitsiScript();
-            videoDockApi = new JitsiMeetExternalAPI('meet.jit.si', {
-                roomName: room,
-                parentNode: document.getElementById('videoDockBody'),
-                width: '100%',
-                height: '100%'
-            });
-        } catch (e) {
-            // Fallback: aabn i nyt vindue hvis embed fejler (fx blokeret)
-            window.open(url, '_blank');
-        }
+    } catch (e) {
+        console.error('[chat-video] dock-fejl, fallback til vindue:', e);
+        window.open(url, '_blank');
+        return;
+    }
+    try {
+        await loadJitsiScript();
+        videoDockApi = new JitsiMeetExternalAPI('meet.jit.si', {
+            roomName: room,
+            parentNode: document.getElementById('videoDockBody'),
+            width: '100%',
+            height: '100%'
+        });
+    } catch (e) {
+        console.error('[chat-video] Jitsi-embed fejlede, fallback til vindue:', e);
+        window.open(url, '_blank');
+    }
+    if (convId) {
         // Del linket i samtalen, sa modtageren kan joine direkte
         try {
             const response = await fetch('/api/chat/messages', {
@@ -748,7 +764,5 @@ async function startChatVideoCall(userId, userName) {
                 if (currentConversationId === convId) renderMessages();
             }
         } catch (e) { /* linket er stadig sendt */ }
-    } catch (error) {
-        alert('Videoopkald kunne ikke startes');
     }
 }
