@@ -216,6 +216,7 @@ function showCreateQuote() {
         valid_until: getDefaultValidUntil(),
         notes: '',
         terms: 'Netto 14 dage',
+        order_type: 'consumption',
         lines: [createEmptyLine()]
     };
     renderQuoteForm();
@@ -382,6 +383,20 @@ function renderQuoteForm() {
                 <div>
                     <label style="display: block; margin-bottom: 8px; font-weight: 600;">Rekvisitionsnummer</label>
                     <input type="text" id="quoteReqNumber" value="${currentQuote.requisition_number || ''}" placeholder="Valgfrit" style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 5px; font-size: 14px;">
+                </div>
+            </div>
+            
+            <div style="margin-bottom: 30px;">
+                <label style="display: block; margin-bottom: 8px; font-weight: 600;">Sagstype *</label>
+                <div style="display: flex; gap: 25px; flex-wrap: wrap;">
+                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                        <input type="radio" name="quoteOrderType" value="consumption" ${currentQuote.order_type !== 'calculation' ? 'checked' : ''} style="width: 16px; height: 16px;">
+                        <span><strong>Forbrug</strong> <span style="color: var(--text-muted); font-size: 13px;">— registrerede materialer tæller med i omsætningen</span></span>
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                        <input type="radio" name="quoteOrderType" value="calculation" ${currentQuote.order_type === 'calculation' ? 'checked' : ''} style="width: 16px; height: 16px;">
+                        <span><strong>Kalkulation</strong> <span style="color: var(--text-muted); font-size: 13px;">— fast aftalt pris; materialer tæller kun som udgift</span></span>
+                    </label>
                 </div>
             </div>
             
@@ -608,6 +623,8 @@ async function saveQuote(status = 'draft') {
     const requisition_number = document.getElementById('quoteReqNumber').value.trim();
     const terms = document.getElementById('quoteTerms').value.trim();
     const notes = document.getElementById('quoteNotes').value.trim();
+    const orderTypeEl = document.querySelector('input[name="quoteOrderType"]:checked');
+    const order_type = orderTypeEl ? orderTypeEl.value : (currentQuote.order_type || 'consumption');
     
     if (!customer_id) {
         alert('Vælg en kunde');
@@ -649,6 +666,7 @@ async function saveQuote(status = 'draft') {
         requisition_number: requisition_number || null,
         notes: notes || null,
         terms: terms || null,
+        order_type,
         lines: currentQuote.lines,
         status
     };

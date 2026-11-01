@@ -402,6 +402,18 @@ function validateUserData({ name, email, password, requirePassword }) {
 }
 
 // ===== Rolle-hjaelpere: Ledelsen = is_admin, alle andre = Montoer =====
+// v91: Omsaetning pr. ordre afhaenger af sagstypen (quotes.order_type):
+// - 'calculation' (Kalkulation): fast tilbudspris (quotes.total). Materialer
+//   taeler KUN som udgift (total_cost) og paavirker aldrig omsaetningen op.
+// - 'consumption' (Forbrug): omsaetning = summen af materiaelinejlernes
+//   salgsvaerdi (order_materials.total_sale) - alt man registrerer taeller med.
+async function revenueForOrder(order) {
+  if (!order) return 0;
+  if (String(order.order_type || 'calculation') !== 'consumption') return order.total || 0;
+  const row = await db.get('SELECT SUM(total_sale) as total FROM order_materials WHERE order_id = ?', [order.id]);
+  return row?.total || 0;
+}
+
 const ECON_FIELDS = ['subtotal', 'vat_rate', 'vat_amount', 'total', 'revenue', 'revenue_main', 'revenue_extra', 'expenses', 'expenses_main', 'expenses_extra', 'profit', 'profit_main', 'profit_extra', 'profit_margin'];
 const ECON_LINE_FIELDS = ['unit_price', 'discount_percent', 'discount_amount', 'line_total'];
 
@@ -2558,11 +2570,14 @@ app.get('/api/quotes', auth, async (req, res) => {
       SELECT * FROM quotes WHERE parent_order_id = ?
     `, [quote.id]);
     
-    // Calculate main order revenue
-    const revenue_main = quote.total || 0;
+    // v91: Omsaetning afhaenger af sagstypen (Forbrug = materiale-salg, Kalkulation = fast pris)
+    const revenue_main = await revenueForOrder(quote);
     
-    // Calculate extra work revenue
-    const revenue_extra = extraWorkOrders.reduce((sum, eo) => sum + (eo.total || 0), 0);
+    // Calculate extra work revenue (hver ekstraordre efter EGEN sagstype)
+    let revenue_extra = 0;
+    for (const eo of extraWorkOrders) {
+      revenue_extra += await revenueForOrder(eo);
+    }
     
     // Calculate total revenue
     const revenue = revenue_main + revenue_extra;
@@ -2696,11 +2711,14 @@ app.post('/api/quotes', auth, async (req, res) => {
   try {
     // Montoer kan ikke oprette tilbud/ordrer
     if (isMontor(req)) return res.status(403).json({ error: 'Adgang nægtet - kun Ledelsen kan oprette ordrer' });
-    const { customer_id, title, valid_until, notes, terms, lines, requisition_number, contact_person_id } = req.body;
+    const { customer_id, title, valid_until, notes, terms, lines, requisition_number, contact_person_id, order_type } = req.body;
     
     if (!customer_id || !title || !lines || lines.length === 0) {
       return res.status(400).json({ error: 'Missing required fields' });
     }
+    
+    // v91: Sagstype - 'consumption' (Forbrug, default) eller 'calculation' (Kalkulation)
+    const safeOrderType = order_type === 'calculation' ? 'calculation' : 'consumption';
     
     const order_number = await generateOrderNumber(); // 0001, 0002...
   
@@ -2719,9 +2737,9 @@ app.post('/api/quotes', auth, async (req, res) => {
   // Create main quote/order (is_extra_work = 0, parent_order_id = NULL)
   // Use order_number as quote_number for backwards compatibility
   const quoteInfo = await db.run(`
-    INSERT INTO quotes (quote_number, order_number, parent_order_id, sub_number, is_extra_work, customer_id, contact_person_id, title, requisition_number, valid_until, notes, terms, subtotal, vat_rate, vat_amount, total, created_by)
-    VALUES (?, ?, NULL, NULL, 0, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `, [order_number, order_number, customer_id, contact_person_id || null, title, requisition_number || null, valid_until || null, notes || null, terms || null, subtotal, vat_rate, vat_amount, total, req.user.id]);
+    INSERT INTO quotes (quote_number, order_number, parent_order_id, sub_number, is_extra_work, customer_id, contact_person_id, title, requisition_number, valid_until, notes, terms, subtotal, vat_rate, vat_amount, total, order_type, created_by)
+    VALUES (?, ?, NULL, NULL, 0, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `, [order_number, order_number, customer_id, contact_person_id || null, title, requisition_number || null, valid_until || null, notes || null, terms || null, subtotal, vat_rate, vat_amount, total, safeOrderType, req.user.id]);
   
   const quoteId = quoteInfo.lastInsertRowid;
   
@@ -2761,7 +2779,7 @@ app.put('/api/quotes/:id', auth, async (req, res) => {
   // Montoer kan ikke redigere ordrer (laesetilstand)
   if (isMontor(req)) return res.status(403).json({ error: 'Adgang nægtet - kun Ledelsen kan redigere ordrer' });
   const quoteId = Number(req.params.id);
-  const { customer_id, title, valid_until, notes, terms, lines, status, contact_person_id } = req.body;
+  const { customer_id, title, valid_until, notes, terms, lines, status, contact_person_id, order_type } = req.body;
   
   const quote = await db.get('SELECT * FROM quotes WHERE id = ?', [quoteId]);
   if (!quote) {
@@ -2794,9 +2812,10 @@ app.put('/api/quotes/:id', auth, async (req, res) => {
       subtotal = ?,
       vat_amount = ?,
       total = ?,
-      status = ?
+      status = ?,
+      order_type = ?
     WHERE id = ?
-  `, [customer_id, contact_person_id !== undefined ? contact_person_id : quote.contact_person_id, title, valid_until || null, notes || null, terms || null, subtotal, vat_amount, total, status || quote.status, quoteId]);
+  `, [customer_id, contact_person_id !== undefined ? contact_person_id : quote.contact_person_id, title, valid_until || null, notes || null, terms || null, subtotal, vat_amount, total, status || quote.status, order_type === 'calculation' || order_type === 'consumption' ? order_type : (quote.order_type || 'calculation'), quoteId]);
   
   // Update lines if provided
   if (lines) {
@@ -3142,11 +3161,14 @@ app.post('/api/quotes/:id/pause', auth, async (req, res) => {
 // Create extra work on existing order
 app.post('/api/quotes/:id/extra-work', auth, async (req, res) => {
   const parentOrderId = Number(req.params.id);
-  const { title, notes, terms, lines } = req.body;
+  const { title, notes, terms, lines, order_type } = req.body;
   
   if (!title || !lines || lines.length === 0) {
     return res.status(400).json({ error: 'Missing required fields' });
   }
+  
+  // v91: Ekstraarbejde har egen sagstype (Forbrug default - kan vaere aftalt pris = Kalkulation)
+  const safeOrderType = order_type === 'calculation' ? 'calculation' : 'consumption';
   
   const parentOrder = await db.get('SELECT * FROM quotes WHERE id = ?', [parentOrderId]);
   if (!parentOrder) {
@@ -3179,9 +3201,9 @@ app.post('/api/quotes/:id/extra-work', auth, async (req, res) => {
   const fullOrderNumber = `${parentOrder.order_number}-${String(subNum).padStart(2, '0')}`;
   
   const info = await db.run(`
-    INSERT INTO quotes (quote_number, order_number, parent_order_id, sub_number, is_extra_work, customer_id, title, notes, terms, subtotal, vat_rate, vat_amount, total, status, created_by)
-    VALUES (?, ?, ?, ?, 1, ?, ?, ?, ?, ?, ?, ?, ?, 'accepted', ?)
-  `, [fullOrderNumber, parentOrder.order_number, parentOrderId, subNum, parentOrder.customer_id, title, notes || null, terms || parentOrder.terms, subtotal, vat_rate, vat_amount, total, req.user.id]);
+    INSERT INTO quotes (quote_number, order_number, parent_order_id, sub_number, is_extra_work, customer_id, title, notes, terms, subtotal, vat_rate, vat_amount, total, status, order_type, created_by)
+    VALUES (?, ?, ?, ?, 1, ?, ?, ?, ?, ?, ?, ?, ?, 'accepted', ?, ?)
+  `, [fullOrderNumber, parentOrder.order_number, parentOrderId, subNum, parentOrder.customer_id, title, notes || null, terms || parentOrder.terms, subtotal, vat_rate, vat_amount, total, safeOrderType, req.user.id]);
   
   const extraWorkId = info.lastInsertRowid;
   
@@ -3847,11 +3869,11 @@ app.put('/api/orders/:orderId/work-description', auth, async (req, res) => {
 // Update order details (contact person, address)
 app.put('/api/orders/:orderId/details', auth, async (req, res) => {
   const orderId = Number(req.params.orderId);
-  const { contact_person_id, order_address, order_postal_code, order_city } = req.body;
+  const { contact_person_id, order_address, order_postal_code, order_city, order_type } = req.body;
   
   try {
     // Verify order exists and get current values
-    const order = await db.get('SELECT id, contact_person_id, order_address, order_postal_code, order_city FROM quotes WHERE id = ?', [orderId]);
+    const order = await db.get('SELECT id, contact_person_id, order_address, order_postal_code, order_city, order_type FROM quotes WHERE id = ?', [orderId]);
     if (!order) {
       return res.status(404).json({ error: 'Order not found' });
     }
@@ -3862,13 +3884,15 @@ app.put('/api/orders/:orderId/details', auth, async (req, res) => {
         contact_person_id = ?,
         order_address = ?,
         order_postal_code = ?,
-        order_city = ?
+        order_city = ?,
+        order_type = ?
       WHERE id = ?
     `, [
       contact_person_id !== undefined ? contact_person_id : order.contact_person_id,
       order_address !== undefined ? order_address : order.order_address,
       order_postal_code !== undefined ? order_postal_code : order.order_postal_code,
       order_city !== undefined ? order_city : order.order_city,
+      order_type === 'calculation' || order_type === 'consumption' ? order_type : (order.order_type || 'calculation'),
       orderId
     ]);
     
@@ -4541,7 +4565,7 @@ app.get('/api/orders/:orderId/workspace', auth, async (req, res) => {
            q.customer_id, q.title, q.requisition_number, q.date, q.valid_until, q.status,
            q.notes, q.terms, q.work_description, q.subtotal, q.vat_rate, q.vat_amount, q.total,
            q.created_by, q.created_at, q.sent_at, q.accepted_at, q.contact_person_id,
-           q.order_address, q.order_postal_code, q.order_city,
+           q.order_address, q.order_postal_code, q.order_city, q.order_type,
            c.company_name, c.contact_person, c.email as customer_email,
            c.phone as customer_phone, c.address, c.postal_code, c.city, c.cvr_number,
            u.name as created_by_name
@@ -4676,10 +4700,12 @@ app.get('/api/orders/:orderId/workspace', auth, async (req, res) => {
   `, [orderId]);
   
   // Calculate aggregated revenue (main order + extra work)
-  let totalRevenue = order.total || 0;
-  extraWorkOrders.forEach(extraOrder => {
-    totalRevenue += (extraOrder.total || 0);
-  });
+  // v91: Forbrugssager har omsaetning = materiale-salg (total_sale);
+  // Kalkulationssager har omsaetning = fast pris (total). Pr. ordre (hoved + ekstra).
+  let totalRevenue = await revenueForOrder(order);
+  for (const extraOrder of extraWorkOrders) {
+    totalRevenue += await revenueForOrder(extraOrder);
+  }
   
   // Calculate profit with aggregated data
   const profit = totalRevenue - totalExpenses;

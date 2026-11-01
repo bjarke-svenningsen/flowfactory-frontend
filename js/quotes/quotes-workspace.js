@@ -160,7 +160,9 @@ function renderWorkspace(data) {
             <!-- Workspace Header (hvid med KPI-kort) -->
             <div class="card" style="padding: 24px 28px; margin-bottom: 24px; display: flex; justify-content: space-between; gap: 24px; flex-wrap: wrap; align-items: center;">
                 <div style="min-width: 220px;">
-                    <h1 style="margin: 0 0 6px 0;">Ordre ${fullOrderNumber}</h1>
+                    <h1 style="margin: 0 0 6px 0;">Ordre ${fullOrderNumber}
+                        ${!isQuotesMontor() ? `<span style="display: inline-block; vertical-align: middle; margin-left: 10px; padding: 3px 10px; border-radius: 12px; font-size: 12px; font-weight: 600; background: ${data.order.order_type === 'consumption' ? 'var(--accent-soft, #fff7e6)' : 'var(--surface-muted, #f2f2f2)'}; color: ${data.order.order_type === 'consumption' ? 'var(--color-orange, #e67e22)' : 'var(--text-muted)'}; border: 1px solid var(--border);">${data.order.order_type === 'consumption' ? 'Forbrug' : 'Kalkulation'}</span>` : ''}
+                    </h1>
                     <p style="margin: 0; color: var(--color-text-muted);">${data.order.title} • ${data.order.company_name}</p>
                 </div>
                 <div class="kpi-grid" style="flex: 1 1 420px; min-width: 0; display: ${isQuotesMontor() ? 'none' : 'flex'};">
@@ -428,6 +430,10 @@ function renderWorkspaceOverview(container) {
                             <div style="color: var(--text-muted); font-size: 13px; margin-bottom: 5px;">Email</div>
                             <div id="orderDetailsEmail" style="font-weight: 600; font-size: 16px;">${currentWorkspaceOrder.contact_person_email || currentWorkspaceOrder.customer_email || 'Ikke angivet'}</div>
                         </div>
+                        <div style="padding-bottom: 15px; border-bottom: 1px solid var(--border);">
+                            <div style="color: var(--text-muted); font-size: 13px; margin-bottom: 5px;">Sagstype</div>
+                            <div id="orderDetailsOrderType" style="font-weight: 600; font-size: 16px;">${currentWorkspaceOrder.order_type === 'consumption' ? 'Forbrug' : 'Kalkulation'}</div>
+                        </div>
                         <div>
                             <div style="color: var(--text-muted); font-size: 13px; margin-bottom: 5px;">Ordre Adresse</div>
                             <div id="orderDetailsAddress" style="font-weight: 600; font-size: 16px;">
@@ -445,6 +451,17 @@ function renderWorkspaceOverview(container) {
                                 <select id="orderDetailsContactSelect" style="width: 100%; padding: 8px; border: 1px solid var(--border); border-radius: 5px; font-size: 14px;">
                                     <option value="">Vælg kontaktperson...</option>
                                 </select>
+                            </div>
+                            <div>
+                                <label style="display: block; color: var(--text-muted); font-size: 13px; margin-bottom: 5px;">Sagstype</label>
+                                <div style="display: flex; gap: 20px; flex-wrap: wrap;">
+                                    <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
+                                        <input type="radio" name="orderDetailsOrderType" value="consumption" ${currentWorkspaceOrder.order_type !== 'calculation' ? 'checked' : ''} style="width: 16px; height: 16px;"> Forbrug
+                                    </label>
+                                    <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
+                                        <input type="radio" name="orderDetailsOrderType" value="calculation" ${currentWorkspaceOrder.order_type === 'calculation' ? 'checked' : ''} style="width: 16px; height: 16px;"> Kalkulation
+                                    </label>
+                                </div>
                             </div>
                             <div>
                                 <label style="display: block; color: var(--text-muted); font-size: 13px; margin-bottom: 5px;">Ordre Adresse</label>
@@ -1912,6 +1929,20 @@ async function createExtraWork(parentOrderId) {
                 </div>
                 
                 <div style="margin-bottom: 20px;">
+                    <label style="display: block; margin-bottom: 8px; font-weight: 600;">Sagstype *</label>
+                    <div style="display: flex; gap: 25px; flex-wrap: wrap;">
+                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                            <input type="radio" name="extraWorkOrderType" value="consumption" checked style="width: 16px; height: 16px;">
+                            <span><strong>Forbrug</strong> <span style="color: var(--text-muted); font-size: 13px;">— på regning (materiale-salg tæller med)</span></span>
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                            <input type="radio" name="extraWorkOrderType" value="calculation" style="width: 16px; height: 16px;">
+                            <span><strong>Kalkulation</strong> <span style="color: var(--text-muted); font-size: 13px;">— aftalt pris (materialer = udgift)</span></span>
+                        </label>
+                    </div>
+                </div>
+                
+                <div style="margin-bottom: 20px;">
                     <label style="display: block; margin-bottom: 8px; font-weight: 600;">Beskrivelse/Noter</label>
                     <textarea id="extraWorkNotes" rows="3" placeholder="Interne noter om ekstraarbejdet..." style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 5px; font-size: 14px; resize: vertical;"></textarea>
                 </div>
@@ -2055,6 +2086,8 @@ function calculateExtraWorkTotals() {
 async function saveExtraWork(parentOrderId) {
     const title = document.getElementById('extraWorkTitle').value.trim();
     const notes = document.getElementById('extraWorkNotes').value.trim();
+    const orderTypeEl = document.querySelector('input[name="extraWorkOrderType"]:checked');
+    const order_type = orderTypeEl ? orderTypeEl.value : 'consumption';
     
     if (!title) {
         alert('Indtast en titel');
@@ -2086,6 +2119,7 @@ async function saveExtraWork(parentOrderId) {
     const data = {
         title,
         notes: notes || null,
+        order_type,
         lines: extraWorkLines
     };
     
@@ -2258,12 +2292,15 @@ async function saveOrderDetails() {
     const orderAddress = document.getElementById('orderDetailsAddressInput').value.trim();
     const orderPostalCode = document.getElementById('orderDetailsPostalInput').value.trim();
     const orderCity = document.getElementById('orderDetailsCityInput').value.trim();
+    const orderTypeEl = document.querySelector('input[name="orderDetailsOrderType"]:checked');
+    const order_type = orderTypeEl ? orderTypeEl.value : (currentWorkspaceOrder.order_type || 'consumption');
     
     const data = {
         contact_person_id: contactPersonId ? parseInt(contactPersonId) : null,
         order_address: orderAddress || null,
         order_postal_code: orderPostalCode || null,
-        order_city: orderCity || null
+        order_city: orderCity || null,
+        order_type
     };
     
     try {
