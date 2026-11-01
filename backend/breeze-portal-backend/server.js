@@ -3289,8 +3289,7 @@ app.post('/api/invoices/from-order/:orderId', auth, async (req, res) => {
   const order = await db.get('SELECT * FROM quotes WHERE id = ?', [orderId]);
   if (!order) {
     return res.status(404).json({ error: 'Order not found' });
-  }
-  
+  }  
   if (order.status !== 'accepted') {
     return res.status(400).json({ error: 'Order must be accepted before creating invoice' });
   }
@@ -4619,7 +4618,7 @@ app.get('/api/orders/:orderId/workspace', auth, async (req, res) => {
   // Get order details
   const order = await db.get(`
     SELECT q.id, q.quote_number, q.order_number, q.parent_order_id, q.sub_number, q.is_extra_work,
-           q.customer_id, q.title, q.requisition_number, q.date, q.valid_until, q.status,
+           q.customer_id, q.title, q.requisition_number, q.date, q.valid_until, q.status, q.order_stage, q.started_at, q.started_by,
            q.notes, q.terms, q.work_description, q.subtotal, q.vat_rate, q.vat_amount, q.total,
            q.created_by, q.created_at, q.sent_at, q.accepted_at, q.contact_person_id,
            q.order_address, q.order_postal_code, q.order_city, q.order_type,
@@ -4635,6 +4634,10 @@ app.get('/api/orders/:orderId/workspace', auth, async (req, res) => {
   if (!order) {
     return res.status(404).json({ error: 'Order not found' });
   }
+  
+  // v102: faktura-flag til stepperen (Godkendt -> Igangvaerende -> Faktureret)
+  const approvedInvoice = await db.get("SELECT id FROM invoices WHERE order_id = ? AND status != 'draft' LIMIT 1", [orderId]);
+  order.has_approved_invoice = !!approvedInvoice;
   
   // If contact_person_id is set, get contact person details
   if (order.contact_person_id) {

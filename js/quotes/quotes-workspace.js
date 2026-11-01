@@ -157,39 +157,20 @@ function renderWorkspace(data) {
                 </button>
             </div>
             
-            <!-- Workspace Header (hvid med KPI-kort) -->
-            <div class="card" style="padding: 24px 28px; margin-bottom: 24px; display: flex; justify-content: space-between; gap: 24px; flex-wrap: wrap; align-items: center;">
+            <!-- Workspace Header (v102: kompakt med donut for Timer/Materialer/Profit) -->
+            <div class="card" style="padding: 18px 24px; margin-bottom: 24px; display: flex; justify-content: space-between; gap: 24px; flex-wrap: wrap; align-items: center;">
                 <div style="min-width: 220px;">
-                    <h1 style="margin: 0 0 6px 0;">Ordre ${fullOrderNumber}
-                        ${!isQuotesMontor() ? `<span style="display: inline-block; vertical-align: middle; margin-left: 10px; padding: 3px 10px; border-radius: 12px; font-size: 12px; font-weight: 600; background: ${data.order.order_type === 'consumption' ? 'var(--accent-soft, #fff7e6)' : 'var(--surface-muted, #f2f2f2)'}; color: ${data.order.order_type === 'consumption' ? 'var(--color-orange, #e67e22)' : 'var(--text-muted)'}; border: 1px solid var(--border);">${data.order.order_type === 'consumption' ? 'Forbrug' : 'Kalkulation'}</span>` : ''}
+                    <h1 style="margin: 0 0 4px 0; font-size: 22px;">Ordre ${fullOrderNumber}
+                        ${!isQuotesMontor() ? `<span style="display: inline-block; vertical-align: middle; margin-left: 10px; padding: 3px 10px; border-radius: 12px; font-size: 12px; font-weight: 600; background: ${data.order.order_type === 'consumption' ? 'var(--accent-soft, #fff7e6)' : 'var(--surface-muted, #f2f2f2)'}; color: ${data.order.order_type === 'consumption' ? 'var(--color-orange, #e67e22)' : 'var(--text-muted)'}; border: 1px solid var(--border);">${data.order.order_type === 'consumption' ? 'Forbrugssag' : 'Kalkulation'}</span>` : ''}
                     </h1>
-                    <p style="margin: 0; color: var(--color-text-muted);">${data.order.title} • ${data.order.company_name}</p>
+                    <p style="margin: 0; color: var(--color-text-muted); font-size: 14px;">${data.order.title} • ${data.order.company_name}</p>
                 </div>
-                <div class="kpi-grid" style="flex: 1 1 420px; min-width: 0; display: ${isQuotesMontor() ? 'none' : 'flex'};">
-                    <div class="kpi-card">
-                        <div class="kpi-label">Omsætning</div>
-                        <div class="kpi-value">${formatCurrency(data.financials.revenue)}</div>
-                    </div>
-                    <div class="kpi-card kpi-red">
-                        <div class="kpi-label">Udgifter</div>
-                        <div class="kpi-value">${formatCurrency(data.financials.expenses)}</div>
-                    </div>
-                    <div class="kpi-card kpi-green">
-                        <div class="kpi-label">Profit</div>
-                        <div class="kpi-value">${formatCurrency(data.financials.profit)}</div>
-                    </div>
-                    <div class="kpi-card">
-                        <div class="kpi-label">Margin</div>
-                        <div class="kpi-value">${data.financials.profit_margin}%</div>
-                        <div class="kpi-sub">Profit af omsætning</div>
-                    </div>
-                </div>
+                ${isQuotesMontor() ? '' : renderHeaderEconomy(data)}
             </div>
             
             <!-- Tabs (underline-stil) -->
             <div class="tab-underline" style="margin-bottom: 28px;">
                 <button onclick="switchWorkspaceTab('overview')" id="workspaceTabOverview" class="tab-underline-btn active">Oversigt</button>
-                ${isQuotesMontor() ? '' : `<button onclick="switchWorkspaceTab('expenses')" id="workspaceTabExpenses" class="tab-underline-btn">Udgifter (${workspaceExpenses.length})</button>`}
                 <button onclick="switchWorkspaceTab('materials')" id="workspaceTabMaterials" class="tab-underline-btn">Timer & Materialer (${workspaceMaterials.length})</button>
                 ${isQuotesMontor() ? '' : `
                 <button onclick="switchWorkspaceTab('documents')" id="workspaceTabDocuments" class="tab-underline-btn">Dokumenter (${workspaceDocuments.length})</button>
@@ -225,9 +206,7 @@ function switchWorkspaceTab(tab) {
     
     if (tab === 'overview') {
         renderWorkspaceOverview(content);
-    } else if (tab === 'expenses') {
-        renderWorkspaceExpenses(content);
-    } else if (tab === 'materials') {
+        } else if (tab === 'materials') {
         renderWorkspaceMaterials(content);
     } else if (tab === 'documents') {
         renderWorkspaceDocuments(content);
@@ -236,6 +215,62 @@ function switchWorkspaceTab(tab) {
     } else if (tab === 'notes') {
         renderWorkspaceNotes(content);
     }
+}
+
+// v102: Kompakt oekonomi-boks i workspace-headeren: SVG-donut (Timer/Materialer/Profit) + timeforbrug i alt
+function renderHeaderEconomy(data) {
+    const lines = workspaceMaterials || [];
+    const fin = data.financials || {};
+    let timeCost = 0, materialCost = 0, totalHours = 0;
+    lines.forEach(l => {
+        const cost = parseFloat(l.total_cost) || 0;
+        if (l.source === 'time_entry') {
+            timeCost += cost;
+            totalHours += parseFloat(l.quantity) || 0;
+        } else {
+            materialCost += cost;
+        }
+    });
+    const revenue = parseFloat(fin.revenue) || 0;
+    const profit = parseFloat(fin.profit) || 0;
+    const coverage = revenue > 0 ? ((profit / revenue) * 100).toFixed(1) : '0.0';
+
+    // Donut-segmenter: timer + materialer + overskud (profit) som rest
+    const parts = [
+        { label: 'Timer', value: Math.max(timeCost, 0), color: '#7C2D12' },
+        { label: 'Materialer', value: Math.max(materialCost, 0), color: '#9333EA' },
+        { label: 'Profit', value: Math.max(profit, 0), color: '#3B82F6' }
+    ];
+    const total = parts.reduce((sum, p) => sum + p.value, 0);
+    const R = 38, C = 2 * Math.PI * R;
+    let offset = 0, segs = '';
+    if (total > 0) {
+        parts.forEach(p => {
+            const frac = p.value / total;
+            segs += `<circle cx="50" cy="50" r="${R}" fill="none" stroke="${p.color}" stroke-width="14" stroke-dasharray="${(frac * C).toFixed(2)} ${C.toFixed(2)}" stroke-dashoffset="${(-offset * C).toFixed(2)}" transform="rotate(-90 50 50)"></circle>`;
+            offset += frac;
+        });
+    } else {
+        segs = `<circle cx="50" cy="50" r="${R}" fill="none" stroke="#E5E7EB" stroke-width="14"></circle>`;
+    }
+    const legend = parts.map(p => `<span style="display: inline-flex; align-items: center; gap: 5px; font-size: 12px; color: var(--text-muted);"><span style="width: 9px; height: 9px; border-radius: 50%; background: ${p.color}; display: inline-block;"></span>${p.label}</span>`).join('');
+    return `
+                <div style="display: flex; align-items: center; gap: 24px; flex-wrap: wrap;">
+                    <div style="display: flex; flex-direction: column; align-items: center; gap: 8px;">
+                        <svg width="104" height="104" viewBox="0 0 100 100" role="img" aria-label="Fordeling af timer, materialer og profit">${segs}</svg>
+                        <div style="display: flex; gap: 14px;">${legend}</div>
+                    </div>
+                    <div style="display: grid; gap: 12px;">
+                        <div>
+                            <div style="font-size: 22px; font-weight: 700; font-variant-numeric: tabular-nums;">${totalHours.toFixed(2)} timer</div>
+                            <div style="font-size: 12px; color: var(--text-muted);">Timeforbrug i alt</div>
+                        </div>
+                        <div>
+                            <div style="font-size: 16px; font-weight: 600; color: ${profit >= 0 ? 'var(--color-green)' : 'var(--color-red)'};">${coverage}%</div>
+                            <div style="font-size: 12px; color: var(--text-muted);">Dækningsbidrag</div>
+                        </div>
+                    </div>
+                </div>`;
 }
 
 // Render overview tab with pie chart
@@ -401,7 +436,7 @@ function renderWorkspaceOverview(container) {
                             <div style="font-size: 28px; font-weight: 600; color: ${profit >= 0 ? 'var(--color-green)' : 'var(--color-red)'};">${formatCurrency(profit)}</div>
                         </div>
                         <div style="background: var(--surface); padding: 20px; border-radius: 10px; border: 2px solid var(--border);">
-                            <div style="color: var(--text-muted); font-size: 14px; margin-bottom: 5px;">Margin</div>
+                            <div style="color: var(--text-muted); font-size: 14px; margin-bottom: 5px;">Dækningsbidrag</div>
                             <div style="font-size: 28px; font-weight: 600; color: ${profit >= 0 ? 'var(--color-green)' : 'var(--color-red)'};">${revenue > 0 ? ((profit / revenue) * 100).toFixed(1) : 0}%</div>
                         </div>
                     </div>
@@ -1502,14 +1537,15 @@ async function deleteDocument(documentId) {
 function renderWorkspaceMaterials(container) {
     const lines = workspaceMaterials || [];
     const montor = isQuotesMontor();
-    const header = montor ? `
+    // v102: Tilfoej-knap til alle roller (var kun montorer - regression fra v96)
+    const header = `
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
             <h3 style="margin: 0;">⏱ Timer & Materialer</h3>
             <button onclick="openRegisterMaterialModal()" class="btn btn-primary btn-sm">
                 + Registrer Materiale
             </button>
         </div>
-    ` : `<h3 style="margin: 0 0 20px 0;">⏱ Timer & Materialer</h3>`;
+    `;
 
     if (lines.length === 0) {
         container.innerHTML = `
