@@ -106,19 +106,33 @@ function renderWorkspace(data) {
     if (quotesPreviewView) quotesPreviewView.style.display = 'none';
     if (quotesCustomersView) quotesCustomersView.style.display = 'none';
     
+    // v83 FIX (tab-mixing): Workspace genbruger ordersContainer i orderTabOrders,
+    // men topfanerne skal afspejle ordrens stage - ellers bliver "Godkendte Ordre"
+    // understreget selv naar ordren er igangvarende (og "Igangvarende"-listen
+    // laakker ind under workspace'et).
+    const isOrderInProgress = data.order.order_stage === 'in_progress';
+    const activeTopTab = isOrderInProgress ? 'in_progress' : 'orders';
+
     // Show orders tab (reuse for workspace)
     const ordersTab = document.getElementById('orderTabOrders');
     if (ordersTab) {
         ordersTab.style.display = 'block';
     }
-    
+
     // Update tab buttons — styres KUN af .active-klassen (gul understregning)
-    const tabs = ['quotes', 'orders', 'invoiced', 'rejected', 'customers'];
+    const tabs = ['quotes', 'orders', 'in_progress', 'invoiced', 'rejected', 'customers'];
     tabs.forEach(t => {
-        const btn = document.getElementById(`tab${t.charAt(0).toUpperCase() + t.slice(1)}`);
+        const name = t === 'in_progress' ? 'InProgress' : t.charAt(0).toUpperCase() + t.slice(1);
+        const btn = document.getElementById(`tab${name}`);
         if (btn) {
-            btn.classList.toggle('active', t === 'orders');
+            btn.classList.toggle('active', t === activeTopTab);
         }
+    });
+
+    // Skjul alle andre fane-indhold end orderTabOrders, sa ingen liste staar under workspace
+    ['orderTabQuotes', 'orderTabInProgress', 'orderTabInvoiced', 'orderTabRejected', 'orderTabCustomers'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.style.display = 'none';
     });
     
     const container = document.getElementById('ordersContainer');
@@ -175,9 +189,11 @@ function renderWorkspace(data) {
                 <button onclick="switchWorkspaceTab('overview')" id="workspaceTabOverview" class="tab-underline-btn active">Oversigt</button>
                 ${isQuotesMontor() ? '' : `<button onclick="switchWorkspaceTab('expenses')" id="workspaceTabExpenses" class="tab-underline-btn">Udgifter (${workspaceExpenses.length})</button>`}
                 <button onclick="switchWorkspaceTab('materials')" id="workspaceTabMaterials" class="tab-underline-btn">Timer & Materialer (${workspaceMaterials.length})</button>
+                ${isQuotesMontor() ? '' : `
                 <button onclick="switchWorkspaceTab('documents')" id="workspaceTabDocuments" class="tab-underline-btn">Dokumenter (${workspaceDocuments.length})</button>
                 <button onclick="switchWorkspaceTab('timeline')" id="workspaceTabTimeline" class="tab-underline-btn">Timeline (${workspaceTimeline.length})</button>
                 <button onclick="switchWorkspaceTab('notes')" id="workspaceTabNotes" class="tab-underline-btn">Noter (${workspaceNotes.length})</button>
+                `}
             </div>
             
             <!-- Tab Content -->
@@ -222,13 +238,66 @@ function switchWorkspaceTab(tab) {
 
 // Render overview tab with pie chart
 function renderWorkspaceOverview(container) {
-    // Montoer: ingen oekonomi i oversigten (backend har allerede fjernet tallene)
+    // Montoer (v83): Pænt overblik med ordreinfo + kundens kontaktinfo.
+    // Ingen oeconomi, ingen timeline - kun det montoren skal bruge i felten.
     if (isQuotesMontor()) {
+        const o = currentWorkspaceOrder;
+        const address = o.order_address || o.address;
+        const postalCity = `${o.order_postal_code || o.postal_code || ''} ${o.order_city || o.city || ''}`.trim();
         container.innerHTML = `
-            <div style="background: var(--surface); padding: 25px; border-radius: 10px; border: 2px solid var(--border); margin: 0 0 30px 0;">
-                <h3 style="margin: 0 0 10px 0;">Økonomi</h3>
-                <p style="margin: 0; color: var(--text-muted);">Økonomiske tal er kun tilgængelige for Ledelsen.</p>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px;">
+                <!-- Kontaktinfo -->
+                <div style="background: var(--surface); padding: 20px; border-radius: 10px; border: 2px solid var(--border); margin: 0;">
+                    <h3 style="margin: 0 0 15px 0;">Kundens Kontaktinfo</h3>
+                    <div style="display: grid; gap: 15px;">
+                        <div style="padding-bottom: 15px; border-bottom: 1px solid var(--border);">
+                            <div style="color: var(--text-muted); font-size: 13px; margin-bottom: 5px;">Kontaktperson</div>
+                            <div style="font-weight: 600; font-size: 16px;">${o.contact_person_name || o.contact_person || 'Ikke angivet'}</div>
+                        </div>
+                        <div style="padding-bottom: 15px; border-bottom: 1px solid var(--border);">
+                            <div style="color: var(--text-muted); font-size: 13px; margin-bottom: 5px;">Telefon</div>
+                            <div style="font-weight: 600; font-size: 16px;">${o.contact_person_phone || o.customer_phone || 'Ikke angivet'}</div>
+                        </div>
+                        <div style="padding-bottom: 15px; border-bottom: 1px solid var(--border);">
+                            <div style="color: var(--text-muted); font-size: 13px; margin-bottom: 5px;">Email</div>
+                            <div style="font-weight: 600; font-size: 16px;">${o.contact_person_email || o.customer_email || 'Ikke angivet'}</div>
+                        </div>
+                        <div>
+                            <div style="color: var(--text-muted); font-size: 13px; margin-bottom: 5px;">Ordre Adresse</div>
+                            <div style="font-weight: 600; font-size: 16px;">
+                                ${address || 'Ikke angivet'}<br>
+                                ${postalCity}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Ordreinfo -->
+                <div style="background: var(--surface); padding: 20px; border-radius: 10px; border: 2px solid var(--border); margin: 0;">
+                    <h3 style="margin: 0 0 15px 0;">Ordre Information</h3>
+                    <div style="display: grid; gap: 15px;">
+                        <div style="padding-bottom: 15px; border-bottom: 1px solid var(--border);">
+                            <div style="color: var(--text-muted); font-size: 13px; margin-bottom: 5px;">Ordre Nummer</div>
+                            <div style="font-weight: 600; font-size: 16px;">${o.order_number}</div>
+                        </div>
+                        <div style="padding-bottom: 15px; border-bottom: 1px solid var(--border);">
+                            <div style="color: var(--text-muted); font-size: 13px; margin-bottom: 5px;">Firma</div>
+                            <div style="font-weight: 600; font-size: 16px;">${o.company_name}</div>
+                        </div>
+                        <div style="padding-bottom: 15px; border-bottom: 1px solid var(--border);">
+                            <div style="color: var(--text-muted); font-size: 13px; margin-bottom: 5px;">Status</div>
+                            ${getStageBadge(o)}
+                        </div>
+                        ${o.accepted_at ? `
+                        <div>
+                            <div style="color: var(--text-muted); font-size: 13px; margin-bottom: 5px;">Accepteret</div>
+                            <div style="font-weight: 600; font-size: 16px;">${new Date(o.accepted_at).toLocaleDateString('da-DK')}</div>
+                        </div>
+                        ` : ''}
+                    </div>
+                </div>
             </div>
+            <p style="font-size: 12px; color: var(--text-muted); margin-top: 20px;">Økonomi, dokumenter og timeline er kun tilgængelige for Ledelsen. Registrér timer via "Min Tid" og materialer/kørsel under "Timer & Materialer".</p>
         `;
         return;
     }
@@ -432,7 +501,8 @@ function renderWorkspaceOverview(container) {
                     </div>
                 </div>
                 
-                <!-- Quick actions: ens hvide knapper i grid -->
+                <!-- Quick actions: ens hvide knapper i grid (v83: skjules helt for montor) -->
+                ${isQuotesMontor() ? '' : `
                 <div class="quick-actions-card">
                     <h3 style="margin: 0 0 15px 0; display: flex; align-items: center; gap: 8px;"><i data-lucide="zap"></i> Hurtige Handlinger</h3>
                     <div class="quick-actions-grid">
@@ -454,6 +524,7 @@ function renderWorkspaceOverview(container) {
                         </button>
                     </div>
                 </div>
+                `}
             </div>
         </div>
         
@@ -1407,11 +1478,20 @@ async function deleteDocument(documentId) {
 // Render "Timer & Materialer" tab - shows labor and material lines on the order
 function renderWorkspaceMaterials(container) {
     const lines = workspaceMaterials || [];
-    
+    const montor = isQuotesMontor();
+    const header = montor ? `
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <h3 style="margin: 0;">⏱ Timer & Materialer</h3>
+            <button onclick="openRegisterMaterialModal()" class="btn btn-primary btn-sm">
+                + Registrer Materiale
+            </button>
+        </div>
+    ` : `<h3 style="margin: 0 0 20px 0;">⏱ Timer & Materialer</h3>`;
+
     if (lines.length === 0) {
         container.innerHTML = `
             <div style="background: var(--surface); padding: 30px; border-radius: 10px; border: 2px solid var(--border);">
-                <h3 style="margin: 0 0 20px 0;">⏱ Timer & Materialer</h3>
+                ${header}
                 <p style="color: var(--text-muted); text-align: center; padding: 40px;">Ingen timer eller materialer registreret på denne sag endnu.<br>
                 <span style="font-size: 13px;">Timer registreret via "Min Tid" med denne sag valgt, dukker automatisk op her.</span></p>
             </div>
@@ -1436,6 +1516,17 @@ function renderWorkspaceMaterials(container) {
             : ` ${line.material_name || 'Materiale'} (${line.material_number || '?'})`;
         const date = line.time_entry_date || (line.added_at ? line.added_at.substring(0, 10) : '');
         
+        if (montor) {
+            // Montor: ingen pris-kolonner
+            return `
+            <tr style="border-bottom: 1px solid var(--border-soft);">
+                <td style="padding: 10px 12px; font-size: 13px; white-space: nowrap;">${date}</td>
+                <td style="padding: 10px 12px; font-size: 13px;">${description}</td>
+                <td style="padding: 10px 12px; font-size: 13px;">${line.added_by_name || '-'}</td>
+                <td style="padding: 10px 12px; font-size: 13px; text-align: right;">${line.quantity} ${isTime ? 't' : (line.unit || '')}</td>
+            </tr>
+        `;
+        }
         return `
             <tr style="border-bottom: 1px solid var(--border-soft);">
                 <td style="padding: 10px 12px; font-size: 13px; white-space: nowrap;">${date}</td>
@@ -1448,12 +1539,14 @@ function renderWorkspaceMaterials(container) {
         `;
     }).join('');
     
-    container.innerHTML = `
-        <div style="background: var(--surface); padding: 30px; border-radius: 10px; border: 2px solid var(--border);">
-            <h3 style="margin: 0 0 20px 0;">⏱ Timer & Materialer</h3>
-            <div style="overflow-x: auto;">
-                <table style="width: 100%; border-collapse: collapse;">
-                    <thead>
+    const tableHead = montor ? `
+                        <tr style="border-bottom: 2px solid var(--border); text-align: left;">
+                            <th style="padding: 10px 12px; font-size: 12px; color: var(--text-muted); text-transform: uppercase;">Dato</th>
+                            <th style="padding: 10px 12px; font-size: 12px; color: var(--text-muted); text-transform: uppercase;">Beskrivelse</th>
+                            <th style="padding: 10px 12px; font-size: 12px; color: var(--text-muted); text-transform: uppercase;">Registreret af</th>
+                            <th style="padding: 10px 12px; font-size: 12px; color: var(--text-muted); text-transform: uppercase; text-align: right;">Antal</th>
+                        </tr>
+` : `
                         <tr style="border-bottom: 2px solid var(--border); text-align: left;">
                             <th style="padding: 10px 12px; font-size: 12px; color: var(--text-muted); text-transform: uppercase;">Dato</th>
                             <th style="padding: 10px 12px; font-size: 12px; color: var(--text-muted); text-transform: uppercase;">Beskrivelse</th>
@@ -1462,8 +1555,16 @@ function renderWorkspaceMaterials(container) {
                             <th style="padding: 10px 12px; font-size: 12px; color: var(--text-muted); text-transform: uppercase; text-align: right;">Udgift</th>
                             <th style="padding: 10px 12px; font-size: 12px; color: var(--text-muted); text-transform: uppercase; text-align: right;">Salg</th>
                         </tr>
-                    </thead>
-                    <tbody>${rows}</tbody>
+`;
+
+    const tableFoot = montor ? `
+                    <tfoot>
+                        <tr style="border-top: 2px solid var(--border); font-weight: 700;">
+                            <td colspan="3" style="padding: 12px; font-size: 13px;">I alt${totalHours > 0 ? ` (${totalHours.toFixed(2)} timer)` : ''}</td>
+                            <td></td>
+                        </tr>
+                    </tfoot>
+` : `
                     <tfoot>
                         <tr style="border-top: 2px solid var(--border); font-weight: 700;">
                             <td colspan="3" style="padding: 12px; font-size: 13px;">I alt${totalHours > 0 ? ` (${totalHours.toFixed(2)} timer)` : ''}</td>
@@ -1472,11 +1573,156 @@ function renderWorkspaceMaterials(container) {
                             <td style="padding: 12px; font-size: 13px; text-align: right; color: var(--success);">${totalSale.toFixed(2)} kr</td>
                         </tr>
                     </tfoot>
+`;
+
+    container.innerHTML = `
+        <div style="background: var(--surface); padding: 30px; border-radius: 10px; border: 2px solid var(--border);">
+            ${header}
+            <div style="overflow-x: auto;">
+                <table style="width: 100%; border-collapse: collapse;">
+                    <thead>
+                        ${tableHead}
+                    </thead>
+                    <tbody>${rows}</tbody>
+                    ${tableFoot}
                 </table>
             </div>
-            <p style="font-size: 12px; color: var(--text-muted); margin-top: 15px;">Udgifterne er allerede trukket fra sagens overskud. Salgssøjlen viser linjernes fakturerbare værdi (relevant ved forbrugssager).</p>
+            ${montor
+                ? `<p style="font-size: 12px; color: var(--text-muted); margin-top: 15px;">Kilometer/kørsel registreres som materiale — vælg "Kørsel" i kataloget og indtast antal km.</p>`
+                : `<p style="font-size: 12px; color: var(--text-muted); margin-top: 15px;">Udgifterne er allerede trukket fra sagens overskud. Salgssøjlen viser linjernes fakturerbare værdi (relevant ved forbrugssager).</p>`
+            }
         </div>
     `;
+}
+
+// ===== v83: Montor - registrer materiale (inkl. kilometer/koersel) paa sag =====
+let registerMaterialsCache = [];
+let selectedRegisterMaterial = null;
+
+async function openRegisterMaterialModal() {
+    const modal = document.createElement('div');
+    modal.id = 'registerMaterialModal';
+    modal.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); z-index: 10001; display: flex; align-items: center; justify-content: center; overflow-y: auto;';
+
+    modal.innerHTML = `
+        <div style="background: var(--surface); border-radius: 10px; padding: 30px; max-width: 600px; width: 90%; max-height: 90vh; overflow-y: auto; margin: 20px;">
+            <h2 style="margin: 0 0 20px 0;">Registrer Materiale</h2>
+            <p style="color: var(--text-muted); margin: 0 0 20px 0;">Ordre #${currentWorkspaceOrder.order_number} — priserne håndteres af Ledelsen.</p>
+            <form onsubmit="event.preventDefault(); saveRegisterMaterial(${currentWorkspaceOrder.id});">
+                <div style="margin-bottom: 20px;">
+                    <label style="display: block; margin-bottom: 8px; font-weight: 600;">Søg materiale</label>
+                    <input type="text" id="registerMaterialSearch" oninput="filterRegisterMaterials()" placeholder="Søg efter navn eller nummer..." style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 5px; font-size: 14px;">
+                </div>
+                <div id="registerMaterialList" style="max-height: 260px; overflow-y: auto; border: 1px solid var(--border); border-radius: 5px; margin-bottom: 20px;"></div>
+                <div style="margin-bottom: 30px;">
+                    <label style="display: block; margin-bottom: 8px; font-weight: 600;">Antal *</label>
+                    <input type="number" id="registerMaterialQty" step="0.01" min="0.01" placeholder="F.eks. 500 (km) eller 10 (kg)" style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 5px; font-size: 14px;">
+                </div>
+                <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                    <button type="button" onclick="closeRegisterMaterialModal()" class="btn btn-secondary">Annuller</button>
+                    <button type="submit" class="btn btn-primary">Registrer</button>
+                </div>
+            </form>
+        </div>
+    `;
+
+    document.body.appendChild(modal);
+    await loadRegisterMaterials();
+}
+
+function closeRegisterMaterialModal() {
+    const modal = document.getElementById('registerMaterialModal');
+    if (modal) modal.remove();
+    selectedRegisterMaterial = null;
+    registerMaterialsCache = [];
+}
+
+async function loadRegisterMaterials() {
+    const listEl = document.getElementById('registerMaterialList');
+    try {
+        const token = sessionStorage.getItem('token');
+        const response = await fetch('/api/materials', {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (!response.ok) throw new Error('Kunne ikke hente materialekataloget');
+        registerMaterialsCache = await response.json();
+        renderRegisterMaterialList('');
+    } catch (error) {
+        console.error('[materials] Kunne ikke hente materialekatalog:', error);
+        if (listEl) listEl.innerHTML = '<p style="padding: 15px; color: var(--danger);">Kunne ikke hente materialekataloget.</p>';
+    }
+}
+
+function renderRegisterMaterialList(search) {
+    const listEl = document.getElementById('registerMaterialList');
+    if (!listEl) return;
+    const term = (search || '').toLowerCase().trim();
+    const items = registerMaterialsCache.filter(m =>
+        !term || (m.name || '').toLowerCase().includes(term) || (m.material_number || '').toLowerCase().includes(term)
+    );
+
+    if (items.length === 0) {
+        listEl.innerHTML = '<p style="padding: 15px; color: var(--text-muted);">Ingen materialer matcher søgningen.</p>';
+        return;
+    }
+
+    listEl.innerHTML = items.map(m => `
+        <div class="register-material-item" data-id="${m.id}" onclick="selectRegisterMaterial(${m.id})" style="padding: 10px 15px; border-bottom: 1px solid var(--border-soft); cursor: pointer;">
+            <div style="font-weight: 600; font-size: 14px;">${m.name} <span style="color: var(--text-muted); font-weight: 400;">(${m.material_number || '-'})</span></div>
+            <div style="font-size: 12px; color: var(--text-muted);">${m.category || ''} ${m.unit ? '• pr. ' + m.unit : ''}</div>
+        </div>
+    `).join('');
+}
+
+function filterRegisterMaterials() {
+    const search = document.getElementById('registerMaterialSearch');
+    renderRegisterMaterialList(search ? search.value : '');
+}
+
+function selectRegisterMaterial(id) {
+    selectedRegisterMaterial = registerMaterialsCache.find(m => m.id === id) || null;
+    document.querySelectorAll('.register-material-item').forEach(el => {
+        el.style.background = Number(el.dataset.id) === id ? 'var(--surface-muted)' : '';
+    });
+}
+
+async function saveRegisterMaterial(orderId) {
+    const qtyEl = document.getElementById('registerMaterialQty');
+    const quantity = parseFloat(qtyEl ? qtyEl.value : '');
+
+    if (!selectedRegisterMaterial) {
+        alert('Vælg først et materiale fra listen.');
+        return;
+    }
+    if (!quantity || quantity <= 0) {
+        alert('Indtast et gyldigt antal (fx km eller kg).');
+        return;
+    }
+
+    try {
+        const token = sessionStorage.getItem('token');
+        const response = await fetch(`/api/orders/${orderId}/materials`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({
+                material_id: selectedRegisterMaterial.id,
+                quantity
+            })
+        });
+        if (!response.ok) {
+            const errData = await response.json().catch(() => ({}));
+            throw new Error(errData.error || 'Kunne ikke registrere materialet. Prøv igen.');
+        }
+        closeRegisterMaterialModal();
+        await openOrderWorkspace(orderId);
+        switchWorkspaceTab('materials');
+    } catch (error) {
+        console.error('[materials] Kunne ikke registrere materiale:', error);
+        alert(error.message || 'Kunne ikke registrere materialet. Prøv igen.');
+    }
 }
 
 // Render timeline tab
@@ -2041,6 +2287,11 @@ async function viewOriginalQuote(orderId) {
 // Export functions
 window.openOrderWorkspace = openOrderWorkspace;
 window.switchWorkspaceTab = switchWorkspaceTab;
+window.openRegisterMaterialModal = openRegisterMaterialModal;
+window.closeRegisterMaterialModal = closeRegisterMaterialModal;
+window.filterRegisterMaterials = filterRegisterMaterials;
+window.selectRegisterMaterial = selectRegisterMaterial;
+window.saveRegisterMaterial = saveRegisterMaterial;
 window.closeWorkspace = closeWorkspace;
 window.viewInvoiceFromWorkspace = viewInvoiceFromWorkspace;
 window.viewOriginalQuote = viewOriginalQuote;

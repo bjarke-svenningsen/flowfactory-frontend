@@ -8,12 +8,13 @@ const UNITS = [
     'forsendelser', 'dage', 'æsker'
 ];
 
-// Format currency to Danish Kroner
+// Format currency to Danish Kroner (håndterer NULL/NaN -> 0 kr.)
 function formatCurrency(amount) {
+    const value = parseFloat(amount);
     return new Intl.NumberFormat('da-DK', {
         style: 'currency',
         currency: 'DKK'
-    }).format(amount);
+    }).format(Number.isFinite(value) ? value : 0);
 }
 
 // Calculate line total with discount

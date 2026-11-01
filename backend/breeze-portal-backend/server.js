@@ -443,7 +443,9 @@ function montorGuard(req, res, next) {
 app.use('/api/files', montorGuard);
 app.use('/api/folders', montorGuard);
 app.use('/api/email', montorGuard);
-app.use('/api/materials', montorGuard);
+// BEMAEK (v83): /api/materials er IKKE blokeret laengere - montorer skal kunne
+// vaælge materialer (inkl. "Koersel/kilometer") naar de registrerer forbrug paa en sag.
+// GET returnerer uden priser til montor (se route nedenfor); skrive-endpoints har adminAuth.
 app.use('/api/invoices', montorGuard);
 app.use('/api/customers', montorGuard);
 
@@ -3874,6 +3876,14 @@ app.get('/api/materials', auth, async (req, res) => {
       WHERE m.is_active = 1
       ORDER BY m.category, m.material_number
     `);
+    // v83: Montorer maa se materialekataloget (for at registrere forbrug),
+    // men uden prisoplysninger - det er oeconomi og kun for Ledelsen.
+    if (isMontor(req)) {
+      return res.json(materials.map(m => {
+        const { cost_price, sales_price, ...rest } = m;
+        return rest;
+      }));
+    }
     res.json(materials);
   } catch (error) {
     console.error('Error fetching materials:', error);
@@ -4291,6 +4301,14 @@ app.get('/api/orders/:orderId/materials', auth, async (req, res) => {
       ORDER BY om.added_at DESC
     `, [orderId]);
 
+    // v83: Montorer ser linjerne uden oeconomi (kostpris/salg udgik)
+    if (isMontor(req)) {
+      return res.json(materials.map(om => {
+        const { unit_cost, unit_sale, total_cost, total_sale, ...rest } = om;
+        return rest;
+      }));
+    }
+
     res.json(materials);
   } catch (error) {
     console.error('Error fetching order materials:', error);
@@ -4316,6 +4334,11 @@ app.post('/api/orders/:orderId/materials', auth, async (req, res) => {
       return res.status(400).json({ error: 'Material or order not found' });
     }
 
+    // v83: Montorer maa kun registrere materialer paa IGANGVAERENDE ordrer
+    if (isMontor(req) && order.order_stage !== 'in_progress') {
+      return res.status(403).json({ error: 'Materialer kan kun registreres på igangværende ordrer' });
+    }
+
     const totalCost = parseFloat(quantity) * parseFloat(material.cost_price);
     const totalSale = parseFloat(quantity) * parseFloat(material.sales_price);
 
@@ -4337,6 +4360,12 @@ app.post('/api/orders/:orderId/materials', auth, async (req, res) => {
       LEFT JOIN materials m ON om.material_id = m.id
       WHERE om.id = ?
     `, [result.lastID]);
+
+    // v83: Montor maa ikke se priser i svaret
+    if (isMontor(req)) {
+      const { unit_cost, unit_sale, total_cost, total_sale, ...rest } = orderMaterial;
+      return res.json(rest);
+    }
 
     res.json(orderMaterial);
   } catch (error) {
