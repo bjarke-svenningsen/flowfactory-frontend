@@ -1,4 +1,4 @@
-﻿// server.js
+// server.js
 import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
@@ -1765,11 +1765,13 @@ const chatRate = new Map();         // userId -> [timestamps]
 
 function chatSseSend(userId, eventName, data) {
   const set = chatSseClients.get(userId);
-  if (!set) return;
-  const payload = 'event: ' + eventName + '\ndata: ' + JSON.stringify(data) + '\n\n';
+  if (!set) return 0;
+  const payload = 'event: ' + eventName + '\nndata: ' + JSON.stringify(data) + '\n\n';
+  let deliveredCount = 0;
   for (const res of set) {
-    try { res.write(payload); } catch (e) { /* forbindelsen er ved at lukke */ }
+    try { res.write(payload); deliveredCount++; } catch (e) { /* forbindelsen er ved at lukke */ }
   }
+  return deliveredCount;
 }
 
 function chatBroadcast(eventName, data) {
@@ -2018,8 +2020,9 @@ app.post('/api/chat/signal', auth, async (req, res) => {
     if (!convId || !type || !callId) return res.status(400).json({ error: 'Ugyldigt signal' });
     if (!(await chatIsParticipant(convId, req.user.id))) return res.status(403).json({ error: 'Adgang naegtet' });
     const others = await chatOtherParticipants(convId, req.user.id);
+    let delivered = 0;
     for (const o of others) {
-      chatSseSend(o.user_id, 'chat_signal', {
+      delivered += chatSseSend(o.user_id, 'chat_signal', {
         conversationId: convId,
         callId: callId,
         type: type,
@@ -2028,7 +2031,8 @@ app.post('/api/chat/signal', auth, async (req, res) => {
         fromName: req.user.name
       });
     }
-    res.json({ ok: true });
+    console.log('[chat] signal ' + type + ' (opkald ' + callId + ') i samtale ' + convId + ' fra bruger ' + req.user.id + ' - modtagere: ' + others.length + ', leveret: ' + delivered + ', SSE-brugere online: ' + chatSseClients.size);
+    res.json({ ok: true, delivered: delivered });
   } catch (err) {
     console.error('[chat] signal error:', err);
     res.status(500).json({ error: 'Kunne ikke sende signal' });

@@ -131,6 +131,8 @@ function updateChatBadges() {
 }
 // --- Init (koeres globalt ved login - SSE + notifikationer paa alle sider) ---
 async function initChat() {
+    if (window._chatInited) return;
+    window._chatInited = true;
     await loadPresence();
     await loadConversations();
     connectChatSse();
@@ -512,6 +514,7 @@ function showChatToast(peerName, text, peerId) {
 // --- SSE ---
 async function connectChatSse() {
     if (!sessionStorage.getItem('token')) return;
+    if (sse && sse.readyState === 1) return; // allerede forbundet
     try {
         const response = await fetch('/api/chat/events-ticket', { method: 'POST', headers: chatAuthHeaders() });
         if (!response.ok) { setTimeout(connectChatSse, 5000); return; }
@@ -544,10 +547,15 @@ async function connectChatSse() {
                 renderContactsStrip();
                 updateChatHeaderStatus();
                 updateChatPageSubtitle();
+                // Giv opkaldsmodulet besked hvis modparten forsvandt midt i et opkald
+                if (window.ChatCall && ChatCall.onPresence) ChatCall.onPresence(ids);
             } catch (e) { /* ignoreres */ }
         });
         sse.addEventListener('chat_signal', function (ev) {
-            try { if (window.ChatCall) ChatCall.onSignal(JSON.parse(ev.data)); } catch (e) { /* ignoreres */ }
+            try {
+                console.log('[call] SSE chat_signal modtaget');
+                if (window.ChatCall) ChatCall.onSignal(JSON.parse(ev.data));
+            } catch (e) { console.error('[call] fejl i chat_signal:', e); }
         });
         sse.onerror = function () {
             // Ticket er engangs - genopret med en ny ticket i stedet for auto-reconnect

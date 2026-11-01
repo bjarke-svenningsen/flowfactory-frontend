@@ -7,6 +7,9 @@ window.onload = function() {
     // Load user data
     loadUserData();
     
+    // SSE + opkaldsnotifikationer paa ALLE sider (ikke kun chat-siden)
+    if (sessionStorage.getItem('token') && typeof initChat === 'function') initChat();
+    
     // Check URL hash first, then fallback to sessionStorage or default
     const hash = window.location.hash;
     let initialPage = 'feed';

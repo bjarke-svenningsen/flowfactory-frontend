@@ -44,11 +44,54 @@ window.ChatCall = (function () {
         setTimeout(function () { t.remove(); }, 4200);
     }
 
+    function clog(msg) { try { console.log('[call]', msg); } catch (e) { /* ignoreres */ } }
+
+    // --- WebAudio: faelles AudioContext, unlock ved foerste klik/tast, bloede ringetoner ---
+    let actx = null;
+    function ensureAudio() {
+        if (!actx) { try { actx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { return null; } }
+        if (actx.state === 'suspended') actx.resume().catch(function () { /* blokeret */ });
+        return actx;
+    }
+    function audioUnlocked() { ensureAudio(); return actx && actx.state === 'running'; }
+    if (!window._callAudioUnlock) {
+        window._callAudioUnlock = true;
+        const un = function () { ensureAudio(); };
+        document.addEventListener('pointerdown', un, { once: true });
+        document.addEventListener('keydown', un, { once: true });
+    }
+    function soundOn() { try { return localStorage.getItem('chatSound') !== '0'; } catch (e) { return true; } }
+    function tone(freq, t0, dur, vol) {
+        const ctx = actx; if (!ctx) return;
+        const o = ctx.createOscillator(), g = ctx.createGain();
+        o.type = 'sine'; o.frequency.value = freq;
+        g.gain.setValueAtTime(0.0001, ctx.currentTime + t0);
+        g.gain.linearRampToValueAtTime(vol, ctx.currentTime + t0 + 0.04);
+        g.gain.linearRampToValueAtTime(0.0001, ctx.currentTime + t0 + dur);
+        o.connect(g); g.connect(ctx.destination);
+        o.start(ctx.currentTime + t0); o.stop(ctx.currentTime + t0 + dur + 0.05);
+    }
+    // Blod "tuuut..." (afsender) / "tut-tut" (modtager). Returnerer false hvis lyden er blokeret eller slaaet fra.
+    function ringOnce(kind) {
+        if (!soundOn()) return true;
+        if (!audioUnlocked()) return false;
+        if (kind === 'callee') { tone(620, 0, 0.45, 0.15); tone(780, 0.55, 0.45, 0.15); }
+        else { tone(440, 0, 0.65, 0.12); }
+        return true;
+    }
+
     function signal(type, payload) {
+        clog('sender signal: ' + type + ' (samtale ' + conversationId + ', opkald ' + callId + ')');
         return fetch('/api/chat/signal', {
             method: 'POST', headers: authHeaders(),
             body: JSON.stringify({ conversationId: conversationId, callId: callId, type: type, payload: payload })
-        }).catch(function () { /* netvaerk */ });
+        }).then(function (r) {
+            if (!r.ok) { clog('signal ' + type + ' fejlede (HTTP ' + r.status + ')'); return { ok: false, delivered: 0 }; }
+            return r.json().catch(function () { return { ok: true, delivered: 1 }; });
+        }).catch(function () {
+            clog('signal ' + type + ' - netvaerksfejl');
+            return { ok: false, delivered: 0 };
+        });
     }
 
     function callLog(status, seconds) {
@@ -93,14 +136,19 @@ window.ChatCall = (function () {
         dock.innerHTML =
             '<div class="video-dock-header" id="vdHeader">' +
             '<span id="vdTitle">' + esc(peerName) + '</span>' +
+            '<span class="vd-timer" id="vdTimer"></span>' +
             '<div class="vd-buttons">' +
             '<button id="vdMinBtn" title="Minimer"><i data-lucide="minus"></i></button>' +
             '<button id="vdCloseBtn" title="Læg på"><i data-lucide="x"></i></button>' +
             '</div></div>' +
+            '<div class="vd-status-bar" id="vdStatus"></div>' +
             '<div class="video-dock-body" id="vdBody">' +
             '<video class="remote" id="vdRemote" autoplay playsinline></video>' +
-            '<video class="local" id="vdLocal" autoplay playsinline muted></video>' +
-            '<div class="video-dock-status" id="vdStatus"></div>' +
+            '<video class="local" id="vdLocal" autoplay playsinline muted style="display:none"></video>' +
+            '<div class="vd-remote-avatar" id="vdRemoteAvatar">' +
+            '<div class="vd-remote-avatar-circle" id="vdAvatarCircle">?</div>' +
+            '<div class="vd-remote-avatar-name" id="vdAvatarName">' + esc(peerName) + '</div>' +
+            '</div>' +
             '<div class="video-dock-error" id="vdError" style="display:none"></div>' +
             '</div>' +
             '<div class="video-dock-controls">' +
@@ -190,36 +238,116 @@ window.ChatCall = (function () {
         if (el) el.textContent = text || '';
     }
 
+    // --- Timer (forbundet) ---
+    let timerInterval = null;
+    function startTimer() {
+        stopTimer();
+        const t0 = Date.now();
+        const tick = function () {
+            const s = Math.floor((Date.now() - t0) / 1000);
+            const el = document.getElementById('vdTimer');
+            if (el) el.textContent = Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0');
+        };
+        tick();
+        timerInterval = setInterval(tick, 1000);
+    }
+    function stopTimer() {
+        if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
+        const el = document.getElementById('vdTimer');
+        if (el) el.textContent = '';
+    }
+
+    // --- Avatar-overlay i stedet for sort flade naar der ikke er video ---
+    function updateRemoteOverlay(hasRemoteVideo) {
+        const ov = document.getElementById('vdRemoteAvatar');
+        if (!ov) return;
+        const circle = document.getElementById('vdAvatarCircle');
+        const name = document.getElementById('vdAvatarName');
+        if (circle) circle.textContent = (peerName || '?').split(' ').map(function (p) { return p.charAt(0); }).join('').toUpperCase();
+        if (name) name.textContent = peerName;
+        const show = !hasRemoteVideo || state !== 'active';
+        ov.style.display = show ? 'flex' : 'none';
+    }
+
+    // --- Fanetitel mens det ringer ---
+    let titleTimer = null;
+    let baseTitle = '';
+    function startTitleToggle() {
+        stopTitleToggle();
+        baseTitle = document.title;
+        let flip = false;
+        titleTimer = setInterval(function () {
+            flip = !flip;
+            document.title = flip ? 'Opkald fra ' + peerName : baseTitle;
+        }, 1200);
+    }
+    function stopTitleToggle() {
+        if (titleTimer) { clearInterval(titleTimer); titleTimer = null; }
+        if (baseTitle) document.title = baseTitle;
+    }
+
     function showError(text) {
         const el = document.getElementById('vdError');
         if (el) { el.textContent = text; el.style.display = 'flex'; }
     }
 
-    // --- Indgaaende opkald-dialog (vises paa alle sider) ---
+    // --- Indgaaende opkald-dialog (oprettes dynamisk, virker paa ALLE sider) ---
+    function ensureIncoming() {
+        let el = document.getElementById('incomingCall');
+        if (el) return el;
+        el = document.createElement('div');
+        el.className = 'incoming-call';
+        el.id = 'incomingCall';
+        el.style.display = 'none';
+        el.innerHTML =
+            '<div class="incoming-call-card">' +
+            '<div class="incoming-call-avatar" id="incomingCallAvatar">?</div>' +
+            '<div class="incoming-call-name" id="incomingCallName">...</div>' +
+            '<div class="incoming-call-text" id="incomingCallText">Videoopkald...</div>' +
+            '<div class="incoming-call-soundhint" id="incomingCallHint" style="display:none">Klik her for at slå ringelyd til</div>' +
+            '<div class="incoming-call-buttons">' +
+            '<button class="incoming-call-reject" id="incomingCallReject" title="Afvis"><i data-lucide="phone-off"></i></button>' +
+            '<button class="incoming-call-accept" id="incomingCallAccept" title="Besvar"><i data-lucide="phone"></i></button>' +
+            '</div></div>';
+        document.body.appendChild(el);
+        return el;
+    }
+
     function showIncoming() {
-        const el = document.getElementById('incomingCall');
-        if (!el) return;
+        const el = ensureIncoming();
         const av = document.getElementById('incomingCallAvatar');
         if (av) av.textContent = (peerName || '?').split(' ').map(function (p) { return p.charAt(0); }).join('').toUpperCase();
         document.getElementById('incomingCallName').textContent = peerName;
         document.getElementById('incomingCallText').textContent = 'Videoopkald...';
+        document.getElementById('incomingCallHint').style.display = 'none';
         el.style.display = 'flex';
+        el.classList.add('ringing');
         if (window.lucide && lucide.createIcons) try { lucide.createIcons(); } catch (e) { /* ignoreres */ }
         document.getElementById('incomingCallAccept').onclick = acceptCall;
         document.getElementById('incomingCallReject').onclick = rejectCall;
+        // Fanetitel: "Opkald fra ..." mens det ringer (virker uden lyd)
+        startTitleToggle();
         // Ringelyd i 30 sekunder, automatisk ubesvaret bagefter
         stopRingInterval();
-        ringInterval = setInterval(function () { if (window.chatRingSound) chatRingSound(); }, 2200);
-        if (window.chatRingSound) chatRingSound();
+        const tryRing = function () {
+            if (!ringOnce('callee')) {
+                // Autoplay-blokeret: vis hint, klik paa dialogen slaar tonen til
+                document.getElementById('incomingCallHint').style.display = 'inline-block';
+            }
+        };
+        tryRing();
+        ringInterval = setInterval(tryRing, 2200);
+        el.addEventListener('pointerdown', function once() { ensureAudio(); tryRing(); }, { once: true });
         ringTimer = setTimeout(function () { autoMissed(); }, 30000);
+        clog('indgaaende opkald vist fra ' + peerName + ' (lyd ' + (audioUnlocked() ? 'til' : 'BLOKERET - viser hint') + ')');
     }
 
     function hideIncoming() {
         const el = document.getElementById('incomingCall');
-        if (el) el.style.display = 'none';
+        if (el) { el.style.display = 'none'; el.classList.remove('ringing'); }
         stopRingInterval();
         clearTimeout(ringTimer);
-        if (window.chatRingStop) chatRingStop();
+        stopTitleToggle();
     }
 
     function stopRingInterval() {
@@ -242,7 +370,11 @@ window.ChatCall = (function () {
         const dock = ensureDock();
         const local = dock.querySelector('#vdLocal');
         const remote = dock.querySelector('#vdRemote');
-        if (local && localStream) { local.srcObject = localStream; local.style.display = camOn ? 'block' : 'none'; }
+        if (local && localStream) {
+            local.srcObject = localStream;
+            const hasCam = localStream.getVideoTracks().length > 0 && camOn;
+            local.style.display = hasCam ? 'block' : 'none';
+        }
         if (remote && pc && pc.getReceivers) {
             const s = new MediaStream();
             pc.getReceivers().forEach(function (r) { if (r.track) s.addTrack(r.track); });
@@ -281,13 +413,23 @@ window.ChatCall = (function () {
         pc.ontrack = function (e) {
             const remote = document.getElementById('vdRemote');
             if (remote && !remote.srcObject) remote.srcObject = e.streams[0] || new MediaStream([e.track]);
+            if (e.track.kind === 'video') {
+                clog('modtager video fra modpart');
+                updateRemoteOverlay(true);
+            } else {
+                updateRemoteOverlay(false);
+            }
         };
         pc.onconnectionstatechange = function () {
             if (pc && (pc.connectionState === 'connected')) {
                 connectedAt = Date.now();
                 state = 'active';
                 clearTimeout(connTimer);
+                stopRingInterval();
+                startTimer();
                 setStatus('');
+                updateRemoteOverlay(false);
+                clog('forbindelse etableret');
             } else if (pc && pc.connectionState === 'failed') {
                 showError('Forbindelsen fejlede. Tjek netværket og prøv igen.');
                 endCall('failed');
@@ -333,19 +475,36 @@ window.ChatCall = (function () {
         if (!conversationId) { info('Kunne ikke starte opkaldet.'); return; }
         state = 'ringing';
         ensureDock();
+        updateRemoteOverlay(false);
         setStatus('Ringer til ' + peerName + '...');
+        clog('starter opkald til ' + peerName);
         try {
             localStream = await getMedia();
-            if (!localStream.getVideoTracks().length) showError('Intet kamera - opkaldet fortsætter kun med lyd.');
+            if (!localStream.getVideoTracks().length) {
+                setStatus('Intet kamera - opkaldet fortsætter kun med lyd');
+                document.getElementById('vdLocal').style.display = 'none';
+            }
             attachStreams();
         } catch (e) {
             showError('Kan ikke bruge kamera eller mikrofon. Tjek browserens tilladelser og prøv igen.');
             return;
         }
-        signal('call_invite', { fromName: (window.myName || peerName) });
+        const sr = await signal('call_invite', { fromName: (window.myName || peerName) });
+        if (!sr || !sr.delivered) {
+            clog('call_invite blev IKKE leveret (modtager har ingen aaben forbindelse)');
+            info(peerName + ' er ikke tilgængelig lige nu.');
+            cleanup();
+            return;
+        }
+        // Blod "tuuut... tuuut..." hos afsenderen indtil svar/afvisning/ubesvaret
+        stopRingInterval();
+        const tryRing = function () { ringOnce('caller'); };
+        tryRing();
+        ringInterval = setInterval(tryRing, 2000);
         // 30 sekunder uden svar = ubesvaret opkald
         ringTimer = setTimeout(function () {
             if (state === 'ringing') {
+                clog('30 sek. uden svar - ubesvaret opkald');
                 signal('call_end', { reason: 'missed' });
                 callLog('missed');
                 info('Ubesvaret opkald til ' + peerName);
@@ -418,6 +577,8 @@ window.ChatCall = (function () {
         clearTimeout(ringTimer);
         clearTimeout(connTimer);
         stopRingInterval();
+        stopTitleToggle();
+        stopTimer();
         hideIncoming();
         if (localStream) {
             try { localStream.getTracks().forEach(function (t) { t.stop(); }); } catch (e) { /* allerede stoppet */ }
@@ -441,6 +602,7 @@ window.ChatCall = (function () {
     // --- Signal-handler (fra chat.js SSE) ---
     async function onSignal(m) {
         if (!m || !m.callId) return;
+        clog('signal modtaget: ' + m.type + ' fra ' + (m.fromName || '?') + ' (opkald ' + m.callId + ')');
         if (state !== 'idle' && m.callId !== callId && m.type === 'call_invite') {
             // Ét opkald pr. bruger: sig at vi er optaget
             const savedConv = conversationId, savedCall = callId;
@@ -449,6 +611,7 @@ window.ChatCall = (function () {
             signal('call_busy', {});
             conversationId = savedConv;
             callId = savedCall;
+            clog('afviser indkommende - vi er allerede i et opkald (busy)');
             return;
         }
         if (m.callId !== callId && state !== 'idle') return;
@@ -464,10 +627,12 @@ window.ChatCall = (function () {
                 showIncoming();
                 break;
             case 'call_accept':
-                if (state !== 'ringing') return;
+                if (role !== 'caller') return;
                 clearTimeout(ringTimer);
+                stopRingInterval(); // ringetonen stopper med det samme ved svar
                 state = 'connecting';
                 setStatus('Opretter forbindelse...');
+                clog('modparten svarer - opretter forbindelse');
                 try {
                     await createPeer();
                     const offer = await pc.createOffer();
@@ -539,6 +704,18 @@ window.ChatCall = (function () {
         pendingIce = [];
     }
 
+    // Presence-opdatering fra chat.js: modparten forsvandt (lukkede fane / mistede forbindelse)
+    function onPresence(onlineIds) {
+        if ((state === 'ringing' || state === 'incoming') && peerId != null && onlineIds.indexOf(peerId) === -1) {
+            clog('modpart ' + peerName + ' forsvandt fra presence (state ' + state + ') - afslutter');
+            if (state === 'ringing') {
+                callLog('missed');
+                info(peerName + ' er ikke længere tilgængelig.');
+            }
+            cleanup();
+        }
+    }
+
     // Kalderes fra chat.js naar siden forlades
     function cleanupOnUnload() {
         if (state !== 'idle') {
@@ -551,6 +728,7 @@ window.ChatCall = (function () {
     return {
         start: start,
         onSignal: onSignal,
+        onPresence: onPresence,
         cleanup: cleanup,
         cleanupOnUnload: cleanupOnUnload,
         state: function () { return state; }

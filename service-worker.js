@@ -1,7 +1,7 @@
 ﻿// SG Seest Gulvteknik Service Worker
 // Provides offline caching and PWA functionality
 
-const CACHE_NAME = 'breeze-portal-v74';
+const CACHE_NAME = 'breeze-portal-v75';
 const urlsToCache = [
   '/',
   '/dashboard.html',
