@@ -1766,10 +1766,21 @@ const chatRate = new Map();         // userId -> [timestamps]
 function chatSseSend(userId, eventName, data) {
   const set = chatSseClients.get(userId);
   if (!set) return 0;
-  const payload = 'event: ' + eventName + '\nndata: ' + JSON.stringify(data) + '\n\n';
+  const payload = 'event: ' + eventName + '\n' + 'data: ' + JSON.stringify(data) + '\n\n';
   let deliveredCount = 0;
+  const dead = [];
   for (const res of set) {
-    try { res.write(payload); deliveredCount++; } catch (e) { /* forbindelsen er ved at lukke */ }
+    if (res.writableEnded || res.destroyed) { dead.push(res); continue; }
+    try {
+      const ok = res.write(payload);
+      if (ok) deliveredCount++;
+      else dead.push(res); // buffer-problem = typisk doed socket bag proxy
+    } catch (e) { dead.push(res); /* forbindelsen er ved at lukke */ }
+  }
+  if (dead.length) {
+    for (const d of dead) set.delete(d);
+    if (set.size === 0) chatSseClients.delete(userId);
+    console.log('[chat] signal ' + eventName + ': fjernede ' + dead.length + ' doed(e) SSE-forbindelse(r) for bruger ' + userId);
   }
   return deliveredCount;
 }
@@ -2029,7 +2040,9 @@ app.post('/api/chat/signal', auth, async (req, res) => {
     const others = await chatOtherParticipants(convId, req.user.id);
     let delivered = 0;
     for (const o of others) {
-      delivered += chatSseSend(o.user_id, 'chat_signal', {
+    const set = chatSseClients.get(o.user_id);
+    console.log('[chat] signal ' + type + ': modtager ' + o.user_id + ' - ' + (set ? set.size + ' forbindelse(r)' : 'INGEN SSE-forbindelse'));
+    delivered += chatSseSend(o.user_id, 'chat_signal', {
         conversationId: convId,
         callId: callId,
         type: type,
@@ -2037,9 +2050,8 @@ app.post('/api/chat/signal', auth, async (req, res) => {
         fromUserId: req.user.id,
         fromName: req.user.name
       });
-    }
-    console.log('[chat] signal ' + type + ' (opkald ' + callId + ') i samtale ' + convId + ' fra bruger ' + req.user.id + ' - modtagere: ' + others.length + ', leveret: ' + delivered + ', SSE-brugere online: ' + chatSseClients.size);
-    res.json({ ok: true, delivered: delivered });
+    };
+    res.json({ ok: true, delivered: delivered, recipients: others.length });
   } catch (err) {
     console.error('[chat] signal error:', err);
     res.status(500).json({ error: 'Kunne ikke sende signal' });

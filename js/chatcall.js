@@ -86,8 +86,12 @@ window.ChatCall = (function () {
             method: 'POST', headers: authHeaders(),
             body: JSON.stringify({ conversationId: conversationId, callId: callId, type: type, payload: payload })
         }).then(function (r) {
-            if (!r.ok) { clog('signal ' + type + ' fejlede (HTTP ' + r.status + ')'); return { ok: false, delivered: 0 }; }
-            return r.json().catch(function () { return { ok: true, delivered: 1 }; });
+            if (!r.ok) { clog('signal ' + type + ' fejlede (HTTP ' + r.status + ')'); return { ok: false, delivered: 0, recipients: 0 }; }
+            const out = r.json();
+            out.then(function (j) { clog('signal sendt: ' + type + ' - leveret til ' + j.delivered + ' af ' + (typeof j.recipients !== 'undefined' ? j.recipients : '?') + ' modtagere'); });
+            return out;
+        }).then(function (sr) {
+            return sr;
         }).catch(function () {
             clog('signal ' + type + ' - netvaerksfejl');
             return { ok: false, delivered: 0 };
