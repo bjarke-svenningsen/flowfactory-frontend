@@ -2008,6 +2008,83 @@ app.post('/api/chat/typing', auth, async (req, res) => {
   }
 });
 
+// --- WebRTC-signalering: validerer og videresender til modparten over SSE ---
+app.post('/api/chat/signal', auth, async (req, res) => {
+  try {
+    const convId = Number(req.body && req.body.conversationId);
+    const type = String((req.body && req.body.type) || '');
+    const callId = String((req.body && req.body.callId) || '');
+    const payload = (req.body && req.body.payload) || null;
+    if (!convId || !type || !callId) return res.status(400).json({ error: 'Ugyldigt signal' });
+    if (!(await chatIsParticipant(convId, req.user.id))) return res.status(403).json({ error: 'Adgang naegtet' });
+    const others = await chatOtherParticipants(convId, req.user.id);
+    for (const o of others) {
+      chatSseSend(o.user_id, 'chat_signal', {
+        conversationId: convId,
+        callId: callId,
+        type: type,
+        payload: payload,
+        fromUserId: req.user.id,
+        fromName: req.user.name
+      });
+    }
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('[chat] signal error:', err);
+    res.status(500).json({ error: 'Kunne ikke sende signal' });
+  }
+});
+
+// --- Opkalds-log: lille systembesked i samtalen (taelles IKKE som ulaest) ---
+app.post('/api/chat/call-log', auth, async (req, res) => {
+  try {
+    const convId = Number(req.body && req.body.conversationId);
+    const status = String((req.body && req.body.status) || '');
+    const seconds = Math.max(0, Number((req.body && req.body.seconds) || 0));
+    if (!convId || !(await chatIsParticipant(convId, req.user.id))) return res.status(403).json({ error: 'Adgang naegtet' });
+    let text;
+    if (status === 'ended') {
+      const mm = Math.floor(seconds / 60);
+      const ss = String(seconds % 60).padStart(2, '0');
+      text = 'Videoopkald, ' + mm + ':' + ss;
+    } else if (status === 'missed') text = 'Ubesvaret opkald';
+    else if (status === 'rejected') text = 'Afvist opkald';
+    else text = 'Videoopkald fejlede';
+    const info = await db.run(
+      'INSERT INTO chat_messages (conversation_id, sender_id, body, is_system) VALUES (?, ?, ?, 1)',
+      [convId, req.user.id, text]
+    );
+    const msg = await db.get(
+      'SELECT m.id, m.conversation_id, m.sender_id, m.body, m.file_id, m.is_system, m.created_at, u.name AS sender_name ' +
+      'FROM chat_messages m JOIN users u ON u.id = m.sender_id WHERE m.id = ?',
+      [Number(info.lastInsertRowid)]
+    );
+    const others = await chatOtherParticipants(convId, req.user.id);
+    for (const o of others) chatSseSend(o.user_id, 'chat_message', msg);
+    res.json(msg);
+  } catch (err) {
+    console.error('[chat] call-log error:', err);
+    res.status(500).json({ error: 'Kunne ikke logge opkald' });
+  }
+});
+
+// --- ICE-servere: STUN altid; TURN KUN hvis miljo-variabler er sat (ingen hemmeligheder i koden) ---
+app.get('/api/chat/ice', auth, (req, res) => {
+  const servers = [
+    { urls: 'stun:stun.l.google.com:19302' },
+    { urls: 'stun:stun1.l.google.com:19302' }
+  ];
+  const turnUrl = process.env.TURN_URL;
+  if (turnUrl) {
+    servers.push({
+      urls: turnUrl,
+      username: process.env.TURN_USERNAME || '',
+      credential: process.env.TURN_CREDENTIAL || ''
+    });
+  }
+  res.json({ iceServers: servers });
+});
+
 // --- Presence: kolleger med online-status og "sidst set" ---
 app.get('/api/chat/presence', auth, async (req, res) => {
   try {

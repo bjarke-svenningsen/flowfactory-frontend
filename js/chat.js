@@ -586,6 +586,6 @@ function handleIncomingMessage(msg) {
 // Genindlaes ulaeste-tal ved fokus (flere faner/enheder)
 window.addEventListener('focus', function () { loadConversations(); });
 window.addEventListener('beforeunload', function () {
-    if (window.ChatCall) try { ChatCall.cleanup(); } catch (e) { /* ignoreres */ }
+    if (window.ChatCall) try { ChatCall.cleanupOnUnload(); } catch (e) { /* ignoreres */ }
 });
 
