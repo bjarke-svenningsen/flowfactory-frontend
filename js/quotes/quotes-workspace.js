@@ -2094,9 +2094,9 @@ async function saveExtraWork(parentOrderId) {
         return;
     }
     
-    // v92: Linjer er kun paakraevet for Kalkulation - tomme linjer filtreres fra
+    // v96: En linje taeller kun med, hvis den har en beskrivelse (se quotes-core.js)
     const filledLines = (extraWorkLines || []).filter(line =>
-        (line.description && line.description.trim()) || (line.quantity && line.quantity > 0)
+        line.description && line.description.trim()
     );
     
     if (order_type === 'calculation' && filledLines.length === 0) {

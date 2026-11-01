@@ -636,11 +636,11 @@ async function saveQuote(status = 'draft') {
         return;
     }
     
-    // v92: Linjer er kun paakraevet for Kalkulation - Forbrugssager kan vaere uden linjer
-    // (tomme linjer filtreres fra; forbruget kommer automatisk fra registreringer)
+    // v96: En linje taeller kun med, hvis den har en beskrivelse (tom standardlinje med
+    // Antal=1 blev faeldet af med, og u.loste saa "Beskrivelse mangler" paa Forbrugssager)
     const isCalculation = order_type === 'calculation';
     const filledLines = (currentQuote.lines || []).filter(line =>
-        (line.description && line.description.trim()) || (line.quantity && line.quantity > 0)
+        line.description && line.description.trim()
     );
     
     if (isCalculation && filledLines.length === 0) {
