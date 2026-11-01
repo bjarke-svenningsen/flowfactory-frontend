@@ -161,25 +161,28 @@
 }
 .quick-actions-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 10px;
 }
 .quick-action-btn {
     display: flex;
     align-items: center;
     gap: 10px;
-    padding: 12px 16px;
+    padding: 12px 14px;
+    min-height: 46px;
     background: var(--color-surface);
     border: 1px solid var(--color-border);
-    border-radius: var(--radius-btn);
+    border-radius: 8px;
     color: var(--color-text);
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 600;
     font-family: inherit;
     cursor: pointer;
     text-align: left;
-    transition: border-color 0.15s, background 0.15s;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+    transition: border-color 0.15s, background 0.15s, transform 0.1s;
 }
+.quick-action-btn:active { transform: scale(0.98); }
 .quick-action-btn:hover {
     border-color: var(--color-accent);
     background: var(--color-accent-soft);
@@ -189,6 +192,17 @@
     border-color: #F0DDBE;
     color: var(--color-orange);
 }
+.quick-action-btn.accent-green {
+    background: #E7F5EC;
+    border-color: #CBE7D5;
+    color: var(--color-green);
+}
+.quick-action-btn.accent-blue {
+    background: #EAF2FC;
+    border-color: #CFE2F7;
+    color: var(--color-blue);
+}
+.quick-action-btn svg { opacity: 0.85; }
 .quick-action-btn svg {
     width: 18px;
     height: 18px;

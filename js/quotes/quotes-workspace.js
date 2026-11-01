@@ -644,19 +644,15 @@ function renderWorkspaceOverview(container) {
 // Render invoice button based on invoice status
 function renderInvoiceButton() {
     if (currentWorkspaceInvoice) {
-        // Invoice exists - show "See Invoice" button
         return `
-            <button onclick=\"viewInvoiceFromWorkspace(${currentWorkspaceInvoice.id})\" style=\"padding: 12px 20px; background: var(--color-blue); color: white; border: none; border-radius: 5px; cursor: pointer; text-align: left;\">
-                Se Faktura ${currentWorkspaceInvoice.invoice_number}
-            </button>
-        `;
+            <button onclick="viewInvoiceFromWorkspace(${currentWorkspaceInvoice.id})" class="quick-action-btn accent-blue">
+                <i data-lucide="receipt"></i> Se Faktura ${currentWorkspaceInvoice.invoice_number}
+            </button>`,
     } else {
-        // No invoice - show "Create Invoice" button
         return `
-            <button onclick=\"createInvoiceFromOrder(${currentWorkspaceOrder.id})\" style=\"padding: 12px 20px; background: var(--color-green); color: white; border: none; border-radius: 5px; cursor: pointer; text-align: left;\">
-                Opret Faktura
-            </button>
-        `;
+            <button onclick="createInvoiceFromOrder(${currentWorkspaceOrder.id})" class="quick-action-btn accent-green">
+                <i data-lucide="receipt-text"></i> Opret Faktura
+            </button>`,
     }
 }
 
@@ -1639,8 +1635,8 @@ function renderWorkspaceMaterials(container) {
                         </tr>
 ` : `
                         <tr style="border-bottom: 2px solid var(--border); text-align: left;">
-                            <th style="padding: 10px 12px; font-size: 12px; color: var(--text-muted); <th style="padding: 10px 6px; width: 44px;"></th>
-text-transform: uppercase;">Dato</th>
+                            <th style="padding: 10px 6px; width: 44px;"></th>
+                            <th style="padding: 10px 12px; font-size: 12px; color: var(--text-muted); text-transform: uppercase;">Dato</th>
                             <th style="padding: 10px 12px; font-size: 12px; color: var(--text-muted); text-transform: uppercase;">Beskrivelse</th>
                             <th style="padding: 10px 12px; font-size: 12px; color: var(--text-muted); text-transform: uppercase;">Registreret af</th>
                             <th style="padding: 10px 12px; font-size: 12px; color: var(--text-muted); text-transform: uppercase; text-align: right;">Antal</th>
@@ -2506,7 +2502,7 @@ async function moveMaterialLine(orderId, lineId, direction) {
     try {
         const res = await fetch(`${API_URL}/api/orders/${orderId}/materials/reorder`, {
             method: 'POST',
-            headers: getAuthHeaders(),
+            headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}`, 'Content-Type': 'application/json' },
             body: JSON.stringify({ order: ids })
         });
         if (!res.ok) throw new Error('Kunne ikke gemme roekkefoelgen');
