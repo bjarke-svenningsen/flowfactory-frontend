@@ -1818,7 +1818,14 @@ app.get('/api/chat/events', async (req, res) => {
   db.run("UPDATE users SET last_seen_at = datetime('now') WHERE id = ?", [userId]).catch(function () {});
   chatBroadcast('chat_presence', Array.from(chatSseClients.keys()));
   const ping = setInterval(function () {
-    try { res.write(': ping\n\n'); } catch (e) { /* ignoreret */ }
+    // Synligt heartbeat-event: klienten kan bevise at server->browser retningen virker
+    try { res.write('event: chat_ping\ndata: {}\n\n'); } catch (e) {
+      // Doed forbindelse: fjern den med det samme, saa delivered-taellet bliver aerligt
+      clearInterval(ping);
+      const s2 = chatSseClients.get(userId);
+      if (s2) { s2.delete(res); if (s2.size === 0) chatSseClients.delete(userId); }
+      try { res.end(); } catch (e2) { /* ignoreret */ }
+    }
   }, 25000);
   req.on('close', function () {
     clearInterval(ping);

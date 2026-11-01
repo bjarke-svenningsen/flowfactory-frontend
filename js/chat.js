@@ -551,6 +551,9 @@ async function connectChatSse() {
                 if (window.ChatCall && ChatCall.onPresence) ChatCall.onPresence(ids);
             } catch (e) { /* ignoreres */ }
         });
+        sse.addEventListener('chat_ping', function () {
+            console.log('[call] SSE ping modtaget fra serveren');
+        });
         sse.addEventListener('chat_signal', function (ev) {
             try {
                 console.log('[call] SSE chat_signal modtaget');

@@ -734,6 +734,7 @@ window.ChatCall = (function () {
         state: function () { return state; }
     };
 })();
+console.log('[call] chatcall.js (v76) indlæst');
 window.addEventListener('beforeunload', function () {
     if (window.ChatCall) try { ChatCall.cleanupOnUnload(); } catch (e) { /* ignoreres */ }
 });
