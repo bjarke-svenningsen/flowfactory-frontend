@@ -7,3 +7,9 @@ backend/breeze-portal-backend/.env.backup
 # Database
 *.db
 *.db-journal
+
+breeze.db.backup
+breeze.db.backup-stage
+shot-*.png
+tilbud-print-check.pdf
+screenshot-quote.mjs
