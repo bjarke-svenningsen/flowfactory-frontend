@@ -110,7 +110,7 @@ function filterInvoicesByStatus(status) {
 
 // Create invoice from order
 // v106.4i: invoiceType = 'aconto' (delbetaling) | 'final' (slutfaktura, afslutter sagen)
-async function createInvoiceFromOrder(orderId, invoiceType, amount, percent, description, paymentTerms) {
+async function createInvoiceFromOrder(orderId, invoiceType, amount, percent, description) {
     const type = invoiceType || 'final';
 
     try {
@@ -121,7 +121,7 @@ async function createInvoiceFromOrder(orderId, invoiceType, amount, percent, des
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${token}`
             },
-            body: JSON.stringify({ invoice_type: type, amount: amount || undefined, percent: percent || undefined, description: description || undefined, payment_terms: paymentTerms || undefined })
+            body: JSON.stringify({ invoice_type: type, amount: amount || undefined, percent: percent || undefined, description: description || undefined })
         });
 
         if (!response.ok) {
@@ -236,9 +236,7 @@ function renderInvoiceTypeModalContent(selectedType) {
                 <span><strong>Slutfaktura</strong><br><span style="font-size:13px;color:var(--text-muted);">Hele ordren minus aconto. Afslutter sagen automatisk. Kun &eacute;n slutfaktura pr. sag.</span></span>
             </label>
             <div style="margin-bottom:14px;">
-                <label style="font-size:12px;color:var(--text-muted);">Betalingsbetingelser (fritekst - systemet laeser forfaldsdatoen)</label>
-                <textarea id="invModalTerms" rows="2" style="${inpStyle}" oninput="invoiceModalTermsPreview()">${d.terms || 'Netto 14 dage'}</textarea>
-                <div id="invModalDuePreview" style="font-size:12px;color:var(--text-muted);margin-top:4px;"></div>
+                <div id="invModalDuePreview" style="font-size:12px;color:var(--text-muted);background:var(--surface-muted);border-radius:8px;padding:8px 12px;"></div>
             </div>
             <div style="display:flex;justify-content:flex-end;gap:8px;">
                 ${btn('secondary', 'x', 'Annuller', { onclick: 'closeInvoiceTypeModal()' })}
@@ -249,9 +247,15 @@ function renderInvoiceTypeModalContent(selectedType) {
     invoiceModalTermsPreview();
 }
 
-// v106.5: live forfalds-preview - samme regler som backendens parsePaymentTerms
+// v106.5b: dansk dato til preview (samme som backendens danishToday)
+function danishTodayPreview() {
+    const s = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Copenhagen' }).format(new Date());
+    const p = s.split('-').map(Number);
+    return new Date(p[0], p[1] - 1, p[2], 12);
+}
+// v106.5: forfalds-preview - samme regler som backendens parsePaymentTerms (read-only, laeser sagens terms)
 function parseTermsDuePreview(text) {
-    const base = new Date();
+    const base = danishTodayPreview();
     const fmtD = d => d.toLocaleDateString('da-DK');
     const str = String(text || '').trim();
     if (!str) { const d = new Date(base); d.setDate(d.getDate() + 14); return fmtD(d); }
@@ -270,10 +274,11 @@ function parseTermsDuePreview(text) {
     return fmtD(base);
 }
 function invoiceModalTermsPreview() {
-    const el = document.getElementById('invModalTerms');
+    const d = invoiceTypeModalData;
     const pv = document.getElementById('invModalDuePreview');
-    if (!el || !pv) return;
-    pv.innerHTML = 'Forfaldsdato: <strong style="color:var(--text);">' + parseTermsDuePreview(el.value) + '</strong>';
+    if (!d || !pv) return;
+    const terms = d.terms || 'Netto 14 dage';
+    pv.innerHTML = 'Betalingsbetingelser: <strong style="color:var(--text);">' + terms + '</strong> &nbsp;&rarr;&nbsp; Forfaldsdato: <strong style="color:var(--text);">' + parseTermsDuePreview(terms) + '</strong> &nbsp;<span style="font-size:11px;">(s&aelig;ttes p&aring; tilbuddet - kan redigeres p&aring; fakturaen)</span>';
 }
 
 function invoiceModalCalc(fromField) {
@@ -345,14 +350,12 @@ function submitInvoiceType(orderId) {
             return;
         }
         const desc = (document.getElementById('invModalDesc')?.value || '').trim();
-        const terms = (document.getElementById('invModalTerms')?.value || '').trim();
         closeInvoiceTypeModal();
-        createInvoiceFromOrder(orderId, 'aconto', amt, undefined, desc, terms);
+        createInvoiceFromOrder(orderId, 'aconto', amt, undefined, desc);
         return;
     }
-    const terms2 = (document.getElementById('invModalTerms')?.value || '').trim();
     closeInvoiceTypeModal();
-    createInvoiceFromOrder(orderId, 'final', undefined, undefined, undefined, terms2);
+    createInvoiceFromOrder(orderId, 'final');
 }
 // View invoice
 async function viewInvoice(invoiceId) {

@@ -493,8 +493,15 @@ async function liveOrderSubtotal(orderId) {
 //  3) Foerste tal foelgt af "dag/dage/dags" -> dato + X dage
 //  4) "kontant"/"straks"/"ved levering"/"umiddelbart" (eller ingen dag/tal) -> samme dag
 //  5) Tom tekst -> "Netto 14 dage" (+14) som fallback
+// v106.5b: dansk dato (Europe/Copenhagen via Intl - tager automatisk hoejtid/lavtid med)
+function danishToday() {
+  const s = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Copenhagen' }).format(new Date()); // YYYY-MM-DD
+  const [y, m, d] = s.split('-').map(Number);
+  return new Date(y, m - 1, d, 12); // kl. 12 lokal = ingen tz-kaantelser
+}
+
 function parsePaymentTerms(text, invoiceDate) {
-  const base = invoiceDate ? new Date(invoiceDate) : new Date();
+  const base = invoiceDate ? new Date(invoiceDate) : danishToday();
   // v106.5: formater i LOKAL tid - toISOString ville skaeve datoer 1 dag bak i DK-tid
   const pad = n => String(n).padStart(2, '0');
   const iso = d => d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
@@ -3528,7 +3535,7 @@ app.post('/api/invoices/from-order/:orderId', auth, async (req, res) => {
   const finalPaymentTerms = payment_terms || order.terms || 'Netto 14 dage';
   let finalDueDate = due_date;
   if (!finalDueDate) {
-    finalDueDate = parsePaymentTerms(finalPaymentTerms, new Date());
+    finalDueDate = parsePaymentTerms(finalPaymentTerms);
   }
   
   // Create invoice
@@ -3766,7 +3773,7 @@ app.post('/api/invoices/:id/creditnote', auth, async (req, res) => {
   const invoice_number = await generateInvoiceNumber();
   // v106.5: kreditnota arver ordrens betalingsbetingelser - forfald laeses af teksten
   const creditTerms = orig.payment_terms || 'Netto 14 dage';
-  const finalDueDate = parsePaymentTerms(creditTerms, new Date());
+  const finalDueDate = parsePaymentTerms(creditTerms);
 
   const info = await db.run(`
     INSERT INTO invoices (invoice_number, order_id, full_order_number, due_date, payment_terms, subtotal, vat_rate, vat_amount, total, notes, status, invoice_type, credit_of, created_by)
