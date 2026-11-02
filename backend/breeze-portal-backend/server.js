@@ -5856,11 +5856,15 @@ app.get('/api/debug/documents', async (req, res) => {
 // DEBUG ENDPOINT: Check quotes table (id, status, titel) - fjern naar problemet er lost
 app.get('/api/debug/quotes', async (req, res) => {
   try {
-    const allQuotes = await db.all('SELECT id, order_number, title, status, order_stage, is_extra_work, parent_order_id, created_at FROM quotes ORDER BY id');
+    const allQuotes = await db.all(`SELECT q.id, q.order_number, q.title, q.status, q.order_stage,
+      q.customer_id, c.id AS customer_exists, c.company_name
+      FROM quotes q LEFT JOIN customers c ON q.customer_id = c.id ORDER BY q.id`);
+    const orphaned = allQuotes.filter(q => !q.customer_exists);
     res.json({
       total_quotes: allQuotes.length,
       all_quotes: allQuotes,
-      message: 'This shows all rows in the quotes table'
+      orphaned_customer_refs: orphaned.map(q => ({ id: q.id, order_number: q.order_number, customer_id: q.customer_id })),
+      message: 'orphaned_customer_refs non-empty = quotes whose customer no longer exists (JOIN makes GET /api/quotes/:id 404)'
     });
   } catch (error) {
     res.status(500).json({ error: error.message });
