@@ -3702,6 +3702,31 @@ app.post('/api/invoices/:id/creditnote', auth, async (req, res) => {
   res.json(credit);
 });
 
+// v106.4n: markér sendt faktura som betalt
+app.post('/api/invoices/:id/mark-paid', auth, async (req, res) => {
+  const invoiceId = Number(req.params.id);
+
+  const invoice = await db.get('SELECT * FROM invoices WHERE id = ?', [invoiceId]);
+  if (!invoice) {
+    return res.status(404).json({ error: 'Invoice not found' });
+  }
+  if (invoice.invoice_type === 'creditnote') {
+    return res.status(400).json({ error: 'Kreditnotaer kan ikke markeres som betalt' });
+  }
+  if (invoice.status === 'draft') {
+    return res.status(400).json({ error: 'Fakturaen skal sendes, før den kan markeres som betalt' });
+  }
+  if (invoice.status === 'paid') {
+    return res.status(400).json({ error: 'Fakturaen er allerede markeret som betalt' });
+  }
+
+  await db.run("UPDATE invoices SET status = 'paid' WHERE id = ?", [invoiceId]);
+  await logOrderEvent(invoice.order_id, 'note', `Faktura ${invoice.invoice_number} markeret som betalt`, req.user.id);
+
+  const updated = await db.get('SELECT * FROM invoices WHERE id = ?', [invoiceId]);
+  res.json(updated);
+});
+
 // Delete invoice
 // v106.4j: kun udkast kan slettes - sendte/betalte fakturaer krediteres i stedet (bogfoeringskrav)
 app.delete('/api/invoices/:id', auth, async (req, res) => {

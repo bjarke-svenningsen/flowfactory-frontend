@@ -696,6 +696,7 @@ function renderWorkspaceInvoicesSection() {
             <td style="padding:8px 6px;font-size:12px;text-align:right;font-weight:600;">${fmt(i.total)}</td>
             <td style="padding:8px 6px;text-align:right;">
                 ${i.status === 'draft' ? `<button class="btn btn-icon btn-danger" title="Slet udkast" onclick="event.stopPropagation();deleteInvoice(${i.id})"><i data-lucide="trash-2"></i></button>` : ''}
+                ${i.invoice_type !== 'creditnote' && i.status === 'sent' ? `<button class="btn btn-icon" title="Markér som betalt" style="color:var(--color-green);" onclick="event.stopPropagation();markInvoicePaid(${i.id})"><i data-lucide="check"></i></button>` : ''}
             </td>
         </tr>`).join('');
 

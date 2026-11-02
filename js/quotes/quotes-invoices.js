@@ -80,6 +80,7 @@ function renderInvoicedContent(invoices) {
                 <div class="list-card-actions">
                     ${btn('secondary', 'eye', 'Se Faktura', { onclick: `viewInvoice(${invoice.id})` })}
                     ${invoice.status === 'draft' ? btn('primary', 'send', 'Send', { onclick: `sendInvoice(${invoice.id})` }) : ''}
+                    ${invoice.invoice_type !== 'creditnote' && invoice.status === 'sent' ? btn('secondary', 'check', 'Markér Betalt', { onclick: `markInvoicePaid(${invoice.id})` }) : ''}
                     ${invoice.invoice_type !== 'creditnote' && invoice.status !== 'draft' ? btn('secondary', 'undo-2', 'Kreditnota', { onclick: `createCreditNote(${invoice.id})` }) : ''}
                     ${invoice.status === 'draft' ? btn('icon', 'trash-2', null, { title: 'Slet Udkast', onclick: `deleteInvoice(${invoice.id})` }) : ''}
                 </div>
@@ -341,6 +342,11 @@ function renderInvoicePreview(invoice) {
                         <i data-lucide="undo-2"></i> Opret Kreditnota
                     </button>
                 ` : ''}
+                ${invoice.invoice_type !== 'creditnote' && invoice.status === 'sent' ? `
+                    <button onclick="markInvoicePaid(${invoice.id})" class="btn btn-primary">
+                        <i data-lucide="check"></i> Markér Betalt
+                    </button>
+                ` : ''}
                 <button onclick="window.print()" class="btn btn-secondary">
                     <i data-lucide="printer"></i> Print / PDF
                 </button>
@@ -473,6 +479,33 @@ function renderInvoicePreview(invoice) {
         </div>
     `;
     if (window.lucide) { try { lucide.createIcons(); } catch (e) { /* ignore */ } }
+}
+
+// v106.4n: markér sendt faktura som betalt (sgConfirm erstatter native confirm)
+function markInvoicePaid(invoiceId) {
+    sgConfirm('Markér som betalt', 'Er betalingen modtaget? Fakturaen markeres som Betalt.', async () => {
+        try {
+            const token = sessionStorage.getItem('token');
+            const response = await fetch(`/api/invoices/${invoiceId}/mark-paid`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.error || 'Kunne ikke markere som betalt');
+            }
+            alert('Faktura markeret som betalt');
+            loadInvoiced();
+            if (typeof loadOrderTabCounts === 'function') loadOrderTabCounts();
+            // Opdater preview hvis den viste faktura er den samme
+            if (window.currentPreviewInvoice && window.currentPreviewInvoice.id === invoiceId) {
+                viewInvoice(invoiceId);
+            }
+        } catch (error) {
+            console.error('Mark paid error:', error);
+            alert('Kunne ikke markere som betalt: ' + error.message);
+        }
+    });
 }
 
 // Send invoice (v106.4i: sgConfirm erstatter native confirm, som browseren blokerer)
@@ -685,6 +718,7 @@ window.invEditorLineTotal = invEditorLineTotal;
 window.addEditorLine = addEditorLine;
 window.removeEditorLine = removeEditorLine;
 window.saveInvoiceLineEdits = saveInvoiceLineEdits;
+window.markInvoicePaid = markInvoicePaid;
 window.filterInvoicedByStatus = filterInvoicedByStatus;
 window.editInvoiceNotes = editInvoiceNotes;
 window.saveInvoiceNotes = saveInvoiceNotes;
