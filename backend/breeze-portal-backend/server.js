@@ -171,6 +171,31 @@ async function ensureInvoiceCreditColumns() {
 }
 ensureInvoiceCreditColumns().catch(err => console.error('Fejl ved tilføjelse af credit_of/invoice_counter:', err));
 
+// v106.4q: quotes.order_type ('calculation'|'consumption') - idempotent migration.
+// Render sin persistedisk kan have en aeldre breeze.db uden denne kolonne, hvilket faar
+// /api/quotes/:id/extra-work (ogordre-oprettelse) til at fejle i stilhed (unhandledRejection).
+async function ensureQuotesOrderTypeColumn() {
+  const tables = ['quotes'];
+  for (const table of tables) {
+    let hasCol = true;
+    try { await db.get(`SELECT order_type FROM ${table} LIMIT 1`); } catch { hasCol = false; }
+    if (!hasCol) {
+      await db.run(`ALTER TABLE ${table} ADD COLUMN order_type TEXT DEFAULT 'calculation'`);
+      console.log(`   Kolonne order_type tilføjet til ${table}`);
+    }
+  }
+  // work_description/order_address m.m. bruges af ordre-workspace - sikr dem ogsaa
+  for (const [col, def] of [['work_description', 'TEXT'], ['order_address', 'TEXT'], ['order_postal_code', 'TEXT'], ['order_city', 'TEXT'], ['order_stage', "TEXT DEFAULT 'quote'"], ['started_at', 'TIMESTAMP'], ['started_by', 'INTEGER']]) {
+    let has = true;
+    try { await db.get(`SELECT ${col} FROM quotes LIMIT 1`); } catch { has = false; }
+    if (!has) {
+      await db.run(`ALTER TABLE quotes ADD COLUMN ${col} ${def}`);
+      console.log(`   Kolonne ${col} tilføjet til quotes`);
+    }
+  }
+}
+ensureQuotesOrderTypeColumn().catch(err => console.error('Fejl ved tilføjelse af quotes-kolonner:', err));
+
 // MIME-fallback: kendte filtyper browsers ellers fejlfortolker
 const MIME_FALLBACKS = { jfif: 'image/jpeg', pjpeg: 'image/jpeg', pjp: 'image/jpeg' };
 // JPEG-varianter der ofte gemmes med en forkert/generisk mime_type - endelsen vinder altid
@@ -3232,6 +3257,7 @@ app.post('/api/quotes/:id/pause', auth, async (req, res) => {
 
 // Create extra work on existing order
 app.post('/api/quotes/:id/extra-work', auth, async (req, res) => {
+  try {
   const parentOrderId = Number(req.params.id);
   const { title, notes, terms, lines, order_type } = req.body;
   
@@ -3303,6 +3329,11 @@ app.post('/api/quotes/:id/extra-work', auth, async (req, res) => {
   extraWork.full_order_number = await getFullOrderNumber(extraWork);
   
   res.json(extraWork);
+  } catch (err) {
+    // v106.4q: returner altid en fejl - ellers haenger requestet og browseren faar "Failed to fetch"
+    console.error('[extra-work] Fejl:', err && err.stack ? err.stack : err);
+    res.status(500).json({ error: err && err.message ? err.message : 'Kunne ikke oprette ekstraarbejde' });
+  }
 });
 
 // --- INVOICES API ---

@@ -685,11 +685,11 @@ function renderWorkspaceInvoicesSection() {
     const invs = workspaceInvoices || [];
     const fmt = v => new Intl.NumberFormat('da-DK', { style: 'currency', currency: 'DKK' }).format(v || 0);
     // v106.4k: udkast taeller med med det samme
-    // v106.4q: summer paa subtotal (ekskl. moms) - order.total er ogsaa ekskl. moms,
-    // saa Rest bliver ikke negativ pga. moms (Total-kolonnen i tabellen er inkl. moms)
+    // v106.4q: Faktureret/Rest er ALTID ekskl. moms (subtotal) - order.total er inkl. moms
     const invoiced = invs.filter(i => i.invoice_type !== 'creditnote').reduce((s, i) => s + (Number(i.subtotal) || 0), 0);
     const credited = invs.filter(i => i.invoice_type === 'creditnote').reduce((s, i) => s + (Number(i.subtotal) || 0), 0);
-    const rest = (Number(currentWorkspaceOrder.total) || 0) - invoiced - credited;
+    const orderSubtotal = Number(currentWorkspaceOrder.subtotal) || 0;
+    const rest = orderSubtotal - invoiced + credited;
     const typeLabel = i => i.invoice_type === 'creditnote' ? 'Kreditnota' : (i.invoice_type === 'aconto' ? 'Aconto' : 'Slutfaktura');
     const statusLabel = i => i.status === 'draft' ? 'Ikke sendt' : (i.status === 'sent' ? 'Sendt' : 'Betalt');
     const rows = invs.map(i => `
@@ -715,9 +715,10 @@ function renderWorkspaceInvoicesSection() {
                 </div>
             </div>
             <div style="font-size:13px;color:var(--text);margin-bottom:15px;">
-                Faktureret: <strong>${fmt(invoiced)}</strong>
-                ${credited !== 0 ? ` &nbsp;&bull;&nbsp; Krediteret: <strong>${fmt(credited)}</strong>` : ''}
-                &nbsp;&bull;&nbsp; Rest: <strong>${fmt(rest)}</strong>
+                Faktureret (ekskl. moms): <strong>${fmt(invoiced)}</strong>
+                ${credited !== 0 ? ` &nbsp;&bull;&nbsp; Krediteret (ekskl. moms): <strong>${fmt(credited)}</strong>` : ''}
+                &nbsp;&bull;&nbsp; Rest (ekskl. moms): <strong>${fmt(rest)}</strong>
+                ${rest < 0 ? '<span style="color:#C0392B;">&nbsp;&#9888; Der er faktureret mere end ordrebeløbet (f.eks. slutfaktura + aconto) &mdash; kontrollér/slet udkastene.</span>' : ''}
             </div>
             <div class="doc-table-scroll">
             <table style="width:100%;border-collapse:collapse;">
