@@ -689,7 +689,7 @@ function renderWorkspaceInvoicesSection() {
     // v106.4q: Faktureret/Rest er ALTID ekskl. moms (subtotal) - order.total er inkl. moms
     const invoiced = invs.filter(i => i.invoice_type !== 'creditnote').reduce((s, i) => s + (Number(i.subtotal) || 0), 0);
     const credited = invs.filter(i => i.invoice_type === 'creditnote').reduce((s, i) => s + (Number(i.subtotal) || 0), 0);
-    const orderSubtotal = Number(currentWorkspaceOrder.subtotal) || 0;
+    const orderSubtotal = Number(currentWorkspaceOrder.live_subtotal ?? currentWorkspaceOrder.subtotal) || 0; // v106.4s: live vaerdi
     const rest = orderSubtotal - invoiced + credited;
     const typeLabel = i => i.invoice_type === 'creditnote' ? 'Kreditnota' : (i.invoice_type === 'aconto' ? 'Aconto' : 'Slutfaktura');
     const statusLabel = i => i.status === 'draft' ? 'Ikke sendt' : (i.status === 'sent' ? 'Sendt' : 'Betalt');

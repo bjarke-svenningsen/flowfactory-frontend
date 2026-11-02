@@ -168,7 +168,7 @@ async function openInvoiceTypeModal(orderId) {
         const resp = await fetch('/api/orders/' + orderId + '/workspace', { headers: { 'Authorization': 'Bearer ' + token } });
         if (resp.ok) {
             const data = await resp.json();
-            subtotal = Number(data.order && data.order.subtotal) || 0;
+            subtotal = Number(data.order && (data.order.live_subtotal ?? data.order.subtotal)) || 0; // v106.4s: live vaerdi
             const invs = data.invoices || [];
             invsList = invs;
             // v106.4k: udkast taeller med med det samme - restbeloebet afspejler alle aconto'er

@@ -467,11 +467,18 @@ function validateUserData({ name, email, password, requirePassword }) {
 //   taeler KUN som udgift (total_cost) og paavirker aldrig omsaetningen op.
 // - 'consumption' (Forbrug): omsaetning = summen af materiaelinejlernes
 //   salgsvaerdi (order_materials.total_sale) - alt man registrerer taeller med.
+// v106.4s: ordrevaerdi = live sum af registreringer (ekskl. moms) for BEGGE sagstyper.
+// Tidligere brugte Kalkulation det frosne quotes.total (inkl. moms, forældet ved nye
+// registreringer) - det gav skæve tal i Oversigt/Rest.
 async function revenueForOrder(order) {
   if (!order) return 0;
-  if (String(order.order_type || 'calculation') !== 'consumption') return order.total || 0;
-  const row = await db.get('SELECT SUM(total_sale) as total FROM order_materials WHERE order_id = ?', [order.id]);
-  return row?.total || 0;
+  return liveOrderSubtotal(order.id);
+}
+
+// v106.4s: sandheden er registreringerne - sum af salgsvaerdi (ekskl. moms)
+async function liveOrderSubtotal(orderId) {
+  const row = await db.get('SELECT COALESCE(SUM(total_sale), 0) as t FROM order_materials WHERE order_id = ?', [orderId]);
+  return row?.t || 0;
 }
 
 const ECON_FIELDS = ['subtotal', 'vat_rate', 'vat_amount', 'total', 'revenue', 'revenue_main', 'revenue_extra', 'expenses', 'expenses_main', 'expenses_extra', 'profit', 'profit_main', 'profit_extra', 'profit_margin'];
@@ -2838,6 +2845,8 @@ app.post('/api/quotes', auth, async (req, res) => {
   
     // Add full_order_number for display
     quote.full_order_number = await getFullOrderNumber(quote);
+    // v106.4s: live ordrevaerdi (sum af registreringer, ekskl. moms)
+    quote.live_subtotal = await liveOrderSubtotal(quoteId);
     
     res.json(quote);
   } catch (error) {
@@ -3508,7 +3517,9 @@ app.post('/api/invoices/from-order/:orderId', auth, async (req, res) => {
   
   const isConsumption = String(order.order_type || 'calculation') === 'consumption';
   // v106.4j: aconto-fakturaer bruger hverken registrerings-linjer eller auto-totals
-  if (isConsumption && invoice_type !== 'aconto') {
+  // v106.4s: ALLE sagstyper (ogsaa Kalkulation) bygger fakturalinjer fra AKTUELLE
+  // registreringer - ordrevaerdien er live, ikke de frosne tilbudslinjer.
+  if (invoice_type !== 'aconto') {
     const regs = await db.all(`
       SELECT om.*, m.name as material_name, m.unit as material_unit
       FROM order_materials om
@@ -4980,6 +4991,8 @@ app.get('/api/orders/:orderId/workspace', auth, async (req, res) => {
   order.has_approved_invoice = !!approvedInvoice;
   // v106.4r: fuldt ordrenummer (sub-ordrer fx "0001-02") - frontend bruger denne direkte
   order.full_order_number = await getFullOrderNumber(order);
+  // v106.4s: live ordrevaerdi (sum af registreringer, ekskl. moms) til Rest-beregning
+  order.live_subtotal = await liveOrderSubtotal(orderId);
   
   // If contact_person_id is set, get contact person details
   if (order.contact_person_id) {
