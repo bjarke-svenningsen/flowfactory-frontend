@@ -5853,6 +5853,20 @@ app.get('/api/debug/documents', async (req, res) => {
   }
 });
 
+// DEBUG ENDPOINT: Check quotes table (id, status, titel) - fjern naar problemet er lost
+app.get('/api/debug/quotes', async (req, res) => {
+  try {
+    const allQuotes = await db.all('SELECT id, order_number, title, status, order_stage, is_extra_work, parent_order_id, created_at FROM quotes ORDER BY id');
+    res.json({
+      total_quotes: allQuotes.length,
+      all_quotes: allQuotes,
+      message: 'This shows all rows in the quotes table'
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Fallback: serve index.html for any non-API route (so /dashboard etc. works)
 app.get(/^\/(?!api|uploads|socket\.io).*/, (req, res) => {
   res.sendFile(path.join(FRONTEND_DIR, 'index.html'));
