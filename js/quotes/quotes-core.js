@@ -1127,7 +1127,7 @@ function switchOrderTab(tab) {
     customersView.style.display = 'none';
     
     // Update button styles (in_progress mapper til tabInProgress/orderTabInProgress)
-    const tabs = ['quotes', 'orders', 'in_progress', 'invoiced', 'rejected', 'customers'];
+    const tabs = ['quotes', 'orders', 'in_progress', 'completed', 'invoiced', 'rejected', 'customers'];
     tabs.forEach(t => {
         const name = t === 'in_progress' ? 'InProgress' : t.charAt(0).toUpperCase() + t.slice(1);
         const btn = document.getElementById(`tab${name}`);
@@ -1152,6 +1152,8 @@ function switchOrderTab(tab) {
         loadOrders();
     } else if (tab === 'in_progress') {
         loadInProgress();
+    } else if (tab === 'completed') {
+        loadCompleted();
     } else if (tab === 'invoiced') {
         loadInvoiced();
     } else if (tab === 'rejected') {
@@ -1191,7 +1193,8 @@ async function loadOrders() {
         const allQuotes = await response.json();
         // Filter: godkendte ordrer der IKKE er startet endnu (order_stage = 'approved')
         // Fallback: ordrer uden order_stage (gamle rækker) behandles som godkendte
-        const orders = allQuotes.filter(q => q.status === 'accepted' && !q.is_extra_work && (q.order_stage !== 'in_progress'));
+        // v106.4i: afsluttede sager rykker til egen "Afsluttet"-fane
+        const orders = allQuotes.filter(q => q.status === 'accepted' && !q.is_extra_work && (q.order_stage !== 'in_progress') && (q.order_stage !== 'completed'));
 
         // v100: lokale godkendelses-overrides - injicer godkendte sager serveren
         // eventuel svarer med gammel status paa
@@ -1264,15 +1267,134 @@ async function loadInProgress() {
     }
 }
 
+// v106.4i: Load "Afsluttet"-fanen (sager markeret afsluttede, inkl. slutfaktura)
+async function loadCompleted() {
+    try {
+        const token = sessionStorage.getItem('token');
+        const response = await fetch('/api/quotes', {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+
+        if (!response.ok) throw new Error('Failed to load quotes');
+
+        const allQuotes = await response.json();
+        const completed = allQuotes.filter(q => q.status === 'accepted' && !q.is_extra_work && q.order_stage === 'completed');
+
+        updateTabCountsFromQuotes(allQuotes);
+        renderTabSlice('completed', completed, renderCompletedContent);
+    } catch (error) {
+        console.error('Error loading completed orders:', error);
+        alert('Kunne ikke indlæse afsluttede ordrer: ' + error.message);
+    }
+}
+
+// v106.4i: Render "Afsluttet"-fanen
+function renderCompletedContent(orders) {
+    const container = document.getElementById('completedContainer');
+
+    if (orders.length === 0) {
+        container.innerHTML = `
+            <div class="list-empty">
+                <div class="icon-box"><i data-lucide="check-circle-2"></i></div>
+                <h3>Ingen afsluttede sager</h3>
+                <p>Afslut en igangværende sag med "Afslut Sag" — eller opret en slutfaktura</p>
+            </div>
+        `;
+        return;
+    }
+
+    let html = `<div class="list-section-head"><span class="title">Afsluttede sager</span><span class="badge badge--accepted">${orders.length}</span></div>`;
+    orders.forEach(order => {
+        const displayNumber = order.order_number || order.quote_number || 'N/A';
+        const fullOrderNumber = order.is_extra_work && order.parent_order_id
+            ? `${displayNumber}-${String(order.sub_number).padStart(2, '0')}`
+            : displayNumber;
+
+        html += `
+            <div class="list-card list-card--paid">
+                <div class="list-card-head">
+                    <h4 class="list-card-title">Ordre ${fullOrderNumber}</h4>
+                    <span class="badge badge--accepted">Afsluttet</span>
+                </div>
+                <div class="list-card-grid">
+                    <div class="list-card-field"><span class="label">Kunde</span><span class="value">${order.customer_name}</span></div>
+                    <div class="list-card-field"><span class="label">Titel</span><span class="value">${order.title}</span></div>
+                    <div class="list-card-field"><span class="label">Oprettet af</span><span class="value">${order.created_by_name || 'Ukendt'}</span></div>
+                    <div class="list-card-total"><span class="label">Total</span>${formatCurrency(order.total)}</div>
+                </div>
+                <div class="list-card-actions">
+                    ${btn('primary', 'eye', 'Se Ordre', { onclick: `viewQuote(${order.id})` })}
+                    ${btn('secondary', 'receipt', 'Opret Faktura', { onclick: `openInvoiceTypeModal(${order.id})` })}
+                    ${btn('ghost', 'undo-2', 'Genåbn', { onclick: `reopenOrder(${order.id})` })}
+                </div>
+            </div>
+        `;
+    });
+
+    container.innerHTML = html;
+    if (window.lucide) lucide.createIcons();
+}
+
+// v106.4i: Afslut sag (med sgConfirm - native confirm blokeres af browseren)
+function completeOrder(orderId) {
+    sgConfirm('Afslut sag', 'Markér sagen som afsluttet? Du kan altid genåbne den igen.', async () => {
+        try {
+            const token = sessionStorage.getItem('token');
+            const response = await fetch(`/api/quotes/${orderId}/complete`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (!response.ok) {
+                const e = await response.json().catch(() => ({}));
+                throw new Error(e.error || 'Kunne ikke afslutte sag');
+            }
+            await response.json();
+            alert('Sagen er nu afsluttet.');
+            loadInProgress();
+            loadOrders();
+            loadOrderTabCounts();
+        } catch (error) {
+            console.error('Complete order error:', error);
+            alert('Kunne ikke afslutte sag: ' + error.message);
+        }
+    });
+}
+
+// v106.4i: Genåbn afsluttet sag (tilbage til igangværende)
+function reopenOrder(orderId) {
+    sgConfirm('Genåbn sag', 'Sagen rykker tilbage til "Igangværende". Fortsæt?', async () => {
+        try {
+            const token = sessionStorage.getItem('token');
+            const response = await fetch(`/api/quotes/${orderId}/reopen`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (!response.ok) {
+                const e = await response.json().catch(() => ({}));
+                throw new Error(e.error || 'Kunne ikke genåbne sag');
+            }
+            await response.json();
+            alert('Sagen er genåbnet.');
+            loadCompleted();
+            loadInProgress();
+            loadOrderTabCounts();
+        } catch (error) {
+            console.error('Reopen order error:', error);
+            alert('Kunne ikke genåbne sag: ' + error.message);
+        }
+    });
+}
+
 // ---------- Fase 4: Soegning + paginering ----------
 const ORDER_PAGE_SIZE = 25;
 let orderSearchQuery = '';
-const orderSearchPages = { quotes: 1, orders: 1, in_progress: 1, invoiced: 1, rejected: 1, customers: 1 };
+const orderSearchPages = { quotes: 1, orders: 1, in_progress: 1, completed: 1, invoiced: 1, rejected: 1, customers: 1 };
 const orderTabCache = {};
 const ORDER_TAB_CONTAINERS = {
     quotes: 'quotesListContainer',
     orders: 'ordersContainer',
     in_progress: 'inProgressContainer',
+    completed: 'completedContainer',
     invoiced: 'invoicingContainer',
     rejected: 'rejectedContainer',
     customers: 'customersListContainer'
@@ -1283,7 +1405,7 @@ function orderSearchMatch(item, tab) {
     if (!q) return true;
     let fields = [];
     switch (tab) {
-        case 'quotes': case 'orders': case 'in_progress': case 'rejected':
+        case 'quotes': case 'orders': case 'in_progress': case 'completed': case 'rejected':
             fields = [item.order_number, item.quote_number, item.customer_name, item.title, item.created_by_name];
             break;
         case 'invoiced':
@@ -1340,6 +1462,7 @@ function rerenderTab(tab) {
         case 'quotes': renderQuotesList(); break;
         case 'orders': renderTabSlice('orders', orderTabCache.orders || [], renderOrdersContent); break;
         case 'in_progress': renderTabSlice('in_progress', orderTabCache.in_progress || [], renderInProgressContent); break; 
+        case 'completed': renderTabSlice('completed', orderTabCache.completed || [], renderCompletedContent); break;
         case 'invoiced': renderTabSlice('invoiced', orderTabCache.invoiced || [], renderInvoicedContent); break;
         case 'rejected': renderTabSlice('rejected', orderTabCache.rejected || [], renderRejectedContent); break;
         case 'customers': renderTabSlice('customers', allCustomers, renderCustomersContent); break;
@@ -1351,33 +1474,35 @@ let orderSearchInitDone = false;
 let orderSearchTimer = null;
 function initOrderSearch() {
     if (orderSearchInitDone) return;
-    const input = document.getElementById('orderSearchInput');
-    if (!input) return;
     orderSearchInitDone = true;
 
-    input.addEventListener('input', () => {
+    // v106.4i: event-delegation - soegningen virker uanset hvornaar input-elementet
+    // bliver oprettet (fragment-load-timing), og hoegeres aldrig af re-renders.
+    document.addEventListener('input', (e) => {
+        if (!e.target || e.target.id !== 'orderSearchInput') return;
         clearTimeout(orderSearchTimer);
         orderSearchTimer = setTimeout(() => {
-            orderSearchQuery = input.value;
+            orderSearchQuery = e.target.value;
             Object.keys(orderSearchPages).forEach(k => orderSearchPages[k] = 1);
             rerenderTab(currentOrderTab);
         }, 300);
     });
 
-    input.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape') {
-            input.value = '';
+    document.addEventListener('keydown', (e) => {
+        // Escape i sogefeltet rydder soegningen
+        if (e.key === 'Escape' && e.target && e.target.id === 'orderSearchInput') {
+            e.target.value = '';
             orderSearchQuery = '';
             Object.keys(orderSearchPages).forEach(k => orderSearchPages[k] = 1);
             rerenderTab(currentOrderTab);
+            return;
         }
-    });
-
-    document.addEventListener('keydown', (e) => {
+        // "/"-genvej fokuserer sogefeltet naar Ordrestyring er synlig
         if (e.key !== '/') return;
         const t = e.target;
         if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable)) return;
-        if (input.offsetParent === null) return; // kun naar Ordrestyring er synlig
+        const input = document.getElementById('orderSearchInput');
+        if (!input || input.offsetParent === null) return; // kun naar Ordrestyring er synlig
         e.preventDefault();
         input.focus();
     });
@@ -1417,7 +1542,7 @@ function updateTabCountsFromQuotes(allQuotes) {
 
     // Godkendte Ordre: serverens accepted (ikke igangvaerende) PLUS overrides som
     // serveren hverken taeller som godkendt ordre eller som igangvaerende
-    const serverOrders = allQuotes.filter(q => isOrder(q) && q.order_stage !== 'in_progress');
+    const serverOrders = allQuotes.filter(q => isOrder(q) && q.order_stage !== 'in_progress' && q.order_stage !== 'completed');
     const serverInProgressIds = new Set(allQuotes.filter(q => isOrder(q) && q.order_stage === 'in_progress').map(q => q.id));
     const extraOrders = overrideRows.filter(r => !serverOrders.some(q => q.id === r.id) && !serverInProgressIds.has(r.id));
     const ordersCount = serverOrders.length + extraOrders.length;
@@ -1425,12 +1550,13 @@ function updateTabCountsFromQuotes(allQuotes) {
     setTabCount('Quotes', quotesCount);
     setTabCount('Orders', ordersCount);
     setTabCount('InProgress', allQuotes.filter(q => isOrder(q) && q.order_stage === 'in_progress').length);
+    setTabCount('Completed', allQuotes.filter(q => isOrder(q) && q.order_stage === 'completed').length);
     setTabCount('Rejected', allQuotes.filter(q => q.status === 'rejected').length);
 }
 
 // Hent ALLE fanernes antal på én gang når Ordrestyring åbnes / efter ændringer
 async function loadOrderTabCounts() {
-    ['Quotes', 'Orders', 'InProgress', 'Invoiced', 'Rejected', 'Customers'].forEach(setTabCountSkeleton);
+    ['Quotes', 'Orders', 'InProgress', 'Completed', 'Invoiced', 'Rejected', 'Customers'].forEach(setTabCountSkeleton);
     try {
         const token = sessionStorage.getItem('token');
         const headers = { 'Authorization': `Bearer ${token}` };
@@ -1468,7 +1594,7 @@ async function loadOrderTabCounts() {
     } finally {
         // v106.4: badges maa ALDRIG haenge som skeleton (graa/gul), uanset om
         // hentningen fejler, tiden går ud eller svaret er ugyldigt.
-        ['Quotes', 'Orders', 'InProgress', 'Invoiced', 'Rejected', 'Customers'].forEach(tabName => {
+        ['Quotes', 'Orders', 'InProgress', 'Completed', 'Invoiced', 'Rejected', 'Customers'].forEach(tabName => {
             const el = document.getElementById(`tabCount${tabName}`);
             if (el && el.classList.contains('skeleton')) {
                 el.classList.add('hidden');
@@ -1565,8 +1691,9 @@ function renderInProgressContent(orders) {
                 </div>
                 <div class="list-card-actions">
                     ${btn('primary', 'eye', 'Se Ordre', { onclick: `viewQuote(${order.id})` })}
-                    ${btn('secondary', 'receipt', 'Opret Faktura', { onclick: `createInvoiceFromOrder(${order.id})` })}
-                    ${btn('secondary', 'undo-2', 'Sæt tilbage til Godkendt', { onclick: `pauseOrder(${order.id})` })}
+                    ${btn('secondary', 'receipt', 'Opret Faktura', { onclick: `openInvoiceTypeModal(${order.id})` })}
+                    ${btn('secondary', 'check-check', 'Afslut Sag', { onclick: `completeOrder(${order.id})` })}
+                    ${btn('ghost', 'undo-2', 'Sæt tilbage til Godkendt', { onclick: `pauseOrder(${order.id})` })}
                 </div>
             </div>
         `;
@@ -1765,8 +1892,9 @@ function renderRejectedContent(quotes) {
 }
 
 // Move order back to quote status
-async function moveOrderBackToQuote(quoteId) {
-    if (!confirm('Rykke denne ordre tilbage til tilbud status?\n\nOrdren vil blive flyttet tilbage til Tilbud tabben.')) return;
+function moveOrderBackToQuote(quoteId) {
+    // v106.4i: sgConfirm erstatter native confirm, som browseren kan blokere i stilhed
+    sgConfirm('Tilbage til tilbud', 'Rykke denne ordre tilbage til tilbud status?\n\nOrdren vil blive flyttet tilbage til Tilbud tabben.', async () => {
     
     try {
         const token = sessionStorage.getItem('token');
@@ -1795,6 +1923,7 @@ async function moveOrderBackToQuote(quoteId) {
         console.error('Revert order error:', error);
         alert('Kunne ikke rykke ordre tilbage: ' + error.message);
     }
+    });
 }
 
 // Move rejected quote back to sent status
@@ -1881,6 +2010,9 @@ window.filterQuotesByStatus = filterQuotesByStatus;
 window.startOrder = startOrder;
 window.closeStartOrderModal = closeStartOrderModal;
 window.submitStartOrder = submitStartOrder;
+window.completeOrder = completeOrder;
+window.reopenOrder = reopenOrder;
+window.loadCompleted = loadCompleted;
 window.pauseOrder = pauseOrder;
 window.loadInProgress = loadInProgress;
 window.loadOrders = loadOrders;

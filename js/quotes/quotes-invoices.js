@@ -55,12 +55,17 @@ function renderInvoicedContent(invoices) {
         'paid': 'list-card--paid'
     };
     
-    let html = `<div class="list-section-head"><span class="title">Fakturerede ordrer og fakturaer</span><span class="badge badge--invoiced">${invoices.length}</span></div>`;
+    let html = `<div class="list-section-head"><span class="title">Faktura-kartotek</span><span class="badge badge--invoiced">${invoices.length}</span></div>`;
     invoices.forEach(invoice => {
+        // v106.4i: type-maerke - Aconto (delbetaling) / Slutfaktura
+        const typeBadge = invoice.invoice_type === 'aconto'
+            ? '<span class="badge badge--draft">Aconto</span>'
+            : '<span class="badge badge--accepted">Slutfaktura</span>';
         html += `
             <div class="list-card ${cardClass[invoice.status] || 'list-card--draft'}">
                 <div class="list-card-head">
                     <h4 class="list-card-title">Faktura ${invoice.invoice_number}</h4>
+                    ${typeBadge}
                     <span class="badge ${badgeClass[invoice.status] || 'badge--draft'}">${statusText[invoice.status] || 'Udkast'}</span>
                 </div>
                 <div class="list-card-grid">
@@ -99,9 +104,10 @@ function filterInvoicesByStatus(status) {
 }
 
 // Create invoice from order
-async function createInvoiceFromOrder(orderId) {
-    if (!confirm('Opret faktura for denne ordre?')) return;
-    
+// v106.4i: invoiceType = 'aconto' (delbetaling) | 'final' (slutfaktura, afslutter sagen)
+async function createInvoiceFromOrder(orderId, invoiceType) {
+    const type = invoiceType || 'final';
+
     try {
         const token = sessionStorage.getItem('token');
         const response = await fetch(`/api/invoices/from-order/${orderId}`, {
@@ -110,29 +116,75 @@ async function createInvoiceFromOrder(orderId) {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${token}`
             },
-            body: JSON.stringify({})
+            body: JSON.stringify({ invoice_type: type })
         });
-        
+
         if (!response.ok) {
             const error = await response.json();
             throw new Error(error.error || 'Failed to create invoice');
         }
-        
+
         const invoice = await response.json();
-        
+
         alert(`Faktura ${invoice.invoice_number} oprettet!`);
-        
-        // Refresh workspace if open, otherwise reload invoiced tab
+
+        // Refresh kartotek + fane-taellinger (slutfaktura flytter sager til Afsluttet)
+        loadInvoiced();
+        if (typeof loadInProgress === 'function') loadInProgress();
+        if (typeof loadCompleted === 'function') loadCompleted();
+        if (typeof loadOrderTabCounts === 'function') loadOrderTabCounts();
+
+        // Refresh workspace hvis det er aabent
         if (typeof currentWorkspaceOrder !== 'undefined' && currentWorkspaceOrder && currentWorkspaceOrder.id === orderId) {
             await openOrderWorkspace(orderId);
-        } else {
-            loadInvoiced();
         }
-        
+
     } catch (error) {
         console.error('Create invoice error:', error);
         alert('Kunne ikke oprette faktura: ' + error.message);
     }
+}
+
+// v106.4i: modal til valg af aconto/slutfaktura (erstatter native confirm)
+function openInvoiceTypeModal(orderId) {
+    document.getElementById('invoiceTypeModal')?.remove();
+    const overlay = document.createElement('div');
+    overlay.id = 'invoiceTypeModal';
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;z-index:10000;';
+    const boxStyle = 'background:var(--surface);border-radius:12px;padding:28px;width:min(440px,92vw);box-shadow:0 20px 60px rgba(0,0,0,.3);';
+    const optStyle = 'display:flex;gap:10px;align-items:flex-start;padding:14px;border:1px solid var(--border);border-radius:8px;margin-bottom:10px;cursor:pointer;';
+    overlay.innerHTML = `
+        <div style="${boxStyle}">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;">
+                <h3 style="margin:0;font-size:17px;">Opret faktura</h3>
+                ${btn('ghost', 'x', '', { onclick: 'closeInvoiceTypeModal()' })}
+            </div>
+            <label style="${optStyle}">
+                <input type="radio" name="invoiceTypeRadio" value="aconto" style="margin-top:3px;">
+                <span><strong>Aconto faktura</strong><br><span style="font-size:13px;color:var(--text-muted);">Delbetaling. Sagen forbliver åben, og der kan oprettes flere fakturaer.</span></span>
+            </label>
+            <label style="${optStyle}margin-bottom:18px;">
+                <input type="radio" name="invoiceTypeRadio" value="final" checked style="margin-top:3px;">
+                <span><strong>Slutfaktura</strong><br><span style="font-size:13px;color:var(--text-muted);">Afslutter sagen automatisk. Kun én slutfaktura pr. sag.</span></span>
+            </label>
+            <div style="display:flex;justify-content:flex-end;gap:8px;">
+                ${btn('secondary', 'x', 'Annuller', { onclick: 'closeInvoiceTypeModal()' })}
+                ${btn('primary', 'receipt', 'Opret Faktura', { onclick: `submitInvoiceType(${orderId})` })}
+            </div>
+        </div>`;
+    document.body.appendChild(overlay);
+    if (window.lucide) { try { lucide.createIcons(); } catch (e) { /* ignore */ } }
+}
+
+function closeInvoiceTypeModal() {
+    document.getElementById('invoiceTypeModal')?.remove();
+}
+
+function submitInvoiceType(orderId) {
+    const radio = document.querySelector('input[name="invoiceTypeRadio"]:checked');
+    const type = radio ? radio.value : 'final';
+    closeInvoiceTypeModal();
+    createInvoiceFromOrder(orderId, type);
 }
 
 // View invoice
@@ -310,34 +362,34 @@ function renderInvoicePreview(invoice) {
     if (window.lucide) { try { lucide.createIcons(); } catch (e) { /* ignore */ } }
 }
 
-// Send invoice
-async function sendInvoice(invoiceId) {
-    if (!confirm('Send denne faktura til kunden via email?')) return;
-    
-    try {
-        const token = sessionStorage.getItem('token');
-        const response = await fetch(`/api/invoices/${invoiceId}/send`, {
-            method: 'POST',
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
-        
-        if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.error || 'Failed to send invoice');
+// Send invoice (v106.4i: sgConfirm erstatter native confirm, som browseren blokerer)
+function sendInvoice(invoiceId) {
+    sgConfirm('Send faktura', 'Send denne faktura til kunden via email?', async () => {
+        try {
+            const token = sessionStorage.getItem('token');
+            const response = await fetch(`/api/invoices/${invoiceId}/send`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.error || 'Failed to send invoice');
+            }
+            
+            alert('Faktura sendt til kunde');
+            loadInvoiced();
+            
+        } catch (error) {
+            console.error('Send invoice error:', error);
+            alert('Kunne ikke sende faktura: ' + error.message);
         }
-        
-        alert('Faktura sendt til kunde');
-        loadInvoiced();
-        
-    } catch (error) {
-        console.error('Send invoice error:', error);
-        alert('Kunne ikke sende faktura: ' + error.message);
-    }
+    });
 }
 
 // Delete invoice
-async function deleteInvoice(invoiceId) {
-    if (!confirm('Er du sikker på at du vil slette denne faktura?')) return;
+function deleteInvoice(invoiceId) {
+    sgConfirm('Slet faktura', 'Er du sikker på at du vil slette denne faktura?', async () => {
     
     try {
         const token = sessionStorage.getItem('token');
@@ -358,11 +410,12 @@ async function deleteInvoice(invoiceId) {
         console.error('Delete invoice error:', error);
         alert('Kunne ikke slette faktura: ' + error.message);
     }
+    });
 }
 
 // Delete invoice from preview (redirects back to list)
-async function deleteInvoiceFromPreview(invoiceId) {
-    if (!confirm('Er du sikker på at du vil slette denne faktura?')) return;
+function deleteInvoiceFromPreview(invoiceId) {
+    sgConfirm('Slet faktura', 'Er du sikker på at du vil slette denne faktura?', async () => {
     
     try {
         const token = sessionStorage.getItem('token');
@@ -384,9 +437,20 @@ async function deleteInvoiceFromPreview(invoiceId) {
         console.error('Delete invoice error:', error);
         alert('Kunne ikke slette faktura: ' + error.message);
     }
+    });
 }
 
 // Export functions
+window.loadInvoiced = loadInvoiced;
+window.filterInvoicesByStatus = filterInvoicesByStatus;
+window.createInvoiceFromOrder = createInvoiceFromOrder;
+window.openInvoiceTypeModal = openInvoiceTypeModal;
+window.closeInvoiceTypeModal = closeInvoiceTypeModal;
+window.submitInvoiceType = submitInvoiceType;
+window.viewInvoice = viewInvoice;
+window.sendInvoice = sendInvoice;
+window.deleteInvoice = deleteInvoice;
+window.deleteInvoiceFromPreview = deleteInvoiceFromPreview;
 window.loadInvoiced = loadInvoiced;
 window.filterInvoicesByStatus = filterInvoicesByStatus;
 window.createInvoiceFromOrder = createInvoiceFromOrder;

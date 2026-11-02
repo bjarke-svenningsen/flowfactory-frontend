@@ -650,7 +650,7 @@ function renderInvoiceButton() {
             </button>`;
     } else {
         return `
-            <button onclick="createInvoiceFromOrder(${currentWorkspaceOrder.id})" class="quick-action-btn accent-green">
+            <button onclick="openInvoiceTypeModal(${currentWorkspaceOrder.id})" class="quick-action-btn accent-green">
                 <i data-lucide="receipt-text"></i> Opret Faktura
             </button>`;
     }
@@ -1497,8 +1497,9 @@ async function downloadDocument(documentId, filename) {
 }
 
 // Delete document
-async function deleteDocument(documentId) {
-    if (!confirm('Slet dette dokument?')) return;
+function deleteDocument(documentId) {
+    // v106.4i: sgConfirm erstatter native confirm, som browseren kan blokere i stilhed
+    sgConfirm('Slet dokument', 'Slet dette dokument?', async () => {
     
     try {
         const token = sessionStorage.getItem('token');
@@ -1527,6 +1528,7 @@ async function deleteDocument(documentId) {
         console.error('Delete error:', error);
         alert('Kunne ikke slette dokument: ' + error.message);
     }
+    });
 }
 
 // Render "Timer & Materialer" tab - shows labor and material lines on the order

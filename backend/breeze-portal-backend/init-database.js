@@ -236,6 +236,7 @@ export async function initializeDatabase() {
       total REAL DEFAULT 0,
       notes TEXT,
       status TEXT DEFAULT 'draft',
+      invoice_type TEXT DEFAULT 'final',
       created_by INTEGER NOT NULL,
       created_at ${db._isProduction ? 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP' : "TEXT DEFAULT (datetime('now'))"},
       sent_at ${db._isProduction ? 'TIMESTAMP' : 'TEXT'},

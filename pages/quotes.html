@@ -14,7 +14,8 @@
     <button id="tabQuotes" onclick="switchOrderTab('quotes')" class="tab">Tilbud <span class="tab-count" id="tabCountQuotes"></span></button>
     <button id="tabOrders" onclick="switchOrderTab('orders')" class="tab">Godkendte Ordre <span class="tab-count" id="tabCountOrders"></span></button>
     <button id="tabInProgress" onclick="switchOrderTab('in_progress')" class="tab">Igangværende <span class="tab-count" id="tabCountInProgress"></span></button>
-    <button id="tabInvoiced" onclick="switchOrderTab('invoiced')" class="tab">Faktureret <span class="tab-count" id="tabCountInvoiced"></span></button>
+    <button id="tabCompleted" onclick="switchOrderTab('completed')" class="tab">Afsluttet <span class="tab-count" id="tabCountCompleted"></span></button>
+    <button id="tabInvoiced" onclick="switchOrderTab('invoiced')" class="tab">Fakturering <span class="tab-count" id="tabCountInvoiced"></span></button>
     <button id="tabRejected" onclick="switchOrderTab('rejected')" class="tab">Afvist <span class="tab-count" id="tabCountRejected"></span></button>
     <button id="tabCustomers" onclick="switchOrderTab('customers')" class="tab">Kunder <span class="tab-count" id="tabCountCustomers"></span></button>
 </div>
@@ -54,7 +55,12 @@
     <div id="inProgressContainer"></div>
 </div>
 
-<!-- TAB 4: FAKTURERET -->
+<!-- TAB 3b: AFSLUTTET (v106.4i) -->
+<div id="orderTabCompleted" class="order-tab-content" style="display: none;">
+    <div id="completedContainer"></div>
+</div>
+
+<!-- TAB 4: FAKTURERING (kartotek over alle fakturaer, v106.4i) -->
 <div id="orderTabInvoiced" class="order-tab-content" style="display: none;">
     <div id="invoicingContainer"></div>
 </div>

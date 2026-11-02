@@ -136,6 +136,18 @@ async function ensureStorageColumns() {
 }
 ensureStorageColumns().catch(err => console.error('Fejl ved tilføjelse af storage-kolonner:', err));
 
+// v106.4i: invoices.invoice_type ('aconto'|'final') - idempotent migration
+// aconto = delbetaling (sagen forbliver aaben), final = slutfaktura (afslutter sagen)
+async function ensureInvoiceTypeColumn() {
+  let hasType = true;
+  try { await db.get('SELECT invoice_type FROM invoices LIMIT 1'); } catch { hasType = false; }
+  if (!hasType) {
+    await db.run("ALTER TABLE invoices ADD COLUMN invoice_type TEXT DEFAULT 'final'");
+    console.log('   Kolonne invoice_type tilføjet til invoices');
+  }
+}
+ensureInvoiceTypeColumn().catch(err => console.error('Fejl ved tilføjelse af invoice_type:', err));
+
 // MIME-fallback: kendte filtyper browsers ellers fejlfortolker
 const MIME_FALLBACKS = { jfif: 'image/jpeg', pjpeg: 'image/jpeg', pjp: 'image/jpeg' };
 // JPEG-varianter der ofte gemmes med en forkert/generisk mime_type - endelsen vinder altid
@@ -2988,6 +3000,32 @@ app.post('/api/quotes/:id/send', auth, async (req, res) => {
   }
 });
 
+// v106.4i: Afslut sag (igangværende -> afsluttet)
+app.post('/api/quotes/:id/complete', auth, async (req, res) => {
+  const quoteId = Number(req.params.id);
+  const quote = await db.get('SELECT * FROM quotes WHERE id = ?', [quoteId]);
+  if (!quote) {
+    return res.status(404).json({ error: 'Quote not found' });
+  }
+  await db.run("UPDATE quotes SET order_stage = 'completed' WHERE id = ?", [quoteId]);
+  const full = await getFullOrderNumber(quote);
+  await logOrderEvent(quoteId, 'order_completed', `Ordre ${full} afsluttet`, req.user.id);
+  res.json({ success: true });
+});
+
+// v106.4i: Genåbn sag (afsluttet -> igangværende)
+app.post('/api/quotes/:id/reopen', auth, async (req, res) => {
+  const quoteId = Number(req.params.id);
+  const quote = await db.get('SELECT * FROM quotes WHERE id = ?', [quoteId]);
+  if (!quote) {
+    return res.status(404).json({ error: 'Quote not found' });
+  }
+  await db.run("UPDATE quotes SET order_stage = 'in_progress' WHERE id = ?", [quoteId]);
+  const full = await getFullOrderNumber(quote);
+  await logOrderEvent(quoteId, 'order_reopened', `Ordre ${full} genåbnet`, req.user.id);
+  res.json({ success: true });
+});
+
 // Accept quote (convert to order)
 app.post('/api/quotes/:id/accept', auth, async (req, res) => {
   const quoteId = Number(req.params.id);
@@ -3246,7 +3284,7 @@ app.post('/api/quotes/:id/extra-work', auth, async (req, res) => {
 // Get all invoices
 app.get('/api/invoices', auth, async (req, res) => {
   const invoices = await db.all(`
-    SELECT i.*, q.order_number, q.title as order_title, 
+    SELECT i.*, q.order_number, q.title as order_title, q.order_stage,
            c.company_name as customer_name, u.name as created_by_name
     FROM invoices i
     JOIN quotes q ON i.order_id = q.id
@@ -3289,6 +3327,8 @@ app.get('/api/invoices/:id', auth, async (req, res) => {
 app.post('/api/invoices/from-order/:orderId', auth, async (req, res) => {
   const orderId = Number(req.params.orderId);
   const { due_date, payment_terms, notes } = req.body;
+  // v106.4i: 'aconto' (delbetaling, sagen forbliver aaben) eller 'final' (slutfaktura)
+  const invoice_type = (req.body && req.body.invoice_type === 'aconto') ? 'aconto' : 'final';
   
   const order = await db.get('SELECT * FROM quotes WHERE id = ?', [orderId]);
   if (!order) {
@@ -3297,15 +3337,19 @@ app.post('/api/invoices/from-order/:orderId', auth, async (req, res) => {
   if (order.status !== 'accepted') {
     return res.status(400).json({ error: 'Order must be accepted before creating invoice' });
   }
-  if (order.order_stage !== 'in_progress') {
-    return res.status(400).json({ error: 'Ordren skal være startet (igangværende), før der kan oprettes faktura' });
+  // v106.4i: faktura kan oprettes paa baade igangvaerende og afsluttede sager
+  if (order.order_stage !== 'in_progress' && order.order_stage !== 'completed') {
+    return res.status(400).json({ error: 'Ordren skal være startet (igangværende eller afsluttet), før der kan oprettes faktura' });
   }
   
-  // Check if order already has an invoice (prevent duplicates)
-  const existingInvoice = await db.get('SELECT invoice_number FROM invoices WHERE order_id = ?', [orderId]);
-  if (existingInvoice) {
-    return res.status(400).json({ 
-      error: `Order already has invoice ${existingInvoice.invoice_number}. Delete the existing invoice first if you need to create a new one.` 
+  // v106.4i: kun én slutfaktura pr. sag - aconto-fakturaer kan oprettes flere af
+  const finalInvoice = await db.get(
+    "SELECT invoice_number FROM invoices WHERE order_id = ? AND (invoice_type = 'final' OR invoice_type IS NULL)",
+    [orderId]
+  );
+  if (invoice_type === 'final' && finalInvoice) {
+    return res.status(400).json({
+      error: `Sagen har allerede en slutfaktura (${finalInvoice.invoice_number}). Slet den først hvis der skal oprettes en ny.`
     });
   }
   
@@ -3322,11 +3366,17 @@ app.post('/api/invoices/from-order/:orderId', auth, async (req, res) => {
   
   // Create invoice
   const info = await db.run(`
-    INSERT INTO invoices (invoice_number, order_id, full_order_number, due_date, payment_terms, subtotal, vat_rate, vat_amount, total, notes, created_by)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `, [invoice_number, orderId, full_order_number, finalDueDate, payment_terms || 'Netto 14 dage', order.subtotal, order.vat_rate, order.vat_amount, order.total, notes || null, req.user.id]);
+    INSERT INTO invoices (invoice_number, order_id, full_order_number, due_date, payment_terms, subtotal, vat_rate, vat_amount, total, notes, created_by, invoice_type)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `, [invoice_number, orderId, full_order_number, finalDueDate, payment_terms || 'Netto 14 dage', order.subtotal, order.vat_rate, order.vat_amount, order.total, notes || null, req.user.id, invoice_type]);
   
   const invoiceId = info.lastInsertRowid;
+  
+  // v106.4i: slutfaktura afslutter sagen automatisk; aconto lader sagen forblive aaben
+  if (invoice_type === 'final') {
+    await db.run("UPDATE quotes SET order_stage = 'completed' WHERE id = ?", [orderId]);
+    await logOrderEvent(orderId, 'order_completed', `Ordre ${full_order_number} afsluttet (slutfaktura ${invoice_number})`, req.user.id);
+  }
   
   // Copy lines from order
   // v92: Forbrugssager - fakturalinjer bygges automatisk fra registreringer (order_materials),
