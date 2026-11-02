@@ -475,10 +475,15 @@ async function revenueForOrder(order) {
   return liveOrderSubtotal(order.id);
 }
 
-// v106.4s: sandheden er registreringerne - sum af salgsvaerdi (ekskl. moms)
+// v106.4s: sandheden er registreringerne - sum af salgsvaerdi (ekskl. moms).
+// Fallback: ordrer uden registreringer (fx nye ekstraarbejder) bruger deres
+// tilbuds-subtotal (quotes.subtotal, EKSKL. moms - aldrig total som er inkl.).
 async function liveOrderSubtotal(orderId) {
   const row = await db.get('SELECT COALESCE(SUM(total_sale), 0) as t FROM order_materials WHERE order_id = ?', [orderId]);
-  return row?.t || 0;
+  const live = row?.t || 0;
+  if (live > 0) return live;
+  const q = await db.get('SELECT COALESCE(subtotal, 0) as s FROM quotes WHERE id = ?', [orderId]);
+  return q?.s || 0;
 }
 
 const ECON_FIELDS = ['subtotal', 'vat_rate', 'vat_amount', 'total', 'revenue', 'revenue_main', 'revenue_extra', 'expenses', 'expenses_main', 'expenses_extra', 'profit', 'profit_main', 'profit_extra', 'profit_margin'];
@@ -5139,8 +5144,10 @@ app.get('/api/orders/:orderId/workspace', auth, async (req, res) => {
   const mainOrderExpenses = expenses.reduce((sum, exp) => sum + exp.amount, 0) + mainLaborCost;
   const extraWorkExpensesTotal = extraWorkExpenses.reduce((sum, exp) => sum + exp.amount, 0) + extraLaborCost;
   
-  // Calculate split profit
-  const mainOrderRevenue = order.total || 0;
+  // v106.4s: hovedordre-omsaetning er LIVE (registreringer, ekskl. moms) -
+  // IKKE det frosne order.total (inkl. moms, foraeldet). Ekstraarbejde bliver
+  // dermed summen af ekstraordrernes egne vaerdier (via totalRevenue).
+  const mainOrderRevenue = await revenueForOrder(order);
   const extraWorkRevenue = totalRevenue - mainOrderRevenue;
   const profitMain = mainOrderRevenue - mainOrderExpenses;
   const profitExtra = extraWorkRevenue - extraWorkExpensesTotal;
