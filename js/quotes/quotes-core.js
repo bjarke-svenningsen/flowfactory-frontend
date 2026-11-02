@@ -2033,3 +2033,5 @@ window.rejectQuote = rejectQuote;
 window.moveOrderBackToQuote = moveOrderBackToQuote;
 window.moveRejectedBackToQuote = moveRejectedBackToQuote;
 window.loadQuoteContactPersons = loadQuoteContactPersons;
+// v106.4q: eksplicit export - viewOriginalQuote i quotes-workspace.js bruger den som fallback
+window.renderQuotePreview = renderQuotePreview;

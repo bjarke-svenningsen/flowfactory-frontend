@@ -685,8 +685,10 @@ function renderWorkspaceInvoicesSection() {
     const invs = workspaceInvoices || [];
     const fmt = v => new Intl.NumberFormat('da-DK', { style: 'currency', currency: 'DKK' }).format(v || 0);
     // v106.4k: udkast taeller med med det samme
-    const invoiced = invs.filter(i => i.invoice_type !== 'creditnote').reduce((s, i) => s + (Number(i.total) || 0), 0);
-    const credited = invs.filter(i => i.invoice_type === 'creditnote').reduce((s, i) => s + (Number(i.total) || 0), 0);
+    // v106.4q: summer paa subtotal (ekskl. moms) - order.total er ogsaa ekskl. moms,
+    // saa Rest bliver ikke negativ pga. moms (Total-kolonnen i tabellen er inkl. moms)
+    const invoiced = invs.filter(i => i.invoice_type !== 'creditnote').reduce((s, i) => s + (Number(i.subtotal) || 0), 0);
+    const credited = invs.filter(i => i.invoice_type === 'creditnote').reduce((s, i) => s + (Number(i.subtotal) || 0), 0);
     const rest = (Number(currentWorkspaceOrder.total) || 0) - invoiced - credited;
     const typeLabel = i => i.invoice_type === 'creditnote' ? 'Kreditnota' : (i.invoice_type === 'aconto' ? 'Aconto' : 'Slutfaktura');
     const statusLabel = i => i.status === 'draft' ? 'Ikke sendt' : (i.status === 'sent' ? 'Sendt' : 'Betalt');
@@ -705,11 +707,11 @@ function renderWorkspaceInvoicesSection() {
 
     sec.innerHTML = `
         <div style="background:var(--surface);padding:30px;border-radius:10px;border:2px solid var(--border);margin-top:30px;">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:15px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:18px;flex-wrap:wrap;">
                 <h3 style="margin:0;display:flex;align-items:center;gap:8px;"><i data-lucide="receipt"></i> Fakturaer &amp; Kreditnotaer</h3>
-                <div style="display:flex;gap:8px;">
-                    <button onclick="openInvoiceTypeModal(${currentWorkspaceOrder.id})" style="background:#E7F5EC;border:1px solid #CBE7D5;color:var(--color-green);border-radius:8px;padding:8px 14px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:6px;"><i data-lucide="plus"></i> Opret Faktura</button>
-                    <button onclick="openCreditNotePicker()" style="background:#FDECEC;border:1px solid #F2C6C0;color:#C0392B;border-radius:8px;padding:8px 14px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:6px;"><i data-lucide="undo-2"></i> Opret Kreditnota</button>
+                <div style="display:flex;gap:10px;">
+                    <button onclick="openInvoiceTypeModal(${currentWorkspaceOrder.id})" style="background:#E7F5EC;border:1px solid #CBE7D5;color:var(--color-green);border-radius:8px;padding:5px 12px;font-size:13px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:6px;"><i data-lucide="plus" style="width:15px;height:15px;"></i> Opret Faktura</button>
+                    <button onclick="openCreditNotePicker()" style="background:#FDECEC;border:1px solid #F2C6C0;color:#C0392B;border-radius:8px;padding:5px 12px;font-size:13px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:6px;"><i data-lucide="undo-2" style="width:15px;height:15px;"></i> Opret Kreditnota</button>
                 </div>
             </div>
             <div style="font-size:13px;color:var(--text);margin-bottom:15px;">
@@ -724,7 +726,7 @@ function renderWorkspaceInvoicesSection() {
                     <th style="padding:8px 6px;text-align:left;font-size:12px;">Type</th>
                     <th style="padding:8px 6px;text-align:left;font-size:12px;">Status</th>
                     <th style="padding:8px 6px;text-align:left;font-size:12px;">Dato</th>
-                    <th style="padding:8px 6px;text-align:right;font-size:12px;">Total</th>
+                    <th style="padding:8px 6px;text-align:right;font-size:12px;">Total (inkl. moms)</th>
                     <th></th>
                 </tr></thead>
                 <tbody>${rows || '<tr><td colspan="6" style="padding:12px;font-size:12px;color:var(--text-muted);">Ingen fakturaer endnu</td></tr>'}</tbody>
@@ -2155,7 +2157,7 @@ async function createExtraWork(parentOrderId) {
                     <button type="button" onclick="closeExtraWorkModal()" class="btn btn-secondary">
                         Annuller
                     </button>
-                    <button type="submit" class="btn btn-primary">Opret Ekstraarbejde</button>
+                    <button type="button" class="btn btn-primary" onclick="saveExtraWorkSafe(${parentOrderId})">Opret Ekstraarbejde</button>
                 </div>
             </form>
         </div>
@@ -2263,6 +2265,16 @@ function calculateExtraWorkTotals() {
     document.getElementById('extraWorkSubtotal').textContent = formatCurrency(subtotal);
     document.getElementById('extraWorkVat').textContent = formatCurrency(vat);
     document.getElementById('extraWorkTotal').textContent = formatCurrency(total);
+}
+
+// v106.4q: direkte knap-kald (undgaar form-submit der kan blokeres) + synlig fejlhaandtering
+function saveExtraWorkSafe(parentOrderId) {
+    try {
+        saveExtraWork(parentOrderId);
+    } catch (e) {
+        console.error('saveExtraWork fejlede:', e);
+        alert('Kunne ikke oprette ekstraarbejde: ' + e.message);
+    }
 }
 
 async function saveExtraWork(parentOrderId) {
@@ -2626,10 +2638,19 @@ async function viewOriginalQuote(orderId) {
         currentQuote = quote;
         
         // Call the renderQuotePreview function from quotes-core.js
-        if (typeof renderQuotePreview === 'function') {
-            renderQuotePreview();
+        // v106.4q: robust - brug window-referencen hvis den globale binding ikke er tilgaengelig
+        const renderFn = (typeof renderQuotePreview === 'function')
+            ? renderQuotePreview
+            : (typeof window.renderQuotePreview === 'function' ? window.renderQuotePreview : null);
+        if (renderFn) {
+            try {
+                renderFn();
+            } catch (renderError) {
+                console.error('renderQuotePreview fejlede:', renderError);
+                alert('Kunne ikke vise ordre: ' + renderError.message);
+            }
         } else {
-            alert('Kunne ikke vise tilbud. Prøv at gå til Tilbud siden i stedet.');
+            alert('Kunne ikke vise ordre (render-funktion mangler). Genindlaes siden (Ctrl+Shift+R) og proev igen.');
         }
         
     } catch (error) {
