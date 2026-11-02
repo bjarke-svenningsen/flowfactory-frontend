@@ -486,6 +486,47 @@ async function liveOrderSubtotal(orderId) {
   return q?.s || 0;
 }
 
+// v106.5: betalingsbetingelser er FRITEKST - systemet laeser dem og beregner forfaldsdato.
+// Regler (fakturadato = basis):
+//  1) Eksplicit dato i teksten (dd.mm.yyyy / dd-mm-yyyy / yyyy-mm-dd) -> bruges direkte
+//  2) "loebende maaned"/"l.m." -> basis = fakturamaanedens udgang, + evt. antal dage fra teksten
+//  3) Foerste tal foelgt af "dag/dage/dags" -> dato + X dage
+//  4) "kontant"/"straks"/"ved levering"/"umiddelbart" (eller ingen dag/tal) -> samme dag
+//  5) Tom tekst -> "Netto 14 dage" (+14) som fallback
+function parsePaymentTerms(text, invoiceDate) {
+  const base = invoiceDate ? new Date(invoiceDate) : new Date();
+  // v106.5: formater i LOKAL tid - toISOString ville skaeve datoer 1 dag bak i DK-tid
+  const pad = n => String(n).padStart(2, '0');
+  const iso = d => d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+  const str = String(text || '').trim();
+  if (!str) { const d = new Date(base); d.setDate(d.getDate() + 14); return iso(d); }
+
+  // 1) Eksplicit dato (men ikke aarstal alene)
+  let m = str.match(/(\d{4})-(\d{2})-(\d{2})/);
+  if (m) { const d = new Date(+m[1], +m[2] - 1, +m[3]); if (!isNaN(d)) return iso(d); }
+  m = str.match(/(\d{1,2})[.\-\/](\d{1,2})[.\-\/](\d{2,4})/);
+  if (m) {
+    let y = +m[3]; if (y < 100) y += 2000;
+    const d = new Date(y, +m[2] - 1, +m[1]); if (!isNaN(d)) return iso(d);
+  }
+
+  // 2) Loebende maaned: basis = maanedens udgang
+  if (/\bl[øo]bende\s+m[åa]ned|\bl\.?\s?m\.\b/i.test(str)) {
+    const monthEnd = new Date(base.getFullYear(), base.getMonth() + 1, 0);
+    const dmatch = str.match(/(\d+)\s*(?:dage|dag|dags)/i);
+    const days = dmatch ? +dmatch[1] : 0;
+    monthEnd.setDate(monthEnd.getDate() + days);
+    return iso(monthEnd);
+  }
+
+  // 3) Tal + "dag/dage" ("Netto 14 dage", "5 dage")
+  m = str.match(/(\d+)\s*(?:dage|dag|dags)/i);
+  if (m) { const d = new Date(base); d.setDate(d.getDate() + (+m[1])); return iso(d); }
+
+  // 4) Kontant/straks/ingen tal -> samme dag
+  return iso(base);
+}
+
 const ECON_FIELDS = ['subtotal', 'vat_rate', 'vat_amount', 'total', 'revenue', 'revenue_main', 'revenue_extra', 'expenses', 'expenses_main', 'expenses_extra', 'profit', 'profit_main', 'profit_extra', 'profit_margin'];
 const ECON_LINE_FIELDS = ['unit_price', 'discount_percent', 'discount_amount', 'line_total'];
 
@@ -3482,12 +3523,12 @@ app.post('/api/invoices/from-order/:orderId', auth, async (req, res) => {
   const invoice_number = await generateInvoiceNumber();
   const full_order_number = await getFullOrderNumber(order);
   
-  // Calculate due date (14 days from now if not provided)
+  // v106.5: forfaldsdato laeses ud fra betalingsbetingelserne (fritekst).
+  // Prioritet: eksplicit due_date fra frontend > ordrens terms > 'Netto 14 dage'.
+  const finalPaymentTerms = payment_terms || order.terms || 'Netto 14 dage';
   let finalDueDate = due_date;
   if (!finalDueDate) {
-    const dueDate = new Date();
-    dueDate.setDate(dueDate.getDate() + 14);
-    finalDueDate = dueDate.toISOString().split('T')[0];
+    finalDueDate = parsePaymentTerms(finalPaymentTerms, new Date());
   }
   
   // Create invoice
@@ -3503,7 +3544,7 @@ app.post('/api/invoices/from-order/:orderId', auth, async (req, res) => {
   const info = await db.run(`
     INSERT INTO invoices (invoice_number, order_id, full_order_number, due_date, payment_terms, subtotal, vat_rate, vat_amount, total, notes, created_by, invoice_type)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `, [invoice_number, orderId, full_order_number, finalDueDate, payment_terms || 'Netto 14 dage', invSubtotal, order.vat_rate || 25, invVat, invTotal, notes || null, req.user.id, invoice_type]);
+  `, [invoice_number, orderId, full_order_number, finalDueDate, finalPaymentTerms, invSubtotal, order.vat_rate || 25, invVat, invTotal, notes || null, req.user.id, invoice_type]);
   
   const invoiceId = info.lastInsertRowid;
   
@@ -3723,15 +3764,14 @@ app.post('/api/invoices/:id/creditnote', auth, async (req, res) => {
   }
 
   const invoice_number = await generateInvoiceNumber();
-  let finalDueDate;
-  const dueDate = new Date();
-  dueDate.setDate(dueDate.getDate() + 14);
-  finalDueDate = dueDate.toISOString().split('T')[0];
+  // v106.5: kreditnota arver ordrens betalingsbetingelser - forfald laeses af teksten
+  const creditTerms = orig.payment_terms || 'Netto 14 dage';
+  const finalDueDate = parsePaymentTerms(creditTerms, new Date());
 
   const info = await db.run(`
     INSERT INTO invoices (invoice_number, order_id, full_order_number, due_date, payment_terms, subtotal, vat_rate, vat_amount, total, notes, status, invoice_type, credit_of, created_by)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft', 'creditnote', ?, ?)
-  `, [invoice_number, orig.order_id, orig.full_order_number, finalDueDate, orig.payment_terms || 'Netto 14 dage',
+  `, [invoice_number, orig.order_id, orig.full_order_number, finalDueDate, creditTerms,
       orig.subtotal, orig.vat_rate || 25, orig.vat_amount, orig.total,
       `Kreditnota for faktura ${orig.invoice_number}`, orig.id, req.user.id]);
   const creditId = info.lastInsertRowid;

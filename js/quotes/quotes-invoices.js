@@ -110,7 +110,7 @@ function filterInvoicesByStatus(status) {
 
 // Create invoice from order
 // v106.4i: invoiceType = 'aconto' (delbetaling) | 'final' (slutfaktura, afslutter sagen)
-async function createInvoiceFromOrder(orderId, invoiceType, amount, percent, description) {
+async function createInvoiceFromOrder(orderId, invoiceType, amount, percent, description, paymentTerms) {
     const type = invoiceType || 'final';
 
     try {
@@ -121,7 +121,7 @@ async function createInvoiceFromOrder(orderId, invoiceType, amount, percent, des
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${token}`
             },
-            body: JSON.stringify({ invoice_type: type, amount: amount || undefined, percent: percent || undefined, description: description || undefined })
+            body: JSON.stringify({ invoice_type: type, amount: amount || undefined, percent: percent || undefined, description: description || undefined, payment_terms: paymentTerms || undefined })
         });
 
         if (!response.ok) {
@@ -180,7 +180,7 @@ async function openInvoiceTypeModal(orderId) {
         }
     } catch (e) { /* falder tilbage til 0 */ }
 
-    invoiceTypeModalData = { orderId, subtotal, acontoInvoiced };
+    invoiceTypeModalData = { orderId, subtotal, acontoInvoiced, terms: (data.order && data.order.terms) || 'Netto 14 dage' };
     renderInvoiceTypeModalContent('aconto');
     if (window.lucide) { try { lucide.createIcons(); } catch (e) { /* ignore */ } }
 }
@@ -235,12 +235,45 @@ function renderInvoiceTypeModalContent(selectedType) {
                 <input type="radio" name="invoiceTypeRadio" value="final" ${isFinal ? 'checked' : ''} onchange="renderInvoiceTypeModalContent('final')" style="margin-top:3px;">
                 <span><strong>Slutfaktura</strong><br><span style="font-size:13px;color:var(--text-muted);">Hele ordren minus aconto. Afslutter sagen automatisk. Kun &eacute;n slutfaktura pr. sag.</span></span>
             </label>
+            <div style="margin-bottom:14px;">
+                <label style="font-size:12px;color:var(--text-muted);">Betalingsbetingelser (fritekst - systemet laeser forfaldsdatoen)</label>
+                <textarea id="invModalTerms" rows="2" style="${inpStyle}" oninput="invoiceModalTermsPreview()">${d.terms || 'Netto 14 dage'}</textarea>
+                <div id="invModalDuePreview" style="font-size:12px;color:var(--text-muted);margin-top:4px;"></div>
+            </div>
             <div style="display:flex;justify-content:flex-end;gap:8px;">
                 ${btn('secondary', 'x', 'Annuller', { onclick: 'closeInvoiceTypeModal()' })}
                 ${btn('primary', 'receipt', 'Opret Faktura', { onclick: 'submitInvoiceType(' + d.orderId + ')' })}
             </div>
         </div>`;
     if (!isFinal) invoiceModalCalc();
+    invoiceModalTermsPreview();
+}
+
+// v106.5: live forfalds-preview - samme regler som backendens parsePaymentTerms
+function parseTermsDuePreview(text) {
+    const base = new Date();
+    const fmtD = d => d.toLocaleDateString('da-DK');
+    const str = String(text || '').trim();
+    if (!str) { const d = new Date(base); d.setDate(d.getDate() + 14); return fmtD(d); }
+    let m = str.match(/(\d{4})-(\d{2})-(\d{2})/);
+    if (m) return fmtD(new Date(+m[1], +m[2] - 1, +m[3]));
+    m = str.match(/(\d{1,2})[.\-\/](\d{1,2})[.\-\/](\d{2,4})/);
+    if (m) { let y = +m[3]; if (y < 100) y += 2000; return fmtD(new Date(y, +m[2] - 1, +m[1])); }
+    if (/\bl[øo]bende\s+m[åa]ned|\bl\.?\s?m\.\b/i.test(str)) {
+        const monthEnd = new Date(base.getFullYear(), base.getMonth() + 1, 0);
+        const dmatch = str.match(/(\d+)\s*(?:dage|dag|dags)/i);
+        monthEnd.setDate(monthEnd.getDate() + (dmatch ? +dmatch[1] : 0));
+        return fmtD(monthEnd);
+    }
+    m = str.match(/(\d+)\s*(?:dage|dag|dags)/i);
+    if (m) { const d = new Date(base); d.setDate(d.getDate() + (+m[1])); return fmtD(d); }
+    return fmtD(base);
+}
+function invoiceModalTermsPreview() {
+    const el = document.getElementById('invModalTerms');
+    const pv = document.getElementById('invModalDuePreview');
+    if (!el || !pv) return;
+    pv.innerHTML = 'Forfaldsdato: <strong style="color:var(--text);">' + parseTermsDuePreview(el.value) + '</strong>';
 }
 
 function invoiceModalCalc(fromField) {
@@ -312,12 +345,14 @@ function submitInvoiceType(orderId) {
             return;
         }
         const desc = (document.getElementById('invModalDesc')?.value || '').trim();
+        const terms = (document.getElementById('invModalTerms')?.value || '').trim();
         closeInvoiceTypeModal();
-        createInvoiceFromOrder(orderId, 'aconto', amt, undefined, desc);
+        createInvoiceFromOrder(orderId, 'aconto', amt, undefined, desc, terms);
         return;
     }
+    const terms2 = (document.getElementById('invModalTerms')?.value || '').trim();
     closeInvoiceTypeModal();
-    createInvoiceFromOrder(orderId, 'final');
+    createInvoiceFromOrder(orderId, 'final', undefined, undefined, undefined, terms2);
 }
 // View invoice
 async function viewInvoice(invoiceId) {
