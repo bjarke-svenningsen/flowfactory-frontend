@@ -923,10 +923,39 @@ function downloadQuotePDF(quoteId) {
     window.print();
 }
 
-// Accept quote (convert to order)
-async function acceptQuote(quoteId) {
-    if (!confirm('Acceptér dette tilbud som ordre?')) return;
+// v106.4e: indbygget bekræftelses-dialog (erstattes for confirm(), som browseren
+// kan blokere i stilhed -> "der sker bare ingenting" ved klik paa Godkend/Afvis)
+function sgConfirm(title, message, onYes) {
+    const existing = document.getElementById('sgConfirmModal');
+    if (existing) existing.remove();
+    const modal = document.createElement('div');
+    modal.id = 'sgConfirmModal';
+    modal.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.55); z-index: 10002; display: flex; align-items: center; justify-content: center;';
+    modal.innerHTML = `
+        <div style="background: var(--surface, #fff); border-radius: 12px; padding: 28px; max-width: 420px; width: 90%; box-shadow: 0 20px 60px rgba(0,0,0,0.3);">
+            <h3 style="margin: 0 0 10px 0; font-size: 17px; color: var(--text, #111);">${title}</h3>
+            <p style="margin: 0 0 22px 0; font-size: 13.5px; line-height: 1.55; color: var(--text-muted, #555); white-space: pre-wrap;">${message}</p>
+            <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                <button id="sgConfirmNo" class="btn btn-secondary" style="min-height: 40px;">Annullér</button>
+                <button id="sgConfirmYes" class="btn btn-primary" style="min-height: 40px;">Bekræft</button>
+            </div>
+        </div>`;
+    document.body.appendChild(modal);
+    const close = () => modal.remove();
+    modal.addEventListener('click', (e) => { if (e.target === modal) close(); });
+    document.getElementById('sgConfirmNo').onclick = close;
+    document.getElementById('sgConfirmYes').onclick = () => { close(); onYes(); };
+}
 
+// Accept quote (convert to order)
+function acceptQuote(quoteId) {
+    // v106.4e: confirm() kan vaere blokeret af browseren (returnerer false i
+    // stilhed) - brug indbygget dialog, og log altid at knappen blev aktivert.
+    console.log('acceptQuote kaldt for tilbud', quoteId);
+    sgConfirm('Acceptér tilbud', 'Acceptér dette tilbud som ordre?', () => doAcceptQuote(quoteId));
+}
+
+async function doAcceptQuote(quoteId) {
     try {
         const token = sessionStorage.getItem('token');
         const response = await fetch(`/api/quotes/${quoteId}/accept`, {
@@ -983,9 +1012,12 @@ async function acceptQuote(quoteId) {
 }
 
 // Reject quote
-async function rejectQuote(quoteId) {
-    if (!confirm('Afvis dette tilbud?\n\nTilbuddet vil blive flyttet til "Afvist" tabben.')) return;
-    
+function rejectQuote(quoteId) {
+    console.log('rejectQuote kaldt for tilbud', quoteId);
+    sgConfirm('Afvis tilbud', 'Afvis dette tilbud?\n\nTilbuddet vil blive flyttet til "Afvist"-tabben.', () => doRejectQuote(quoteId));
+}
+
+async function doRejectQuote(quoteId) {
     try {
         const token = sessionStorage.getItem('token');
         const response = await fetch(`/api/quotes/${quoteId}/reject`, {
