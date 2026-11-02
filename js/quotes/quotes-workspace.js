@@ -577,14 +577,14 @@ function renderWorkspaceOverview(container) {
                         <button onclick="switchWorkspaceTab('notes')" class="quick-action-btn">
                             <i data-lucide="sticky-note"></i> Tilføj Note
                         </button>
-                        ${renderInvoiceButton()}
                         <button onclick="createExtraWork(${currentWorkspaceOrder.id})" class="quick-action-btn accent-orange">
+
                             <i data-lucide="hammer"></i> Ekstraarbejde
                         </button>
                     </div>
                 </div>
                 `}
-                <div id="workspaceInvoicesSection" style="display:none;"></div>
+                <div id="workspaceInvoicesSection"></div>
             </div>
         </div>
         
@@ -641,6 +641,9 @@ function renderWorkspaceOverview(container) {
         ` : ''}
     `;
     
+    // v106.4k: faktura-sektionen er altid synlig - render indholdet efter overview
+    renderWorkspaceInvoicesSection();
+
 }
 
 // Render invoice button based on invoice status
@@ -684,7 +687,7 @@ function renderWorkspaceInvoicesSection() {
     const typeLabel = i => i.invoice_type === 'creditnote' ? 'Kreditnota' : (i.invoice_type === 'aconto' ? 'Aconto' : 'Slutfaktura');
     const statusLabel = i => i.status === 'draft' ? 'Udkast' : (i.status === 'sent' ? 'Sendt' : 'Betalt');
     const rows = invs.map(i => `
-        <tr onclick="viewInvoiceFromWorkspace(${i.id})" style="cursor:pointer;border-bottom:1px solid var(--border);">
+        <tr onclick="viewInvoiceFromWorkspace(${i.id})" style="cursor:pointer;border-bottom:1px solid var(--border);background:rgba(186,151,84,.07);">
             <td style="padding:8px 6px;font-size:12px;">${i.invoice_number}</td>
             <td style="padding:8px 6px;font-size:12px;">${typeLabel(i)}</td>
             <td style="padding:8px 6px;font-size:12px;">${statusLabel(i)}</td>
@@ -699,7 +702,7 @@ function renderWorkspaceInvoicesSection() {
         <div style="background:var(--surface);padding:30px;border-radius:10px;border:2px solid var(--border);margin-top:30px;">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:15px;">
                 <h3 style="margin:0;display:flex;align-items:center;gap:8px;"><i data-lucide="receipt"></i> Fakturaer &amp; Kreditnotaer</h3>
-                <button onclick="openInvoiceTypeModal(${currentWorkspaceOrder.id})" class="btn-secondary"><i data-lucide="plus"></i> Opret Faktura</button>
+                <button onclick="openInvoiceTypeModal(${currentWorkspaceOrder.id})" style="background:#E7F5EC;border:1px solid #CBE7D5;color:var(--color-green);border-radius:8px;padding:8px 14px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:6px;"><i data-lucide="plus"></i> Opret Faktura</button>
             </div>
             <div style="font-size:13px;color:var(--text);margin-bottom:15px;">
                 Faktureret: <strong>${fmt(invoiced)}</strong>

@@ -60,7 +60,7 @@ function renderInvoicedContent(invoices) {
         // v106.4i: type-maerke - Aconto (delbetaling) / Slutfaktura
         // v106.4j: type-maerke - Aconto / Slutfaktura / Kreditnota
         const typeBadge = invoice.invoice_type === 'aconto'
-            ? '<span class="badge badge--draft">Aconto</span>'
+            ? '<span class="badge badge--sent">Aconto</span>'
             : invoice.invoice_type === 'creditnote'
             ? '<span class="badge badge--sent">Kreditnota</span>'
             : '<span class="badge badge--accepted">Slutfaktura</span>';
@@ -109,7 +109,7 @@ function filterInvoicesByStatus(status) {
 
 // Create invoice from order
 // v106.4i: invoiceType = 'aconto' (delbetaling) | 'final' (slutfaktura, afslutter sagen)
-async function createInvoiceFromOrder(orderId, invoiceType, amount, percent) {
+async function createInvoiceFromOrder(orderId, invoiceType, amount, percent, description) {
     const type = invoiceType || 'final';
 
     try {
@@ -120,7 +120,7 @@ async function createInvoiceFromOrder(orderId, invoiceType, amount, percent) {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${token}`
             },
-            body: JSON.stringify({ invoice_type: type, amount: amount || undefined, percent: percent || undefined })
+            body: JSON.stringify({ invoice_type: type, amount: amount || undefined, percent: percent || undefined, description: description || undefined })
         });
 
         if (!response.ok) {
@@ -160,7 +160,8 @@ async function openInvoiceTypeModal(orderId) {
     overlay.innerHTML = '<div style="background:var(--surface);border-radius:12px;padding:28px;width:min(460px,92vw);box-shadow:0 20px 60px rgba(0,0,0,.3);"><p style="color:var(--text-muted);margin:0;">Indlaeser ordre...</p></div>';
     document.body.appendChild(overlay);
 
-    let subtotal = 0, acontoInvoiced = 0;
+    let subtotal = 0, acontoInvoiced = 0, draftAcontoSum = 0;
+    let invsList = [];
     try {
         const token = sessionStorage.getItem('token');
         const resp = await fetch('/api/orders/' + orderId + '/workspace', { headers: { 'Authorization': 'Bearer ' + token } });
@@ -168,6 +169,7 @@ async function openInvoiceTypeModal(orderId) {
             const data = await resp.json();
             subtotal = Number(data.order && data.order.subtotal) || 0;
             const invs = data.invoices || [];
+            invsList = invs;
             acontoInvoiced = invs.filter(i => i.status !== 'draft').reduce((s, i) => {
                 if (i.invoice_type === 'aconto') return s + (Number(i.subtotal) || 0);
                 if (i.invoice_type === 'creditnote' && invs.some(a => a.id === i.credit_of && a.invoice_type === 'aconto')) return s - (Number(i.subtotal) || 0);
@@ -176,8 +178,11 @@ async function openInvoiceTypeModal(orderId) {
         }
     } catch (e) { /* falder tilbage til 0 */ }
 
-    invoiceTypeModalData = { orderId, subtotal, acontoInvoiced };
-    renderInvoiceTypeModalContent('final');
+    // v106.4k: taell også usendte aconto-udkast, så modalen kan advare om at de ikke traekkes fra endnu
+    invsList.filter(i => i.status === 'draft' && i.invoice_type === 'aconto').forEach(i => { draftAcontoSum += (Number(i.subtotal) || 0); });
+
+    invoiceTypeModalData = { orderId, subtotal, acontoInvoiced, draftAcontoSum };
+    renderInvoiceTypeModalContent('aconto');
     if (window.lucide) { try { lucide.createIcons(); } catch (e) { /* ignore */ } }
 }
 
@@ -207,9 +212,14 @@ function renderInvoiceTypeModalContent(selectedType) {
                 <div style="display:flex;justify-content:space-between;"><span>Ordre (ekskl. moms):</span><strong>${fmt(d.subtotal)}</strong></div>
                 ${d.acontoInvoiced > 0 ? `<div style="display:flex;justify-content:space-between;"><span>Heraf aconto:</span><strong>&minus;${fmt(d.acontoInvoiced)}</strong></div>` : ''}
                 <div style="display:flex;justify-content:space-between;border-top:1px solid var(--border);margin-top:6px;padding-top:6px;"><span>Restbel&oslash;b:</span><strong>${fmt(rest)}</strong></div>
+                ${d.draftAcontoSum > 0 ? `<div style="margin-top:8px;padding:8px 10px;background:#FEF3C7;border:1px solid #F59E0B;border-radius:6px;color:#92400E;">&#9888; Der er usendte aconto-udkast p&aring; ${fmt(d.draftAcontoSum)}. De tr&aelig;kkes f&oslash;rst fra, n&aring;r de er sendt.</div>` : ''}
             </div>
             ` : `
             <div style="margin:-4px 0 12px 34px;">
+                <div style="margin-bottom:10px;">
+                    <label style="font-size:12px;color:var(--text-muted);">Beskrivelse (valgfri)</label>
+                    <input type="text" id="invModalDesc" placeholder="fx Indskud p&aring; k&oslash;kken..." style="${inpStyle}">
+                </div>
                 <div style="display:flex;gap:10px;margin-bottom:10px;">
                     <div style="flex:1;">
                         <label style="font-size:12px;color:var(--text-muted);">Beloeb (kr, ekskl. moms)</label>
@@ -270,8 +280,9 @@ function submitInvoiceType(orderId) {
             alert('Angiv et beloeb eller en procent for aconto-fakturaen');
             return;
         }
+        const desc = (document.getElementById('invModalDesc')?.value || '').trim();
         closeInvoiceTypeModal();
-        createInvoiceFromOrder(orderId, 'aconto', amt);
+        createInvoiceFromOrder(orderId, 'aconto', amt, undefined, desc);
         return;
     }
     closeInvoiceTypeModal();

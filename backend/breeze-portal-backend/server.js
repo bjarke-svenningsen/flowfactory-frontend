@@ -3519,7 +3519,11 @@ app.post('/api/invoices/from-order/:orderId', auth, async (req, res) => {
   const orderLines = await db.all('SELECT * FROM quote_lines WHERE quote_id = ? ORDER BY sort_order, id', [orderId]);
   // v106.4j: aconto-fakturaer faar ikke ordrens linjer - kun en aconto-linje
   if (invoice_type === 'aconto') {
-    const acontoDesc = acontoPctLabel
+    // v106.4k: valgfri fritekst-beskrivelse fra modalen
+    const bodyDesc = req.body && typeof req.body.description === 'string' ? req.body.description.trim() : '';
+    const acontoDesc = bodyDesc
+      ? bodyDesc
+      : acontoPctLabel
       ? `Aconto ${acontoPctLabel}% af ordre ${full_order_number}`
       : `Aconto (delbetaling) - ordre ${full_order_number}`;
     await db.run(`
