@@ -25,6 +25,15 @@ async function loadQuotes() {
         if (overrides.length) {
             const overrideIds = new Set(overrides.map(o => o.id));
             allQuotes = allQuotes.filter(q => !overrideIds.has(q.id));
+            // v106.4g: selvrengoering - drop overrides for sager serveren IKKE kender
+            // (fx efter database-reset). Uden dette lever spogelsessager for evigt.
+            const serverIds = new Set(allFetchedQuotes.map(q => q.id));
+            const stale = overrides.filter(o => !serverIds.has(o.id));
+            if (stale.length) {
+                console.log('Fjerner foraelde lokale overrides (sager serveren ikke kender):', stale.map(o => o.id));
+                const remaining = overrides.filter(o => serverIds.has(o.id));
+                try { localStorage.setItem(ACCEPT_OVERRIDES_KEY, JSON.stringify(remaining)); } catch (e) { /* ignore */ }
+            }
         }
         updateTabCountsFromQuotes(allFetchedQuotes);
         renderQuotesList();
@@ -979,6 +988,19 @@ async function doAcceptQuote(quoteId) {
             headers: { 'Authorization': `Bearer ${token}` }
         });
 
+        // v106.4g: 404 = sagen findes ikke laengere paa serveren (foraelde lokal
+        // kopi/spoegelse fra localStorage) - ryd op og opdater listerne
+        if (response.status === 404) {
+            try {
+                const remaining = getAcceptOverrides().filter(x => x.id !== quoteId);
+                localStorage.setItem(ACCEPT_OVERRIDES_KEY, JSON.stringify(remaining));
+            } catch (e) { /* ignore */ }
+            alert('Sagen (id ' + quoteId + ') findes ikke laengere på serveren - det var en forældet lokal kopi. Listen opdateres nu.');
+            await loadQuotes();
+            await loadOrders();
+            return;
+        }
+
         if (!response.ok) {
             const error = await response.json();
             throw new Error(error.error || 'Failed to accept quote');
@@ -1040,7 +1062,18 @@ async function doRejectQuote(quoteId) {
             method: 'POST',
             headers: { 'Authorization': `Bearer ${token}` }
         });
-        
+
+        // v106.4g: 404 = sagen findes ikke laengere paa serveren (spoegelse)
+        if (response.status === 404) {
+            try {
+                const remaining = getAcceptOverrides().filter(x => x.id !== quoteId);
+                localStorage.setItem(ACCEPT_OVERRIDES_KEY, JSON.stringify(remaining));
+            } catch (e) { /* ignore */ }
+            alert('Sagen (id ' + quoteId + ') findes ikke laengere på serveren - det var en forældet lokal kopi. Listen opdateres nu.');
+            await loadQuotes();
+            return;
+        }
+
         if (!response.ok) {
             const error = await response.json();
             throw new Error(error.error || 'Failed to reject quote');
@@ -1167,14 +1200,24 @@ async function loadOrders() {
             const row = o.row || {};
             if (row.is_extra_work) continue;
             const serverRow = allQuotes.find(q => q.id === o.id);
+            // v106.4g: sager serveren IKKE kender er spoegelser (fx efter reset) -
+            // drop dem og ryd op i localStorage i stedet for at genoplive dem
+            if (!serverRow) {
+                console.log('Dropper foraelde override - sag', o.id, 'findes ikke laengere paa serveren');
+                try {
+                    const remaining = getAcceptOverrides().filter(x => x.id !== o.id);
+                    localStorage.setItem(ACCEPT_OVERRIDES_KEY, JSON.stringify(remaining));
+                } catch (e) { /* ignore */ }
+                continue;
+            }
             // Fjern server-række der stadig lyver om status, og brug override i stedet
             const idx = orders.findIndex(q => q.id === o.id);
-            if (idx !== -1 && serverRow && serverRow.status !== 'accepted') orders.splice(idx, 1);
+            if (idx !== -1 && serverRow.status !== 'accepted') orders.splice(idx, 1);
             if (idx === -1 && !orders.some(q => q.id === o.id)) {
-                orders.unshift(serverRow && serverRow.status === 'accepted' ? serverRow : { ...row, status: 'accepted', order_stage: row.order_stage || 'approved' });
+                orders.unshift(serverRow.status === 'accepted' ? serverRow : { ...row, status: 'accepted', order_stage: row.order_stage || 'approved' });
             }
             // Hvis serveren ENDELIG svarer korrekt, drop override (den er nu overfloedig)
-            if (serverRow && serverRow.status === 'accepted') {
+            if (serverRow.status === 'accepted') {
                 try {
                     const remaining = getAcceptOverrides().filter(x => x.id !== o.id);
                     localStorage.setItem(ACCEPT_OVERRIDES_KEY, JSON.stringify(remaining));
