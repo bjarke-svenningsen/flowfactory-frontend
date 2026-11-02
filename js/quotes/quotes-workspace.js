@@ -532,7 +532,7 @@ function renderWorkspaceOverview(container) {
                                 <div style="font-size: 13px; margin-top: 4px;">${extraOrder.title}</div>
                                 <div style="display:flex;justify-content:space-between;margin-top:6px;font-size:12px;">
                                     <span style="color: var(--text-muted);">${new Date(extraOrder.created_at).toLocaleDateString('da-DK')}</span>
-                                    <strong>${formatCurrency(extraOrder.total)}</strong>
+                                    <strong>${formatCurrency(extraOrder.subtotal ?? extraOrder.total)}</strong> <!-- v106.4s: EKSKL. moms -->
                                 </div>
                             </div>
                         `).join('')}
