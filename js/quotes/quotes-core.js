@@ -1313,9 +1313,7 @@ function renderCompletedContent(orders) {
     let html = `<div class="list-section-head"><span class="title">Afsluttede sager</span><span class="badge badge--accepted">${orders.length}</span></div>`;
     orders.forEach(order => {
         const displayNumber = order.order_number || order.quote_number || 'N/A';
-        const fullOrderNumber = order.is_extra_work && order.parent_order_id
-            ? `${displayNumber}-${String(order.sub_number).padStart(2, '0')}`
-            : displayNumber;
+        const fullOrderNumber = order.full_order_number || displayNumber; // v106.4r: backend leverer fuldt nummer
 
         html += `
             <div class="list-card list-card--paid">
@@ -1634,9 +1632,7 @@ function renderOrdersContent(orders) {
     orders.forEach(order => {
         // Use order_number if available, otherwise use quote_number
         const displayNumber = order.order_number || order.quote_number || 'N/A';
-        const fullOrderNumber = order.is_extra_work && order.parent_order_id
-            ? `${displayNumber}-${String(order.sub_number).padStart(2, '0')}`
-            : displayNumber;
+        const fullOrderNumber = order.full_order_number || displayNumber; // v106.4r: backend leverer fuldt nummer
 
         html += `
             <div class="list-card list-card--accepted">
@@ -1682,9 +1678,7 @@ function renderInProgressContent(orders) {
     let html = `<div class="list-section-head"><span class="title">Igangværende ordrer</span><span class="badge badge--sent">${orders.length}</span></div>`;
     orders.forEach(order => {
         const displayNumber = order.order_number || order.quote_number || 'N/A';
-        const fullOrderNumber = order.is_extra_work && order.parent_order_id
-            ? `${displayNumber}-${String(order.sub_number).padStart(2, '0')}`
-            : displayNumber;
+        const fullOrderNumber = order.full_order_number || displayNumber; // v106.4r: backend leverer fuldt nummer
         const startedDate = order.started_at ? new Date(order.started_at).toLocaleDateString('da-DK') : '';
 
         html += `

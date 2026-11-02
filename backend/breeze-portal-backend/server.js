@@ -3300,12 +3300,14 @@ app.post('/api/quotes/:id/extra-work', auth, async (req, res) => {
   // Note: For extra work, we use the full order number (e.g., "0001-01") as quote_number for backwards compatibility
   const fullOrderNumber = `${parentOrder.order_number}-${String(subNum).padStart(2, '0')}`;
   
-  // v106.4q: order_number SKAL vaere unik (UNIQUE-index) - sub-ordrer faar sit fulde nummer
+  // v106.4r: order_number SKAL vaere unik (UNIQUE-index) - sub-ordrer faar sit fulde nummer
   // (fx "0001-01"); tidligere fejlede INSERT med UNIQUE constraint og request haengte.
+  // v106.4r: ekstraarbejde autostartes som 'in_progress' (hovedsagen er allerede igang),
+  // sa det straks kan faktureres uden en manglende "Start"-knap.
   const info = await db.run(`
-    INSERT INTO quotes (quote_number, order_number, parent_order_id, sub_number, is_extra_work, customer_id, title, notes, terms, subtotal, vat_rate, vat_amount, total, status, order_type, created_by)
-    VALUES (?, ?, ?, ?, 1, ?, ?, ?, ?, ?, ?, ?, ?, 'accepted', ?, ?)
-  `, [fullOrderNumber, fullOrderNumber, parentOrderId, subNum, parentOrder.customer_id, title, notes || null, terms || parentOrder.terms, subtotal, vat_rate, vat_amount, total, safeOrderType, req.user.id]);
+    INSERT INTO quotes (quote_number, order_number, parent_order_id, sub_number, is_extra_work, customer_id, title, notes, terms, subtotal, vat_rate, vat_amount, total, status, order_type, order_stage, started_at, started_by, created_by)
+    VALUES (?, ?, ?, ?, 1, ?, ?, ?, ?, ?, ?, ?, ?, 'accepted', ?, 'in_progress', CURRENT_TIMESTAMP, ?, ?)
+  `, [fullOrderNumber, fullOrderNumber, parentOrderId, subNum, parentOrder.customer_id, title, notes || null, terms || parentOrder.terms, subtotal, vat_rate, vat_amount, total, safeOrderType, req.user.id, req.user.id]);
   
   const extraWorkId = info.lastInsertRowid;
   
@@ -4976,6 +4978,8 @@ app.get('/api/orders/:orderId/workspace', auth, async (req, res) => {
   // v102: faktura-flag til stepperen (Godkendt -> Igangvaerende -> Faktureret)
   const approvedInvoice = await db.get("SELECT id FROM invoices WHERE order_id = ? AND status != 'draft' LIMIT 1", [orderId]);
   order.has_approved_invoice = !!approvedInvoice;
+  // v106.4r: fuldt ordrenummer (sub-ordrer fx "0001-02") - frontend bruger denne direkte
+  order.full_order_number = await getFullOrderNumber(order);
   
   // If contact_person_id is set, get contact person details
   if (order.contact_person_id) {

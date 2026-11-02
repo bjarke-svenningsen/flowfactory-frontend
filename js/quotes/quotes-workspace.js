@@ -143,9 +143,8 @@ function renderWorkspace(data) {
         return;
     }
     
-    const fullOrderNumber = data.order.is_extra_work && data.order.parent_order_id 
-        ? `${data.order.order_number}-${String(data.order.sub_number).padStart(2, '0')}`
-        : data.order.order_number;
+    // v106.4r: brug backend-verificeret full_order_number (sub-ordrer fx "0001-02")
+    const fullOrderNumber = data.order.full_order_number || data.order.order_number;
     
     container.innerHTML = `
         <div style="max-width: 1400px; margin: 0 auto;">
@@ -162,7 +161,7 @@ function renderWorkspace(data) {
             <div class="card" style="padding: 18px 24px; margin-bottom: 24px; display: flex; justify-content: space-between; gap: 24px; flex-wrap: wrap; align-items: center;">
                 <div style="min-width: 220px;">
                     <h1 style="margin: 0 0 4px 0; font-size: 22px;">Ordre ${fullOrderNumber}
-                        ${!isQuotesMontor() ? `<span style="display: inline-block; vertical-align: middle; margin-left: 10px; padding: 3px 10px; border-radius: 12px; font-size: 12px; font-weight: 600; background: ${data.order.order_type === 'consumption' ? 'var(--accent-soft, #fff7e6)' : 'var(--surface-muted, #f2f2f2)'}; color: ${data.order.order_type === 'consumption' ? 'var(--color-orange, #e67e22)' : 'var(--text-muted)'}; border: 1px solid var(--border);">${data.order.order_type === 'consumption' ? 'Forbrugssag' : 'Kalkulation'}</span>` : ''}
+                        ${!isQuotesMontor() ? `<span style="display: inline-block; vertical-align: middle; margin-left: 10px; padding: 3px 10px; border-radius: 12px; font-size: 12px; font-weight: 600; ${data.order.is_extra_work ? 'background: var(--color-orange, #e67e22); color: #fff; border: 1px solid var(--color-orange, #e67e22);' : `background: var(--accent-soft, #fff7e6); color: var(--color-orange, #e67e22); border: 1px solid var(--accent, #f0a030);`}">${data.order.is_extra_work ? 'Ekstraarbejde' : (data.order.order_type === 'consumption' ? 'Forbrugssag' : 'Kalkulation')}</span>` : ''}
                     </h1>
                     <p style="margin: 0; color: var(--color-text-muted); font-size: 14px;">${data.order.title} • ${data.order.company_name}</p>
                 </div>
@@ -468,7 +467,7 @@ function renderWorkspaceOverview(container) {
                         </div>
                         <div style="padding-bottom: 15px; border-bottom: 1px solid var(--border);">
                             <div style="color: var(--text-muted); font-size: 13px; margin-bottom: 5px;">Sagstype</div>
-                            <div id="orderDetailsOrderType" style="font-weight: 600; font-size: 16px;">${currentWorkspaceOrder.order_type === 'consumption' ? 'Forbrug' : 'Kalkulation'}</div>
+                            <div id="orderDetailsOrderType" style="font-weight: 600; font-size: 16px;">${currentWorkspaceOrder.order_type === 'consumption' ? 'Forbrug' : 'Kalkulation'}${currentWorkspaceOrder.is_extra_work ? ' - Ekstraarbejde' : ''}</div>
                         </div>
                         <div>
                             <div style="color: var(--text-muted); font-size: 13px; margin-bottom: 5px;">Ordre Adresse</div>
@@ -595,10 +594,12 @@ function renderWorkspaceOverview(container) {
                         <button onclick="switchWorkspaceTab('notes')" class="quick-action-btn">
                             <i data-lucide="sticky-note"></i> Tilføj Note
                         </button>
+                        ${!isQuotesMontor() && !currentWorkspaceOrder.is_extra_work ? `
                         <button onclick="createExtraWork(${currentWorkspaceOrder.id})" class="quick-action-btn accent-orange">
 
                             <i data-lucide="hammer"></i> Ekstraarbejde
                         </button>
+                        ` : ''}
                         ${currentWorkspaceOrder.order_stage === 'completed' ? `
                         <button onclick="reopenOrder(${currentWorkspaceOrder.id})" class="quick-action-btn">
                             <i data-lucide="undo-2"></i> Genåbn
