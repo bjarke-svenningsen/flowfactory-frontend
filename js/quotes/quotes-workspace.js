@@ -6,7 +6,6 @@ function isQuotesMontor() {
 }
 
 let currentWorkspaceOrder = null;
-        workspaceInvoices = [];
 let workspaceInvoices = []; // v106.4j: alle fakturaer + kreditnotaer for ordren
 let workspaceExpenses = [];
 let workspaceDocuments = [];
