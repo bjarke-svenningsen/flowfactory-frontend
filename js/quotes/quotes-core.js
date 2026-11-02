@@ -955,10 +955,26 @@ function acceptQuote(quoteId) {
     sgConfirm('Acceptér tilbud', 'Acceptér dette tilbud som ordre?', () => doAcceptQuote(quoteId));
 }
 
+// v106.4f: Render free tier soever backend'en efter 15 min - foerste kald kan
+// fejle med "Failed to fetch". Genforsog automatisk op til 3 gange med ventetid.
+async function sgFetchWithRetry(url, options, retries = 3) {
+    for (let attempt = 1; attempt <= retries; attempt++) {
+        try {
+            return await fetch(url, options);
+        } catch (err) {
+            console.warn(`sgFetchWithRetry: forsøg ${attempt}/${retries} fejlede for ${url}:`, err);
+            if (attempt === retries) throw err;
+            await new Promise(r => setTimeout(r, 2500 * attempt));
+        }
+    }
+}
+
 async function doAcceptQuote(quoteId) {
     try {
         const token = sessionStorage.getItem('token');
-        const response = await fetch(`/api/quotes/${quoteId}/accept`, {
+        // v106.4f: vaek backend'en foerst med et let GET-kald (ignorer fejl)
+        try { await sgFetchWithRetry(`/api/quotes/${quoteId}?_=${Date.now()}`, { headers: { 'Authorization': `Bearer ${token}` } }, 1); } catch (e) { /* warm-up best effort */ }
+        const response = await sgFetchWithRetry(`/api/quotes/${quoteId}/accept`, {
             method: 'POST',
             headers: { 'Authorization': `Bearer ${token}` }
         });
@@ -1020,7 +1036,7 @@ function rejectQuote(quoteId) {
 async function doRejectQuote(quoteId) {
     try {
         const token = sessionStorage.getItem('token');
-        const response = await fetch(`/api/quotes/${quoteId}/reject`, {
+        const response = await sgFetchWithRetry(`/api/quotes/${quoteId}/reject`, {
             method: 'POST',
             headers: { 'Authorization': `Bearer ${token}` }
         });
