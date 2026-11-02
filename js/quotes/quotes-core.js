@@ -359,6 +359,9 @@ function backToQuotesList() {
     document.getElementById('quotesListView').style.display = 'block';
     document.getElementById('quotesFormView').style.display = 'none';
     document.getElementById('quotesPreviewView').style.display = 'none';
+    // v106.4p: genopret aktiv fane-kolonne (skjult af preview/form)
+    const activeTabContent = document.getElementById('orderTabQuotes');
+    if (activeTabContent) activeTabContent.style.display = 'block';
     loadQuotes();
 }
 
@@ -368,6 +371,8 @@ function renderQuoteForm() {
     document.getElementById('quotesFormView').style.display = 'block';
     document.getElementById('quotesPreviewView').style.display = 'none';
     document.getElementById('quotesCustomersView').style.display = 'none';
+    // v106.4p: skjul alle fane-indhold (fx Afsluttet-listen) saa de ikke hang over arket
+    document.querySelectorAll('[id^="orderTab"]').forEach(el => { el.style.display = 'none'; });
     
     const container = document.getElementById('quotesFormContainer');
     const isEdit = currentView === 'edit';
@@ -761,6 +766,8 @@ function renderQuotePreview() {
     document.getElementById('quotesFormView').style.display = 'none';
     document.getElementById('quotesPreviewView').style.display = 'block';
     document.getElementById('quotesCustomersView').style.display = 'none';
+    // v106.4p: skjul alle fane-indhold (fx Afsluttet-listen) saa de ikke hang over ordre-arket
+    document.querySelectorAll('[id^="orderTab"]').forEach(el => { el.style.display = 'none'; });
     
     const container = document.getElementById('quotesPreviewContainer');
     

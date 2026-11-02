@@ -269,6 +269,39 @@ function closeInvoiceTypeModal() {
     invoiceTypeModalData = null;
 }
 
+// v106.4p: kreditnota-knap i workspace - vaeg den sendte/betalte faktura der skal krediteres
+function openCreditNotePicker() {
+    document.getElementById('creditNotePickerModal')?.remove();
+    const candidates = (typeof workspaceInvoices !== 'undefined' ? workspaceInvoices : [])
+        .filter(i => i.invoice_type !== 'creditnote' && (i.status === 'sent' || i.status === 'paid'));
+    const overlay = document.createElement('div');
+    overlay.id = 'creditNotePickerModal';
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;z-index:10000;';
+    const fmt = v => new Intl.NumberFormat('da-DK', { style: 'currency', currency: 'DKK' }).format(v || 0);
+    const rows = candidates.length ? candidates.map(i => `
+        <div onclick="closeCreditNotePicker(); createCreditNote(${i.id});" style="display:flex;justify-content:space-between;align-items:center;padding:12px 14px;border:1px solid var(--border);border-radius:8px;margin-bottom:10px;cursor:pointer;background:var(--surface-muted);">
+            <div>
+                <div style="font-weight:600;">${i.invoice_number} &middot; ${i.invoice_type === 'aconto' ? 'Aconto' : 'Slutfaktura'}</div>
+                <div style="font-size:12px;color:var(--text-muted);">${new Date(i.invoice_date).toLocaleDateString('da-DK')} &middot; ${i.status === 'paid' ? 'Betalt' : 'Sendt'}</div>
+            </div>
+            <strong>${fmt(i.total)}</strong>
+        </div>`).join('') : '<p style="color:var(--text-muted);margin:0;">Ingen sendte eller betalte fakturaer at kreditere endnu.</p>';
+    overlay.innerHTML = `
+        <div style="background:var(--surface);border-radius:12px;padding:28px;width:min(480px,92vw);box-shadow:0 20px 60px rgba(0,0,0,.3);max-height:90vh;overflow-y:auto;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;">
+                <h3 style="margin:0;font-size:17px;">V&aelig;lg faktura at kreditere</h3>
+                ${btn('ghost', 'x', '', { onclick: 'closeCreditNotePicker()' })}
+            </div>
+            ${rows}
+        </div>`;
+    document.body.appendChild(overlay);
+    if (window.lucide) { try { lucide.createIcons(); } catch (e) { /* ignore */ } }
+}
+
+function closeCreditNotePicker() {
+    document.getElementById('creditNotePickerModal')?.remove();
+}
+
 function submitInvoiceType(orderId) {
     const radio = document.querySelector('input[name="invoiceTypeRadio"]:checked');
     const type = radio ? radio.value : 'final';
@@ -435,6 +468,8 @@ function renderInvoicePreview(invoice) {
     document.getElementById('quotesFormView').style.display = 'none';
     document.getElementById('quotesPreviewView').style.display = 'none';
     document.getElementById('quotesCustomersView').style.display = 'none';
+    // v106.4p: skjul alle fane-indhold foerst, saa fx Afsluttet-listen ikke hang over faktura-arket
+    document.querySelectorAll('[id^="orderTab"]').forEach(el => { el.style.display = 'none'; });
     
     // Show invoiced tab content (reuse for preview)
     const invoicedTab = document.getElementById('orderTabInvoiced');
@@ -735,6 +770,8 @@ window.invoiceModalCalc = invoiceModalCalc;
 window.closeInvoiceTypeModal = closeInvoiceTypeModal;
 window.submitInvoiceType = submitInvoiceType;
 window.createCreditNote = createCreditNote;
+window.openCreditNotePicker = openCreditNotePicker;
+window.closeCreditNotePicker = closeCreditNotePicker;
 window.toggleInvoiceLineEditor = toggleInvoiceLineEditor;
 window.renderInvoiceLineEditor = renderInvoiceLineEditor;
 window.invEscAttr = invEscAttr;

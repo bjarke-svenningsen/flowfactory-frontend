@@ -522,6 +522,24 @@ function renderWorkspaceOverview(container) {
                         </div>
                     </div>
                 </div>
+                ${hasExtraWork ? `
+                <!-- v106.4p: Ekstraarbejde i venstre kolonne (klikbare bokse) -->
+                <div style="background: var(--surface); padding: 25px; border-radius: 10px; border: 2px solid var(--color-orange);">
+                    <h3 style="margin: 0 0 15px 0; color: var(--color-orange); display:flex;align-items:center;gap:8px;"><i data-lucide="hammer"></i> Ekstraarbejde (${workspaceExtraWorkOrders.length})</h3>
+                    <div style="display: grid; gap: 12px;">
+                        ${workspaceExtraWorkOrders.map(extraOrder => `
+                            <div onclick="openOrderWorkspace(${extraOrder.id}, ${currentWorkspaceOrder.id})" style="background: var(--accent-soft); padding: 15px; border-radius: 8px; border: 1px solid var(--color-orange); cursor: pointer;">
+                                <div style="font-weight: 600; color: var(--color-orange); font-size: 13px;">Ordre ${extraOrder.full_order_number}</div>
+                                <div style="font-size: 13px; margin-top: 4px;">${extraOrder.title}</div>
+                                <div style="display:flex;justify-content:space-between;margin-top:6px;font-size:12px;">
+                                    <span style="color: var(--text-muted);">${new Date(extraOrder.created_at).toLocaleDateString('da-DK')}</span>
+                                    <strong>${formatCurrency(extraOrder.total)}</strong>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+                ` : ''}
             </div>
             
             <!-- Right column: Quick info -->
@@ -621,29 +639,9 @@ function renderWorkspaceOverview(container) {
             </div>
         </div>
         
-        <!-- Extra Work Orders Section -->
-        ${workspaceExtraWorkOrders && workspaceExtraWorkOrders.length > 0 ? `
-            <div style="margin-top: 30px;">
-                <div style="background: var(--surface); padding: 30px; border-radius: 10px; border: 2px solid var(--color-orange);">
-                    <h3 style="margin: 0 0 20px 0; color: var(--color-orange);">Ekstraarbejde (${workspaceExtraWorkOrders.length})</h3>
-                    <div style="display: grid; gap: 15px;">
-                        ${workspaceExtraWorkOrders.map(extraOrder => `
-                            <div style="background: var(--accent-soft); padding: 20px; border-radius: 8px; border: 1px solid var(--color-orange);">
-                                <div style="display: flex; justify-content: space-between; align-items: start;">
-                                    <div style="flex: 1;">
-                                        <h4 style="margin: 0 0 10px 0; color: var(--color-orange);">Ordre ${extraOrder.full_order_number}</h4>
-                                        <p style="margin: 5px 0;"><strong>Titel:</strong> ${extraOrder.title}</p>
-                                        <p style="margin: 5px 0;"><strong>Total:</strong> ${formatCurrency(extraOrder.total)}</p>
-                                        <p style="margin: 5px 0; font-size: 12px; color: var(--text-muted);">Oprettet: ${new Date(extraOrder.created_at).toLocaleDateString('da-DK')}</p>
-                                    </div>
-                                    ${btn('secondary', 'external-link', 'Åbn', { onclick: `openOrderWorkspace(${extraOrder.id}, ${currentWorkspaceOrder.id})`, small: true })}
-                                </div>
-                            </div>
-                        `).join('')}
-                    </div>
-                </div>
-            </div>
-        ` : ''}
+        <!-- v106.4p: (Ekstraarbejde er flyttet til venstre kolonne i oversigten) -->
+        <!-- v106.4p: faktura-preview i fuld bredde, nederst i oversigten -->
+        <div id="wsInvoicePreview"></div>
     `;
     
     // v106.4k: faktura-sektionen er altid synlig - render indholdet efter overview
@@ -709,7 +707,10 @@ function renderWorkspaceInvoicesSection() {
         <div style="background:var(--surface);padding:30px;border-radius:10px;border:2px solid var(--border);margin-top:30px;">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:15px;">
                 <h3 style="margin:0;display:flex;align-items:center;gap:8px;"><i data-lucide="receipt"></i> Fakturaer &amp; Kreditnotaer</h3>
-                <button onclick="openInvoiceTypeModal(${currentWorkspaceOrder.id})" style="background:#E7F5EC;border:1px solid #CBE7D5;color:var(--color-green);border-radius:8px;padding:8px 14px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:6px;"><i data-lucide="plus"></i> Opret Faktura</button>
+                <div style="display:flex;gap:8px;">
+                    <button onclick="openInvoiceTypeModal(${currentWorkspaceOrder.id})" style="background:#E7F5EC;border:1px solid #CBE7D5;color:var(--color-green);border-radius:8px;padding:8px 14px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:6px;"><i data-lucide="plus"></i> Opret Faktura</button>
+                    <button onclick="openCreditNotePicker()" style="background:#FDECEC;border:1px solid #F2C6C0;color:#C0392B;border-radius:8px;padding:8px 14px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:6px;"><i data-lucide="undo-2"></i> Opret Kreditnota</button>
+                </div>
             </div>
             <div style="font-size:13px;color:var(--text);margin-bottom:15px;">
                 Faktureret: <strong>${fmt(invoiced)}</strong>
@@ -729,7 +730,6 @@ function renderWorkspaceInvoicesSection() {
                 <tbody>${rows || '<tr><td colspan="6" style="padding:12px;font-size:12px;color:var(--text-muted);">Ingen fakturaer endnu</td></tr>'}</tbody>
             </table>
             </div>
-            <div id="wsInvoicePreview"></div>
         </div>`;
     if (window.lucide) { try { lucide.createIcons(); } catch (e) { /* ignore */ } }
 }
