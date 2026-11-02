@@ -1378,6 +1378,10 @@ function reopenOrder(orderId) {
             loadCompleted();
             loadInProgress();
             loadOrderTabCounts();
+            // v106.4o: genindlaes workspace hvis genaabnes derfra, saa Genåbn-knappen forsvinder
+            if (currentWorkspaceOrder && currentWorkspaceOrder.id === orderId && typeof openOrderWorkspace === 'function') {
+                openOrderWorkspace(orderId);
+            }
         } catch (error) {
             console.error('Reopen order error:', error);
             alert('Kunne ikke genåbne sag: ' + error.message);

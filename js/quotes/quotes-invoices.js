@@ -304,61 +304,9 @@ async function viewInvoice(invoiceId) {
     }
 }
 
-// Render invoice preview
-function renderInvoicePreview(invoice) {
-    window.currentPreviewInvoice = invoice;
-    // Hide all other views
-    document.getElementById('quotesListView').style.display = 'none';
-    document.getElementById('quotesFormView').style.display = 'none';
-    document.getElementById('quotesPreviewView').style.display = 'none';
-    document.getElementById('quotesCustomersView').style.display = 'none';
-    
-    // Show invoiced tab content (reuse for preview)
-    const invoicedTab = document.getElementById('orderTabInvoiced');
-    if (invoicedTab) {
-        invoicedTab.style.display = 'block';
-    }
-    
-    const container = document.getElementById('invoicingContainer');
-    
-    container.innerHTML = `
-        <div class="quote-sheet-wrap">
-            <div class="preview-actions">
-                <button onclick="switchOrderTab('invoiced'); loadInvoiced();" class="btn btn-secondary">
-                    <i data-lucide="arrow-left"></i> Tilbage
-                </button>
-                ${invoice.status === 'draft' ? `
-                    <button onclick="sendInvoice(${invoice.id})" class="btn btn-primary">
-                        <i data-lucide="send"></i> Send til Kunde
-                    </button>
-                ` : ''}
-                ${invoice.invoice_type === 'creditnote' && invoice.status === 'draft' ? `
-                    <button onclick="toggleInvoiceLineEditor(${invoice.id})" class="btn btn-secondary">
-                        <i data-lucide="pencil"></i> Rediger linjer
-                    </button>
-                ` : ''}
-                ${invoice.invoice_type !== 'creditnote' && invoice.status !== 'draft' ? `
-                    <button onclick="createCreditNote(${invoice.id})" class="btn btn-secondary">
-                        <i data-lucide="undo-2"></i> Opret Kreditnota
-                    </button>
-                ` : ''}
-                ${invoice.invoice_type !== 'creditnote' && invoice.status === 'sent' ? `
-                    <button onclick="markInvoicePaid(${invoice.id})" class="btn btn-primary">
-                        <i data-lucide="check"></i> Markér Betalt
-                    </button>
-                ` : ''}
-                <button onclick="window.print()" class="btn btn-secondary">
-                    <i data-lucide="printer"></i> Print / PDF
-                </button>
-                ${invoice.status === 'draft' ? `
-                    <button onclick="deleteInvoiceFromPreview(${invoice.id})" class="btn btn-danger toolbar-end">
-                        <i data-lucide="trash-2"></i> Slet
-                    </button>
-                ` : ''}
-            </div>
-                </button>
-            </div>
-            
+// v106.4o: genbrugeligt faktura-ark (preview + workspace inline-preview)
+function buildInvoiceSheetHTML(invoice) {
+    return `
             <div class="quote-sheet">
                 <!-- Minimal Header -->
                 <div style="display: flex; justify-content: space-between; align-items: start; padding-bottom: 30px; border-bottom: 1px solid var(--text); margin-bottom: 40px;">
@@ -476,6 +424,65 @@ function renderInvoicePreview(invoice) {
                     </p>
                 </div>
             </div>
+    `;
+}
+
+// Render invoice preview
+function renderInvoicePreview(invoice) {
+    window.currentPreviewInvoice = invoice;
+    // Hide all other views
+    document.getElementById('quotesListView').style.display = 'none';
+    document.getElementById('quotesFormView').style.display = 'none';
+    document.getElementById('quotesPreviewView').style.display = 'none';
+    document.getElementById('quotesCustomersView').style.display = 'none';
+    
+    // Show invoiced tab content (reuse for preview)
+    const invoicedTab = document.getElementById('orderTabInvoiced');
+    if (invoicedTab) {
+        invoicedTab.style.display = 'block';
+    }
+    
+    const container = document.getElementById('invoicingContainer');
+    
+    container.innerHTML = `
+        <div class="quote-sheet-wrap">
+            <div class="preview-actions">
+                <button onclick="switchOrderTab('invoiced'); loadInvoiced();" class="btn btn-secondary">
+                    <i data-lucide="arrow-left"></i> Tilbage
+                </button>
+                ${invoice.status === 'draft' ? `
+                    <button onclick="sendInvoice(${invoice.id})" class="btn btn-primary">
+                        <i data-lucide="send"></i> Send til Kunde
+                    </button>
+                ` : ''}
+                ${invoice.invoice_type === 'creditnote' && invoice.status === 'draft' ? `
+                    <button onclick="toggleInvoiceLineEditor(${invoice.id})" class="btn btn-secondary">
+                        <i data-lucide="pencil"></i> Rediger linjer
+                    </button>
+                ` : ''}
+                ${invoice.invoice_type !== 'creditnote' && invoice.status !== 'draft' ? `
+                    <button onclick="createCreditNote(${invoice.id})" class="btn btn-secondary">
+                        <i data-lucide="undo-2"></i> Opret Kreditnota
+                    </button>
+                ` : ''}
+                ${invoice.invoice_type !== 'creditnote' && invoice.status === 'sent' ? `
+                    <button onclick="markInvoicePaid(${invoice.id})" class="btn btn-primary">
+                        <i data-lucide="check"></i> Markér Betalt
+                    </button>
+                ` : ''}
+                <button onclick="window.print()" class="btn btn-secondary">
+                    <i data-lucide="printer"></i> Print / PDF
+                </button>
+                ${invoice.status === 'draft' ? `
+                    <button onclick="deleteInvoiceFromPreview(${invoice.id})" class="btn btn-danger toolbar-end">
+                        <i data-lucide="trash-2"></i> Slet
+                    </button>
+                ` : ''}
+            </div>
+                </button>
+            </div>
+            
+            ${buildInvoiceSheetHTML(invoice)}
         </div>
     `;
     if (window.lucide) { try { lucide.createIcons(); } catch (e) { /* ignore */ } }
@@ -497,8 +504,10 @@ function markInvoicePaid(invoiceId) {
             alert('Faktura markeret som betalt');
             loadInvoiced();
             if (typeof loadOrderTabCounts === 'function') loadOrderTabCounts();
-            // Opdater preview hvis den viste faktura er den samme
-            if (window.currentPreviewInvoice && window.currentPreviewInvoice.id === invoiceId) {
+            // v106.4o: opdater inline-preview i workspace hvis den er aaben for denne faktura
+            if (currentWorkspaceOrder && document.getElementById('wsInvoicePreview')) {
+                if (typeof refreshWorkspaceInvoicePreview === 'function') refreshWorkspaceInvoicePreview(invoiceId);
+            } else if (window.currentPreviewInvoice && window.currentPreviewInvoice.id === invoiceId) {
                 viewInvoice(invoiceId);
             }
         } catch (error) {
@@ -525,6 +534,10 @@ function sendInvoice(invoiceId) {
             
             alert('Faktura sendt til kunde');
             loadInvoiced();
+            // v106.4o: opdater workspace-preview hvis sendt derfra
+            if (currentWorkspaceOrder && typeof refreshWorkspaceInvoicePreview === 'function') {
+                refreshWorkspaceInvoicePreview(invoiceId);
+            }
             
         } catch (error) {
             console.error('Send invoice error:', error);
@@ -551,6 +564,11 @@ function deleteInvoice(invoiceId) {
         
         alert('Faktura slettet!');
         loadInvoiced();
+        // v106.4o: opdater workspace-listen og luk inline-preview hvis slettet derfra
+        if (currentWorkspaceOrder) {
+            if (typeof refreshWorkspaceInvoicesFromServer === 'function') refreshWorkspaceInvoicesFromServer();
+            if (typeof closeWorkspaceInvoicePreview === 'function') closeWorkspaceInvoicePreview();
+        }
         
     } catch (error) {
         console.error('Delete invoice error:', error);
@@ -603,7 +621,13 @@ async function createCreditNote(invoiceId) {
             const credit = await response.json();
             alert('Kreditnota ' + credit.invoice_number + ' oprettet som udkast');
             loadInvoiced();
-            renderInvoicePreview(credit);
+            // v106.4o: bliv i workspace hvis kreditnotaen oprettes derfra
+            if (currentWorkspaceOrder) {
+                if (typeof refreshWorkspaceInvoicesFromServer === 'function') refreshWorkspaceInvoicesFromServer();
+                if (typeof showWorkspaceInvoicePreview === 'function') showWorkspaceInvoicePreview(credit.id);
+            } else {
+                renderInvoicePreview(credit);
+            }
         } catch (error) {
             console.error('Creditnote error:', error);
             alert('Kunne ikke oprette kreditnota: ' + error.message);
@@ -718,6 +742,7 @@ window.invEditorLineTotal = invEditorLineTotal;
 window.addEditorLine = addEditorLine;
 window.removeEditorLine = removeEditorLine;
 window.saveInvoiceLineEdits = saveInvoiceLineEdits;
+window.buildInvoiceSheetHTML = buildInvoiceSheetHTML;
 window.markInvoicePaid = markInvoicePaid;
 window.filterInvoicedByStatus = filterInvoicedByStatus;
 window.editInvoiceNotes = editInvoiceNotes;

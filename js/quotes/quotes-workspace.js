@@ -581,6 +581,11 @@ function renderWorkspaceOverview(container) {
 
                             <i data-lucide="hammer"></i> Ekstraarbejde
                         </button>
+                        ${currentWorkspaceOrder.order_stage === 'completed' ? `
+                        <button onclick="reopenOrder(${currentWorkspaceOrder.id})" class="quick-action-btn">
+                            <i data-lucide="undo-2"></i> Genåbn
+                        </button>
+                        ` : ''}
                     </div>
                 </div>
                 `}
@@ -688,7 +693,7 @@ function renderWorkspaceInvoicesSection() {
     const typeLabel = i => i.invoice_type === 'creditnote' ? 'Kreditnota' : (i.invoice_type === 'aconto' ? 'Aconto' : 'Slutfaktura');
     const statusLabel = i => i.status === 'draft' ? 'Ikke sendt' : (i.status === 'sent' ? 'Sendt' : 'Betalt');
     const rows = invs.map(i => `
-        <tr onclick="viewInvoiceFromWorkspace(${i.id})" style="cursor:pointer;border-bottom:1px solid var(--border);background:rgba(186,151,84,.07);">
+        <tr onclick="showWorkspaceInvoicePreview(${i.id})" style="cursor:pointer;border-bottom:1px solid var(--border);background:rgba(186,151,84,.07);">
             <td style="padding:8px 6px;font-size:12px;">${i.invoice_number}</td>
             <td style="padding:8px 6px;font-size:12px;">${typeLabel(i)}</td>
             <td style="padding:8px 6px;font-size:12px;">${statusLabel(i)}</td>
@@ -724,25 +729,102 @@ function renderWorkspaceInvoicesSection() {
                 <tbody>${rows || '<tr><td colspan="6" style="padding:12px;font-size:12px;color:var(--text-muted);">Ingen fakturaer endnu</td></tr>'}</tbody>
             </table>
             </div>
+            <div id="wsInvoicePreview"></div>
         </div>`;
     if (window.lucide) { try { lucide.createIcons(); } catch (e) { /* ignore */ } }
 }
 
 
-// View invoice from workspace (closes workspace first)
-async function viewInvoiceFromWorkspace(invoiceId) {
-    // Close workspace
-    currentWorkspaceOrder = null;
-    parentOrderId = null;
-    
-    // Switch to invoiced tab
-    switchOrderTab('invoiced');
-    
-    // Small delay to ensure tab is loaded
-    await new Promise(resolve => setTimeout(resolve, 100));
-    
-    // Now view the invoice
-    viewInvoice(invoiceId);
+// v106.4o: vis faktura inline i workspace (nederst i faktura-sektionen) - forlader ikke ordren
+async function showWorkspaceInvoicePreview(invoiceId) {
+    try {
+        const token = sessionStorage.getItem('token');
+        const res = await fetch(`/api/invoices/${invoiceId}`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (!res.ok) throw new Error('Kunne ikke hente faktura');
+        const invoice = await res.json();
+        renderWorkspaceInvoicePreview(invoice);
+        const box = document.getElementById('wsInvoicePreview');
+        if (box) box.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    } catch (error) {
+        console.error('Workspace invoice preview error:', error);
+        alert('Kunne ikke indlæse faktura: ' + error.message);
+    }
+}
+
+function renderWorkspaceInvoicePreview(invoice) {
+    const box = document.getElementById('wsInvoicePreview');
+    if (!box || typeof buildInvoiceSheetHTML !== 'function') return;
+    window.currentPreviewInvoice = invoice;
+    const actions = `
+        <button onclick="closeWorkspaceInvoicePreview()" class="btn btn-secondary">
+            <i data-lucide="x"></i> Luk
+        </button>
+        ${invoice.status === 'draft' && invoice.invoice_type !== 'creditnote' ? `
+            <button onclick="sendInvoice(${invoice.id})" class="btn btn-primary">
+                <i data-lucide="send"></i> Send til Kunde
+            </button>
+        ` : ''}
+        ${invoice.invoice_type !== 'creditnote' && invoice.status === 'sent' ? `
+            <button onclick="markInvoicePaid(${invoice.id})" class="btn btn-primary">
+                <i data-lucide="check"></i> Markér Betalt
+            </button>
+        ` : ''}
+        ${invoice.invoice_type !== 'creditnote' && invoice.status !== 'draft' ? `
+            <button onclick="createCreditNote(${invoice.id})" class="btn btn-secondary">
+                <i data-lucide="undo-2"></i> Opret Kreditnota
+            </button>
+        ` : ''}
+        <button onclick="window.print()" class="btn btn-secondary">
+            <i data-lucide="printer"></i> Print / PDF
+        </button>
+        ${invoice.status === 'draft' ? `
+            <button onclick="deleteInvoice(${invoice.id})" class="btn btn-danger toolbar-end">
+                <i data-lucide="trash-2"></i> Slet
+            </button>
+        ` : ''}
+    `;
+    box.innerHTML = `
+        <div style="margin-top:20px;border-top:2px solid var(--border);padding-top:20px;">
+            <div class="preview-actions" style="margin-bottom:20px;">${actions}</div>
+            <div class="quote-sheet-wrap">${buildInvoiceSheetHTML(invoice)}</div>
+        </div>`;
+    if (window.lucide) { try { lucide.createIcons(); } catch (e) { /* ignore */ }
+    }
+}
+
+function refreshWorkspaceInvoicePreview(invoiceId) {
+    // Genrender listen og hent fakturaen igen, saa status/belob er friske
+    renderWorkspaceInvoicesSection();
+    const box = document.getElementById('wsInvoicePreview');
+    if (box && window.currentPreviewInvoice && window.currentPreviewInvoice.id === invoiceId) {
+        showWorkspaceInvoicePreview(invoiceId);
+    }
+}
+
+function closeWorkspaceInvoicePreview() {
+    const box = document.getElementById('wsInvoicePreview');
+    if (box) box.innerHTML = '';
+    window.currentPreviewInvoice = null;
+}
+
+// v106.4o: genhent fakturaer fra server og genrender workspace-sektionen (bruges efter sletning)
+async function refreshWorkspaceInvoicesFromServer() {
+    if (!currentWorkspaceOrder) return;
+    try {
+        const token = sessionStorage.getItem('token');
+        const res = await fetch(`/api/orders/${currentWorkspaceOrder.id}/workspace`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (res.ok) {
+            const data = await res.json();
+            workspaceInvoices = data.invoices || (data.invoice ? [data.invoice] : []);
+        }
+    } catch (error) {
+        console.error('Refresh workspace invoices error:', error);
+    }
+    renderWorkspaceInvoicesSection();
 }
 
 // Render expenses tab
@@ -2597,7 +2679,10 @@ window.resetQuotesNavState = function () {
 };
 window.saveRegisterMaterial = saveRegisterMaterial;
 window.closeWorkspace = closeWorkspace;
-window.viewInvoiceFromWorkspace = viewInvoiceFromWorkspace;
+window.showWorkspaceInvoicePreview = showWorkspaceInvoicePreview;
+window.closeWorkspaceInvoicePreview = closeWorkspaceInvoicePreview;
+window.refreshWorkspaceInvoicePreview = refreshWorkspaceInvoicePreview;
+window.refreshWorkspaceInvoicesFromServer = refreshWorkspaceInvoicesFromServer;
 window.toggleWorkspaceInvoices = toggleWorkspaceInvoices;
 window.viewOriginalQuote = viewOriginalQuote;
 window.showAddExpense = showAddExpense;
