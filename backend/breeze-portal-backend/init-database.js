@@ -652,6 +652,8 @@ export async function initializeDatabase() {
       } catch (e) { /* Postgres: noegler haandteres af slette-raekkefoelgen */ }
       const tables = [
         'order_timeline',      // ordre-historik
+        'order_documents',     // v106.4: dokumenter/billeder i dokumentation
+        'order_notes',         // v106.4: ordrer-noter
         'order_materials',     // tids-/materialeforbrug
         'order_expenses',      // udgifter
         'invoice_lines',       // fakturalinjer
@@ -673,7 +675,7 @@ export async function initializeDatabase() {
         else await db.run('PRAGMA foreign_keys = ON');
       } catch (e) { /* ignore */ }
       // SQLite: nulstil autoincrement, saa foerste ordre igen bliver 0001
-      try { await db.run("DELETE FROM sqlite_sequence WHERE name IN ('quotes','quote_lines','quote_attachments','invoices','invoice_lines','order_expenses','order_materials','order_timeline')"); } catch (e) { /* Postgres eller tabel findes ikke */ }
+      try { await db.run("DELETE FROM sqlite_sequence WHERE name IN ('quotes','quote_lines','quote_attachments','invoices','invoice_lines','order_expenses','order_materials','order_timeline','order_documents','order_notes')"); } catch (e) { /* Postgres eller tabel findes ikke */ }
       console.log('✅ Ren slaede gennemfoert - næste ordre får nummer 0001');
     }
 
