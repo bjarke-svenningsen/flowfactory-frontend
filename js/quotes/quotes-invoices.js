@@ -45,7 +45,7 @@ function renderInvoicedContent(invoices) {
         'paid': 'badge--accepted'
     };
     const statusText = {
-        'draft': 'Udkast',
+        'draft': 'Ikke sendt',
         'sent': 'Sendt',
         'paid': 'Betalt'
     };
@@ -69,7 +69,7 @@ function renderInvoicedContent(invoices) {
                 <div class="list-card-head">
                     <h4 class="list-card-title">${invoice.invoice_type === 'creditnote' ? 'Kreditnota ' : 'Faktura '}${invoice.invoice_number}</h4>
                     ${typeBadge}
-                    <span class="badge ${badgeClass[invoice.status] || 'badge--draft'}">${statusText[invoice.status] || 'Udkast'}</span>
+                    <span class="badge ${badgeClass[invoice.status] || 'badge--draft'}">${statusText[invoice.status] || 'Ikke sendt'}</span>
                 </div>
                 <div class="list-card-grid">
                     <div class="list-card-field"><span class="label">Kunde</span><span class="value">${invoice.customer_name}</span></div>

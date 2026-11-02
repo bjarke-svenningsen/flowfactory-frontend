@@ -686,7 +686,7 @@ function renderWorkspaceInvoicesSection() {
     const credited = invs.filter(i => i.invoice_type === 'creditnote').reduce((s, i) => s + (Number(i.total) || 0), 0);
     const rest = (Number(currentWorkspaceOrder.total) || 0) - invoiced - credited;
     const typeLabel = i => i.invoice_type === 'creditnote' ? 'Kreditnota' : (i.invoice_type === 'aconto' ? 'Aconto' : 'Slutfaktura');
-    const statusLabel = i => i.status === 'draft' ? 'Udkast' : (i.status === 'sent' ? 'Sendt' : 'Betalt');
+    const statusLabel = i => i.status === 'draft' ? 'Ikke sendt' : (i.status === 'sent' ? 'Sendt' : 'Betalt');
     const rows = invs.map(i => `
         <tr onclick="viewInvoiceFromWorkspace(${i.id})" style="cursor:pointer;border-bottom:1px solid var(--border);background:rgba(186,151,84,.07);">
             <td style="padding:8px 6px;font-size:12px;">${i.invoice_number}</td>
