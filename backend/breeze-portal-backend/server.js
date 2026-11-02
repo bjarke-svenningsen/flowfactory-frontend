@@ -148,6 +148,29 @@ async function ensureInvoiceTypeColumn() {
 }
 ensureInvoiceTypeColumn().catch(err => console.error('Fejl ved tilføjelse af invoice_type:', err));
 
+// v106.4j: kreditnotaer + hul-sikker fakturanummerering
+// - invoices.credit_of: reference til den faktura der krediteres (NULL = normal faktura)
+// - invoice_counter: atomar taeller, så fakturanumre ALDRIG genbruges (også efter sletning)
+async function ensureInvoiceCreditColumns() {
+  let hasCreditOf = true;
+  try { await db.get('SELECT credit_of FROM invoices LIMIT 1'); } catch { hasCreditOf = false; }
+  if (!hasCreditOf) {
+    await db.run('ALTER TABLE invoices ADD COLUMN credit_of INTEGER');
+    console.log('   Kolonne credit_of tilføjet til invoices');
+  }
+  await db.run(`CREATE TABLE IF NOT EXISTS invoice_counter (
+    name TEXT PRIMARY KEY,
+    value INTEGER NOT NULL
+  )`);
+  // Seed taelleren fra eksisterende serie (5000+), hvis den ikke findes
+  await db.run(`
+    INSERT INTO invoice_counter (name, value)
+    SELECT 'invoice', COALESCE((SELECT MAX(CAST(invoice_number AS INTEGER)) FROM invoices), 4999) + 1
+    WHERE NOT EXISTS (SELECT 1 FROM invoice_counter WHERE name = 'invoice')
+  `);
+}
+ensureInvoiceCreditColumns().catch(err => console.error('Fejl ved tilføjelse af credit_of/invoice_counter:', err));
+
 // MIME-fallback: kendte filtyper browsers ellers fejlfortolker
 const MIME_FALLBACKS = { jfif: 'image/jpeg', pjpeg: 'image/jpeg', pjp: 'image/jpeg' };
 // JPEG-varianter der ofte gemmes med en forkert/generisk mime_type - endelsen vinder altid
@@ -2353,15 +2376,18 @@ async function generateExtraWorkNumber(parentOrderId) {
 }
 
 // Helper function to generate invoice number
+// v106.4j: taellerbaseret - numre er forloebende og kan ALDRIG genbruges,
+// heller ikke hvis den seneste faktura slettes (bogfoeringskrav)
 async function generateInvoiceNumber() {
-  const lastInvoice = await db.get('SELECT invoice_number FROM invoices ORDER BY id DESC LIMIT 1');
-  
-  let nextNum = 5000; // Start from 5000
-  if (lastInvoice) {
-    nextNum = parseInt(lastInvoice.invoice_number) + 1;
+  const row = await db.get(`SELECT value FROM invoice_counter WHERE name = 'invoice'`);
+  if (!row) {
+    // Fallback hvis migrationen ikke har koert endnu
+    await db.run(`INSERT INTO invoice_counter (name, value) SELECT 'invoice', COALESCE((SELECT MAX(CAST(invoice_number AS INTEGER)) FROM invoices), 4999) + 1 WHERE NOT EXISTS (SELECT 1 FROM invoice_counter WHERE name = 'invoice')`);
+    return generateInvoiceNumber();
   }
-  
-  return String(nextNum); // 5000, 5001, 5002...
+  const next = row.value + 1;
+  await db.run(`UPDATE invoice_counter SET value = ? WHERE name = 'invoice'`, [next]);
+  return String(next);
 }
 
 // Helper function to get full order number (for display)
@@ -3352,7 +3378,58 @@ app.post('/api/invoices/from-order/:orderId', auth, async (req, res) => {
       error: `Sagen har allerede en slutfaktura (${finalInvoice.invoice_number}). Slet den først hvis der skal oprettes en ny.`
     });
   }
-  
+
+  // v106.4j: netto faktureret aconto (aconto minus kreditnotaer paa aconto-fakturaer)
+  const acontoNet = await db.get(`
+    SELECT COALESCE(SUM(
+      CASE
+        WHEN i.invoice_type = 'aconto' THEN i.subtotal
+        WHEN i.invoice_type = 'creditnote' AND i.credit_of IN (
+          SELECT a2.id FROM invoices a2 WHERE a2.invoice_type = 'aconto' AND a2.order_id = i.order_id
+        ) THEN -i.subtotal
+        ELSE 0
+      END
+    ), 0) AS net
+    FROM invoices i
+    WHERE i.order_id = ? AND i.status != 'draft'
+  `, [orderId]);
+  const acontoInvoicedNet = Number(acontoNet?.net) || 0;
+  const orderSubtotal = Number(order.subtotal) || 0;
+  const remainingSubtotal = orderSubtotal - acontoInvoicedNet;
+
+  // Ikke-udkast aconto-fakturaer (bruges til minus-linjer paa slutfakturaen)
+  const acontoInvoices = await db.all(`
+    SELECT id, invoice_number, subtotal FROM invoices
+    WHERE order_id = ? AND invoice_type = 'aconto' AND status != 'draft'
+    ORDER BY id ASC
+  `, [orderId]);
+
+  // v106.4j: aconto beloeb (ekskl. moms) - direkte amount eller percent af ordre-subtotal
+  let acontoAmount = null;
+  let acontoPctLabel = null;
+  if (invoice_type === 'aconto') {
+    const bodyAmount = req.body && req.body.amount != null ? parseFloat(req.body.amount) : null;
+    const bodyPercent = req.body && req.body.percent != null ? parseFloat(req.body.percent) : null;
+
+    if (bodyAmount != null && !isNaN(bodyAmount) && bodyAmount > 0) {
+      acontoAmount = Math.round(bodyAmount * 100) / 100;
+      if (orderSubtotal > 0) acontoPctLabel = String(Math.round((bodyAmount / orderSubtotal) * 1000) / 10);
+    } else if (bodyPercent != null && !isNaN(bodyPercent) && bodyPercent > 0) {
+      acontoAmount = Math.round(orderSubtotal * bodyPercent) / 100;
+      acontoPctLabel = String(bodyPercent);
+    }
+
+    if (!acontoAmount || acontoAmount <= 0) {
+      return res.status(400).json({ error: 'Angiv et beloeb eller en procent for aconto-fakturaen' });
+    }
+    if (remainingSubtotal <= 0) {
+      return res.status(400).json({ error: 'Hele ordrebeloebet er allerede faktureret - der kan ikke oprettes mere aconto' });
+    }
+    if (acontoAmount > remainingSubtotal + 0.01) {
+      return res.status(400).json({ error: `Aconto-beloebet (${acontoAmount} kr.) overstiger det resterende beloeb (${remainingSubtotal} kr. ekskl. moms)` });
+    }
+  }
+
   const invoice_number = await generateInvoiceNumber();
   const full_order_number = await getFullOrderNumber(order);
   
@@ -3365,10 +3442,19 @@ app.post('/api/invoices/from-order/:orderId', auth, async (req, res) => {
   }
   
   // Create invoice
+  // v106.4j: aconto faar kun sit eget beloeb (ekskl. moms) - ordrens totals røres ikke
+  let invSubtotal = order.subtotal;
+  let invVat = order.vat_amount;
+  let invTotal = order.total;
+  if (invoice_type === 'aconto') {
+    invSubtotal = acontoAmount;
+    invVat = Math.round(acontoAmount * 0.25 * 100) / 100;
+    invTotal = invSubtotal + invVat;
+  }
   const info = await db.run(`
     INSERT INTO invoices (invoice_number, order_id, full_order_number, due_date, payment_terms, subtotal, vat_rate, vat_amount, total, notes, created_by, invoice_type)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `, [invoice_number, orderId, full_order_number, finalDueDate, payment_terms || 'Netto 14 dage', order.subtotal, order.vat_rate, order.vat_amount, order.total, notes || null, req.user.id, invoice_type]);
+  `, [invoice_number, orderId, full_order_number, finalDueDate, payment_terms || 'Netto 14 dage', invSubtotal, order.vat_rate || 25, invVat, invTotal, notes || null, req.user.id, invoice_type]);
   
   const invoiceId = info.lastInsertRowid;
   
@@ -3386,7 +3472,8 @@ app.post('/api/invoices/from-order/:orderId', auth, async (req, res) => {
   let totalFinal = order.total;
   
   const isConsumption = String(order.order_type || 'calculation') === 'consumption';
-  if (isConsumption) {
+  // v106.4j: aconto-fakturaer bruger hverken registrerings-linjer eller auto-totals
+  if (isConsumption && invoice_type !== 'aconto') {
     const regs = await db.all(`
       SELECT om.*, m.name as material_name, m.unit as material_unit
       FROM order_materials om
@@ -3430,6 +3517,16 @@ app.post('/api/invoices/from-order/:orderId', auth, async (req, res) => {
   }
   
   const orderLines = await db.all('SELECT * FROM quote_lines WHERE quote_id = ? ORDER BY sort_order, id', [orderId]);
+  // v106.4j: aconto-fakturaer faar ikke ordrens linjer - kun en aconto-linje
+  if (invoice_type === 'aconto') {
+    const acontoDesc = acontoPctLabel
+      ? `Aconto ${acontoPctLabel}% af ordre ${full_order_number}`
+      : `Aconto (delbetaling) - ordre ${full_order_number}`;
+    await db.run(`
+      INSERT INTO invoice_lines (invoice_id, description, quantity, unit, unit_price, discount_percent, discount_amount, line_total, sort_order)
+      VALUES (?, ?, 1, 'stk', ?, 0, 0, ?, 0)
+    `, [invoiceId, acontoDesc, acontoAmount, acontoAmount]);
+  } else {
   // For Forbrugssager med registreringer bruges de automatiske linjer ovenfor - spring manuelle linjer over
   if (!(isConsumption && subtotalFinal !== order.subtotal)) {
     for (const line of orderLines) {
@@ -3438,6 +3535,31 @@ app.post('/api/invoices/from-order/:orderId', auth, async (req, res) => {
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
       `, [invoiceId, line.description, line.quantity, line.unit, line.unit_price, line.discount_percent, line.discount_amount, line.line_total, line.sort_order]);
     }
+  }
+
+  // v106.4j: aconto traekkes fra paa slutfakturaen som minus-linjer (ekskl. moms)
+  if (acontoInvoices.length > 0) {
+    let acontoDeduct = 0;
+    for (const a of acontoInvoices) {
+      const ded = Math.round((Number(a.subtotal) || 0) * 100) / 100;
+      await db.run(`
+        INSERT INTO invoice_lines (invoice_id, description, quantity, unit, unit_price, discount_percent, discount_amount, line_total, sort_order)
+        VALUES (?, ?, -1, 'stk', ?, 0, 0, ?, ?)
+      `, [invoiceId, `Aconto - faktura ${a.invoice_number} (trukket fra)`, ded, -ded, 1000 + a.id]);
+      acontoDeduct += ded;
+    }
+    if (acontoDeduct > 0) {
+      subtotalFinal = Math.round((subtotalFinal - acontoDeduct) * 100) / 100;
+      vatFinal = Math.round(subtotalFinal * 0.25 * 100) / 100;
+      totalFinal = Math.round((subtotalFinal + vatFinal) * 100) / 100;
+
+      await db.run(`
+        UPDATE invoices SET subtotal = ?, vat_amount = ?, total = ? WHERE id = ?
+      `, [subtotalFinal, vatFinal, totalFinal, invoiceId]);
+      // Hold ordrens totals i soejle med slutfakturaen (restbeloeb)
+      await db.run('UPDATE quotes SET subtotal = ?, vat_amount = ?, total = ? WHERE id = ?', [subtotalFinal, vatFinal, totalFinal, orderId]);
+    }
+  }
   }
   
   const invoice = await db.get(`
@@ -3520,9 +3642,76 @@ app.put('/api/invoices/:id', auth, async (req, res) => {
   res.json(updated);
 });
 
+// v106.4j: opret kreditnota for en faktura - kopier med alle linjer negative (udkast)
+app.post('/api/invoices/:id/creditnote', auth, async (req, res) => {
+  const invoiceId = Number(req.params.id);
+
+  const orig = await db.get('SELECT * FROM invoices WHERE id = ?', [invoiceId]);
+  if (!orig) {
+    return res.status(404).json({ error: 'Invoice not found' });
+  }
+  if (orig.invoice_type === 'creditnote') {
+    return res.status(400).json({ error: 'Man kan ikke kreditere en kreditnota' });
+  }
+  if (orig.status === 'draft') {
+    return res.status(400).json({ error: 'Udkast kan slettes direkte - de behøver ikke krediteres' });
+  }
+
+  // Allerede fuldt krediteret? (kreditnota-subtotaler er positive i databasen)
+  const credited = await db.get(
+    "SELECT COALESCE(SUM(subtotal), 0) AS s FROM invoices WHERE credit_of = ? AND status != 'draft'",
+    [invoiceId]
+  );
+  const creditedSum = Number(credited?.s) || 0;
+  if (creditedSum >= (Number(orig.subtotal) || 0) - 0.01) {
+    return res.status(400).json({ error: `Fakturaen er allerede krediteret (${creditedSum} kr. af ${orig.subtotal} kr.)` });
+  }
+
+  const invoice_number = await generateInvoiceNumber();
+  let finalDueDate;
+  const dueDate = new Date();
+  dueDate.setDate(dueDate.getDate() + 14);
+  finalDueDate = dueDate.toISOString().split('T')[0];
+
+  const info = await db.run(`
+    INSERT INTO invoices (invoice_number, order_id, full_order_number, due_date, payment_terms, subtotal, vat_rate, vat_amount, total, notes, status, invoice_type, credit_of, created_by)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft', 'creditnote', ?, ?)
+  `, [invoice_number, orig.order_id, orig.full_order_number, finalDueDate, orig.payment_terms || 'Netto 14 dage',
+      orig.subtotal, orig.vat_rate || 25, orig.vat_amount, orig.total,
+      `Kreditnota for faktura ${orig.invoice_number}`, orig.id, req.user.id]);
+  const creditId = info.lastInsertRowid;
+
+  // Kopier linjer med minus foran (antal negativt, enhedspris positivt)
+  const origLines = await db.all('SELECT * FROM invoice_lines WHERE invoice_id = ? ORDER BY sort_order, id', [invoiceId]);
+  for (const [index, line] of origLines.entries()) {
+    await db.run(`
+      INSERT INTO invoice_lines (invoice_id, description, quantity, unit, unit_price, discount_percent, discount_amount, line_total, sort_order)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `, [creditId, line.description, -(Number(line.quantity) || 0), line.unit, line.unit_price,
+        line.discount_percent || 0, -(Number(line.discount_amount) || 0), -(Number(line.line_total) || 0), index]);
+  }
+
+  await logOrderEvent(orig.order_id, 'note', `Kreditnota ${invoice_number} oprettet for faktura ${orig.invoice_number}`, req.user.id);
+
+  const credit = await db.get('SELECT * FROM invoices WHERE id = ?', [creditId]);
+  credit.lines = await db.all('SELECT * FROM invoice_lines WHERE invoice_id = ? ORDER BY sort_order, id', [creditId]);
+  res.json(credit);
+});
+
 // Delete invoice
+// v106.4j: kun udkast kan slettes - sendte/betalte fakturaer krediteres i stedet (bogfoeringskrav)
 app.delete('/api/invoices/:id', auth, async (req, res) => {
   const invoiceId = Number(req.params.id);
+
+  const invoice = await db.get('SELECT * FROM invoices WHERE id = ?', [invoiceId]);
+  if (!invoice) {
+    return res.status(404).json({ error: 'Invoice not found' });
+  }
+  if (invoice.status !== 'draft') {
+    return res.status(400).json({
+      error: 'Sendte/betalte fakturaer kan ikke slettes - opret en kreditnota i stedet, så nummerserien forbliver forløbende'
+    });
+  }
   await db.run('DELETE FROM invoices WHERE id = ?', [invoiceId]);
   res.json({ success: true });
 });
@@ -4845,6 +5034,15 @@ app.get('/api/orders/:orderId/workspace', auth, async (req, res) => {
     ORDER BY i.id DESC
     LIMIT 1
   `, [orderId]);
+
+  // v106.4j: ALLE fakturaer + kreditnotaer for ordren (til workspace-fakturalisten)
+  const invoices = await db.all(`
+    SELECT i.*, u.name as created_by_name
+    FROM invoices i
+    JOIN users u ON i.created_by = u.id
+    WHERE i.order_id = ?
+    ORDER BY i.id DESC
+  `, [orderId]);
   
   // Calculate aggregated revenue (main order + extra work)
   // v91: Forbrugssager har omsaetning = materiale-salg (total_sale);
@@ -4883,6 +5081,7 @@ app.get('/api/orders/:orderId/workspace', auth, async (req, res) => {
     materials,
     extra_work_orders: extraWorkOrdersWithNumbers,
     invoice: invoice || null,
+    invoices: invoices,
     expenses: {
       items: expenses,
       extra_work_expenses: extraWorkExpenses,

@@ -237,6 +237,7 @@ export async function initializeDatabase() {
       notes TEXT,
       status TEXT DEFAULT 'draft',
       invoice_type TEXT DEFAULT 'final',
+      credit_of INTEGER,
       created_by INTEGER NOT NULL,
       created_at ${db._isProduction ? 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP' : "TEXT DEFAULT (datetime('now'))"},
       sent_at ${db._isProduction ? 'TIMESTAMP' : 'TEXT'},
@@ -256,6 +257,17 @@ export async function initializeDatabase() {
       line_total REAL NOT NULL,
       sort_order INTEGER DEFAULT 0${db._isProduction ? '' : ',\n  FOREIGN KEY(invoice_id) REFERENCES invoices(id) ON DELETE CASCADE'}
     )`);
+
+    // v106.4j: fakturanummer-taeller (numre genbruges ALDRIG, heller ikke efter sletning)
+    await db.run(`CREATE TABLE IF NOT EXISTS invoice_counter (
+      name TEXT PRIMARY KEY,
+      value INTEGER NOT NULL
+    )`);
+    await db.run(`
+      INSERT INTO invoice_counter (name, value)
+      SELECT 'invoice', COALESCE((SELECT MAX(CAST(invoice_number AS INTEGER)) FROM invoices), 4999) + 1
+      WHERE NOT EXISTS (SELECT 1 FROM invoice_counter WHERE name = 'invoice')
+    `);
 
     // Order expenses
     await db.run(`CREATE TABLE IF NOT EXISTS order_expenses (

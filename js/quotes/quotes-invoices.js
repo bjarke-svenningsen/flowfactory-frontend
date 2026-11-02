@@ -58,13 +58,16 @@ function renderInvoicedContent(invoices) {
     let html = `<div class="list-section-head"><span class="title">Faktura-kartotek</span><span class="badge badge--invoiced">${invoices.length}</span></div>`;
     invoices.forEach(invoice => {
         // v106.4i: type-maerke - Aconto (delbetaling) / Slutfaktura
+        // v106.4j: type-maerke - Aconto / Slutfaktura / Kreditnota
         const typeBadge = invoice.invoice_type === 'aconto'
             ? '<span class="badge badge--draft">Aconto</span>'
+            : invoice.invoice_type === 'creditnote'
+            ? '<span class="badge badge--sent">Kreditnota</span>'
             : '<span class="badge badge--accepted">Slutfaktura</span>';
         html += `
             <div class="list-card ${cardClass[invoice.status] || 'list-card--draft'}">
                 <div class="list-card-head">
-                    <h4 class="list-card-title">Faktura ${invoice.invoice_number}</h4>
+                    <h4 class="list-card-title">${invoice.invoice_type === 'creditnote' ? 'Kreditnota ' : 'Faktura '}${invoice.invoice_number}</h4>
                     ${typeBadge}
                     <span class="badge ${badgeClass[invoice.status] || 'badge--draft'}">${statusText[invoice.status] || 'Udkast'}</span>
                 </div>
@@ -76,8 +79,9 @@ function renderInvoicedContent(invoices) {
                 </div>
                 <div class="list-card-actions">
                     ${btn('secondary', 'eye', 'Se Faktura', { onclick: `viewInvoice(${invoice.id})` })}
-                    ${btn(invoice.status === 'draft' ? 'primary' : 'secondary', 'send', 'Send', { onclick: `sendInvoice(${invoice.id})` })}
-                    ${btn('icon', 'trash-2', null, { title: 'Slet Faktura', onclick: `deleteInvoice(${invoice.id})` })}
+                    ${invoice.status === 'draft' ? btn('primary', 'send', 'Send', { onclick: `sendInvoice(${invoice.id})` }) : ''}
+                    ${invoice.invoice_type !== 'creditnote' && invoice.status !== 'draft' ? btn('secondary', 'undo-2', 'Kreditnota', { onclick: `createCreditNote(${invoice.id})` }) : ''}
+                    ${invoice.status === 'draft' ? btn('icon', 'trash-2', null, { title: 'Slet Udkast', onclick: `deleteInvoice(${invoice.id})` }) : ''}
                 </div>
             </div>
         `;
@@ -105,7 +109,7 @@ function filterInvoicesByStatus(status) {
 
 // Create invoice from order
 // v106.4i: invoiceType = 'aconto' (delbetaling) | 'final' (slutfaktura, afslutter sagen)
-async function createInvoiceFromOrder(orderId, invoiceType) {
+async function createInvoiceFromOrder(orderId, invoiceType, amount, percent) {
     const type = invoiceType || 'final';
 
     try {
@@ -116,7 +120,7 @@ async function createInvoiceFromOrder(orderId, invoiceType) {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${token}`
             },
-            body: JSON.stringify({ invoice_type: type })
+            body: JSON.stringify({ invoice_type: type, amount: amount || undefined, percent: percent || undefined })
         });
 
         if (!response.ok) {
@@ -145,14 +149,49 @@ async function createInvoiceFromOrder(orderId, invoiceType) {
     }
 }
 
-// v106.4i: modal til valg af aconto/slutfaktura (erstatter native confirm)
-function openInvoiceTypeModal(orderId) {
+// v106.4j: modal til valg af aconto/slutfaktura med beloeb/procent + aconto-status
+let invoiceTypeModalData = null;
+
+async function openInvoiceTypeModal(orderId) {
     document.getElementById('invoiceTypeModal')?.remove();
     const overlay = document.createElement('div');
     overlay.id = 'invoiceTypeModal';
     overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;z-index:10000;';
-    const boxStyle = 'background:var(--surface);border-radius:12px;padding:28px;width:min(440px,92vw);box-shadow:0 20px 60px rgba(0,0,0,.3);';
+    overlay.innerHTML = '<div style="background:var(--surface);border-radius:12px;padding:28px;width:min(460px,92vw);box-shadow:0 20px 60px rgba(0,0,0,.3);"><p style="color:var(--text-muted);margin:0;">Indlaeser ordre...</p></div>';
+    document.body.appendChild(overlay);
+
+    let subtotal = 0, acontoInvoiced = 0;
+    try {
+        const token = sessionStorage.getItem('token');
+        const resp = await fetch('/api/orders/' + orderId + '/workspace', { headers: { 'Authorization': 'Bearer ' + token } });
+        if (resp.ok) {
+            const data = await resp.json();
+            subtotal = Number(data.order && data.order.subtotal) || 0;
+            const invs = data.invoices || [];
+            acontoInvoiced = invs.filter(i => i.status !== 'draft').reduce((s, i) => {
+                if (i.invoice_type === 'aconto') return s + (Number(i.subtotal) || 0);
+                if (i.invoice_type === 'creditnote' && invs.some(a => a.id === i.credit_of && a.invoice_type === 'aconto')) return s - (Number(i.subtotal) || 0);
+                return s;
+            }, 0);
+        }
+    } catch (e) { /* falder tilbage til 0 */ }
+
+    invoiceTypeModalData = { orderId, subtotal, acontoInvoiced };
+    renderInvoiceTypeModalContent('final');
+    if (window.lucide) { try { lucide.createIcons(); } catch (e) { /* ignore */ } }
+}
+
+function renderInvoiceTypeModalContent(selectedType) {
+    const overlay = document.getElementById('invoiceTypeModal');
+    if (!overlay || !invoiceTypeModalData) return;
+    const d = invoiceTypeModalData;
+    const rest = Math.max(d.subtotal - d.acontoInvoiced, 0);
+    const boxStyle = 'background:var(--surface);border-radius:12px;padding:28px;width:min(480px,92vw);box-shadow:0 20px 60px rgba(0,0,0,.3);max-height:90vh;overflow-y:auto;';
     const optStyle = 'display:flex;gap:10px;align-items:flex-start;padding:14px;border:1px solid var(--border);border-radius:8px;margin-bottom:10px;cursor:pointer;';
+    const inpStyle = 'width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:6px;background:var(--surface-muted);color:var(--text);';
+    const fmt = v => new Intl.NumberFormat('da-DK', { style: 'currency', currency: 'DKK' }).format(v || 0);
+    const isFinal = selectedType === 'final';
+
     overlay.innerHTML = `
         <div style="${boxStyle}">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;">
@@ -160,33 +199,84 @@ function openInvoiceTypeModal(orderId) {
                 ${btn('ghost', 'x', '', { onclick: 'closeInvoiceTypeModal()' })}
             </div>
             <label style="${optStyle}">
-                <input type="radio" name="invoiceTypeRadio" value="aconto" style="margin-top:3px;">
-                <span><strong>Aconto faktura</strong><br><span style="font-size:13px;color:var(--text-muted);">Delbetaling. Sagen forbliver åben, og der kan oprettes flere fakturaer.</span></span>
+                <input type="radio" name="invoiceTypeRadio" value="aconto" ${isFinal ? '' : 'checked'} onchange="renderInvoiceTypeModalContent('aconto')" style="margin-top:3px;">
+                <span><strong>Aconto faktura</strong><br><span style="font-size:13px;color:var(--text-muted);">Delbetaling. Sagen forbliver &aring;ben, og der kan oprettes flere fakturaer.</span></span>
             </label>
+            ${isFinal ? `
+            <div style="margin:-4px 0 10px 34px;padding:10px 12px;background:var(--surface-muted);border-radius:8px;font-size:13px;color:var(--text);">
+                <div style="display:flex;justify-content:space-between;"><span>Ordre (ekskl. moms):</span><strong>${fmt(d.subtotal)}</strong></div>
+                ${d.acontoInvoiced > 0 ? `<div style="display:flex;justify-content:space-between;"><span>Heraf aconto:</span><strong>&minus;${fmt(d.acontoInvoiced)}</strong></div>` : ''}
+                <div style="display:flex;justify-content:space-between;border-top:1px solid var(--border);margin-top:6px;padding-top:6px;"><span>Restbel&oslash;b:</span><strong>${fmt(rest)}</strong></div>
+            </div>
+            ` : `
+            <div style="margin:-4px 0 12px 34px;">
+                <div style="display:flex;gap:10px;margin-bottom:10px;">
+                    <div style="flex:1;">
+                        <label style="font-size:12px;color:var(--text-muted);">Beloeb (kr, ekskl. moms)</label>
+                        <input type="number" id="invModalAmount" min="0" step="0.01" placeholder="fx 50000" oninput="invoiceModalCalc('amount')" style="${inpStyle}">
+                    </div>
+                    <div style="flex:0 0 130px;">
+                        <label style="font-size:12px;color:var(--text-muted);">Procent af ordre</label>
+                        <input type="number" id="invModalPercent" min="0" max="100" step="0.5" placeholder="fx 50" oninput="invoiceModalCalc('percent')" style="${inpStyle}">
+                    </div>
+                </div>
+                <div id="invModalPreview" style="font-size:13px;color:var(--text);background:var(--surface-muted);border-radius:8px;padding:10px 12px;"></div>
+            </div>
+            `}
             <label style="${optStyle}margin-bottom:18px;">
-                <input type="radio" name="invoiceTypeRadio" value="final" checked style="margin-top:3px;">
-                <span><strong>Slutfaktura</strong><br><span style="font-size:13px;color:var(--text-muted);">Afslutter sagen automatisk. Kun én slutfaktura pr. sag.</span></span>
+                <input type="radio" name="invoiceTypeRadio" value="final" ${isFinal ? 'checked' : ''} onchange="renderInvoiceTypeModalContent('final')" style="margin-top:3px;">
+                <span><strong>Slutfaktura</strong><br><span style="font-size:13px;color:var(--text-muted);">Hele ordren minus aconto. Afslutter sagen automatisk. Kun &eacute;n slutfaktura pr. sag.</span></span>
             </label>
             <div style="display:flex;justify-content:flex-end;gap:8px;">
                 ${btn('secondary', 'x', 'Annuller', { onclick: 'closeInvoiceTypeModal()' })}
-                ${btn('primary', 'receipt', 'Opret Faktura', { onclick: `submitInvoiceType(${orderId})` })}
+                ${btn('primary', 'receipt', 'Opret Faktura', { onclick: 'submitInvoiceType(' + d.orderId + ')' })}
             </div>
         </div>`;
-    document.body.appendChild(overlay);
-    if (window.lucide) { try { lucide.createIcons(); } catch (e) { /* ignore */ } }
+    if (!isFinal) invoiceModalCalc();
+}
+
+function invoiceModalCalc(fromField) {
+    const d = invoiceTypeModalData; if (!d) return;
+    const amtEl = document.getElementById('invModalAmount');
+    const pctEl = document.getElementById('invModalPercent');
+    if (!amtEl || !pctEl) return;
+    if (fromField === 'amount' && amtEl.value && d.subtotal > 0) {
+        const v = parseFloat(amtEl.value);
+        if (!isNaN(v) && v > 0) pctEl.value = Math.round((v / d.subtotal) * 1000) / 10;
+    } else if (fromField === 'percent' && pctEl.value) {
+        const v = parseFloat(pctEl.value);
+        if (!isNaN(v) && v > 0) amtEl.value = Math.round(d.subtotal * v) / 100;
+    }
+    const a = parseFloat(amtEl.value) || 0;
+    const vat = Math.round(a * 0.25 * 100) / 100;
+    const fmt = v => new Intl.NumberFormat('da-DK', { style: 'currency', currency: 'DKK' }).format(v || 0);
+    const pv = document.getElementById('invModalPreview');
+    if (pv) pv.innerHTML = a > 0
+        ? 'Subtotal: <strong>' + fmt(a) + '</strong> ekskl. moms &nbsp;&bull;&nbsp; Moms (25%): <strong>' + fmt(vat) + '</strong> &nbsp;&bull;&nbsp; Total: <strong>' + fmt(a + vat) + '</strong>'
+        : '<span style="color:var(--text-muted);">Indtast beloeb eller procent for at se fakturaens beloeb</span>';
 }
 
 function closeInvoiceTypeModal() {
     document.getElementById('invoiceTypeModal')?.remove();
+    invoiceTypeModalData = null;
 }
 
 function submitInvoiceType(orderId) {
     const radio = document.querySelector('input[name="invoiceTypeRadio"]:checked');
     const type = radio ? radio.value : 'final';
+    if (type === 'aconto') {
+        const amt = parseFloat(document.getElementById('invModalAmount')?.value);
+        if (!amt || amt <= 0) {
+            alert('Angiv et beloeb eller en procent for aconto-fakturaen');
+            return;
+        }
+        closeInvoiceTypeModal();
+        createInvoiceFromOrder(orderId, 'aconto', amt);
+        return;
+    }
     closeInvoiceTypeModal();
-    createInvoiceFromOrder(orderId, type);
+    createInvoiceFromOrder(orderId, 'final');
 }
-
 // View invoice
 async function viewInvoice(invoiceId) {
     try {
@@ -207,6 +297,7 @@ async function viewInvoice(invoiceId) {
 
 // Render invoice preview
 function renderInvoicePreview(invoice) {
+    window.currentPreviewInvoice = invoice;
     // Hide all other views
     document.getElementById('quotesListView').style.display = 'none';
     document.getElementById('quotesFormView').style.display = 'none';
@@ -232,11 +323,25 @@ function renderInvoicePreview(invoice) {
                         <i data-lucide="send"></i> Send til Kunde
                     </button>
                 ` : ''}
+                ${invoice.invoice_type === 'creditnote' && invoice.status === 'draft' ? `
+                    <button onclick="toggleInvoiceLineEditor(${invoice.id})" class="btn btn-secondary">
+                        <i data-lucide="pencil"></i> Rediger linjer
+                    </button>
+                ` : ''}
+                ${invoice.invoice_type !== 'creditnote' && invoice.status !== 'draft' ? `
+                    <button onclick="createCreditNote(${invoice.id})" class="btn btn-secondary">
+                        <i data-lucide="undo-2"></i> Opret Kreditnota
+                    </button>
+                ` : ''}
                 <button onclick="window.print()" class="btn btn-secondary">
                     <i data-lucide="printer"></i> Print / PDF
                 </button>
-                <button onclick="deleteInvoiceFromPreview(${invoice.id})" class="btn btn-danger toolbar-end">
-                    <i data-lucide="trash-2"></i> Slet
+                ${invoice.status === 'draft' ? `
+                    <button onclick="deleteInvoiceFromPreview(${invoice.id})" class="btn btn-danger toolbar-end">
+                        <i data-lucide="trash-2"></i> Slet
+                    </button>
+                ` : ''}
+            </div>
                 </button>
             </div>
             
@@ -247,7 +352,7 @@ function renderInvoicePreview(invoice) {
                         <img src="seestlogo.png" alt="SG Seest Gulvteknik ApS" style="height: 80px; width: auto; display: block; background: transparent !important; background-color: transparent !important; margin: 0; padding: 0;">
                     </div>
                     <div style="text-align: right;">
-                        <h2 style="margin: 0 0 15px 0; font-size: 24px; font-weight: 700; color: var(--text);">FAKTURA</h2>
+                        <h2 style="margin: 0 0 15px 0; font-size: 24px; font-weight: 700; color: var(--text);">${invoice.invoice_type === 'creditnote' ? 'KREDITNOTA' : (invoice.invoice_type === 'aconto' ? 'ACONTO FAKTURA' : 'FAKTURA')}</h2>
                         <table style="border-collapse: collapse; margin-left: auto;">
                             <tr>
                                 <td style="padding: 3px 10px 3px 0; font-size: 12px; color: var(--text-muted);">Kundenummer:</td>
@@ -389,7 +494,7 @@ function sendInvoice(invoiceId) {
 
 // Delete invoice
 function deleteInvoice(invoiceId) {
-    sgConfirm('Slet faktura', 'Er du sikker på at du vil slette denne faktura?', async () => {
+    sgConfirm('Slet udkast', 'Er du sikker på at du vil slette dette udkast?', async () => {
     
     try {
         const token = sessionStorage.getItem('token');
@@ -415,7 +520,7 @@ function deleteInvoice(invoiceId) {
 
 // Delete invoice from preview (redirects back to list)
 function deleteInvoiceFromPreview(invoiceId) {
-    sgConfirm('Slet faktura', 'Er du sikker på at du vil slette denne faktura?', async () => {
+    sgConfirm('Slet udkast', 'Er du sikker på at du vil slette dette udkast?', async () => {
     
     try {
         const token = sessionStorage.getItem('token');
@@ -441,20 +546,172 @@ function deleteInvoiceFromPreview(invoiceId) {
 }
 
 // Export functions
+// v106.4j: kreditnota + redigering af linjer i udkast
+async function createCreditNote(invoiceId) {
+    sgConfirm('Opret kreditnota', 'Opret en kreditnota for denne faktura?\n\nAlle linjer kopieres med minus foran, og du kan redigere dem inden sending.', async () => {
+        try {
+            const token = sessionStorage.getItem('token');
+            const response = await fetch('/api/invoices/' + invoiceId + '/creditnote', {
+                method: 'POST',
+                headers: { 'Authorization': 'Bearer ' + token }
+            });
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.error || 'Kunne ikke oprette kreditnota');
+            }
+            const credit = await response.json();
+            alert('Kreditnota ' + credit.invoice_number + ' oprettet som udkast');
+            loadInvoiced();
+            renderInvoicePreview(credit);
+        } catch (error) {
+            console.error('Creditnote error:', error);
+            alert('Kunne ikke oprette kreditnota: ' + error.message);
+        }
+    });
+}
+
+let invoiceLineEditor = null;
+
+function toggleInvoiceLineEditor(invoiceId) {
+    if (!window.currentPreviewInvoice || window.currentPreviewInvoice.id !== invoiceId) return;
+    invoiceLineEditor = JSON.parse(JSON.stringify(window.currentPreviewInvoice));
+    if (!Array.isArray(invoiceLineEditor.lines) || invoiceLineEditor.lines.length === 0) {
+        invoiceLineEditor.lines = [{ description: '', quantity: -1, unit: 'stk', unit_price: 0, discount_percent: 0, line_total: 0 }];
+    }
+    renderInvoiceLineEditor();
+}
+
+
+function invEscAttr(v) {
+    return String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
+}
+
+function renderInvoiceLineEditor() {
+    const inv = invoiceLineEditor;
+    if (!inv) return;
+    const container = document.getElementById('invoicingContainer');
+    const inp = 'padding:6px 8px;border:1px solid var(--border);border-radius:5px;background:var(--surface);color:var(--text);width:100%;box-sizing:border-box;font-size:12px;';
+    const rows = inv.lines.map((line, i) => `
+        <tr>
+            <td style="padding:6px;"><input class="ed-desc" value="${invEscAttr(line.description)}" style="${inp}"></td>
+            <td style="padding:6px;width:80px;"><input class="ed-qty" type="number" step="0.01" value="${line.quantity}" style="${inp}" oninput="invEditorLineTotal(${i})"></td>
+            <td style="padding:6px;width:70px;"><input class="ed-unit" value="${invEscAttr(line.unit || 'stk')}" style="${inp}"></td>
+            <td style="padding:6px;width:110px;"><input class="ed-price" type="number" step="0.01" value="${line.unit_price}" style="${inp}" oninput="invEditorLineTotal(${i})"></td>
+            <td style="padding:6px;width:70px;"><input class="ed-disc" type="number" step="1" value="${line.discount_percent || 0}" style="${inp}" oninput="invEditorLineTotal(${i})"></td>
+            <td style="padding:6px;width:110px;text-align:right;font-weight:600;font-size:12px;color:var(--text);" class="ed-total">${formatCurrency(line.line_total)}</td>
+            <td style="padding:6px;width:44px;text-align:center;"><button class="btn btn-icon btn-danger" title="Fjern linje" onclick="removeEditorLine(${i})"><i data-lucide="x"></i></button></td>
+        </tr>
+    `).join('');
+
+    container.innerHTML = `
+        <div class="quote-sheet-wrap">
+            <div class="preview-actions">
+                <button onclick="viewInvoice(${inv.id})" class="btn btn-secondary"><i data-lucide="arrow-left"></i> Tilbage</button>
+                <div style="flex:1;text-align:center;"><strong>Rediger linjer - kreditnota ${inv.invoice_number}</strong></div>
+                <button onclick="addEditorLine()" class="btn btn-secondary"><i data-lucide="plus"></i> Tilfoej linje</button>
+                <button onclick="saveInvoiceLineEdits(${inv.id})" class="btn btn-primary"><i data-lucide="save"></i> Gem</button>
+            </div>
+            <div class="quote-sheet">
+                <div class="doc-table-scroll">
+                <table style="width:100%;border-collapse:collapse;" id="invEditLines">
+                    <thead>
+                        <tr style="border-bottom:2px solid var(--text);">
+                            <th style="padding:10px 6px;text-align:left;font-size:12px;">Beskrivelse</th>
+                            <th style="padding:10px 6px;text-align:center;font-size:12px;">Antal</th>
+                            <th style="padding:10px 6px;text-align:center;font-size:12px;">Enhed</th>
+                            <th style="padding:10px 6px;text-align:right;font-size:12px;">E.pris</th>
+                            <th style="padding:10px 6px;text-align:right;font-size:12px;">Rabat %</th>
+                            <th style="padding:10px 6px;text-align:right;font-size:12px;">Total</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>${rows}</tbody>
+                </table>
+                </div>
+                <p style="font-size:12px;color:var(--text-muted);margin-top:20px;">Totalerne (subtotal, moms og at-betale) genberegnes automatisk ved gem.</p>
+            </div>
+        </div>`;
+    if (window.lucide) { try { lucide.createIcons(); } catch (e) { /* ignore */ } }
+}
+
+function invEditorLineTotal(i) {
+    const trs = document.querySelectorAll('#invEditLines tbody tr');
+    const tr = trs[i]; if (!tr) return;
+    const qty = parseFloat(tr.querySelector('.ed-qty').value) || 0;
+    const price = parseFloat(tr.querySelector('.ed-price').value) || 0;
+    const disc = parseFloat(tr.querySelector('.ed-disc').value) || 0;
+    tr.querySelector('.ed-total').textContent = formatCurrency((qty * price) * (1 - disc / 100));
+}
+
+function addEditorLine() {
+    if (!invoiceLineEditor) return;
+    invoiceLineEditor.lines.push({ description: '', quantity: -1, unit: 'stk', unit_price: 0, discount_percent: 0, line_total: 0 });
+    renderInvoiceLineEditor();
+}
+
+function removeEditorLine(i) {
+    if (!invoiceLineEditor) return;
+    invoiceLineEditor.lines.splice(i, 1);
+    renderInvoiceLineEditor();
+}
+
+
+// v106.4j: exports
 window.loadInvoiced = loadInvoiced;
-window.filterInvoicesByStatus = filterInvoicesByStatus;
+window.viewInvoice = viewInvoice;
+window.renderInvoicePreview = renderInvoicePreview;
+window.sendInvoice = sendInvoice;
+window.deleteInvoice = deleteInvoice;
+window.deleteInvoiceFromPreview = deleteInvoiceFromPreview;
 window.createInvoiceFromOrder = createInvoiceFromOrder;
 window.openInvoiceTypeModal = openInvoiceTypeModal;
+window.renderInvoiceTypeModalContent = renderInvoiceTypeModalContent;
+window.invoiceModalCalc = invoiceModalCalc;
 window.closeInvoiceTypeModal = closeInvoiceTypeModal;
 window.submitInvoiceType = submitInvoiceType;
-window.viewInvoice = viewInvoice;
-window.sendInvoice = sendInvoice;
-window.deleteInvoice = deleteInvoice;
-window.deleteInvoiceFromPreview = deleteInvoiceFromPreview;
-window.loadInvoiced = loadInvoiced;
-window.filterInvoicesByStatus = filterInvoicesByStatus;
-window.createInvoiceFromOrder = createInvoiceFromOrder;
-window.viewInvoice = viewInvoice;
-window.sendInvoice = sendInvoice;
-window.deleteInvoice = deleteInvoice;
-window.deleteInvoiceFromPreview = deleteInvoiceFromPreview;
+window.createCreditNote = createCreditNote;
+window.toggleInvoiceLineEditor = toggleInvoiceLineEditor;
+window.renderInvoiceLineEditor = renderInvoiceLineEditor;
+window.invEscAttr = invEscAttr;
+window.invEditorLineTotal = invEditorLineTotal;
+window.addEditorLine = addEditorLine;
+window.removeEditorLine = removeEditorLine;
+window.saveInvoiceLineEdits = saveInvoiceLineEdits;
+window.filterInvoicedByStatus = filterInvoicedByStatus;
+window.editInvoiceNotes = editInvoiceNotes;
+window.saveInvoiceNotes = saveInvoiceNotes;
+window.setInvoicedFilter = setInvoicedFilter;
+async function saveInvoiceLineEdits(invoiceId) {
+    if (!invoiceLineEditor) return;
+    const trs = [...document.querySelectorAll('#invEditLines tbody tr')];
+    const lines = trs.map(tr => ({
+        description: tr.querySelector('.ed-desc').value || 'Linje',
+        quantity: parseFloat(tr.querySelector('.ed-qty').value) || 0,
+        unit: tr.querySelector('.ed-unit').value || 'stk',
+        unit_price: parseFloat(tr.querySelector('.ed-price').value) || 0,
+        discount_percent: parseFloat(tr.querySelector('.ed-disc').value) || 0
+    }));
+    if (lines.length === 0) {
+        alert('Kreditnotaen skal have mindst en linje');
+        return;
+    }
+    try {
+        const token = sessionStorage.getItem('token');
+        const response = await fetch('/api/invoices/' + invoiceId, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+            body: JSON.stringify({ lines: lines, notes: invoiceLineEditor.notes })
+        });
+        if (!response.ok) {
+            const e = await response.json();
+            throw new Error(e.error || 'Kunne ikke gemme kreditnota');
+        }
+        alert('Kreditnota gemt!');
+        invoiceLineEditor = null;
+        loadInvoiced();
+        viewInvoice(invoiceId);
+    } catch (error) {
+        console.error('Save creditnote error:', error);
+        alert('Kunne ikke gemme kreditnota: ' + error.message);
+    }
+}

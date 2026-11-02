@@ -6,7 +6,8 @@ function isQuotesMontor() {
 }
 
 let currentWorkspaceOrder = null;
-let currentWorkspaceInvoice = null;
+        workspaceInvoices = [];
+let workspaceInvoices = []; // v106.4j: alle fakturaer + kreditnotaer for ordren
 let workspaceExpenses = [];
 let workspaceDocuments = [];
 let workspaceTimeline = [];
@@ -74,6 +75,7 @@ async function openOrderWorkspace(orderId, fromParentId = null) {
         
         currentWorkspaceOrder = data.order;
         currentWorkspaceInvoice = data.invoice;
+        workspaceInvoices = data.invoices || (data.invoice ? [data.invoice] : []);
         workspaceExpenses = data.expenses.items;
         workspaceDocuments = data.documents;
         workspaceTimeline = data.timeline;
@@ -583,6 +585,7 @@ function renderWorkspaceOverview(container) {
                     </div>
                 </div>
                 `}
+                <div id="workspaceInvoicesSection" style="display:none;"></div>
             </div>
         </div>
         
@@ -642,19 +645,85 @@ function renderWorkspaceOverview(container) {
 }
 
 // Render invoice button based on invoice status
+// Render invoice button based on invoice status
+// v106.4j: med fakturaer vises "Fakturaer (n)" som aabner listen i workspace
 function renderInvoiceButton() {
-    if (currentWorkspaceInvoice) {
+    const invs = workspaceInvoices || [];
+    if (invs.length > 0) {
         return `
-            <button onclick="viewInvoiceFromWorkspace(${currentWorkspaceInvoice.id})" class="quick-action-btn accent-blue">
-                <i data-lucide="receipt"></i> Se Faktura ${currentWorkspaceInvoice.invoice_number}
-            </button>`;
-    } else {
-        return `
-            <button onclick="openInvoiceTypeModal(${currentWorkspaceOrder.id})" class="quick-action-btn accent-green">
-                <i data-lucide="receipt-text"></i> Opret Faktura
+            <button onclick="toggleWorkspaceInvoices()" class="quick-action-btn accent-blue">
+                <i data-lucide="receipt"></i> Fakturaer (${invs.length})
             </button>`;
     }
+    return `
+        <button onclick="openInvoiceTypeModal(${currentWorkspaceOrder.id})" class="quick-action-btn accent-green">
+            <i data-lucide="receipt-text"></i> Opret Faktura
+        </button>`;
 }
+
+// v106.4j: vis/skjul faktura- & kreditnota-listen i workspace
+function toggleWorkspaceInvoices() {
+    const sec = document.getElementById('workspaceInvoicesSection');
+    if (!sec) return;
+    if (sec.style.display === 'none') {
+        sec.style.display = 'block';
+        renderWorkspaceInvoicesSection();
+    } else {
+        sec.style.display = 'none';
+    }
+}
+
+// v106.4j: "Fakturaer & Kreditnotaer" - liste + opsummering (Faktureret / Krediteret / Rest)
+function renderWorkspaceInvoicesSection() {
+    const sec = document.getElementById('workspaceInvoicesSection');
+    if (!sec || !currentWorkspaceOrder) return;
+    const invs = workspaceInvoices || [];
+    const fmt = v => new Intl.NumberFormat('da-DK', { style: 'currency', currency: 'DKK' }).format(v || 0);
+    const invoiced = invs.filter(i => i.invoice_type !== 'creditnote' && i.status !== 'draft').reduce((s, i) => s + (Number(i.total) || 0), 0);
+    const credited = invs.filter(i => i.invoice_type === 'creditnote' && i.status !== 'draft').reduce((s, i) => s + (Number(i.total) || 0), 0);
+    const rest = (Number(currentWorkspaceOrder.total) || 0) - invoiced - credited;
+    const typeLabel = i => i.invoice_type === 'creditnote' ? 'Kreditnota' : (i.invoice_type === 'aconto' ? 'Aconto' : 'Slutfaktura');
+    const statusLabel = i => i.status === 'draft' ? 'Udkast' : (i.status === 'sent' ? 'Sendt' : 'Betalt');
+    const rows = invs.map(i => `
+        <tr onclick="viewInvoiceFromWorkspace(${i.id})" style="cursor:pointer;border-bottom:1px solid var(--border);">
+            <td style="padding:8px 6px;font-size:12px;">${i.invoice_number}</td>
+            <td style="padding:8px 6px;font-size:12px;">${typeLabel(i)}</td>
+            <td style="padding:8px 6px;font-size:12px;">${statusLabel(i)}</td>
+            <td style="padding:8px 6px;font-size:12px;">${new Date(i.invoice_date).toLocaleDateString('da-DK')}</td>
+            <td style="padding:8px 6px;font-size:12px;text-align:right;font-weight:600;">${fmt(i.total)}</td>
+            <td style="padding:8px 6px;text-align:right;">
+                ${i.status === 'draft' ? `<button class="btn btn-icon btn-danger" title="Slet udkast" onclick="event.stopPropagation();deleteInvoice(${i.id})"><i data-lucide="trash-2"></i></button>` : ''}
+            </td>
+        </tr>`).join('');
+
+    sec.innerHTML = `
+        <div style="background:var(--surface);padding:30px;border-radius:10px;border:2px solid var(--border);margin-top:30px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:15px;">
+                <h3 style="margin:0;display:flex;align-items:center;gap:8px;"><i data-lucide="receipt"></i> Fakturaer &amp; Kreditnotaer</h3>
+                <button onclick="openInvoiceTypeModal(${currentWorkspaceOrder.id})" class="btn-secondary"><i data-lucide="plus"></i> Opret Faktura</button>
+            </div>
+            <div style="font-size:13px;color:var(--text);margin-bottom:15px;">
+                Faktureret: <strong>${fmt(invoiced)}</strong>
+                ${credited !== 0 ? ` &nbsp;&bull;&nbsp; Krediteret: <strong>${fmt(credited)}</strong>` : ''}
+                &nbsp;&bull;&nbsp; Rest: <strong>${fmt(rest)}</strong>
+            </div>
+            <div class="doc-table-scroll">
+            <table style="width:100%;border-collapse:collapse;">
+                <thead><tr style="border-bottom:2px solid var(--text);">
+                    <th style="padding:8px 6px;text-align:left;font-size:12px;">Nr.</th>
+                    <th style="padding:8px 6px;text-align:left;font-size:12px;">Type</th>
+                    <th style="padding:8px 6px;text-align:left;font-size:12px;">Status</th>
+                    <th style="padding:8px 6px;text-align:left;font-size:12px;">Dato</th>
+                    <th style="padding:8px 6px;text-align:right;font-size:12px;">Total</th>
+                    <th></th>
+                </tr></thead>
+                <tbody>${rows || '<tr><td colspan="6" style="padding:12px;font-size:12px;color:var(--text-muted);">Ingen fakturaer endnu</td></tr>'}</tbody>
+            </table>
+            </div>
+        </div>`;
+    if (window.lucide) { try { lucide.createIcons(); } catch (e) { /* ignore */ } }
+}
+
 
 // View invoice from workspace (closes workspace first)
 async function viewInvoiceFromWorkspace(invoiceId) {
@@ -2520,10 +2589,12 @@ window.resetQuotesNavState = function () {
     currentWorkspaceOrder = null;
     parentOrderId = null;
     currentWorkspaceInvoice = null;
+        workspaceInvoices = [];
 };
 window.saveRegisterMaterial = saveRegisterMaterial;
 window.closeWorkspace = closeWorkspace;
 window.viewInvoiceFromWorkspace = viewInvoiceFromWorkspace;
+window.toggleWorkspaceInvoices = toggleWorkspaceInvoices;
 window.viewOriginalQuote = viewOriginalQuote;
 window.showAddExpense = showAddExpense;
 window.closeExpenseModal = closeExpenseModal;
