@@ -3391,7 +3391,7 @@ app.post('/api/invoices/from-order/:orderId', auth, async (req, res) => {
       END
     ), 0) AS net
     FROM invoices i
-    WHERE i.order_id = ? AND i.status != 'draft'
+    WHERE i.order_id = ?
   `, [orderId]);
   const acontoInvoicedNet = Number(acontoNet?.net) || 0;
   const orderSubtotal = Number(order.subtotal) || 0;
@@ -3400,7 +3400,7 @@ app.post('/api/invoices/from-order/:orderId', auth, async (req, res) => {
   // Ikke-udkast aconto-fakturaer (bruges til minus-linjer paa slutfakturaen)
   const acontoInvoices = await db.all(`
     SELECT id, invoice_number, subtotal FROM invoices
-    WHERE order_id = ? AND invoice_type = 'aconto' AND status != 'draft'
+    WHERE order_id = ? AND invoice_type = 'aconto'
     ORDER BY id ASC
   `, [orderId]);
 

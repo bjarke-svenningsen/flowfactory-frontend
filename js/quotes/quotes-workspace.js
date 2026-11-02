@@ -681,8 +681,9 @@ function renderWorkspaceInvoicesSection() {
     if (!sec || !currentWorkspaceOrder) return;
     const invs = workspaceInvoices || [];
     const fmt = v => new Intl.NumberFormat('da-DK', { style: 'currency', currency: 'DKK' }).format(v || 0);
-    const invoiced = invs.filter(i => i.invoice_type !== 'creditnote' && i.status !== 'draft').reduce((s, i) => s + (Number(i.total) || 0), 0);
-    const credited = invs.filter(i => i.invoice_type === 'creditnote' && i.status !== 'draft').reduce((s, i) => s + (Number(i.total) || 0), 0);
+    // v106.4k: udkast taeller med med det samme
+    const invoiced = invs.filter(i => i.invoice_type !== 'creditnote').reduce((s, i) => s + (Number(i.total) || 0), 0);
+    const credited = invs.filter(i => i.invoice_type === 'creditnote').reduce((s, i) => s + (Number(i.total) || 0), 0);
     const rest = (Number(currentWorkspaceOrder.total) || 0) - invoiced - credited;
     const typeLabel = i => i.invoice_type === 'creditnote' ? 'Kreditnota' : (i.invoice_type === 'aconto' ? 'Aconto' : 'Slutfaktura');
     const statusLabel = i => i.status === 'draft' ? 'Udkast' : (i.status === 'sent' ? 'Sendt' : 'Betalt');

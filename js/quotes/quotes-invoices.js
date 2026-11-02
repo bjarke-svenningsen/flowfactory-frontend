@@ -160,7 +160,7 @@ async function openInvoiceTypeModal(orderId) {
     overlay.innerHTML = '<div style="background:var(--surface);border-radius:12px;padding:28px;width:min(460px,92vw);box-shadow:0 20px 60px rgba(0,0,0,.3);"><p style="color:var(--text-muted);margin:0;">Indlaeser ordre...</p></div>';
     document.body.appendChild(overlay);
 
-    let subtotal = 0, acontoInvoiced = 0, draftAcontoSum = 0;
+    let subtotal = 0, acontoInvoiced = 0;
     let invsList = [];
     try {
         const token = sessionStorage.getItem('token');
@@ -170,7 +170,8 @@ async function openInvoiceTypeModal(orderId) {
             subtotal = Number(data.order && data.order.subtotal) || 0;
             const invs = data.invoices || [];
             invsList = invs;
-            acontoInvoiced = invs.filter(i => i.status !== 'draft').reduce((s, i) => {
+            // v106.4k: udkast taeller med med det samme - restbeloebet afspejler alle aconto'er
+            acontoInvoiced = invs.reduce((s, i) => {
                 if (i.invoice_type === 'aconto') return s + (Number(i.subtotal) || 0);
                 if (i.invoice_type === 'creditnote' && invs.some(a => a.id === i.credit_of && a.invoice_type === 'aconto')) return s - (Number(i.subtotal) || 0);
                 return s;
@@ -178,10 +179,7 @@ async function openInvoiceTypeModal(orderId) {
         }
     } catch (e) { /* falder tilbage til 0 */ }
 
-    // v106.4k: taell også usendte aconto-udkast, så modalen kan advare om at de ikke traekkes fra endnu
-    invsList.filter(i => i.status === 'draft' && i.invoice_type === 'aconto').forEach(i => { draftAcontoSum += (Number(i.subtotal) || 0); });
-
-    invoiceTypeModalData = { orderId, subtotal, acontoInvoiced, draftAcontoSum };
+    invoiceTypeModalData = { orderId, subtotal, acontoInvoiced };
     renderInvoiceTypeModalContent('aconto');
     if (window.lucide) { try { lucide.createIcons(); } catch (e) { /* ignore */ } }
 }
@@ -212,7 +210,6 @@ function renderInvoiceTypeModalContent(selectedType) {
                 <div style="display:flex;justify-content:space-between;"><span>Ordre (ekskl. moms):</span><strong>${fmt(d.subtotal)}</strong></div>
                 ${d.acontoInvoiced > 0 ? `<div style="display:flex;justify-content:space-between;"><span>Heraf aconto:</span><strong>&minus;${fmt(d.acontoInvoiced)}</strong></div>` : ''}
                 <div style="display:flex;justify-content:space-between;border-top:1px solid var(--border);margin-top:6px;padding-top:6px;"><span>Restbel&oslash;b:</span><strong>${fmt(rest)}</strong></div>
-                ${d.draftAcontoSum > 0 ? `<div style="margin-top:8px;padding:8px 10px;background:#FEF3C7;border:1px solid #F59E0B;border-radius:6px;color:#92400E;">&#9888; Der er usendte aconto-udkast p&aring; ${fmt(d.draftAcontoSum)}. De tr&aelig;kkes f&oslash;rst fra, n&aring;r de er sendt.</div>` : ''}
             </div>
             ` : `
             <div style="margin:-4px 0 12px 34px;">
