@@ -2658,8 +2658,10 @@ app.get('/api/quotes/:id', auth, async (req, res) => {
   const quoteId = Number(req.params.id);
   
   const quote = await db.get(`
-    SELECT q.*, c.*, u.name as created_by_name,
-           c.company_name, c.contact_person, c.email as customer_email, 
+    -- v106.4h: c.* EFTER q.* overskrev id/customer_id med kunde-id i Postgres
+    -- (sidste kolonne vinder) -> Godkend brugte forkert id. Kolonner er nu eksplicitte.
+    SELECT q.*, u.name as created_by_name,
+           c.company_name, c.contact_person, c.email as customer_email,
            c.phone as customer_phone, c.address, c.postal_code, c.city, c.cvr_number
     FROM quotes q
     JOIN customers c ON q.customer_id = c.id
@@ -2925,7 +2927,7 @@ app.post('/api/quotes/:id/send', auth, async (req, res) => {
   const quote = await new Promise((resolve, reject) => {
     try {
       const q = db.prepare(`
-        SELECT q.*, c.*, u.name as created_by_name,
+        SELECT q.*, u.name as created_by_name,
                c.company_name, c.contact_person, c.email as customer_email
         FROM quotes q
         JOIN customers c ON q.customer_id = c.id
@@ -3260,8 +3262,10 @@ app.get('/api/invoices/:id', auth, async (req, res) => {
   const invoiceId = Number(req.params.id);
   
   const invoice = await db.get(`
-    SELECT i.*, q.*, c.*, u.name as created_by_name,
-           c.company_name, c.contact_person, c.email as customer_email, 
+    -- v106.4h: i.*, q.*, c.* kolliderede (id blev kunde-id i Postgres).
+    -- q.* foerst, derefter i.* (så invoice.id = faktura-id), kunde-kolonner eksplicitte.
+    SELECT q.*, i.*, u.name as created_by_name,
+           c.company_name, c.contact_person, c.email as customer_email,
            c.phone as customer_phone, c.address, c.postal_code, c.city, c.cvr_number,
            q.title as order_title
     FROM invoices i
@@ -3270,11 +3274,11 @@ app.get('/api/invoices/:id', auth, async (req, res) => {
     JOIN users u ON i.created_by = u.id
     WHERE i.id = ?
   `, [invoiceId]);
-  
+
   if (!invoice) {
     return res.status(404).json({ error: 'Invoice not found' });
   }
-  
+
   const lines = await db.all('SELECT * FROM invoice_lines WHERE invoice_id = ? ORDER BY sort_order, id', [invoiceId]);
   invoice.lines = lines;
   
@@ -3478,7 +3482,8 @@ app.post('/api/invoices/:id/send', auth, async (req, res) => {
   const invoiceId = Number(req.params.id);
   
   const invoice = await db.get(`
-    SELECT i.*, q.*, c.*, u.name as created_by_name,
+    -- v106.4h: kollisionsfri kolonne-udvaelgelse (id = faktura-id)
+    SELECT q.*, i.*, u.name as created_by_name,
            c.company_name, c.contact_person, c.email as customer_email,
            q.title as order_title
     FROM invoices i
@@ -5847,24 +5852,6 @@ app.get('/api/debug/documents', async (req, res) => {
       total_documents: count.cnt,
       latest_20_documents: allDocs,
       message: 'This shows all documents in order_documents table'
-    });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// DEBUG ENDPOINT: Check quotes table (id, status, titel) - fjern naar problemet er lost
-app.get('/api/debug/quotes', async (req, res) => {
-  try {
-    const allQuotes = await db.all(`SELECT q.id, q.order_number, q.title, q.status, q.order_stage,
-      q.customer_id, c.id AS customer_exists, c.company_name
-      FROM quotes q LEFT JOIN customers c ON q.customer_id = c.id ORDER BY q.id`);
-    const orphaned = allQuotes.filter(q => !q.customer_exists);
-    res.json({
-      total_quotes: allQuotes.length,
-      all_quotes: allQuotes,
-      orphaned_customer_refs: orphaned.map(q => ({ id: q.id, order_number: q.order_number, customer_id: q.customer_id })),
-      message: 'orphaned_customer_refs non-empty = quotes whose customer no longer exists (JOIN makes GET /api/quotes/:id 404)'
     });
   } catch (error) {
     res.status(500).json({ error: error.message });
