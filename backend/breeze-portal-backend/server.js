@@ -3300,10 +3300,12 @@ app.post('/api/quotes/:id/extra-work', auth, async (req, res) => {
   // Note: For extra work, we use the full order number (e.g., "0001-01") as quote_number for backwards compatibility
   const fullOrderNumber = `${parentOrder.order_number}-${String(subNum).padStart(2, '0')}`;
   
+  // v106.4q: order_number SKAL vaere unik (UNIQUE-index) - sub-ordrer faar sit fulde nummer
+  // (fx "0001-01"); tidligere fejlede INSERT med UNIQUE constraint og request haengte.
   const info = await db.run(`
     INSERT INTO quotes (quote_number, order_number, parent_order_id, sub_number, is_extra_work, customer_id, title, notes, terms, subtotal, vat_rate, vat_amount, total, status, order_type, created_by)
     VALUES (?, ?, ?, ?, 1, ?, ?, ?, ?, ?, ?, ?, ?, 'accepted', ?, ?)
-  `, [fullOrderNumber, parentOrder.order_number, parentOrderId, subNum, parentOrder.customer_id, title, notes || null, terms || parentOrder.terms, subtotal, vat_rate, vat_amount, total, safeOrderType, req.user.id]);
+  `, [fullOrderNumber, fullOrderNumber, parentOrderId, subNum, parentOrder.customer_id, title, notes || null, terms || parentOrder.terms, subtotal, vat_rate, vat_amount, total, safeOrderType, req.user.id]);
   
   const extraWorkId = info.lastInsertRowid;
   
