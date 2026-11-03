@@ -45,7 +45,7 @@ function renderInvoicedContent(invoices) {
         'paid': 'badge--accepted'
     };
     const statusText = {
-        'draft': 'Ikke sendt',
+        'draft': 'Ikke godkendt',
         'sent': 'Sendt',
         'paid': 'Betalt'
     };
@@ -69,7 +69,7 @@ function renderInvoicedContent(invoices) {
                 <div class="list-card-head">
                     <h4 class="list-card-title">${invoice.invoice_type === 'creditnote' ? 'Kreditnota ' : 'Faktura '}${invoice.invoice_number}</h4>
                     ${typeBadge}
-                    <span class="badge ${badgeClass[invoice.status] || 'badge--draft'}">${statusText[invoice.status] || 'Ikke sendt'}</span>
+                    <span class="badge ${badgeClass[invoice.status] || 'badge--draft'}">${statusText[invoice.status] || 'Ikke godkendt'}</span>
                 </div>
                 <div class="list-card-grid">
                     <div class="list-card-field"><span class="label">Kunde</span><span class="value">${invoice.customer_name}</span></div>
@@ -658,7 +658,7 @@ function approveInvoiceWithoutSending(invoiceId) {
 
 // Delete invoice
 function deleteInvoice(invoiceId) {
-    sgConfirm('Slet udkast', 'Er du sikker på at du vil slette dette udkast?', async () => {
+    sgConfirm('Slet udkast', 'Er du sikker på at du vil slette dette udkast? Faktura-nummeret frigives og genbruges til næste faktura.', async () => {
     
     try {
         const token = sessionStorage.getItem('token');
@@ -689,7 +689,7 @@ function deleteInvoice(invoiceId) {
 
 // Delete invoice from preview (redirects back to list)
 function deleteInvoiceFromPreview(invoiceId) {
-    sgConfirm('Slet udkast', 'Er du sikker på at du vil slette dette udkast?', async () => {
+    sgConfirm('Slet udkast', 'Er du sikker på at du vil slette dette udkast? Faktura-nummeret frigives og genbruges til næste faktura.', async () => {
     
     try {
         const token = sessionStorage.getItem('token');

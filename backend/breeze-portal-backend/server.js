@@ -3858,6 +3858,20 @@ app.delete('/api/invoices/:id', auth, async (req, res) => {
     });
   }
   await db.run('DELETE FROM invoices WHERE id = ?', [invoiceId]);
+
+  // v106.6j: udkastets fakturanummer frigives igen hvis det var det seneste
+  // tildelte nummer - ellers forbruges et nummer hver gang et udkast slettes.
+  // Godkendte/sendte fakturaer laaser nummeret permanent (bogfoeringskrav).
+  try {
+    const counter = await db.get(`SELECT value FROM invoice_counter WHERE name = 'invoice'`);
+    const deletedNum = Number(invoice.invoice_number);
+    if (counter && deletedNum === Number(counter.value)) {
+      await db.run(`UPDATE invoice_counter SET value = ? WHERE name = 'invoice'`, [deletedNum - 1]);
+    }
+  } catch (e) {
+    console.error('Kunne ikke frigive fakturanummer:', e);
+  }
+
   res.json({ success: true });
 });
 
