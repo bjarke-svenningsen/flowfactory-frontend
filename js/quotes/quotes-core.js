@@ -761,15 +761,19 @@ async function saveAndPreviewQuote() {
 }
 
 // Render quote preview
-function renderQuotePreview() {
-    document.getElementById('quotesListView').style.display = 'none';
-    document.getElementById('quotesFormView').style.display = 'none';
-    document.getElementById('quotesPreviewView').style.display = 'block';
-    document.getElementById('quotesCustomersView').style.display = 'none';
-    // v106.4p: skjul alle fane-indhold (fx Afsluttet-listen) saa de ikke hang over ordre-arket
-    document.querySelectorAll('[id^="orderTab"]').forEach(el => { el.style.display = 'none'; });
+// v106.6b: valgfri targetBox - hvis angivet renderes arket INLINE i boksen
+// (fx workspace' wsInvoicePreview) uden at skifte view.
+function renderQuotePreview(targetBox) {
+    if (!targetBox) {
+        document.getElementById('quotesListView').style.display = 'none';
+        document.getElementById('quotesFormView').style.display = 'none';
+        document.getElementById('quotesPreviewView').style.display = 'block';
+        document.getElementById('quotesCustomersView').style.display = 'none';
+        // v106.4p: skjul alle fane-indhold (fx Afsluttet-listen) saa de ikke hang over ordre-arket
+        document.querySelectorAll('[id^="orderTab"]').forEach(el => { el.style.display = 'none'; });
+    }
     
-    const container = document.getElementById('quotesPreviewContainer');
+    const container = targetBox || document.getElementById('quotesPreviewContainer');
     
     // Ensure lines is an array
     if (!currentQuote.lines || !Array.isArray(currentQuote.lines)) {
@@ -781,6 +785,14 @@ function renderQuotePreview() {
     // Professional PDF-style preview matching invoice design
     container.innerHTML = `
         <div class="quote-sheet-wrap">
+            ${targetBox ? `
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                <span style="font-weight: 600; font-size: 14px; color: var(--text);">Ordre-visning</span>
+                <button onclick="closeWorkspaceInvoicePreview()" class="btn btn-secondary btn-sm">
+                    <i data-lucide="x"></i> Luk
+                </button>
+            </div>
+            ` : ''}
             <div class="preview-actions" ${currentQuote.is_order_view ? 'style="display: none;"' : ''}>
                 ${currentQuote.status === 'draft' || currentQuote.status === 'sent' ? `
                 <button onclick="acceptQuote(${currentQuote.id})" class="btn btn-primary">

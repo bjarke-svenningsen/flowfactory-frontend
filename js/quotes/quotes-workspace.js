@@ -811,6 +811,8 @@ function closeWorkspaceInvoicePreview() {
     const box = document.getElementById('wsInvoicePreview');
     if (box) box.innerHTML = '';
     window.currentPreviewInvoice = null;
+    // v106.6b: ryd op efter inline ordre-visning
+    if (typeof currentQuote !== 'undefined' && currentQuote && currentQuote.is_order_view) currentQuote = null;
 }
 
 // v106.4o: genhent fakturaer fra server og genrender workspace-sektionen (bruges efter sletning)
@@ -2641,10 +2643,22 @@ async function viewOriginalQuote(orderId) {
         
         // Call the renderQuotePreview function from quotes-core.js
         // v106.4q: robust - brug window-referencen hvis den globale binding ikke er tilgaengelig
+        // v106.6b: render INLINE i workspace' wsInvoicePreview (man forbliver i workspacet) -
+        // fallback til det separate view hvis boksen ikke findes.
+        const previewBox = document.getElementById('wsInvoicePreview');
         const renderFn = (typeof renderQuotePreview === 'function')
             ? renderQuotePreview
             : (typeof window.renderQuotePreview === 'function' ? window.renderQuotePreview : null);
-        if (renderFn) {
+        if (renderFn && previewBox) {
+            try {
+                window.currentPreviewInvoice = null; // undgaa at faktura-luk roder med ordredata
+                renderFn(previewBox);
+                previewBox.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            } catch (renderError) {
+                console.error('renderQuotePreview fejlede:', renderError);
+                alert('Kunne ikke vise ordre: ' + renderError.message);
+            }
+        } else if (renderFn) {
             try {
                 renderFn();
             } catch (renderError) {
