@@ -694,7 +694,10 @@ function renderWorkspaceInvoicesSection() {
     const invoiced = invs.filter(i => i.invoice_type !== 'creditnote').reduce((s, i) => s + (Number(i.subtotal) || 0), 0);
     const credited = invs.filter(i => i.invoice_type === 'creditnote').reduce((s, i) => s + (Number(i.subtotal) || 0), 0);
     const orderSubtotal = Number(currentWorkspaceOrder.live_subtotal ?? currentWorkspaceOrder.subtotal) || 0; // v106.4s: live vaerdi
-    const rest = orderSubtotal - invoiced + credited;
+    // v106.6o: kreditnota-subtotals er ALLEREDE negative - de skal traekkes fra
+    // (netto-faktureret), ikke laegges til. Tidligere "+ credited" ga resten
+    // dobbelt-negativ og udløste den røde advarsel ved fuld kreditering.
+    const rest = orderSubtotal - (invoiced + credited);
     const typeLabel = i => i.invoice_type === 'creditnote' ? 'Kreditnota' : (i.invoice_type === 'aconto' ? 'Aconto' : 'Slutfaktura');
     const statusLabel = i => i.status === 'draft' ? 'Ikke godkendt' : (i.status === 'sent' ? (i.sent_at ? 'Godkendt - Sendt' : 'Godkendt - ikke sendt') : 'Betalt');
     const rows = invs.map(i => `
