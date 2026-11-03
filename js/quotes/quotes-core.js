@@ -951,9 +951,11 @@ function renderQuotePreview(targetBox) {
 // fastbredde-container (794px = A4 ved 96dpi), render med html2canvas (bevist virkende),
 // og saettes sammen til multipage A4 med jsPDF.
 async function downloadSheetAsPDF(filename) {
-    // Find det SYNLIGE sheet (der kan vaere flere previews i DOM'et)
+    // Find det SYNLIGE sheet (der kan vaere flere previews i DOM'et).
+    // v108: getClientRects() i stedet for offsetParent - offsetParent er null i
+    // flere tilfaelde hvor elementet FAKTISK er synligt (fixed ancestors m.m.).
     const sheets = Array.from(document.querySelectorAll('.quote-sheet-wrap .quote-sheet'))
-        .filter(el => el.offsetParent !== null);
+        .filter(el => el.getClientRects().length > 0);
     const sheet = sheets[sheets.length - 1];
     if (!sheet) { alert('Kunne ikke finde dokumentet at downloade.'); return; }
     if (typeof html2canvas !== 'function' || !window.jspdf || typeof window.jspdf.jsPDF !== 'function') {
