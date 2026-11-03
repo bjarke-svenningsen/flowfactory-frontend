@@ -771,7 +771,10 @@ function renderWorkspaceInvoicePreview(invoice) {
         </button>
         ${invoice.status === 'draft' && invoice.invoice_type !== 'creditnote' ? `
             <button onclick="sendInvoice(${invoice.id})" class="btn btn-primary">
-                <i data-lucide="send"></i> Send til Kunde
+                <i data-lucide="send"></i> Godkend og send
+            </button>
+            <button onclick="approveInvoiceWithoutSending(${invoice.id})" class="btn btn-secondary">
+                <i data-lucide="check"></i> Godkend uden at sende
             </button>
         ` : ''}
         ${invoice.invoice_type !== 'creditnote' && invoice.status === 'sent' ? `
@@ -2668,17 +2671,19 @@ function getStatusBadge(status) {
 
 // View original quote from workspace
 async function viewOriginalQuote(orderId) {
+    const previewBox = document.getElementById('wsInvoicePreview');
     try {
-        // Load the quote data
+        // v106.6i: cache-buster + retry (Render cold-start)
         const token = sessionStorage.getItem('token');
-        const response = await fetch(`/api/quotes/${orderId}`, {
+        const response = await sgFetchWithRetry(`/api/quotes/${orderId}?_=${Date.now()}`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
-        
-        if (!response.ok) throw new Error('Failed to load quote');
-        
+
+        if (!response.ok) throw new Error('Failed to load quote (HTTP ' + response.status + ')');
+
         const quote = await response.json();
-        
+        console.log('viewOriginalQuote: ordre hentet', { id: quote.id, status: quote.status, is_order: quote.is_order });
+
         // v105: det her er nu ORDRen - linjerne kommer fra ordrens timer/materialer
         // (inkl. rabat), ikke fra det oprindelige tilbud.
         const mats = workspaceMaterials || [];
@@ -2692,38 +2697,49 @@ async function viewOriginalQuote(orderId) {
         }));
         quote.is_order_view = true;
         currentQuote = quote;
-        
+
         // Call the renderQuotePreview function from quotes-core.js
         // v106.4q: robust - brug window-referencen hvis den globale binding ikke er tilgaengelig
         // v106.6b: render INLINE i workspace' wsInvoicePreview (man forbliver i workspacet) -
         // fallback til det separate view hvis boksen ikke findes.
-        const previewBox = document.getElementById('wsInvoicePreview');
+        // v106.6i: fejl vises nu INDENI boksen (ikke kun alert) og logges detaljeret,
+        // saa en tom boks altid kan fejlsoeges via konsollen.
         const renderFn = (typeof renderQuotePreview === 'function')
             ? renderQuotePreview
             : (typeof window.renderQuotePreview === 'function' ? window.renderQuotePreview : null);
+        const showRenderError = (box, err) => {
+            console.error('renderQuotePreview fejlede:', err);
+            if (box) box.innerHTML = `<div style="margin-top:20px;padding:24px;border:1px solid var(--color-red);border-radius:8px;color:var(--color-red);">Kunne ikke vise ordre: ${err.message}<br><small>Se konsollen (F12) for detaljer - og proev genindlaesning (Ctrl+Shift+R).</small></div>`;
+            else alert('Kunne ikke vise ordre: ' + err.message);
+        };
         if (renderFn && previewBox) {
             try {
                 window.currentPreviewInvoice = null; // undgaa at faktura-luk roder med ordredata
                 renderFn(previewBox);
                 previewBox.scrollIntoView({ behavior: 'smooth', block: 'start' });
             } catch (renderError) {
-                console.error('renderQuotePreview fejlede:', renderError);
-                alert('Kunne ikke vise ordre: ' + renderError.message);
+                showRenderError(previewBox, renderError);
             }
         } else if (renderFn) {
             try {
                 renderFn();
             } catch (renderError) {
-                console.error('renderQuotePreview fejlede:', renderError);
-                alert('Kunne ikke vise ordre: ' + renderError.message);
+                showRenderError(previewBox, renderError);
             }
         } else {
-            alert('Kunne ikke vise ordre (render-funktion mangler). Genindlaes siden (Ctrl+Shift+R) og proev igen.');
+            showRenderError(previewBox, new Error('render-funktion mangler'));
         }
-        
+
     } catch (error) {
         console.error('Error viewing original quote:', error);
-        alert('Kunne ikke vise tilbud: ' + error.message);
+        // v106.6i: vis fejlen i boksen frem for kun en alert, saa den tomme boks
+        // aldrig opstaar uden forklaring.
+        if (previewBox) {
+            previewBox.innerHTML = `<div style="margin-top:20px;padding:24px;border:1px solid var(--color-red);border-radius:8px;color:var(--color-red);">Kunne ikke hente ordren: ${error.message}<br><small>Proev igen om et oejeblik (serveren kan vaere ved at starte op) - detaljer i konsollen (F12).</small></div>`;
+            previewBox.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        } else {
+            alert('Kunne ikke vise tilbud: ' + error.message);
+        }
     }
 }
 

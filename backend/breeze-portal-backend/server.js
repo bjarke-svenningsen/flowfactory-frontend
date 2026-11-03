@@ -543,6 +543,11 @@ function parsePaymentTerms(text, invoiceDate) {
   m = str.match(/(\d+)\s*(?:dage|dag|dags)/i);
   if (m) { const d = new Date(base); d.setDate(d.getDate() + (+m[1])); return iso(d); }
 
+  // 3b) v106.6i: "Netto 5" / "netto 8" (uden ordet "dage") - faldt tidligere til
+  // samme-dag-reglen, saa forfaldsdatoen ligned fakturadatoen. Laes tallet direkte.
+  m = str.match(/netto\s*(\d+)/i);
+  if (m) { const d = new Date(base); d.setDate(d.getDate() + (+m[1])); return iso(d); }
+
   // 4) Kontant/straks/ingen tal -> samme dag
   return iso(base);
 }

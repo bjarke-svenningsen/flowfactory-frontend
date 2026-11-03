@@ -79,7 +79,8 @@ function renderInvoicedContent(invoices) {
                 </div>
                 <div class="list-card-actions">
                     ${btn('secondary', 'eye', 'Se Faktura', { onclick: `viewInvoice(${invoice.id})` })}
-                    ${invoice.status === 'draft' ? btn('primary', 'send', 'Send', { onclick: `sendInvoice(${invoice.id})` }) : ''}
+                    ${invoice.status === 'draft' ? btn('primary', 'send', 'Godkend og send', { onclick: `sendInvoice(${invoice.id})` }) : ''}
+                    ${invoice.status === 'draft' ? btn('secondary', 'check', 'Godkend uden at sende', { onclick: `approveInvoiceWithoutSending(${invoice.id})` }) : ''}
                     ${invoice.invoice_type !== 'creditnote' && invoice.status === 'sent' ? btn('secondary', 'check', 'Markér Betalt', { onclick: `markInvoicePaid(${invoice.id})` }) : ''}
                     ${invoice.invoice_type !== 'creditnote' && invoice.status !== 'draft' ? btn('secondary', 'undo-2', 'Kreditnota', { onclick: `createCreditNote(${invoice.id})` }) : ''}
                     ${invoice.status === 'draft' ? btn('icon', 'trash-2', null, { title: 'Slet Udkast', onclick: `deleteInvoice(${invoice.id})` }) : ''}
@@ -272,6 +273,9 @@ function parseTermsDuePreview(text) {
         return fmtD(monthEnd);
     }
     m = str.match(/(\d+)\s*(?:dage|dag|dags)/i);
+    if (m) { const d = new Date(base); d.setDate(d.getDate() + (+m[1])); return fmtD(d); }
+    // v106.6i: "Netto 5" (uden ordet "dage") - samme regel som backendens parsePaymentTerms
+    m = str.match(/netto\s*(\d+)/i);
     if (m) { const d = new Date(base); d.setDate(d.getDate() + (+m[1])); return fmtD(d); }
     return fmtD(base);
 }
@@ -527,7 +531,10 @@ function renderInvoicePreview(invoice) {
                 </button>
                 ${invoice.status === 'draft' ? `
                     <button onclick="sendInvoice(${invoice.id})" class="btn btn-primary">
-                        <i data-lucide="send"></i> Send til Kunde
+                        <i data-lucide="send"></i> Godkend og send
+                    </button>
+                    <button onclick="approveInvoiceWithoutSending(${invoice.id})" class="btn btn-secondary">
+                        <i data-lucide="check"></i> Godkend uden at sende
                     </button>
                 ` : ''}
                 ${invoice.invoice_type === 'creditnote' && invoice.status === 'draft' ? `
@@ -617,6 +624,34 @@ function sendInvoice(invoiceId) {
         } catch (error) {
             console.error('Send invoice error:', error);
             alert('Kunne ikke sende faktura: ' + error.message);
+        }
+    });
+}
+
+// v106.6i: godkend faktura UDEN at sende den til kunden (print/PDF eller egen mail).
+// Saettes til 'sent' -> has_approved_invoice -> stepper "Faktureret" + Fakturering-fanen.
+function approveInvoiceWithoutSending(invoiceId) {
+    sgConfirm('Godkend uden at sende', 'Fakturaen godkendes og rykker ordren videre til "Faktureret" - men der sendes IKKE en email til kunden. Fortsæt?', async () => {
+        try {
+            const token = sessionStorage.getItem('token');
+            const response = await fetch(`/api/invoices/${invoiceId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify({ status: 'sent' })
+            });
+            if (!response.ok) {
+                const e = await response.json().catch(() => ({}));
+                throw new Error(e.error || 'Kunne ikke godkende faktura');
+            }
+            alert('Faktura godkendt (ikke sendt til kunde)');
+            loadInvoiced();
+            if (typeof loadOrderTabCounts === 'function') loadOrderTabCounts();
+            if (currentWorkspaceOrder && typeof refreshWorkspaceInvoicePreview === 'function') {
+                refreshWorkspaceInvoicePreview(invoiceId);
+            }
+        } catch (error) {
+            console.error('Approve invoice error:', error);
+            alert('Kunne ikke godkende faktura: ' + error.message);
         }
     });
 }
@@ -801,6 +836,7 @@ window.loadInvoiced = loadInvoiced;
 window.viewInvoice = viewInvoice;
 window.renderInvoicePreview = renderInvoicePreview;
 window.sendInvoice = sendInvoice;
+window.approveInvoiceWithoutSending = approveInvoiceWithoutSending;
 window.deleteInvoice = deleteInvoice;
 window.deleteInvoiceFromPreview = deleteInvoiceFromPreview;
 window.createInvoiceFromOrder = createInvoiceFromOrder;
