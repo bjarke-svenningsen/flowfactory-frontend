@@ -158,11 +158,12 @@ async function openInvoiceTypeModal(orderId) {
     const overlay = document.createElement('div');
     overlay.id = 'invoiceTypeModal';
     overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;z-index:10000;';
-    overlay.innerHTML = '<div style="background:var(--surface);border-radius:12px;padding:28px;width:min(460px,92vw);box-shadow:0 20px 60px rgba(0,0,0,.3);"><p style="color:var(--text-muted);margin:0;">Indlaeser ordre...</p></div>';
+    overlay.innerHTML = '<div style="background:var(--surface);border-radius:12px;padding:28px;width:min(460px,92vw);box-shadow:0 20px 60px rgba(0,0,0,.3);"><p style="color:var(--text-muted);margin:0;">Indlæser ordre...</p></div>';
     document.body.appendChild(overlay);
 
     let subtotal = 0, acontoInvoiced = 0;
     let invsList = [];
+    let orderTerms = 'Netto 14 dage';
     try {
         const token = sessionStorage.getItem('token');
         const resp = await fetch('/api/orders/' + orderId + '/workspace', { headers: { 'Authorization': 'Bearer ' + token } });
@@ -171,6 +172,7 @@ async function openInvoiceTypeModal(orderId) {
             subtotal = Number(data.order && (data.order.live_subtotal ?? data.order.subtotal)) || 0; // v106.4s: live vaerdi
             const invs = data.invoices || [];
             invsList = invs;
+            orderTerms = (data.order && data.order.terms) || orderTerms;
             // v106.4k: udkast taeller med med det samme - restbeloebet afspejler alle aconto'er
             acontoInvoiced = invs.reduce((s, i) => {
                 if (i.invoice_type === 'aconto') return s + (Number(i.subtotal) || 0);
@@ -180,7 +182,7 @@ async function openInvoiceTypeModal(orderId) {
         }
     } catch (e) { /* falder tilbage til 0 */ }
 
-    invoiceTypeModalData = { orderId, subtotal, acontoInvoiced, terms: (data.order && data.order.terms) || 'Netto 14 dage' };
+    invoiceTypeModalData = { orderId, subtotal, acontoInvoiced, terms: orderTerms };
     renderInvoiceTypeModalContent('aconto');
     if (window.lucide) { try { lucide.createIcons(); } catch (e) { /* ignore */ } }
 }
@@ -819,7 +821,7 @@ window.removeEditorLine = removeEditorLine;
 window.saveInvoiceLineEdits = saveInvoiceLineEdits;
 window.buildInvoiceSheetHTML = buildInvoiceSheetHTML;
 window.markInvoicePaid = markInvoicePaid;
-window.filterInvoicedByStatus = filterInvoicedByStatus;
+window.filterInvoicesByStatus = filterInvoicesByStatus;
 window.editInvoiceNotes = editInvoiceNotes;
 window.saveInvoiceNotes = saveInvoiceNotes;
 window.setInvoicedFilter = setInvoicedFilter;
