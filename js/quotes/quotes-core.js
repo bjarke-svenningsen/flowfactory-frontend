@@ -1593,7 +1593,22 @@ async function loadOrderTabCounts() {
         const token = sessionStorage.getItem('token');
         const headers = { 'Authorization': `Bearer ${token}` };
 
-        const quotesRes = await fetch('/api/quotes', { headers });
+        // v106.6d2: Render cold-start kan laae fetches haenge i hele 30-60+ sek.
+        // Uden timeout haeenger skeleton-cirklerne (graa/gule) indtil brugeren
+        // skifter side frem og tilbage. 12s timeout -> fejler paeent -> finally
+        // rydder skeleton; naeste loadOrderTabCounts (naar serveren er vaagen)
+        // fylder tallene.
+        const fetchWithTimeout = async (url, ms = 12000) => {
+            let timer;
+            try {
+                return await Promise.race([
+                    fetch(url, { headers }),
+                    new Promise((_, rej) => { timer = setTimeout(() => rej(new Error('Fanetælling timeout: ' + url)), ms); })
+                ]);
+            } finally { clearTimeout(timer); }
+        };
+
+        const quotesRes = await fetchWithTimeout('/api/quotes');
         if (gen !== tabCountsGen) return; // aeldre kald - drop
         if (!quotesRes.ok) throw new Error('Kunne ikke hente fanetællinger (quotes)');
         const allQuotes = await quotesRes.json();
@@ -1601,7 +1616,7 @@ async function loadOrderTabCounts() {
 
         // Faktureret tælles fra samme kilde som fanens liste
         try {
-            const invoicesRes = await fetch('/api/invoices', { headers });
+            const invoicesRes = await fetchWithTimeout('/api/invoices');
             if (gen !== tabCountsGen) return; // aeldre kald - drop
             if (!invoicesRes.ok) throw new Error('Kunne ikke hente fakturaer');
             const invoicesData = await invoicesRes.json();
@@ -1614,7 +1629,7 @@ async function loadOrderTabCounts() {
 
         // Kunder tælles fra samme kilde som kundelisten
         try {
-            const customersRes = await fetch('/api/customers', { headers });
+            const customersRes = await fetchWithTimeout('/api/customers');
             if (gen !== tabCountsGen) return; // aeldre kald - drop
             if (!customersRes.ok) throw new Error('Kunne ikke hente kunder');
             const customersData = await customersRes.json();
@@ -1626,6 +1641,11 @@ async function loadOrderTabCounts() {
         }
     } catch (err) {
         console.error('Fanetælling:', err);
+        // v106.6d2: et automatisk retry naar serveren er vaegen igen (Render
+        // cold-start), saa brugeren IKKE skal skifte fane for at faa tal.
+        if (gen === tabCountsGen) {
+            setTimeout(() => { if (gen === tabCountsGen) loadOrderTabCounts(); }, 15000);
+        }
     } finally {
         // v106.4: badges maa ALDRIG haenge som skeleton (graa/gul), uanset om
         // hentningen fejler, tiden går ud eller svaret er ugyldigt.
