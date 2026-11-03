@@ -604,21 +604,35 @@ function markInvoicePaid(invoiceId) {
 }
 
 // Send invoice (v106.4i: sgConfirm erstatter native confirm, som browseren blokerer)
-function sendInvoice(invoiceId) {
-    sgConfirm('Send faktura', 'Send denne faktura til kunden via email?', async () => {
+// v106.6p: tekster er dok-label-bevidste (Faktura/Kreditnota)
+async function invoiceDocLabel(invoiceId) {
+    try {
+        const token = sessionStorage.getItem('token');
+        const res = await fetch(`/api/invoices/${invoiceId}`, { headers: { 'Authorization': `Bearer ${token}` } });
+        if (res.ok) {
+            const inv = await res.json();
+            if (inv && inv.invoice_type === 'creditnote') return 'Kreditnota';
+        }
+    } catch { /* ignore - fallback Faktura */ }
+    return 'Faktura';
+}
+
+async function sendInvoice(invoiceId) {
+    const docLabel = await invoiceDocLabel(invoiceId);
+    sgConfirm(`Send ${docLabel.toLowerCase()}`, `Send denne ${docLabel.toLowerCase()} til kunden via email?`, async () => {
         try {
             const token = sessionStorage.getItem('token');
             const response = await fetch(`/api/invoices/${invoiceId}/send`, {
                 method: 'POST',
                 headers: { 'Authorization': `Bearer ${token}` }
             });
-            
+
             if (!response.ok) {
                 const error = await response.json();
                 throw new Error(error.error || 'Failed to send invoice');
             }
-            
-            alert('Faktura sendt til kunde');
+
+            alert(`${docLabel} sendt til kunde`);
             loadInvoiced();
             // v106.6k: opdater stepper/badge live ("Afsluttet" -> "Faktureret")
             if (typeof refreshWorkspaceStepper === 'function') refreshWorkspaceStepper();
@@ -626,18 +640,19 @@ function sendInvoice(invoiceId) {
             if (currentWorkspaceOrder && typeof refreshWorkspaceInvoicePreview === 'function') {
                 refreshWorkspaceInvoicePreview(invoiceId);
             }
-            
+
         } catch (error) {
             console.error('Send invoice error:', error);
-            alert('Kunne ikke sende faktura: ' + error.message);
+            alert(`Kunne ikke sende ${docLabel.toLowerCase()}: ` + error.message);
         }
     });
 }
 
 // v106.6i: godkend faktura UDEN at sende den til kunden (print/PDF eller egen mail).
 // Saettes til 'sent' -> has_approved_invoice -> stepper "Faktureret" + Fakturering-fanen.
-function approveInvoiceWithoutSending(invoiceId) {
-    sgConfirm('Godkend uden at sende', 'Fakturaen godkendes og rykker ordren videre til "Faktureret" - men der sendes IKKE en email til kunden. Fortsæt?', async () => {
+async function approveInvoiceWithoutSending(invoiceId) {
+    const docLabel = await invoiceDocLabel(invoiceId);
+    sgConfirm('Godkend uden at sende', `${docLabel}en godkendes og rykker ordren videre til "Faktureret" - men der sendes IKKE en email til kunden. Fortsæt?`, async () => {
         try {
             const token = sessionStorage.getItem('token');
             const response = await fetch(`/api/invoices/${invoiceId}`, {
@@ -647,9 +662,9 @@ function approveInvoiceWithoutSending(invoiceId) {
             });
             if (!response.ok) {
                 const e = await response.json().catch(() => ({}));
-                throw new Error(e.error || 'Kunne ikke godkende faktura');
+                throw new Error(e.error || `Kunne ikke godkende ${docLabel.toLowerCase()}`);
             }
-            alert('Faktura godkendt (ikke sendt til kunde)');
+            alert(`${docLabel} godkendt (ikke sendt til kunde)`);
             loadInvoiced();
             // v106.6k: opdater stepper/badge live ("Afsluttet" -> "Faktureret")
             if (typeof refreshWorkspaceStepper === 'function') refreshWorkspaceStepper();
@@ -659,7 +674,7 @@ function approveInvoiceWithoutSending(invoiceId) {
             }
         } catch (error) {
             console.error('Approve invoice error:', error);
-            alert('Kunne ikke godkende faktura: ' + error.message);
+            alert(`Kunne ikke godkende ${docLabel.toLowerCase()}: ` + error.message);
         }
     });
 }
