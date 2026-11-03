@@ -696,7 +696,7 @@ function renderWorkspaceInvoicesSection() {
     const orderSubtotal = Number(currentWorkspaceOrder.live_subtotal ?? currentWorkspaceOrder.subtotal) || 0; // v106.4s: live vaerdi
     const rest = orderSubtotal - invoiced + credited;
     const typeLabel = i => i.invoice_type === 'creditnote' ? 'Kreditnota' : (i.invoice_type === 'aconto' ? 'Aconto' : 'Slutfaktura');
-    const statusLabel = i => i.status === 'draft' ? 'Ikke sendt' : (i.status === 'sent' ? 'Sendt' : 'Betalt');
+    const statusLabel = i => i.status === 'draft' ? 'Ikke godkendt' : (i.status === 'sent' ? (i.sent_at ? 'Godkendt - Sendt' : 'Godkendt - ikke sendt') : 'Betalt');
     const rows = invs.map(i => `
         <tr onclick="showWorkspaceInvoicePreview(${i.id})" style="cursor:pointer;border-bottom:1px solid var(--border);background:rgba(186,151,84,.07);">
             <td style="padding:8px 6px;font-size:12px;">${i.invoice_number}</td>
@@ -777,6 +777,11 @@ function renderWorkspaceInvoicePreview(invoice) {
                 <i data-lucide="check"></i> Godkend uden at sende
             </button>
         ` : ''}
+        ${invoice.status === 'draft' && invoice.invoice_type === 'creditnote' ? `
+            <button onclick="toggleInvoiceLineEditor(${invoice.id}, 'wsInvoiceEditorHost', true)" class="btn btn-secondary">
+                <i data-lucide="pencil"></i> Rediger linjer
+            </button>
+        ` : ''}
         ${invoice.invoice_type !== 'creditnote' && invoice.status === 'sent' ? `
             <button onclick="markInvoicePaid(${invoice.id})" class="btn btn-primary">
                 <i data-lucide="check"></i> Markér Betalt
@@ -800,6 +805,7 @@ function renderWorkspaceInvoicePreview(invoice) {
         <div style="margin-top:20px;border-top:2px solid var(--border);padding-top:20px;">
             <div class="preview-actions" style="margin-bottom:20px;">${actions}</div>
             <div class="quote-sheet-wrap">${buildInvoiceSheetHTML(invoice)}</div>
+            <div id="wsInvoiceEditorHost"></div>
         </div>`;
     if (window.lucide) { try { lucide.createIcons(); } catch (e) { /* ignore */ }
     }

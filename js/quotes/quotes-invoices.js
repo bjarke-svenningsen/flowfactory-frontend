@@ -54,6 +54,10 @@ function renderInvoicedContent(invoices) {
         'sent': 'list-card--sent',
         'paid': 'list-card--paid'
     };
+    // v106.6m: skeln mellem "godkendt uden at sende" og "godkendt og sendt" via sent_at
+    const invStatusText = (inv) => inv.status === 'sent'
+        ? (inv.sent_at ? 'Godkendt - Sendt' : 'Godkendt - ikke sendt')
+        : (statusText[inv.status] || 'Ikke godkendt');
     
     let html = `<div class="list-section-head"><span class="title">Faktura-kartotek</span><span class="badge badge--invoiced">${invoices.length}</span></div>`;
     invoices.forEach(invoice => {
@@ -69,7 +73,7 @@ function renderInvoicedContent(invoices) {
                 <div class="list-card-head">
                     <h4 class="list-card-title">${invoice.invoice_type === 'creditnote' ? 'Kreditnota ' : 'Faktura '}${invoice.invoice_number}</h4>
                     ${typeBadge}
-                    <span class="badge ${badgeClass[invoice.status] || 'badge--draft'}">${statusText[invoice.status] || 'Ikke godkendt'}</span>
+                    <span class="badge ${badgeClass[invoice.status] || 'badge--draft'}">${invStatusText(invoice)}</span>
                 </div>
                 <div class="list-card-grid">
                     <div class="list-card-field"><span class="label">Kunde</span><span class="value">${invoice.customer_name}</span></div>
@@ -750,14 +754,32 @@ async function createCreditNote(invoiceId) {
 }
 
 let invoiceLineEditor = null;
+// v106.6m: editoren kan rendre bade i Fakturering-fanen og i workspace'ets inline-preview
+let invoiceLineEditorHost = null;   // DOM-id paa container (default 'invoicingContainer')
+let invoiceLineEditorInWs = false;  // true = aabnet fra workspace
 
-function toggleInvoiceLineEditor(invoiceId) {
+function toggleInvoiceLineEditor(invoiceId, hostId, inWs) {
     if (!window.currentPreviewInvoice || window.currentPreviewInvoice.id !== invoiceId) return;
     invoiceLineEditor = JSON.parse(JSON.stringify(window.currentPreviewInvoice));
+    invoiceLineEditorHost = hostId || 'invoicingContainer';
+    invoiceLineEditorInWs = !!inWs;
     if (!Array.isArray(invoiceLineEditor.lines) || invoiceLineEditor.lines.length === 0) {
         invoiceLineEditor.lines = [{ description: '', quantity: -1, unit: 'stk', unit_price: 0, discount_percent: 0, line_total: 0 }];
     }
     renderInvoiceLineEditor();
+}
+
+function closeInvoiceLineEditor() {
+    const inv = invoiceLineEditor;
+    invoiceLineEditor = null;
+    invoiceLineEditorHost = null;
+    invoiceLineEditorInWs = false;
+    if (!inv) return;
+    if (typeof refreshWorkspaceInvoicePreview === 'function' && document.getElementById('wsInvoicePreview')) {
+        refreshWorkspaceInvoicePreview(inv.id);
+    } else {
+        viewInvoice(inv.id);
+    }
 }
 
 
@@ -768,7 +790,8 @@ function invEscAttr(v) {
 function renderInvoiceLineEditor() {
     const inv = invoiceLineEditor;
     if (!inv) return;
-    const container = document.getElementById('invoicingContainer');
+    const container = document.getElementById(invoiceLineEditorHost || 'invoicingContainer');
+    if (!container) return;
     const inp = 'padding:6px 8px;border:1px solid var(--border);border-radius:5px;background:var(--surface);color:var(--text);width:100%;box-sizing:border-box;font-size:12px;';
     const rows = inv.lines.map((line, i) => `
         <tr>
@@ -785,7 +808,7 @@ function renderInvoiceLineEditor() {
     container.innerHTML = `
         <div class="quote-sheet-wrap">
             <div class="preview-actions">
-                <button onclick="viewInvoice(${inv.id})" class="btn btn-secondary"><i data-lucide="arrow-left"></i> Tilbage</button>
+                <button onclick="${invoiceLineEditorInWs ? 'closeInvoiceLineEditor()' : `viewInvoice(${inv.id})`}" class="btn btn-secondary"><i data-lucide="arrow-left"></i> Tilbage</button>
                 <div style="flex:1;text-align:center;"><strong>Rediger linjer - kreditnota ${inv.invoice_number}</strong></div>
                 <button onclick="addEditorLine()" class="btn btn-secondary"><i data-lucide="plus"></i> Tilfoej linje</button>
                 <button onclick="saveInvoiceLineEdits(${inv.id})" class="btn btn-primary"><i data-lucide="save"></i> Gem</button>
@@ -853,6 +876,7 @@ window.createCreditNote = createCreditNote;
 window.openCreditNotePicker = openCreditNotePicker;
 window.closeCreditNotePicker = closeCreditNotePicker;
 window.toggleInvoiceLineEditor = toggleInvoiceLineEditor;
+window.closeInvoiceLineEditor = closeInvoiceLineEditor;
 window.renderInvoiceLineEditor = renderInvoiceLineEditor;
 window.invEscAttr = invEscAttr;
 window.invEditorLineTotal = invEditorLineTotal;
@@ -892,8 +916,15 @@ async function saveInvoiceLineEdits(invoiceId) {
         }
         alert('Kreditnota gemt!');
         invoiceLineEditor = null;
+        invoiceLineEditorHost = null;
+        invoiceLineEditorInWs = false;
         loadInvoiced();
-        viewInvoice(invoiceId);
+        if (document.getElementById('wsInvoicePreview') && typeof refreshWorkspaceInvoicePreview === 'function') {
+            // v106.6m: aabnet fra workspace - opdater inline-preview i stedet for at navigera vaek
+            refreshWorkspaceInvoicePreview(invoiceId);
+        } else {
+            viewInvoice(invoiceId);
+        }
     } catch (error) {
         console.error('Save creditnote error:', error);
         alert('Kunne ikke gemme kreditnota: ' + error.message);

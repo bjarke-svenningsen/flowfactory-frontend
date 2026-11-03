@@ -2493,6 +2493,18 @@ async function generateInvoiceNumber() {
   return String(next);
 }
 
+// v106.6m: kreditnotaer har egen nummerserie (starter ved 1000) - uafhaengig af fakturaer
+async function generateCreditNoteNumber() {
+  let row = await db.get(`SELECT value FROM invoice_counter WHERE name = 'creditnote'`);
+  if (!row) {
+    await db.run(`INSERT INTO invoice_counter (name, value) VALUES ('creditnote', 999)`);
+    row = await db.get(`SELECT value FROM invoice_counter WHERE name = 'creditnote'`);
+  }
+  const next = row.value + 1;
+  await db.run(`UPDATE invoice_counter SET value = ? WHERE name = 'creditnote'`, [next]);
+  return String(next);
+}
+
 // Helper function to get full order number (for display)
 async function getFullOrderNumber(quote) {
   if (quote.is_extra_work && quote.parent_order_id) {
@@ -3800,7 +3812,7 @@ app.post('/api/invoices/:id/creditnote', auth, async (req, res) => {
     return res.status(400).json({ error: `Fakturaen er allerede krediteret (${creditedSum} kr. af ${orig.subtotal} kr.)` });
   }
 
-  const invoice_number = await generateInvoiceNumber();
+  const invoice_number = await generateCreditNoteNumber();
   // v106.5: kreditnota arver ordrens betalingsbetingelser - forfald laeses af teksten
   const creditTerms = orig.payment_terms || 'Netto 14 dage';
   const finalDueDate = parsePaymentTerms(creditTerms);
@@ -3875,10 +3887,12 @@ app.delete('/api/invoices/:id', auth, async (req, res) => {
   // tildelte nummer - ellers forbruges et nummer hver gang et udkast slettes.
   // Godkendte/sendte fakturaer laaser nummeret permanent (bogfoeringskrav).
   try {
-    const counter = await db.get(`SELECT value FROM invoice_counter WHERE name = 'invoice'`);
+    // v106.6m: kreditnotaer frigives fra egen taeller (creditnote), fakturaer fra 'invoice'
+    const counterName = invoice.invoice_type === 'creditnote' ? 'creditnote' : 'invoice';
+    const counter = await db.get(`SELECT value FROM invoice_counter WHERE name = '${counterName}'`);
     const deletedNum = Number(invoice.invoice_number);
     if (counter && deletedNum === Number(counter.value)) {
-      await db.run(`UPDATE invoice_counter SET value = ? WHERE name = 'invoice'`, [deletedNum - 1]);
+      await db.run(`UPDATE invoice_counter SET value = ? WHERE name = '${counterName}'`, [deletedNum - 1]);
     }
   } catch (e) {
     console.error('Kunne ikke frigive fakturanummer:', e);
@@ -3926,13 +3940,15 @@ app.post('/api/invoices/:id/send', auth, async (req, res) => {
       await db.run('UPDATE invoices SET status = ?, sent_at = datetime(\'now\') WHERE id = ?', ['sent', invoiceId]);
     }
     
+    // v106.6m: kreditnotaer omtales som kreditnota i emailen
+    const docLabel = invoice.invoice_type === 'creditnote' ? 'Kreditnota' : 'Faktura';
     const mailOptions = {
       from: process.env.EMAIL_FROM || process.env.EMAIL_USER,
       to: invoice.customer_email,
-      subject: `Faktura ${invoice.invoice_number} - Ordre ${invoice.full_order_number}`,
+      subject: `${docLabel} ${invoice.invoice_number} - Ordre ${invoice.full_order_number}`,
       html: `
         <p>Kære ${invoice.contact_person || invoice.company_name},</p>
-        <p>Vedhæftet finder du faktura for ordre <strong>${invoice.full_order_number}</strong>.</p>
+        <p>Vedhæftet finder du ${docLabel.toLowerCase()} for ordre <strong>${invoice.full_order_number}</strong>.</p>
         <p>Forfaldsdato: ${new Date(invoice.due_date).toLocaleDateString('da-DK')}</p>
         <p>Betalingsbetingelser: ${invoice.payment_terms}</p>
         <p>Hvis du har spørgsmål, er du velkommen til at kontakte os.</p>
@@ -3943,7 +3959,7 @@ app.post('/api/invoices/:id/send', auth, async (req, res) => {
     await emailTransporter.sendMail(mailOptions);
 
     // v106.6l: log faktura-sendt-haendelse
-    await logOrderEvent(invoice.order_id, 'invoice_sent', `Faktura ${invoice.invoice_number} sendt til ${invoice.customer_email}`, req.user.id);
+    await logOrderEvent(invoice.order_id, 'invoice_sent', `${docLabel} ${invoice.invoice_number} sendt til ${invoice.customer_email}`, req.user.id);
 
     res.json({ success: true, message: 'Invoice sent successfully' });
   } catch (error) {
