@@ -109,10 +109,12 @@ function renderWorkspace(data) {
     
     // v83 FIX (tab-mixing): Workspace genbruger ordersContainer i orderTabOrders,
     // men topfanerne skal afspejle ordrens stage - ellers bliver "Godkendte Ordre"
-    // understreget selv naar ordren er igangvarende (og "Igangvarende"-listen
-    // laakker ind under workspace'et).
+    // understreget selv naar ordren er igangvaerende/afsluttet (og "Afsluttede"-
+    // listen laakker ind under workspace'et).
+    // v106.6h: afsluttede ordrer fremhaever nu "Afsluttede"-fanen (ikke Godkendte Ordre)
     const isOrderInProgress = data.order.order_stage === 'in_progress';
-    const activeTopTab = isOrderInProgress ? 'in_progress' : 'orders';
+    const isOrderCompleted = data.order.order_stage === 'completed';
+    const activeTopTab = isOrderInProgress ? 'in_progress' : (isOrderCompleted ? 'completed' : 'orders');
 
     // Show orders tab (reuse for workspace)
     const ordersTab = document.getElementById('orderTabOrders');
@@ -131,7 +133,8 @@ function renderWorkspace(data) {
     });
 
     // Skjul alle andre fane-indhold end orderTabOrders, sa ingen liste staar under workspace
-    ['orderTabQuotes', 'orderTabInProgress', 'orderTabInvoiced', 'orderTabRejected', 'orderTabCustomers'].forEach(id => {
+    // v106.6h: orderTabCompleted med nu (Afsluttede-sager-listen laakte ellers ind under workspace)
+    ['orderTabQuotes', 'orderTabInProgress', 'orderTabCompleted', 'orderTabInvoiced', 'orderTabRejected', 'orderTabCustomers'].forEach(id => {
         const el = document.getElementById(id);
         if (el) el.style.display = 'none';
     });
@@ -1292,7 +1295,10 @@ function renderDocumentsList() {
                         <div style="display: flex; gap: 6px; flex: 0 0 auto;">
                             ${btn('ghost', 'eye', 'Preview', { onclick: `previewDocument(${doc.id}, '${doc.original_name.replace(/'/g, "\\'")}')`, title: 'Vis dokument' })}
                             ${btn('ghost', 'download', 'Download', { onclick: `downloadDocument(${doc.id}, '${doc.original_name.replace(/'/g, "\\'")}')`, title: 'Download dokument' })}
-                            ${!montor ? btn(isAdminDoc ? 'ghost' : 'ghost', isAdminDoc ? 'users' : 'eye-off', isAdminDoc ? 'Alle' : 'Kun ledelsen', { onclick: `toggleDocumentVisibility(${doc.id})`, title: isAdminDoc ? 'Skift til: kun ledelsen kan se' : 'Skift til: alle kan se' }) : ''}
+                            ${!montor ? `<label style="display: inline-flex; align-items: center; gap: 6px; padding: 8px 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 13px; cursor: pointer; user-select: none; color: var(--text); white-space: nowrap;" title="Flueben = kun ledelsen kan se dokumentet. Ingen flueben = alle kan se det.">
+                                <input type="checkbox" id="docVisChk${doc.id}" ${isAdminDoc ? 'checked' : ''} onchange="toggleDocumentVisibility(${doc.id}, this.checked)" style="width: 16px; height: 16px; accent-color: var(--accent, #f0a030); cursor: pointer;">
+                                Kun ledelsen
+                            </label>` : ''}
                             ${!montor ? btn('icon', 'trash-2', 'Slet dokument', { onclick: `deleteDocument(${doc.id})`, danger: true, attrs: 'style="color: var(--danger, #c0392b);"' }) : ''}
                         </div>
                     </div>
@@ -1303,11 +1309,14 @@ function renderDocumentsList() {
     refreshIcons(); // v106.6c: konvertér lucide-ikoner (trash-2 var ellers usynlig)
 }
 
-// v106.6g: skift synlighed paa et dokument ('all' <-> 'admin') - kun ledelsen
-async function toggleDocumentVisibility(documentId) {
+// v106.6g: skift synlighed paa et dokument - kun ledelsen.
+// v106.6h: explicit tilstand fra checkbox (checked = kun ledelsen, unchecked = alle)
+async function toggleDocumentVisibility(documentId, checked) {
     const doc = workspaceDocuments.find(d => d.id === documentId);
     if (!doc || isQuotesMontor()) return;
-    const next = (doc.visibility || 'all') === 'admin' ? 'all' : 'admin';
+    const next = checked ? 'admin' : 'all';
+    const chk = document.getElementById(`docVisChk${documentId}`);
+    if (chk) chk.disabled = true; // undlag dobbeltklik mens PATCH koerer
     try {
         const token = sessionStorage.getItem('token');
         const response = await fetch(`/api/orders/${doc.order_id}/documents/${documentId}/visibility`, {
@@ -1323,6 +1332,8 @@ async function toggleDocumentVisibility(documentId) {
         renderDocumentsList();
     } catch (error) {
         console.error('Toggle document visibility error:', error);
+        // rul checkbox tilbage ved fejl
+        if (chk) { chk.checked = !checked; chk.disabled = false; }
         alert('Kunne ikke skifte synlighed: ' + error.message);
     }
 }

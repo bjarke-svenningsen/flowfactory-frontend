@@ -1530,12 +1530,40 @@ function initOrderSearch() {
 }
 
 // Set antal-badge på en fane (viser altid et tal, også "0")
+// v106.6h: gem samtidig taallet i sidst-kendt-cache, saa badges aldrig behoever
+// at staa som skeleton/cirkler ved naeste indlaesning (eller efter en fejlet hentning)
 function setTabCount(tabName, count) {
     const el = document.getElementById(`tabCount${tabName}`);
     if (el) {
         el.classList.remove('skeleton', 'hidden');
         el.textContent = String(count ?? 0);
     }
+    setCachedTabCount(tabName, count ?? 0);
+}
+
+// v106.6h: cache af sidst kendte fanetaellinger (session + localStorage).
+// Render cold-start kan haeenge fetches i 30-60+ s - i stedet for graa/gule
+// skeleton-cirkler viser vi cachede tal med det samme og opdaterer bagefter.
+const TAB_COUNTS_CACHE_KEY = 'breezeTabCountsCache';
+let lastTabCounts = (() => {
+    try { return JSON.parse(localStorage.getItem(TAB_COUNTS_CACHE_KEY) || '{}'); }
+    catch { return {}; }
+})();
+
+function setCachedTabCount(tabName, count) {
+    lastTabCounts[tabName] = count;
+    try { localStorage.setItem(TAB_COUNTS_CACHE_KEY, JSON.stringify(lastTabCounts)); } catch { /* ignore */ }
+}
+
+// v106.6h: fyld cachede tal direkte paa badges (ingen skeleton)
+function restoreTabCountsFromCache() {
+    Object.keys(lastTabCounts).forEach(name => {
+        const el = document.getElementById(`tabCount${name}`);
+        if (el && typeof lastTabCounts[name] === 'number') {
+            el.classList.remove('skeleton', 'hidden');
+            el.textContent = String(lastTabCounts[name]);
+        }
+    });
 }
 
 // Skeleton-badge mens der hentes
@@ -1583,11 +1611,17 @@ let tabCountsGen = 0;
 async function loadOrderTabCounts() {
     const gen = ++tabCountsGen;
     const countTabs = ['Quotes', 'Orders', 'InProgress', 'Completed', 'Invoiced', 'Rejected', 'Customers'];
-    // Skeleton KUN paa badges der ikke allerede har et tal - eksisterende tal
-    // skal aldrig viskes ud mens der hentes friske data.
+    // v106.6h: vis cachede tal med det samme - skeleton KUN paa badges hvor der
+    // aldrig er hentet et tal foer (fx foerste besoeg). Eksisterende tal viskes aldrig ud.
     countTabs.forEach(name => {
         const el = document.getElementById(`tabCount${name}`);
-        if (el && !el.textContent.trim()) setTabCountSkeleton(name);
+        if (!el) return;
+        if (typeof lastTabCounts[name] === 'number') {
+            el.classList.remove('skeleton', 'hidden');
+            el.textContent = String(lastTabCounts[name]);
+        } else if (!el.textContent.trim()) {
+            setTabCountSkeleton(name);
+        }
     });
     try {
         const token = sessionStorage.getItem('token');
@@ -1641,6 +1675,9 @@ async function loadOrderTabCounts() {
         }
     } catch (err) {
         console.error('Fanetælling:', err);
+        // v106.6h: genopret cachede tal med det samme ved fejl/timeout, saa der
+        // ALDRIG haeenger graa/gule skeleton-cirkler uden tal (Render cold-start).
+        restoreTabCountsFromCache();
         // v106.6d2: et automatisk retry naar serveren er vaegen igen (Render
         // cold-start), saa brugeren IKKE skal skifte fane for at faa tal.
         if (gen === tabCountsGen) {
