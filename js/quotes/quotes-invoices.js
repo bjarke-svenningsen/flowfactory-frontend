@@ -568,9 +568,7 @@ function renderInvoicePreview(invoice) {
                     </button>
                 ` : ''}
             </div>
-                </button>
-            </div>
-            
+
             ${buildInvoiceSheetHTML(invoice)}
         </div>
     `;
