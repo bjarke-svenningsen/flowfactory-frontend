@@ -945,17 +945,18 @@ function renderQuotePreview(targetBox) {
     if (window.lucide) { try { lucide.createIcons(); } catch (e) { /* ignore */ } }
 }
 
-// v106.6r: aegte PDF-download via html2pdf.js (html2canvas + jsPDF).
-// v107: render en KLON af sheet'et i en fastbredde-container (794px = A4 ved 96dpi) -
-// direkte rendering af elementet i dets egen kontekst ga blank/hvid PDF (procentbredde
-// + foraedre-layout odelaegger html2canvas-malet).
+// v106.6r: aegte PDF-download.
+// v107: html2canvas + jsPDF direkte (html2pdf.js gav BLANK PDF - dens interne kloning
+// af elementet laver tomt canvas). Arbejds-recipe bevidst: klones sheet'et ind i en
+// fastbredde-container (794px = A4 ved 96dpi), render med html2canvas (bevist virkende),
+// og saettes sammen til multipage A4 med jsPDF.
 async function downloadSheetAsPDF(filename) {
     // Find det SYNLIGE sheet (der kan vaere flere previews i DOM'et)
     const sheets = Array.from(document.querySelectorAll('.quote-sheet-wrap .quote-sheet'))
         .filter(el => el.offsetParent !== null);
     const sheet = sheets[sheets.length - 1];
     if (!sheet) { alert('Kunne ikke finde dokumentet at downloade.'); return; }
-    if (typeof html2pdf !== 'function') {
+    if (typeof html2canvas !== 'function' || !window.jspdf || typeof window.jspdf.jsPDF !== 'function') {
         alert('PDF-bibliotek er ikke indlaest - brug Print / PDF i stedet.');
         return;
     }
@@ -970,14 +971,31 @@ async function downloadSheetAsPDF(filename) {
         // Vent paa at klonen er stylet og fonts er klar
         await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
         if (document.fonts && document.fonts.ready) { try { await document.fonts.ready; } catch { /* ignore */ } }
-        await html2pdf().set({
-            margin: [8, 8, 8, 8],
-            filename,
-            image: { type: 'jpeg', quality: 0.95 },
-            html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff', windowWidth: 794, logging: false },
-            jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-            pagebreak: { mode: ['css', 'legacy'] }
-        }).from(holder).save();
+
+        const canvas = await html2canvas(holder, {
+            scale: 2, useCORS: true, backgroundColor: '#ffffff', windowWidth: 794, logging: false
+        });
+
+        // Multipage A4: skaer canvas i sidehoje skiver og laeg dem pa jsPDF-sider
+        const { jsPDF } = window.jspdf;
+        const pdf = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
+        const pageW = 210, pageH = 297, margin = 8;
+        const imgW = pageW - margin * 2;                 // 194 mm
+        const pxPerMm = canvas.width / imgW;
+        const sliceHpx = Math.floor((pageH - margin * 2) * pxPerMm);
+        let y = 0, first = true;
+        while (y < canvas.height) {
+            const h = Math.min(sliceHpx, canvas.height - y);
+            const slice = document.createElement('canvas');
+            slice.width = canvas.width;
+            slice.height = h;
+            slice.getContext('2d').drawImage(canvas, 0, y, canvas.width, h, 0, 0, canvas.width, h);
+            if (!first) pdf.addPage();
+            pdf.addImage(slice.toDataURL('image/jpeg', 0.95), 'JPEG', margin, margin, imgW, h / pxPerMm, undefined, 'FAST');
+            first = false;
+            y += h;
+        }
+        pdf.save(filename);
     } catch (err) {
         console.error('PDF-download fejlede:', err);
         alert('Kunne ikke generere PDF - brug Print / PDF i stedet.');

@@ -87,8 +87,10 @@
     <script src="js/pwa-init.js"></script>
     
     <script src="https://cdn.jsdelivr.net/npm/lucide@0.462.0/dist/umd/lucide.min.js"></script>
-    <!-- v106.6r: html2pdf.js (html2canvas + jsPDF) til aegte PDF-downloads af tilbud/faktura/kreditnota -->
-    <script src="https://cdn.jsdelivr.net/npm/html2pdf.js@0.10.1/dist/html2pdf.bundle.min.js"></script>
+    <!-- v107: html2canvas + jsPDF direkte til aegte PDF-downloads (html2pdf.js bundt
+         lavede blanke PDF'er pga. sin interne kloning; standalone html2canvas virker) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="js/ui.js"></script>
     <script src="js/page-loader.js"></script>
     <script src="js/dashboard.js"></script>
