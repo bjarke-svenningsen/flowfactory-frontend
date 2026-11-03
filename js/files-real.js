@@ -301,6 +301,53 @@ function getImageMime(filename) {
     return ['jpg', 'jpeg', 'jfif', 'pjpeg', 'pjp'].includes(ext) ? 'image/jpeg' : '';
 }
 
+// v106.6: MIME-typer for filtyper browseren kan vise direkte (PDF-viewer, video/lyd-afspiller, tekst)
+function getFileMime(filename) {
+    const ext = filename.split('.').pop().toLowerCase();
+    const mimes = {
+        pdf: 'application/pdf', txt: 'text/plain', md: 'text/plain', log: 'text/plain',
+        csv: 'text/csv', json: 'application/json', xml: 'text/xml', html: 'text/html',
+        mp4: 'video/mp4', webm: 'video/webm', mov: 'video/quicktime',
+        mp3: 'audio/mpeg', wav: 'audio/wav', ogg: 'audio/ogg', m4a: 'audio/mp4'
+    };
+    return mimes[ext] || '';
+}
+
+// Kan filtypen vises i browseren uden download? (Office-filer skal downloades)
+function isViewableInBrowser(filename) {
+    const ext = filename.split('.').pop().toLowerCase();
+    if (isImage(filename)) return true;
+    return !!getFileMime(filename);
+}
+
+// v106.6: aabn fil i browser-viewer uden download - blob + objectURL (auth via Bearer-header)
+async function openFileInViewer(fileId) {
+    try {
+        const token = sessionStorage.getItem('token');
+        const response = await fetch(`/api/files/download/${fileId}`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (!response.ok) throw new Error('Kunne ikke hente filen');
+
+        const file = findFileAnywhere(fileId);
+        const filename = file ? file.original_name : 'fil';
+        const mime = getImageMime(filename) || getFileMime(filename) || response.headers.get('Content-Type') || 'application/octet-stream';
+        const blob = await response.blob();
+        const url = URL.createObjectURL(new Blob([blob], { type: mime }));
+        const win = window.open(url, '_blank');
+        if (!win) {
+            // popup blokeret - tilbyd at aabne i samme fane
+            if (await winConfirm('Din browser blokerede pop op-vinduer. Åbn filen i samme fane?', 'Åbn fil')) window.location.href = url;
+            else URL.revokeObjectURL(url);
+        }
+        // Frigiv blob-URL'et efter 5 min (browser-vieweren har laest det laangt foer)
+        setTimeout(() => URL.revokeObjectURL(url), 5 * 60 * 1000);
+    } catch (error) {
+        console.error('Viewer error:', error);
+        await winAlert('Kunne ikke åbne filen: ' + error.message, 'Fejl');
+    }
+}
+
 async function loadSharedFiles() {
     try {
         const token = sessionStorage.getItem('token');
@@ -1199,9 +1246,12 @@ async function openRealFile(fileId) {
     
     const ext = file.original_name.split('.').pop().toLowerCase();
     const imageExtensions = ['jpg', 'jpeg', 'jfif', 'pjpeg', 'pjp', 'png', 'gif', 'bmp', 'webp'];
-    
+
     if (imageExtensions.includes(ext)) {
         await previewImage(fileId, file.original_name);
+    } else if (isViewableInBrowser(file.original_name)) {
+        // v106.6: pdf/tekst/video/lyd aabnes i browserens indbyggede viewer - ingen download
+        await openFileInViewer(fileId);
     } else {
         await winAlert(`<strong>Navn:</strong> ${file.original_name}<br><br><strong>Størrelse:</strong> ${formatFileSize(file.file_size)}<br><strong>Type:</strong> ${getFileType(file.original_name)}<br><strong>Uploadet af:</strong> ${file.uploader_name}<br><strong>Dato:</strong> ${new Date(file.created_at).toLocaleString('da-DK')}`, 'Fil');
     }
