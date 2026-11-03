@@ -1576,13 +1576,25 @@ function updateTabCountsFromQuotes(allQuotes) {
 }
 
 // Hent ALLE fanernes antal på én gang når Ordrestyring åbnes / efter ændringer
+// v106.6d: generations-guard - ved dobbeltkald (init + hash-restore + faneskift)
+// er det KUN det nyeste kald, der maa skrive skeleton og resultater. aeldre kald
+// dropper stille deres svar, saa badges aldrig haeenger tomme/graefore til F5.
+let tabCountsGen = 0;
 async function loadOrderTabCounts() {
-    ['Quotes', 'Orders', 'InProgress', 'Completed', 'Invoiced', 'Rejected', 'Customers'].forEach(setTabCountSkeleton);
+    const gen = ++tabCountsGen;
+    const countTabs = ['Quotes', 'Orders', 'InProgress', 'Completed', 'Invoiced', 'Rejected', 'Customers'];
+    // Skeleton KUN paa badges der ikke allerede har et tal - eksisterende tal
+    // skal aldrig viskes ud mens der hentes friske data.
+    countTabs.forEach(name => {
+        const el = document.getElementById(`tabCount${name}`);
+        if (el && !el.textContent.trim()) setTabCountSkeleton(name);
+    });
     try {
         const token = sessionStorage.getItem('token');
         const headers = { 'Authorization': `Bearer ${token}` };
 
         const quotesRes = await fetch('/api/quotes', { headers });
+        if (gen !== tabCountsGen) return; // aeldre kald - drop
         if (!quotesRes.ok) throw new Error('Kunne ikke hente fanetællinger (quotes)');
         const allQuotes = await quotesRes.json();
         updateTabCountsFromQuotes(allQuotes);
@@ -1590,6 +1602,7 @@ async function loadOrderTabCounts() {
         // Faktureret tælles fra samme kilde som fanens liste
         try {
             const invoicesRes = await fetch('/api/invoices', { headers });
+            if (gen !== tabCountsGen) return; // aeldre kald - drop
             if (!invoicesRes.ok) throw new Error('Kunne ikke hente fakturaer');
             const invoicesData = await invoicesRes.json();
             const invoices = Array.isArray(invoicesData) ? invoicesData : (invoicesData.invoices || []);
@@ -1602,6 +1615,7 @@ async function loadOrderTabCounts() {
         // Kunder tælles fra samme kilde som kundelisten
         try {
             const customersRes = await fetch('/api/customers', { headers });
+            if (gen !== tabCountsGen) return; // aeldre kald - drop
             if (!customersRes.ok) throw new Error('Kunne ikke hente kunder');
             const customersData = await customersRes.json();
             const customers = Array.isArray(customersData) ? customersData : (customersData.customers || []);
@@ -1615,13 +1629,16 @@ async function loadOrderTabCounts() {
     } finally {
         // v106.4: badges maa ALDRIG haenge som skeleton (graa/gul), uanset om
         // hentningen fejler, tiden går ud eller svaret er ugyldigt.
-        ['Quotes', 'Orders', 'InProgress', 'Completed', 'Invoiced', 'Rejected', 'Customers'].forEach(tabName => {
-            const el = document.getElementById(`tabCount${tabName}`);
-            if (el && el.classList.contains('skeleton')) {
-                el.classList.add('hidden');
-                el.classList.remove('skeleton');
-            }
-        });
+        // v106.6d: kun det nyeste kald rydder op (skeleton paa badges uden tal).
+        if (gen === tabCountsGen) {
+            countTabs.forEach(tabName => {
+                const el = document.getElementById(`tabCount${tabName}`);
+                if (el && el.classList.contains('skeleton')) {
+                    el.classList.add('hidden');
+                    el.classList.remove('skeleton');
+                }
+            });
+        }
     }
 }
 
@@ -1996,7 +2013,7 @@ async function initQuotesPage() {
         
         if (hash.startsWith('#quotes/')) {
             const tabName = hash.substring(8); // Remove "#quotes/"
-            if (['quotes', 'orders', 'in_progress', 'invoiced', 'rejected', 'customers'].includes(tabName)) {
+            if (['quotes', 'orders', 'in_progress', 'completed', 'invoiced', 'rejected', 'customers'].includes(tabName)) {
                 tabToLoad = tabName;
             }
         }

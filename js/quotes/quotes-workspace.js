@@ -2567,27 +2567,31 @@ if (document.readyState === 'loading') {
     }
 }
 
-// Ordre-stepper: viser arbejdsstatus Godkendt → Igangværende → Faktureret
+// Ordre-stepper: viser arbejdsstatus Godkendt → Igangværende → Afsluttet → Faktureret
+// v106.6d: kun AKTUEL status er farvet m. ikon; oevrige er neutrale graa uden ikon
 function renderStageStepper(order) {
     const steps = [
         { key: 'approved', icon: 'check-circle-2', label: 'Godkendt' },
         { key: 'in_progress', icon: 'loader', label: 'Igangværende' },
-        { key: 'invoiced', icon: 'receipt', label: 'Faktureret' },
-        { key: 'completed', icon: 'check', label: 'Afsluttet' } // v106.6c
+        { key: 'completed', icon: 'check', label: 'Afsluttet' },
+        { key: 'invoiced', icon: 'receipt', label: 'Faktureret' }
     ];
 
-    // v106.6c: 0 = godkendt, 1 = igangværende, 2 = faktureret, 3 = afsluttet
+    // v106.6d: 0 = godkendt, 1 = igangværende, 2 = afsluttet, 3 = faktureret
     let current = 0;
     if (order.order_stage === 'in_progress') current = 1;
-    if (order.has_approved_invoice) current = 2;
-    if (order.order_stage === 'completed') current = 3;
+    if (order.has_approved_invoice) current = 3;
+    if (order.order_stage === 'completed') current = 2;
 
     let html = '<div class="order-stepper">';
     steps.forEach((step, i) => {
-        const cls = i < current ? 'done' : (i === current ? 'current' : '');
-        html += `<div class="order-stepper-step ${cls}"><i data-lucide="${step.icon}"></i> ${step.label}</div>`;
+        if (i === current) {
+            html += `<div class="order-stepper-step current"><i data-lucide="${step.icon}"></i> ${step.label}</div>`;
+        } else {
+            html += `<div class="order-stepper-step muted">${step.label}</div>`;
+        }
         if (i < steps.length - 1) {
-            html += `<div class="order-stepper-line ${i < current ? 'done' : ''}"></div>`;
+            html += '<div class="order-stepper-line"></div>';
         }
     });
     html += '</div>';
