@@ -945,10 +945,38 @@ function renderQuotePreview(targetBox) {
     if (window.lucide) { try { lucide.createIcons(); } catch (e) { /* ignore */ } }
 }
 
-// Download PDF placeholder
+// v106.6r: aegte PDF-download via html2pdf.js (html2canvas + jsPDF).
+// Fanger det synlige .quote-sheet (tilbud/faktura/kreditnota) og gemmer direkte som fil.
+async function downloadSheetAsPDF(filename) {
+    // Find det SYNLIGE sheet (der kan vaere flere previews i DOM'et)
+    const sheets = Array.from(document.querySelectorAll('.quote-sheet-wrap .quote-sheet'))
+        .filter(el => el.offsetParent !== null);
+    const sheet = sheets[sheets.length - 1];
+    if (!sheet) { alert('Kunne ikke finde dokumentet at downloade.'); return; }
+    if (typeof html2pdf !== 'function') {
+        alert('PDF-bibliotek er ikke indlaest - brug Print / PDF i stedet.');
+        return;
+    }
+    try {
+        await html2pdf().set({
+            margin: [8, 8, 8, 8],
+            filename,
+            image: { type: 'jpeg', quality: 0.95 },
+            html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff' },
+            jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+            pagebreak: { mode: ['css', 'legacy'] }
+        }).from(sheet).save();
+    } catch (err) {
+        console.error('PDF-download fejlede:', err);
+        alert('Kunne ikke generere PDF - brug Print / PDF i stedet.');
+    }
+}
+
+// v106.6r: aegte PDF-download af tilbud (erstatter placeholder-alerten)
 function downloadQuotePDF(quoteId) {
-    alert('PDF generering kommer i en fremtidig version.\n\nDu kan i stedet bruge browser print (Ctrl+P) til at gemme som PDF.');
-    window.print();
+    const q = (typeof currentQuote !== 'undefined' && currentQuote && currentQuote.id === quoteId) ? currentQuote : null;
+    const num = q && (q.order_number || q.id) ? `-${q.order_number || q.id}` : `-${quoteId}`;
+    downloadSheetAsPDF(`Tilbud${num}.pdf`);
 }
 
 // v106.4e: indbygget bekræftelses-dialog (erstattes for confirm(), som browseren

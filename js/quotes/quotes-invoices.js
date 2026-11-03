@@ -559,6 +559,9 @@ function renderInvoicePreview(invoice) {
                 <button onclick="window.print()" class="btn btn-secondary">
                     <i data-lucide="printer"></i> Print / PDF
                 </button>
+                <button onclick="downloadInvoicePDF(${invoice.id})" class="btn btn-secondary">
+                    <i data-lucide="download"></i> Download
+                </button>
                 ${invoice.status === 'draft' ? `
                     <button onclick="deleteInvoiceFromPreview(${invoice.id})" class="btn btn-danger toolbar-end">
                         <i data-lucide="trash-2"></i> Slet
@@ -605,6 +608,26 @@ function markInvoicePaid(invoiceId) {
 
 // Send invoice (v106.4i: sgConfirm erstatter native confirm, som browseren blokerer)
 // v106.6p: tekster er dok-label-bevidste (Faktura/Kreditnota)
+// v106.6r: aegte PDF-download af faktura/kreditnota (html2pdf via quotes-core's helper)
+async function downloadInvoicePDF(invoiceId) {
+    let docLabel = 'Faktura';
+    let num = invoiceId;
+    try {
+        const token = sessionStorage.getItem('token');
+        const res = await fetch(`/api/invoices/${invoiceId}`, { headers: { 'Authorization': `Bearer ${token}` } });
+        if (res.ok) {
+            const inv = await res.json();
+            if (inv && inv.invoice_type === 'creditnote') docLabel = 'Kreditnota';
+            if (inv && inv.invoice_number) num = inv.invoice_number;
+        }
+    } catch { /* fallback til id */ }
+    if (typeof downloadSheetAsPDF === 'function') {
+        await downloadSheetAsPDF(`${docLabel}-${num}.pdf`);
+    } else {
+        alert('PDF-download er ikke tilgaengelig - brug Print / PDF.');
+    }
+}
+
 async function invoiceDocLabel(invoiceId) {
     try {
         const token = sessionStorage.getItem('token');
@@ -879,6 +902,7 @@ window.viewInvoice = viewInvoice;
 window.renderInvoicePreview = renderInvoicePreview;
 window.sendInvoice = sendInvoice;
 window.approveInvoiceWithoutSending = approveInvoiceWithoutSending;
+window.downloadInvoicePDF = downloadInvoicePDF;
 window.deleteInvoice = deleteInvoice;
 window.deleteInvoiceFromPreview = deleteInvoiceFromPreview;
 window.createInvoiceFromOrder = createInvoiceFromOrder;

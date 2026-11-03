@@ -804,6 +804,9 @@ function renderWorkspaceInvoicePreview(invoice) {
         <button onclick="window.print()" class="btn btn-secondary">
             <i data-lucide="printer"></i> Print / PDF
         </button>
+        <button onclick="downloadInvoicePDF(${invoice.id})" class="btn btn-secondary">
+            <i data-lucide="download"></i> Download
+        </button>
         ${invoice.status === 'draft' ? `
             <button onclick="deleteInvoice(${invoice.id})" class="btn btn-danger toolbar-end">
                 <i data-lucide="trash-2"></i> Slet
