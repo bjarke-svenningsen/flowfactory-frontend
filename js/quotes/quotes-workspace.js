@@ -151,7 +151,7 @@ function renderWorkspace(data) {
             <!-- Ordre-stepper: Godkendt → Igangværende → Faktureret -->
             ${renderStageStepper(data.order)}
             <!-- Back button -->
-            <div style="margin-bottom: 20px;">
+            <div style="margin-bottom: 12px;">
                 <button onclick="closeWorkspace()" class="btn-secondary" style="min-height: 40px;">
                     ← Tilbage til Ordrer
                 </button>
@@ -260,7 +260,7 @@ function renderHeaderEconomy(data) {
                         <svg width="104" height="104" viewBox="0 0 100 100" role="img" aria-label="Fordeling af timer, materialer og profit">${segs}</svg>
                         <div style="display: flex; gap: 14px;">${legend}</div>
                     </div>
-                    <div style="display: grid; gap: 12px;">
+                    <div style="display: grid; gap: 8px;">
                         <div>
                             <div style="font-size: 22px; font-weight: 700; font-variant-numeric: tabular-nums;">${totalHours.toFixed(2)} timer</div>
                             <div style="font-size: 12px; color: var(--text-muted);">Timeforbrug i alt</div>
@@ -282,26 +282,26 @@ function renderWorkspaceOverview(container) {
         const address = o.order_address || o.address;
         const postalCity = `${o.order_postal_code || o.postal_code || ''} ${o.order_city || o.city || ''}`.trim();
         container.innerHTML = `
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px;">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
                 <!-- Kontaktinfo -->
-                <div style="background: var(--surface); padding: 20px; border-radius: 10px; border: 2px solid var(--border); margin: 0;">
+                <div style="background: var(--surface); padding: 16px; border-radius: 10px; border: 1px solid var(--border); margin: 0;">
                     <h3 style="margin: 0 0 15px 0;">Kundens Kontaktinfo</h3>
-                    <div style="display: grid; gap: 15px;">
-                        <div style="padding-bottom: 15px; border-bottom: 1px solid var(--border);">
-                            <div style="color: var(--text-muted); font-size: 13px; margin-bottom: 5px;">Kontaktperson</div>
-                            <div style="font-weight: 600; font-size: 16px;">${o.contact_person_name || o.contact_person || 'Ikke angivet'}</div>
+                    <div style="display: grid; gap: 8px;">
+                        <div style="padding-bottom: 10px; border-bottom: 1px solid var(--border);">
+                            <div style="color: var(--text-muted); font-size: 12px; margin-bottom: 3px;">Kontaktperson</div>
+                            <div style="font-weight: 600; font-size: 14px;">${o.contact_person_name || o.contact_person || 'Ikke angivet'}</div>
                         </div>
-                        <div style="padding-bottom: 15px; border-bottom: 1px solid var(--border);">
-                            <div style="color: var(--text-muted); font-size: 13px; margin-bottom: 5px;">Telefon</div>
-                            <div style="font-weight: 600; font-size: 16px;">${o.contact_person_phone || o.customer_phone || 'Ikke angivet'}</div>
+                        <div style="padding-bottom: 10px; border-bottom: 1px solid var(--border);">
+                            <div style="color: var(--text-muted); font-size: 12px; margin-bottom: 3px;">Telefon</div>
+                            <div style="font-weight: 600; font-size: 14px;">${o.contact_person_phone || o.customer_phone || 'Ikke angivet'}</div>
                         </div>
-                        <div style="padding-bottom: 15px; border-bottom: 1px solid var(--border);">
-                            <div style="color: var(--text-muted); font-size: 13px; margin-bottom: 5px;">Email</div>
-                            <div style="font-weight: 600; font-size: 16px;">${o.contact_person_email || o.customer_email || 'Ikke angivet'}</div>
+                        <div style="padding-bottom: 10px; border-bottom: 1px solid var(--border);">
+                            <div style="color: var(--text-muted); font-size: 12px; margin-bottom: 3px;">Email</div>
+                            <div style="font-weight: 600; font-size: 14px;">${o.contact_person_email || o.customer_email || 'Ikke angivet'}</div>
                         </div>
                         <div>
-                            <div style="color: var(--text-muted); font-size: 13px; margin-bottom: 5px;">Ordre Adresse</div>
-                            <div style="font-weight: 600; font-size: 16px;">
+                            <div style="color: var(--text-muted); font-size: 12px; margin-bottom: 3px;">Ordre Adresse</div>
+                            <div style="font-weight: 600; font-size: 14px;">
                                 ${address || 'Ikke angivet'}<br>
                                 ${postalCity}
                             </div>
@@ -310,32 +310,32 @@ function renderWorkspaceOverview(container) {
                 </div>
 
                 <!-- Ordreinfo -->
-                <div style="background: var(--surface); padding: 20px; border-radius: 10px; border: 2px solid var(--border); margin: 0;">
+                <div style="background: var(--surface); padding: 16px; border-radius: 10px; border: 1px solid var(--border); margin: 0;">
                     <h3 style="margin: 0 0 15px 0;">Ordre Information</h3>
-                    <div style="display: grid; gap: 15px;">
-                        <div style="padding-bottom: 15px; border-bottom: 1px solid var(--border);">
-                            <div style="color: var(--text-muted); font-size: 13px; margin-bottom: 5px;">Ordre Nummer</div>
-                            <div style="font-weight: 600; font-size: 16px;">${o.order_number}</div>
+                    <div style="display: grid; gap: 8px;">
+                        <div style="padding-bottom: 10px; border-bottom: 1px solid var(--border);">
+                            <div style="color: var(--text-muted); font-size: 12px; margin-bottom: 3px;">Ordre Nummer</div>
+                            <div style="font-weight: 600; font-size: 14px;">${o.order_number}</div>
                         </div>
-                        <div style="padding-bottom: 15px; border-bottom: 1px solid var(--border);">
-                            <div style="color: var(--text-muted); font-size: 13px; margin-bottom: 5px;">Firma</div>
-                            <div style="font-weight: 600; font-size: 16px;">${o.company_name}</div>
+                        <div style="padding-bottom: 10px; border-bottom: 1px solid var(--border);">
+                            <div style="color: var(--text-muted); font-size: 12px; margin-bottom: 3px;">Firma</div>
+                            <div style="font-weight: 600; font-size: 14px;">${o.company_name}</div>
                         </div>
-                        <div style="padding-bottom: 15px; border-bottom: 1px solid var(--border);">
-                            <div style="color: var(--text-muted); font-size: 13px; margin-bottom: 5px;">Status</div>
+                        <div style="padding-bottom: 10px; border-bottom: 1px solid var(--border);">
+                            <div style="color: var(--text-muted); font-size: 12px; margin-bottom: 3px;">Status</div>
                             ${getStageBadge(o)}
                         </div>
                         ${o.accepted_at ? `
                         <div>
-                            <div style="color: var(--text-muted); font-size: 13px; margin-bottom: 5px;">Accepteret</div>
-                            <div style="font-weight: 600; font-size: 16px;">${new Date(o.accepted_at).toLocaleDateString('da-DK')}</div>
+                            <div style="color: var(--text-muted); font-size: 12px; margin-bottom: 3px;">Accepteret</div>
+                            <div style="font-weight: 600; font-size: 14px;">${new Date(o.accepted_at).toLocaleDateString('da-DK')}</div>
                         </div>
                         ` : ''}
                     </div>
                 </div>
             </div>
-            <div style="background: var(--surface); padding: 20px; border-radius: 10px; border: 2px solid var(--border); margin-top: 30px;">
-                <h3 style="margin: 0 0 15px 0;">Arbejdsbeskrivelse</h3>
+            <div style="background: var(--surface); padding: 16px; border-radius: 10px; border: 1px solid var(--border); margin-top: 30px;">
+                <h3 style="margin: 0 0 10px 0;">Arbejdsbeskrivelse</h3>
                 <div style="min-height: 60px; padding: 15px; background: var(--surface-muted); border-radius: 5px; border: 1px solid var(--border); font-size: 14px;">
                     ${currentWorkspaceOrder.work_description || '<em style="color: var(--text-muted);">Ingen beskrivelse endnu...</em>'}
                 </div>
@@ -354,21 +354,21 @@ function renderWorkspaceOverview(container) {
     const hasExtraWork = workspaceExtraWorkOrders && workspaceExtraWorkOrders.length > 0;
     
     container.innerHTML = `
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px;">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
             <!-- Left column: Stats and Chart -->
-            <div style="display: flex; flex-direction: column; gap: 30px;">
+            <div style="display: flex; flex-direction: column; gap: 20px;">
                 ${hasExtraWork ? `
                     <!-- Split Statistics Cards -->
-                    <div style="background: var(--surface); padding: 25px; border-radius: 10px; border: 2px solid var(--border); margin: 0 0 30px 0; min-height: 500px;">
-                        <h3 style="margin: 0 0 20px 0; color: var(--text);">Opdelt Statistik</h3>
+                    <div style="background: var(--surface); padding: 18px; border-radius: 10px; border: 1px solid var(--border); margin: 0;">
+                        <h3 style="margin: 0 0 12px 0; color: var(--text);">Opdelt Statistik</h3>
                         
                         <!-- Revenue -->
-                        <div style="margin-bottom: 20px;">
-                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                                <div style="font-weight: 600; font-size: 16px;">Omsætning</div>
-                                <div style="font-size: 20px; font-weight: 600; color: var(--color-accent-hover);">${formatCurrency(workspaceFinancials.revenue)}</div>
+                        <div style="margin-bottom: 12px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                                <div style="font-weight: 600; font-size: 14px;">Omsætning</div>
+                                <div style="font-size: 16px; font-weight: 600; color: var(--color-accent-hover);">${formatCurrency(workspaceFinancials.revenue)}</div>
                             </div>
-                            <div style="padding-left: 25px; font-size: 14px; color: var(--text-muted);">
+                            <div style="padding-left: 20px; font-size: 13px; color: var(--text-muted);">
                                 <div style="display: flex; justify-content: space-between; padding: 5px 0;">
                                     <div>└─ Hovedordre:</div>
                                     <div style="font-weight: 600;">${formatCurrency(workspaceFinancials.revenue_main)}</div>
@@ -380,15 +380,15 @@ function renderWorkspaceOverview(container) {
                             </div>
                         </div>
                         
-                        <div style="border-top: 1px solid var(--border); margin: 20px 0;"></div>
+                        <div style="border-top: 1px solid var(--border); margin: 12px 0;"></div>
                         
                         <!-- Expenses -->
-                        <div style="margin-bottom: 20px;">
-                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                                <div style="font-weight: 600; font-size: 16px;">Udgifter</div>
-                                <div style="font-size: 20px; font-weight: 600; color: var(--color-red);">${formatCurrency(workspaceFinancials.expenses)}</div>
+                        <div style="margin-bottom: 12px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                                <div style="font-weight: 600; font-size: 14px;">Udgifter</div>
+                                <div style="font-size: 16px; font-weight: 600; color: var(--color-red);">${formatCurrency(workspaceFinancials.expenses)}</div>
                             </div>
-                            <div style="padding-left: 25px; font-size: 14px; color: var(--text-muted);">
+                            <div style="padding-left: 20px; font-size: 13px; color: var(--text-muted);">
                                 <div style="display: flex; justify-content: space-between; padding: 5px 0;">
                                     <div>└─ Hovedordre:</div>
                                     <div style="font-weight: 600;">${formatCurrency(workspaceFinancials.expenses_main || 0)}</div>
@@ -400,15 +400,15 @@ function renderWorkspaceOverview(container) {
                             </div>
                         </div>
                         
-                        <div style="border-top: 1px solid var(--border); margin: 20px 0;"></div>
+                        <div style="border-top: 1px solid var(--border); margin: 12px 0;"></div>
                         
                         <!-- Profit -->
                         <div>
-                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                                <div style="font-weight: 600; font-size: 16px;">Profit</div>
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                                <div style="font-weight: 600; font-size: 14px;">Profit</div>
                                 <div style="font-size: 20px; font-weight: 600; color: ${profit >= 0 ? 'var(--color-green)' : 'var(--color-red)'};">${formatCurrency(workspaceFinancials.profit)} (${profitMargin}%)</div>
                             </div>
-                            <div style="padding-left: 25px; font-size: 14px; color: var(--text-muted);">
+                            <div style="padding-left: 20px; font-size: 13px; color: var(--text-muted);">
                                 <div style="display: flex; justify-content: space-between; padding: 5px 0;">
                                     <div>└─ Hovedordre:</div>
                                     <div style="font-weight: 600;">${formatCurrency(workspaceFinancials.profit_main || 0)}</div>
@@ -422,28 +422,28 @@ function renderWorkspaceOverview(container) {
                     </div>
                 ` : `
                     <!-- Simple Stats cards (no extra work) -->
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin: 0 0 30px 0;">
-                        <div style="background: var(--surface); padding: 20px; border-radius: 10px; border: 2px solid var(--border);">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 0;">
+                        <div style="background: var(--surface); padding: 16px; border-radius: 10px; border: 1px solid var(--border);">
                             <div style="color: var(--text-muted); font-size: 14px; margin-bottom: 5px;">Omsætning</div>
-                            <div style="font-size: 28px; font-weight: 600; color: var(--color-accent-hover);">${formatCurrency(revenue)}</div>
+                            <div style="font-size: 20px; font-weight: 600; color: var(--color-accent-hover);">${formatCurrency(revenue)}</div>
                         </div>
-                        <div style="background: var(--surface); padding: 20px; border-radius: 10px; border: 2px solid var(--border);">
+                        <div style="background: var(--surface); padding: 16px; border-radius: 10px; border: 1px solid var(--border);">
                             <div style="color: var(--text-muted); font-size: 14px; margin-bottom: 5px;">Udgifter</div>
-                            <div style="font-size: 28px; font-weight: 600; color: var(--color-red);">${formatCurrency(totalExpenses)}</div>
+                            <div style="font-size: 20px; font-weight: 600; color: var(--color-red);">${formatCurrency(totalExpenses)}</div>
                         </div>
-                        <div style="background: var(--surface); padding: 20px; border-radius: 10px; border: 2px solid var(--border);">
+                        <div style="background: var(--surface); padding: 16px; border-radius: 10px; border: 1px solid var(--border);">
                             <div style="color: var(--text-muted); font-size: 14px; margin-bottom: 5px;">Profit</div>
-                            <div style="font-size: 28px; font-weight: 600; color: ${profit >= 0 ? 'var(--color-green)' : 'var(--color-red)'};">${formatCurrency(profit)}</div>
+                            <div style="font-size: 20px; font-weight: 600; color: ${profit >= 0 ? 'var(--color-green)' : 'var(--color-red)'};">${formatCurrency(profit)}</div>
                         </div>
-                        <div style="background: var(--surface); padding: 20px; border-radius: 10px; border: 2px solid var(--border);">
+                        <div style="background: var(--surface); padding: 16px; border-radius: 10px; border: 1px solid var(--border);">
                             <div style="color: var(--text-muted); font-size: 14px; margin-bottom: 5px;">Dækningsbidrag</div>
-                            <div style="font-size: 28px; font-weight: 600; color: ${profit >= 0 ? 'var(--color-green)' : 'var(--color-red)'};">${revenue > 0 ? ((profit / revenue) * 100).toFixed(1) : 0}%</div>
+                            <div style="font-size: 20px; font-weight: 600; color: ${profit >= 0 ? 'var(--color-green)' : 'var(--color-red)'};">${revenue > 0 ? ((profit / revenue) * 100).toFixed(1) : 0}%</div>
                         </div>
                     </div>
                 `}
                 
                 <!-- Ordre Detaljer (NEW - replaces Profit Chart) -->
-                <div style="background: var(--surface); padding: 20px; border-radius: 10px; border: 2px solid var(--border); margin: 0; min-height: 250px;">
+                <div style="background: var(--surface); padding: 16px; border-radius: 10px; border: 1px solid var(--border); margin: 0; min-height: 250px;">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
                         <h3 style="margin: 0;">Ordre Detaljer</h3>
                         <button id="orderDetailsEditBtn" onclick="toggleOrderDetailsEdit()" class="btn btn-primary btn-sm" style="display: ${isQuotesMontor() ? 'none' : ''};">
@@ -452,26 +452,26 @@ function renderWorkspaceOverview(container) {
                     </div>
                     
                     <!-- Read Mode -->
-                    <div id="orderDetailsReadMode" style="display: grid; gap: 15px;">
-                        <div style="padding-bottom: 15px; border-bottom: 1px solid var(--border);">
-                            <div style="color: var(--text-muted); font-size: 13px; margin-bottom: 5px;">Kontaktperson</div>
-                            <div id="orderDetailsContactName" style="font-weight: 600; font-size: 16px;">${currentWorkspaceOrder.contact_person_name || currentWorkspaceOrder.contact_person || 'Ikke angivet'}</div>
+                    <div id="orderDetailsReadMode" style="display: grid; gap: 12px;">
+                        <div style="padding-bottom: 10px; border-bottom: 1px solid var(--border);">
+                            <div style="color: var(--text-muted); font-size: 12px; margin-bottom: 3px;">Kontaktperson</div>
+                            <div id="orderDetailsContactName" style="font-weight: 600; font-size: 14px;">${currentWorkspaceOrder.contact_person_name || currentWorkspaceOrder.contact_person || 'Ikke angivet'}</div>
                         </div>
-                        <div style="padding-bottom: 15px; border-bottom: 1px solid var(--border);">
-                            <div style="color: var(--text-muted); font-size: 13px; margin-bottom: 5px;">Telefon</div>
-                            <div id="orderDetailsPhone" style="font-weight: 600; font-size: 16px;">${currentWorkspaceOrder.contact_person_phone || currentWorkspaceOrder.customer_phone || 'Ikke angivet'}</div>
+                        <div style="padding-bottom: 10px; border-bottom: 1px solid var(--border);">
+                            <div style="color: var(--text-muted); font-size: 12px; margin-bottom: 3px;">Telefon</div>
+                            <div id="orderDetailsPhone" style="font-weight: 600; font-size: 14px;">${currentWorkspaceOrder.contact_person_phone || currentWorkspaceOrder.customer_phone || 'Ikke angivet'}</div>
                         </div>
-                        <div style="padding-bottom: 15px; border-bottom: 1px solid var(--border);">
-                            <div style="color: var(--text-muted); font-size: 13px; margin-bottom: 5px;">Email</div>
-                            <div id="orderDetailsEmail" style="font-weight: 600; font-size: 16px;">${currentWorkspaceOrder.contact_person_email || currentWorkspaceOrder.customer_email || 'Ikke angivet'}</div>
+                        <div style="padding-bottom: 10px; border-bottom: 1px solid var(--border);">
+                            <div style="color: var(--text-muted); font-size: 12px; margin-bottom: 3px;">Email</div>
+                            <div id="orderDetailsEmail" style="font-weight: 600; font-size: 14px;">${currentWorkspaceOrder.contact_person_email || currentWorkspaceOrder.customer_email || 'Ikke angivet'}</div>
                         </div>
-                        <div style="padding-bottom: 15px; border-bottom: 1px solid var(--border);">
-                            <div style="color: var(--text-muted); font-size: 13px; margin-bottom: 5px;">Sagstype</div>
-                            <div id="orderDetailsOrderType" style="font-weight: 600; font-size: 16px;">${currentWorkspaceOrder.order_type === 'consumption' ? 'Forbrug' : 'Kalkulation'}${currentWorkspaceOrder.is_extra_work ? ' - Ekstraarbejde' : ''}</div>
+                        <div style="padding-bottom: 10px; border-bottom: 1px solid var(--border);">
+                            <div style="color: var(--text-muted); font-size: 12px; margin-bottom: 3px;">Sagstype</div>
+                            <div id="orderDetailsOrderType" style="font-weight: 600; font-size: 14px;">${currentWorkspaceOrder.order_type === 'consumption' ? 'Forbrug' : 'Kalkulation'}${currentWorkspaceOrder.is_extra_work ? ' - Ekstraarbejde' : ''}</div>
                         </div>
                         <div>
-                            <div style="color: var(--text-muted); font-size: 13px; margin-bottom: 5px;">Ordre Adresse</div>
-                            <div id="orderDetailsAddress" style="font-weight: 600; font-size: 16px;">
+                            <div style="color: var(--text-muted); font-size: 12px; margin-bottom: 3px;">Ordre Adresse</div>
+                            <div id="orderDetailsAddress" style="font-weight: 600; font-size: 14px;">
                                 ${currentWorkspaceOrder.order_address || currentWorkspaceOrder.address || 'Ikke angivet'}<br>
                                 ${currentWorkspaceOrder.order_postal_code || currentWorkspaceOrder.postal_code || ''} ${currentWorkspaceOrder.order_city || currentWorkspaceOrder.city || ''}
                             </div>
@@ -480,15 +480,15 @@ function renderWorkspaceOverview(container) {
                     
                     <!-- Edit Mode (hidden) -->
                     <div id="orderDetailsEditMode" style="display: none;">
-                        <div style="display: grid; gap: 15px;">
+                        <div style="display: grid; gap: 8px;">
                             <div>
-                                <label style="display: block; color: var(--text-muted); font-size: 13px; margin-bottom: 5px;">Kontaktperson</label>
+                                <label style="display: block; color: var(--text-muted); font-size: 12px; margin-bottom: 3px;">Kontaktperson</label>
                                 <select id="orderDetailsContactSelect" style="width: 100%; padding: 8px; border: 1px solid var(--border); border-radius: 5px; font-size: 14px;">
                                     <option value="">Vælg kontaktperson...</option>
                                 </select>
                             </div>
                             <div>
-                                <label style="display: block; color: var(--text-muted); font-size: 13px; margin-bottom: 5px;">Sagstype</label>
+                                <label style="display: block; color: var(--text-muted); font-size: 12px; margin-bottom: 3px;">Sagstype</label>
                                 <div style="display: flex; gap: 20px; flex-wrap: wrap;">
                                     <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
                                         <input type="radio" name="orderDetailsOrderType" value="consumption" ${currentWorkspaceOrder.order_type !== 'calculation' ? 'checked' : ''} style="width: 16px; height: 16px;"> Forbrug
@@ -499,16 +499,16 @@ function renderWorkspaceOverview(container) {
                                 </div>
                             </div>
                             <div>
-                                <label style="display: block; color: var(--text-muted); font-size: 13px; margin-bottom: 5px;">Ordre Adresse</label>
+                                <label style="display: block; color: var(--text-muted); font-size: 12px; margin-bottom: 3px;">Ordre Adresse</label>
                                 <input type="text" id="orderDetailsAddressInput" value="${currentWorkspaceOrder.order_address || currentWorkspaceOrder.address || ''}" style="width: 100%; padding: 8px; border: 1px solid var(--border); border-radius: 5px; font-size: 14px;">
                             </div>
                             <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 10px;">
                                 <div>
-                                    <label style="display: block; color: var(--text-muted); font-size: 13px; margin-bottom: 5px;">Postnummer</label>
+                                    <label style="display: block; color: var(--text-muted); font-size: 12px; margin-bottom: 3px;">Postnummer</label>
                                     <input type="text" id="orderDetailsPostalInput" value="${currentWorkspaceOrder.order_postal_code || currentWorkspaceOrder.postal_code || ''}" style="width: 100%; padding: 8px; border: 1px solid var(--border); border-radius: 5px; font-size: 14px;">
                                 </div>
                                 <div>
-                                    <label style="display: block; color: var(--text-muted); font-size: 13px; margin-bottom: 5px;">By</label>
+                                    <label style="display: block; color: var(--text-muted); font-size: 12px; margin-bottom: 3px;">By</label>
                                     <input type="text" id="orderDetailsCityInput" value="${currentWorkspaceOrder.order_city || currentWorkspaceOrder.city || ''}" style="width: 100%; padding: 8px; border: 1px solid var(--border); border-radius: 5px; font-size: 14px;">
                                 </div>
                             </div>
@@ -523,14 +523,14 @@ function renderWorkspaceOverview(container) {
                 </div>
                 ${hasExtraWork ? `
                 <!-- v106.4p: Ekstraarbejde i venstre kolonne (klikbare bokse) -->
-                <div style="background: var(--surface); padding: 25px; border-radius: 10px; border: 2px solid var(--color-orange);">
-                    <h3 style="margin: 0 0 15px 0; color: var(--color-orange); display:flex;align-items:center;gap:8px;"><i data-lucide="hammer"></i> Ekstraarbejde (${workspaceExtraWorkOrders.length})</h3>
-                    <div style="display: grid; gap: 12px;">
+                <div style="background: var(--surface); padding: 18px; border-radius: 10px; border: 1px solid var(--color-orange);">
+                    <h3 style="margin: 0 0 10px 0; color: var(--color-orange); display:flex;align-items:center;gap:8px;"><i data-lucide="hammer"></i> Ekstraarbejde (${workspaceExtraWorkOrders.length})</h3>
+                    <div style="display: grid; gap: 8px;">
                         ${workspaceExtraWorkOrders.map(extraOrder => `
-                            <div onclick="openOrderWorkspace(${extraOrder.id}, ${currentWorkspaceOrder.id})" style="background: var(--accent-soft); padding: 15px; border-radius: 8px; border: 1px solid var(--color-orange); cursor: pointer;">
-                                <div style="font-weight: 600; color: var(--color-orange); font-size: 13px;">Ordre ${extraOrder.full_order_number}</div>
-                                <div style="font-size: 13px; margin-top: 4px;">${extraOrder.title}</div>
-                                <div style="display:flex;justify-content:space-between;margin-top:6px;font-size:12px;">
+                            <div onclick="openOrderWorkspace(${extraOrder.id}, ${currentWorkspaceOrder.id})" style="background: var(--accent-soft); padding: 10px 12px; border-radius: 8px; border: 1px solid var(--color-orange); cursor: pointer;">
+                                <div style="font-weight: 600; color: var(--color-orange); font-size: 12px;">Ordre ${extraOrder.full_order_number}</div>
+                                <div style="font-size: 12px; margin-top: 3px;">${extraOrder.title}</div>
+                                <div style="display:flex;justify-content:space-between;margin-top:5px;font-size:11px;">
                                     <span style="color: var(--text-muted);">${new Date(extraOrder.created_at).toLocaleDateString('da-DK')}</span>
                                     <strong>${formatCurrency(extraOrder.subtotal ?? extraOrder.total)}</strong> <!-- v106.4s: EKSKL. moms -->
                                 </div>
@@ -542,37 +542,37 @@ function renderWorkspaceOverview(container) {
             </div>
             
             <!-- Right column: Quick info -->
-            <div style="display: flex; flex-direction: column; gap: 30px;">
-                <div style="background: var(--surface); padding: 25px; border-radius: 10px; border: 2px solid var(--border); flex: 1;">
-                    <h3 style="margin: 0 0 20px 0;">Kunde Information</h3>
-                    <div style="display: grid; gap: 15px;">
-                        <div style="padding-bottom: 15px; border-bottom: 1px solid var(--border);">
-                            <div style="color: var(--text-muted); font-size: 13px; margin-bottom: 5px;">Ordre Nummer</div>
-                            <div style="font-weight: 600; font-size: 16px;">${currentWorkspaceOrder.order_number}</div>
+            <div style="display: flex; flex-direction: column; gap: 20px;">
+                <div style="background: var(--surface); padding: 18px; border-radius: 10px; border: 1px solid var(--border);">
+                    <h3 style="margin: 0 0 12px 0;">Kunde Information</h3>
+                    <div style="display: grid; gap: 8px;">
+                        <div style="padding-bottom: 10px; border-bottom: 1px solid var(--border);">
+                            <div style="color: var(--text-muted); font-size: 12px; margin-bottom: 3px;">Ordre Nummer</div>
+                            <div style="font-weight: 600; font-size: 14px;">${currentWorkspaceOrder.order_number}</div>
                         </div>
-                        <div style="padding-bottom: 15px; border-bottom: 1px solid var(--border);">
-                            <div style="color: var(--text-muted); font-size: 13px; margin-bottom: 5px;">Firma</div>
-                            <div style="font-weight: 600; font-size: 16px;">${currentWorkspaceOrder.company_name}</div>
+                        <div style="padding-bottom: 10px; border-bottom: 1px solid var(--border);">
+                            <div style="color: var(--text-muted); font-size: 12px; margin-bottom: 3px;">Firma</div>
+                            <div style="font-weight: 600; font-size: 14px;">${currentWorkspaceOrder.company_name}</div>
                         </div>
                         ${currentWorkspaceOrder.cvr_number || currentWorkspaceOrder.customer_cvr ? `
-                        <div style="padding-bottom: 15px; border-bottom: 1px solid var(--border);">
-                            <div style="color: var(--text-muted); font-size: 13px; margin-bottom: 5px;">CVR Nummer</div>
-                            <div style="font-weight: 600; font-size: 16px;">${currentWorkspaceOrder.cvr_number || currentWorkspaceOrder.customer_cvr}</div>
+                        <div style="padding-bottom: 10px; border-bottom: 1px solid var(--border);">
+                            <div style="color: var(--text-muted); font-size: 12px; margin-bottom: 3px;">CVR Nummer</div>
+                            <div style="font-weight: 600; font-size: 14px;">${currentWorkspaceOrder.cvr_number || currentWorkspaceOrder.customer_cvr}</div>
                         </div>
                         ` : ''}
-                        <div style="padding-bottom: 15px; border-bottom: 1px solid var(--border);">
-                            <div style="color: var(--text-muted); font-size: 13px; margin-bottom: 5px;">Status</div>
+                        <div style="padding-bottom: 10px; border-bottom: 1px solid var(--border);">
+                            <div style="color: var(--text-muted); font-size: 12px; margin-bottom: 3px;">Status</div>
                             ${getStageBadge(currentWorkspaceOrder)}
                         </div>
                         ${currentWorkspaceOrder.accepted_at ? `
-                        <div style="padding-bottom: 15px; border-bottom: 1px solid var(--border);">
-                            <div style="color: var(--text-muted); font-size: 13px; margin-bottom: 5px;">Accepteret</div>
-                            <div style="font-weight: 600; font-size: 16px;">${new Date(currentWorkspaceOrder.accepted_at).toLocaleDateString('da-DK')}</div>
+                        <div style="padding-bottom: 10px; border-bottom: 1px solid var(--border);">
+                            <div style="color: var(--text-muted); font-size: 12px; margin-bottom: 3px;">Accepteret</div>
+                            <div style="font-weight: 600; font-size: 14px;">${new Date(currentWorkspaceOrder.accepted_at).toLocaleDateString('da-DK')}</div>
                         </div>
                         ` : ''}
                         <div>
-                            <div style="color: var(--text-muted); font-size: 13px; margin-bottom: 5px;">Oprettet af</div>
-                            <div style="font-weight: 600; font-size: 16px;">${currentWorkspaceOrder.created_by_name}</div>
+                            <div style="color: var(--text-muted); font-size: 12px; margin-bottom: 3px;">Oprettet af</div>
+                            <div style="font-weight: 600; font-size: 14px;">${currentWorkspaceOrder.created_by_name}</div>
                         </div>
                     </div>
                 </div>
@@ -580,7 +580,7 @@ function renderWorkspaceOverview(container) {
                 <!-- Quick actions: ens hvide knapper i grid (v83: skjules helt for montor) -->
                 ${isQuotesMontor() ? '' : `
                 <div class="quick-actions-card">
-                    <h3 style="margin: 0 0 15px 0; display: flex; align-items: center; gap: 8px;"><i data-lucide="zap"></i> Hurtige Handlinger</h3>
+                    <h3 style="margin: 0 0 10px 0; display: flex; align-items: center; gap: 8px;"><i data-lucide="zap"></i> Hurtige Handlinger</h3>
                     <div class="quick-actions-grid">
                         <button onclick="viewOriginalQuote(${currentWorkspaceOrder.id})" class="quick-action-btn">
                             <i data-lucide="file-text"></i> Se Ordre
@@ -613,8 +613,8 @@ function renderWorkspaceOverview(container) {
         </div>
         
         <!-- Arbejdsbeskrivelse Section (Full Width) -->
-        <div style="background: var(--surface); padding: 30px; border-radius: 10px; border: 2px solid var(--border); margin-top: 30px;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <div style="background: var(--surface); padding: 20px; border-radius: 10px; border: 1px solid var(--border); margin-top: 20px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
                 <h3 style="margin: 0; display: flex; align-items: center; gap: 8px;"><i data-lucide="clipboard-list"></i> Arbejdsbeskrivelse</h3>
                 <button id="workDescEditBtn" onclick="toggleWorkDescriptionEdit()" class="btn-secondary">
                     <i data-lucide="pencil"></i> Rediger
@@ -920,7 +920,7 @@ function showAddExpense() {
                     <div id="expenseMaterialSelected" style="display: none; margin-top: 10px; padding: 10px; background: var(--accent-soft); border-radius: 5px; font-size: 13px;"></div>
                 </div>
 
-                <div style="margin-bottom: 20px;">
+                <div style="margin-bottom: 12px;">
                     <label style="display: block; margin-bottom: 8px; font-weight: 600;">Beskrivelse *</label>
                     <textarea id="expenseDescription" required rows="3" style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 5px; font-size: 14px; resize: vertical;"></textarea>
                 </div>
@@ -1122,7 +1122,7 @@ function editExpense(expenseId) {
             <h2 style="margin: 0 0 20px 0;">Rediger Udgift</h2>
             
             <form id="expenseForm" onsubmit="event.preventDefault(); updateExpense(${expenseId});">
-                <div style="margin-bottom: 20px;">
+                <div style="margin-bottom: 12px;">
                     <label style="display: block; margin-bottom: 8px; font-weight: 600;">Beskrivelse *</label>
                     <textarea id="expenseDescription" required rows="3" style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 5px; font-size: 14px; resize: vertical;">${expense.description}</textarea>
                 </div>
@@ -1266,7 +1266,7 @@ function renderDocumentsList() {
     }
     
     container.innerHTML = `
-        <div style="display: grid; gap: 15px;">
+        <div style="display: grid; gap: 8px;">
             ${workspaceDocuments.map(doc => {
                 const icon = getDocumentIcon(doc.original_name);
                 const size = formatFileSize(doc.file_size);
@@ -1329,7 +1329,7 @@ function showUploadDocument() {
             <h2 style="margin: 0 0 20px 0;"> Upload Dokument</h2>
             
             <form id="documentForm" onsubmit="event.preventDefault(); uploadDocument();">
-                <div style="margin-bottom: 20px;">
+                <div style="margin-bottom: 12px;">
                     <label style="display: block; margin-bottom: 8px; font-weight: 600;">Vælg fil *</label>
                     <input type="file" id="documentFile" required style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 5px; font-size: 14px;">
                 </div>
@@ -1696,7 +1696,7 @@ function renderWorkspaceMaterials(container) {
     const montor = isQuotesMontor();
     // v102: Tilfoej-knap til alle roller (var kun montorer - regression fra v96)
     const header = `
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
             <h3 style="margin: 0;">⏱ Timer & Materialer</h3>
             <button onclick="openRegisterMaterialModal()" class="btn btn-primary btn-sm">
                 + Registrer Materiale
@@ -1914,7 +1914,7 @@ async function openRegisterMaterialModal() {
             <h2 style="margin: 0 0 20px 0;">Registrer Materiale</h2>
             <p style="color: var(--text-muted); margin: 0 0 20px 0;">Ordre #${currentWorkspaceOrder.order_number} — vælg et materiale fra kataloget, eller skriv det selv, hvis det ikke findes.</p>
             <form onsubmit="event.preventDefault(); saveRegisterMaterial(${currentWorkspaceOrder.id});">
-                <div style="margin-bottom: 20px;">
+                <div style="margin-bottom: 12px;">
                     <label style="display: block; margin-bottom: 8px; font-weight: 600;">Søg materiale</label>
                     <input type="text" id="registerMaterialSearch" oninput="filterRegisterMaterials()" placeholder="Søg efter navn eller nummer..." style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 5px; font-size: 14px;">
                 </div>
@@ -2109,12 +2109,12 @@ async function createExtraWork(parentOrderId) {
             <p style="color: var(--text-muted); margin-bottom: 30px;">Ekstraarbejde oprettes som en under-ordre knyttet til hoved-ordren.</p>
             
             <form id="extraWorkForm" onsubmit="event.preventDefault(); saveExtraWork(${parentOrderId});">
-                <div style="margin-bottom: 20px;">
+                <div style="margin-bottom: 12px;">
                     <label style="display: block; margin-bottom: 8px; font-weight: 600;">Titel *</label>
                     <input type="text" id="extraWorkTitle" required placeholder="F.eks. Ekstra gulvbelægning i gang" style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 5px; font-size: 14px;">
                 </div>
                 
-                <div style="margin-bottom: 20px;">
+                <div style="margin-bottom: 12px;">
                     <label style="display: block; margin-bottom: 8px; font-weight: 600;">Sagstype *</label>
                     <div style="display: flex; gap: 25px; flex-wrap: wrap;">
                         <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
@@ -2128,7 +2128,7 @@ async function createExtraWork(parentOrderId) {
                     </div>
                 </div>
                 
-                <div style="margin-bottom: 20px;">
+                <div style="margin-bottom: 12px;">
                     <label style="display: block; margin-bottom: 8px; font-weight: 600;">Beskrivelse/Noter</label>
                     <textarea id="extraWorkNotes" rows="3" placeholder="Interne noter om ekstraarbejdet..." style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 5px; font-size: 14px; resize: vertical;"></textarea>
                 </div>
@@ -2183,7 +2183,7 @@ function renderExtraWorkLines() {
     
     container.innerHTML = extraWorkLines.map((line, index) => `
         <div style="background: var(--surface-muted); padding: 15px; border-radius: 8px; margin-bottom: 15px; border: 2px solid var(--border);">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
                 <strong>Linje ${index + 1}</strong>
                 ${btn('danger', 'x', 'Fjern', { onclick: `removeExtraWorkLine(${index})`, small: true, title: 'Fjern linje' })}
             </div>
@@ -2591,10 +2591,10 @@ function renderStageStepper(order) {
 // Status-badge for ordre: viser arbejdsstatus (Faktureret/Igangværende) eller quote-status
 function getStageBadge(order) {
     if (order.has_approved_invoice) {
-        return '<div style="font-weight: 600; font-size: 16px; color: var(--color-green);">Faktureret</div>';
+        return '<div style="font-weight: 600; font-size: 14px; color: var(--color-green);">Faktureret</div>';
     }
     if (order.order_stage === 'in_progress') {
-        return '<div style="font-weight: 600; font-size: 16px; color: #1E40AF;">Igangværende</div>';
+        return '<div style="font-weight: 600; font-size: 14px; color: #1E40AF;">Igangværende</div>';
     }
     return getStatusBadge(order.status);
 }
@@ -2609,7 +2609,7 @@ function getStatusBadge(status) {
     };
     
     const config = statusConfig[status] || statusConfig['draft'];
-    return `<div style="font-weight: 600; font-size: 16px; color: ${config.color};">${config.icon} ${config.text}</div>`;
+    return `<div style="font-weight: 600; font-size: 14px; color: ${config.color};">${config.icon} ${config.text}</div>`;
 }
 
 // View original quote from workspace
