@@ -82,7 +82,7 @@ function renderInvoicedContent(invoices) {
                     <div class="list-card-total"><span class="label">Total</span>${formatCurrency(invoice.total)}</div>
                 </div>
                 <div class="list-card-actions">
-                    ${btn('secondary', 'eye', 'Se Faktura', { onclick: `viewInvoice(${invoice.id})` })}
+                    ${btn('secondary', 'eye', invoice.invoice_type === 'creditnote' ? 'Se Kreditnota' : 'Se Faktura', { onclick: `viewInvoice(${invoice.id})` })}
                     ${invoice.status === 'draft' ? btn('primary', 'send', 'Godkend og send', { onclick: `sendInvoice(${invoice.id})` }) : ''}
                     ${invoice.status === 'draft' ? btn('secondary', 'check', 'Godkend uden at sende', { onclick: `approveInvoiceWithoutSending(${invoice.id})` }) : ''}
                     ${invoice.invoice_type !== 'creditnote' && invoice.status === 'sent' ? btn('secondary', 'check', 'Markér Betalt', { onclick: `markInvoicePaid(${invoice.id})` }) : ''}
