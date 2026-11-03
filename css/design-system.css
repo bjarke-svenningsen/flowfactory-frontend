@@ -299,6 +299,8 @@ h1 { font-size: var(--font-size-title); }
 }
 .badge--draft    { background: #F1F2F4; color: #4B5563; }
 .badge--sent     { background: #DBEAFE; color: #1E40AF; }
+/* v106.6n: kreditnotaer faar lyse roedt badge (som Opret Kreditnota-knappen) */
+.badge--creditnote { background: #FDECEC; color: #C0392B; }
 .badge--accepted { background: #DCFCE7; color: #166534; }
 .badge--invoiced { background: #FEF3C7; color: #92400E; }
 .badge--rejected { background: #FEE2E2; color: #991B1B; }

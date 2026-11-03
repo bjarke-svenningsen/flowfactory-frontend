@@ -778,6 +778,12 @@ function renderWorkspaceInvoicePreview(invoice) {
             </button>
         ` : ''}
         ${invoice.status === 'draft' && invoice.invoice_type === 'creditnote' ? `
+            <button onclick="sendInvoice(${invoice.id})" class="btn btn-primary">
+                <i data-lucide="send"></i> Godkend og send
+            </button>
+            <button onclick="approveInvoiceWithoutSending(${invoice.id})" class="btn btn-secondary">
+                <i data-lucide="check"></i> Godkend uden at sende
+            </button>
             <button onclick="toggleInvoiceLineEditor(${invoice.id}, 'wsInvoiceEditorHost', true)" class="btn btn-secondary">
                 <i data-lucide="pencil"></i> Rediger linjer
             </button>

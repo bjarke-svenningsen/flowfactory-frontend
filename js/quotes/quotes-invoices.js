@@ -66,7 +66,7 @@ function renderInvoicedContent(invoices) {
         const typeBadge = invoice.invoice_type === 'aconto'
             ? '<span class="badge badge--sent">Aconto</span>'
             : invoice.invoice_type === 'creditnote'
-            ? '<span class="badge badge--sent">Kreditnota</span>'
+            ? '<span class="badge badge--creditnote">Kreditnota</span>'
             : '<span class="badge badge--accepted">Slutfaktura</span>';
         html += `
             <div class="list-card ${cardClass[invoice.status] || 'list-card--draft'}">
@@ -402,7 +402,7 @@ function buildInvoiceSheetHTML(invoice) {
                                 <td style="padding: 3px 0; font-size: 12px; color: var(--text); font-weight: 600;">${invoice.customer_id || 'N/A'}</td>
                             </tr>
                             <tr>
-                                <td style="padding: 3px 10px 3px 0; font-size: 12px; color: var(--text-muted);">Faktura nr.:</td>
+                                <td style="padding: 3px 10px 3px 0; font-size: 12px; color: var(--text-muted);">${invoice.invoice_type === 'creditnote' ? 'Kreditnota nr.:' : 'Faktura nr.:'}</td>
                                 <td style="padding: 3px 0; font-size: 12px; color: var(--text); font-weight: 600;">${invoice.invoice_number}</td>
                             </tr>
                             <tr>
@@ -810,7 +810,7 @@ function renderInvoiceLineEditor() {
             <div class="preview-actions">
                 <button onclick="${invoiceLineEditorInWs ? 'closeInvoiceLineEditor()' : `viewInvoice(${inv.id})`}" class="btn btn-secondary"><i data-lucide="arrow-left"></i> Tilbage</button>
                 <div style="flex:1;text-align:center;"><strong>Rediger linjer - kreditnota ${inv.invoice_number}</strong></div>
-                <button onclick="addEditorLine()" class="btn btn-secondary"><i data-lucide="plus"></i> Tilfoej linje</button>
+                <button onclick="addEditorLine()" class="btn btn-secondary"><i data-lucide="plus"></i> Tilføj linje</button>
                 <button onclick="saveInvoiceLineEdits(${inv.id})" class="btn btn-primary"><i data-lucide="save"></i> Gem</button>
             </div>
             <div class="quote-sheet">

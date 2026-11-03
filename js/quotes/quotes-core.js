@@ -1623,11 +1623,23 @@ async function loadOrderTabCounts() {
             setTabCountSkeleton(name);
         }
     });
+    // v106.6o: hard watchdog - uanset hvad der haenger (fx .json() uden timeout)
+    // ryddes tomme skeleton-cirkler efter 20s og fyldes med cache.
+    setTimeout(() => {
+        if (gen !== tabCountsGen) return;
+        countTabs.forEach(tabName => {
+            const el = document.getElementById(`tabCount${tabName}`);
+            if (el && el.classList.contains('skeleton')) {
+                if (typeof lastTabCounts[tabName] === 'number') setTabCount(tabName, lastTabCounts[tabName]);
+                else { el.classList.add('hidden'); el.classList.remove('skeleton'); }
+            }
+        });
+    }, 20000);
     try {
         const token = sessionStorage.getItem('token');
         const headers = { 'Authorization': `Bearer ${token}` };
 
-        // v106.6d2: Render cold-start kan laae fetches haenge i hele 30-60+ sek.
+        // v106.6d2: Render cold-start kan laae fetches haeenge i hele 30-60+ sek.
         // Uden timeout haeenger skeleton-cirklerne (graa/gule) indtil brugeren
         // skifter side frem og tilbage. 12s timeout -> fejler paeent -> finally
         // rydder skeleton; naeste loadOrderTabCounts (naar serveren er vaagen)
@@ -1642,36 +1654,68 @@ async function loadOrderTabCounts() {
             } finally { clearTimeout(timer); }
         };
 
-        const quotesRes = await fetchWithTimeout('/api/quotes');
+        // v106.6o: hent ALLE tre endpoints PARALLELT (tidligere sekvaentielt - op til
+        // ~36s foer sidste badge blev fyldt). allSettled = hver fane falder tilbage
+        // til cache hver for sig, i stedet for at hele raekken afhaenger af quotes.
+        const [quotesRes, invoicesRes, customersRes] = await Promise.allSettled([
+            fetchWithTimeout('/api/quotes'),
+            fetchWithTimeout('/api/invoices'),
+            fetchWithTimeout('/api/customers')
+        ]);
         if (gen !== tabCountsGen) return; // aeldre kald - drop
-        if (!quotesRes.ok) throw new Error('Kunne ikke hente fanetællinger (quotes)');
-        const allQuotes = await quotesRes.json();
-        updateTabCountsFromQuotes(allQuotes);
 
-        // Faktureret tælles fra samme kilde som fanens liste
+        let anySuccess = false;
         try {
-            const invoicesRes = await fetchWithTimeout('/api/invoices');
-            if (gen !== tabCountsGen) return; // aeldre kald - drop
-            if (!invoicesRes.ok) throw new Error('Kunne ikke hente fakturaer');
-            const invoicesData = await invoicesRes.json();
-            const invoices = Array.isArray(invoicesData) ? invoicesData : (invoicesData.invoices || []);
-            setTabCount('Invoiced', invoices.length);
+            if (quotesRes.status === 'fulfilled' && quotesRes.value.ok) {
+                const allQuotes = await quotesRes.value.json();
+                updateTabCountsFromQuotes(allQuotes);
+                anySuccess = true;
+            } else {
+                throw new Error('Kunne ikke hente fanetællinger (quotes)');
+            }
         } catch (err) {
-            console.error('Fanetælling (Faktureret):', err);
-            setTabCountHidden('Invoiced');
+            console.error('Fanetælling (quotes):', err);
+            // v106.6o: fyld cachede tal straks for de 5 quote-baserede faner
+            ['Quotes', 'Orders', 'InProgress', 'Completed', 'Rejected'].forEach(name => {
+                if (typeof lastTabCounts[name] === 'number') setTabCount(name, lastTabCounts[name]);
+                else setTabCountHidden(name);
+            });
         }
 
-        // Kunder tælles fra samme kilde som kundelisten
         try {
-            const customersRes = await fetchWithTimeout('/api/customers');
-            if (gen !== tabCountsGen) return; // aeldre kald - drop
-            if (!customersRes.ok) throw new Error('Kunne ikke hente kunder');
-            const customersData = await customersRes.json();
-            const customers = Array.isArray(customersData) ? customersData : (customersData.customers || []);
-            setTabCount('Customers', customers.length);
+            if (invoicesRes.status === 'fulfilled' && invoicesRes.value.ok) {
+                const invoicesData = await invoicesRes.value.json();
+                const invoices = Array.isArray(invoicesData) ? invoicesData : (invoicesData.invoices || []);
+                setTabCount('Invoiced', invoices.length);
+                anySuccess = true;
+            } else {
+                throw new Error('Kunne ikke hente fakturaer');
+            }
+        } catch (err) {
+            console.error('Fanetælling (Faktureret):', err);
+            if (typeof lastTabCounts.Invoiced === 'number') setTabCount('Invoiced', lastTabCounts.Invoiced);
+            else setTabCountHidden('Invoiced');
+        }
+
+        try {
+            if (customersRes.status === 'fulfilled' && customersRes.value.ok) {
+                const customersData = await customersRes.value.json();
+                const customers = Array.isArray(customersData) ? customersData : (customersData.customers || []);
+                setTabCount('Customers', customers.length);
+                anySuccess = true;
+            } else {
+                throw new Error('Kunne ikke hente kunder');
+            }
         } catch (err) {
             console.error('Fanetælling (Kunder):', err);
-            setTabCountHidden('Customers');
+            if (typeof lastTabCounts.Customers === 'number') setTabCount('Customers', lastTabCounts.Customers);
+            else setTabCountHidden('Customers');
+        }
+
+        // v106.6d2: et automatisk retry naar serveren er vaegen igen (Render
+        // cold-start), saa brugeren IKKE skal skifte fane for at faa tal.
+        if (!anySuccess && gen === tabCountsGen) {
+            setTimeout(() => { if (gen === tabCountsGen) loadOrderTabCounts(); }, 15000);
         }
     } catch (err) {
         console.error('Fanetælling:', err);
