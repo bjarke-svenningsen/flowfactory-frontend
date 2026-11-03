@@ -1288,13 +1288,14 @@ function renderDocumentsList() {
                         <div style="display: flex; gap: 6px; flex: 0 0 auto;">
                             ${btn('ghost', 'eye', 'Preview', { onclick: `previewDocument(${doc.id}, '${doc.original_name.replace(/'/g, "\\'")}')`, title: 'Vis dokument' })}
                             ${btn('ghost', 'download', 'Download', { onclick: `downloadDocument(${doc.id}, '${doc.original_name.replace(/'/g, "\\'")}')`, title: 'Download dokument' })}
-                            ${btn('icon', 'trash-2', 'Slet dokument', { onclick: `deleteDocument(${doc.id})`, danger: true })}
+                            ${btn('icon', 'trash-2', 'Slet dokument', { onclick: `deleteDocument(${doc.id})`, danger: true, attrs: 'style="color: var(--danger, #c0392b);"' })}
                         </div>
                     </div>
                 `;
             }).join('')}
         </div>
     `;
+    refreshIcons(); // v106.6c: konvertér lucide-ikoner (trash-2 var ellers usynlig)
 }
 
 // Get document icon
@@ -2571,12 +2572,15 @@ function renderStageStepper(order) {
     const steps = [
         { key: 'approved', icon: 'check-circle-2', label: 'Godkendt' },
         { key: 'in_progress', icon: 'loader', label: 'Igangværende' },
-        { key: 'invoiced', icon: 'receipt', label: 'Faktureret' }
+        { key: 'invoiced', icon: 'receipt', label: 'Faktureret' },
+        { key: 'completed', icon: 'check', label: 'Afsluttet' } // v106.6c
     ];
 
-    let current = 0; // 0 = godkendt, 1 = igangværende, 2 = faktureret
+    // v106.6c: 0 = godkendt, 1 = igangværende, 2 = faktureret, 3 = afsluttet
+    let current = 0;
     if (order.order_stage === 'in_progress') current = 1;
     if (order.has_approved_invoice) current = 2;
+    if (order.order_stage === 'completed') current = 3;
 
     let html = '<div class="order-stepper">';
     steps.forEach((step, i) => {
@@ -2592,6 +2596,10 @@ function renderStageStepper(order) {
 
 // Status-badge for ordre: viser arbejdsstatus (Faktureret/Igangværende) eller quote-status
 function getStageBadge(order) {
+    // v106.6c: Afsluttet overstiger alt andet
+    if (order.order_stage === 'completed') {
+        return '<div style="font-weight: 600; font-size: 14px; color: var(--color-green);">Afsluttet</div>';
+    }
     if (order.has_approved_invoice) {
         return '<div style="font-weight: 600; font-size: 14px; color: var(--color-green);">Faktureret</div>';
     }
