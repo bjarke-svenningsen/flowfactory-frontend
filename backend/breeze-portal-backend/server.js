@@ -3165,6 +3165,10 @@ app.post('/api/quotes/:id/accept', auth, async (req, res) => {
   // This allows the order to appear in Orders tab
   // Status should ONLY be 'sent' if email was actually sent via /send endpoint
   // PostgreSQL-compatible: Use CURRENT_TIMESTAMP instead of datetime('now')
+  // v106.6l: marker gentagen accept eksplicit i loggen
+  const prevQuote = await db.get('SELECT accepted_at FROM quotes WHERE id = ?', [quoteId]);
+  const reAccepted = prevQuote && prevQuote.accepted_at ? ' (igen)' : '';
+
   if (db._isProduction) {
     await db.run('UPDATE quotes SET status = ?, accepted_at = CURRENT_TIMESTAMP WHERE id = ?', ['accepted', quoteId]);
   } else {
@@ -3182,7 +3186,7 @@ app.post('/api/quotes/:id/accept', auth, async (req, res) => {
   quote.full_order_number = await getFullOrderNumber(quote);
   
   // Log quote accepted event
-  await logOrderEvent(quoteId, 'quote_accepted', `Ordre ${quote.full_order_number} accepteret`, req.user.id);
+  await logOrderEvent(quoteId, 'quote_accepted', `Ordre ${quote.full_order_number} accepteret${reAccepted}`, req.user.id);
   
   res.json(quote);
 });
@@ -3573,6 +3577,9 @@ app.post('/api/invoices/from-order/:orderId', auth, async (req, res) => {
   
   const invoiceId = info.lastInsertRowid;
   
+  // v106.6l: log altid faktura-oprettelse - ellers er slettede/genoprettede udkast usynlige i loggen
+  await logOrderEvent(orderId, 'invoice_created', `${invoice_type === 'aconto' ? 'Aconto-faktura' : 'Slutfaktura'} ${invoice_number} oprettet (udkast)`, req.user.id);
+  
   // v106.4i: slutfaktura afslutter sagen automatisk; aconto lader sagen forblive aaben
   if (invoice_type === 'final') {
     await db.run("UPDATE quotes SET order_stage = 'completed' WHERE id = ?", [orderId]);
@@ -3735,6 +3742,11 @@ app.put('/api/invoices/:id', auth, async (req, res) => {
     WHERE id = ?
   `, [due_date || invoice.due_date, payment_terms || invoice.payment_terms, notes !== undefined ? notes : invoice.notes, status || invoice.status, subtotal, vat_amount, total, invoiceId]);
   
+  // v106.6l: log statusaendring (godkendt uden at sende) - ellers ses handlingen aldrig i loggen
+  if (status && status !== invoice.status && invoice.status === 'draft' && status === 'sent') {
+    await logOrderEvent(invoice.order_id, 'invoice_approved', `Faktura ${invoice.invoice_number} godkendt uden at sende`, req.user.id);
+  }
+  
   // Update lines if provided
   if (lines) {
     await db.run('DELETE FROM invoice_lines WHERE invoice_id = ?', [invoiceId]);
@@ -3872,6 +3884,9 @@ app.delete('/api/invoices/:id', auth, async (req, res) => {
     console.error('Kunne ikke frigive fakturanummer:', e);
   }
 
+  // v106.6l: log sletning - ellers er opret/slet/opret-cykler usynlige i loggen
+  await logOrderEvent(invoice.order_id, 'invoice_deleted', `Udkast ${invoice.invoice_number} slettet (fakturanummer frigivet)`, req.user.id);
+
   res.json({ success: true });
 });
 
@@ -3926,7 +3941,10 @@ app.post('/api/invoices/:id/send', auth, async (req, res) => {
     };
     
     await emailTransporter.sendMail(mailOptions);
-    
+
+    // v106.6l: log faktura-sendt-haendelse
+    await logOrderEvent(invoice.order_id, 'invoice_sent', `Faktura ${invoice.invoice_number} sendt til ${invoice.customer_email}`, req.user.id);
+
     res.json({ success: true, message: 'Invoice sent successfully' });
   } catch (error) {
     console.error('Email send error:', error);

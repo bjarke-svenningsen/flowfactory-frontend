@@ -178,7 +178,7 @@ function renderWorkspace(data) {
                 <!-- v106.6g: Dokumenter vises nu for ALLE roller - montorer skal se tegninger/billeder og kan selv uploade -->
                 <button onclick="switchWorkspaceTab('documents')" id="workspaceTabDocuments" class="tab-underline-btn">Dokumenter (${workspaceDocuments.length})</button>
                 ${isQuotesMontor() ? '' : `
-                <button onclick="switchWorkspaceTab('timeline')" id="workspaceTabTimeline" class="tab-underline-btn">Timeline (${workspaceTimeline.length})</button>
+                <button onclick="switchWorkspaceTab('timeline')" id="workspaceTabTimeline" class="tab-underline-btn">Loghændelser (${workspaceTimeline.length})</button>
                 <button onclick="switchWorkspaceTab('notes')" id="workspaceTabNotes" class="tab-underline-btn">Noter (${workspaceNotes.length})</button>
                 `}
             </div>
@@ -2098,7 +2098,7 @@ async function saveRegisterMaterial(orderId) {
 function renderWorkspaceTimeline(container) {
     container.innerHTML = `
         <div style="background: var(--surface); padding: 30px; border-radius: 10px; border: 2px solid var(--border);">
-            <h3 style="margin: 0 0 20px 0;">Timeline</h3>
+            <h3 style="margin: 0 0 20px 0;">Loghændelser</h3>
             ${workspaceTimeline.length === 0 ? 
                 '<p style="color: var(--text-muted); text-align: center; padding: 40px;">Ingen aktiviteter endnu</p>' :
                 workspaceTimeline.map(entry => `
