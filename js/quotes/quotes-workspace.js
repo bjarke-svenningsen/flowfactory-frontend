@@ -152,7 +152,7 @@ function renderWorkspace(data) {
     container.innerHTML = `
         <div style="max-width: 1400px; margin: 0 auto;">
             <!-- Ordre-stepper: Godkendt → Igangværende → Faktureret -->
-            ${renderStageStepper(data.order)}
+            <div id="wsStepperWrap">${renderStageStepper(data.order)}</div>
             <!-- Back button -->
             <div style="margin-bottom: 12px;">
                 <button onclick="closeWorkspace()" class="btn-secondary" style="min-height: 40px;">
@@ -566,7 +566,7 @@ function renderWorkspaceOverview(container) {
                         ` : ''}
                         <div style="padding-bottom: 10px; border-bottom: 1px solid var(--border);">
                             <div style="color: var(--text-muted); font-size: 12px; margin-bottom: 3px;">Status</div>
-                            ${getStageBadge(currentWorkspaceOrder)}
+                            <span id="wsStageBadge">${getStageBadge(currentWorkspaceOrder)}</span>
                         </div>
                         ${currentWorkspaceOrder.accepted_at ? `
                         <div style="padding-bottom: 10px; border-bottom: 1px solid var(--border);">
@@ -2621,10 +2621,15 @@ function renderStageStepper(order) {
     ];
 
     // v106.6d: 0 = godkendt, 1 = igangværende, 2 = afsluttet, 3 = faktureret
+    // v106.6k: godkendt faktura (sendt ELLER godkendt uden at sende) vinder altid
+    // over "Afsluttet" - sagen markeres "Faktureret" naar fakturaen er godkendt.
     let current = 0;
     if (order.order_stage === 'in_progress') current = 1;
-    if (order.has_approved_invoice) current = 3;
-    if (order.order_stage === 'completed') current = 2;
+    if (order.has_approved_invoice) {
+        current = 3;
+    } else if (order.order_stage === 'completed') {
+        current = 2;
+    }
 
     let html = '<div class="order-stepper">';
     steps.forEach((step, i) => {
@@ -2643,17 +2648,34 @@ function renderStageStepper(order) {
 
 // Status-badge for ordre: viser arbejdsstatus (Faktureret/Igangværende) eller quote-status
 function getStageBadge(order) {
-    // v106.6c: Afsluttet overstiger alt andet
-    if (order.order_stage === 'completed') {
-        return '<div style="font-weight: 600; font-size: 14px; color: var(--color-green);">Afsluttet</div>';
-    }
+    // v106.6k: godkendt faktura (sendt eller godkendt uden at sende) viser altid
+    // "Faktureret" - ogsaa naar sagen i oeget er afsluttet.
     if (order.has_approved_invoice) {
         return '<div style="font-weight: 600; font-size: 14px; color: var(--color-green);">Faktureret</div>';
+    }
+    if (order.order_stage === 'completed') {
+        return '<div style="font-weight: 600; font-size: 14px; color: var(--color-green);">Afsluttet</div>';
     }
     if (order.order_stage === 'in_progress') {
         return '<div style="font-weight: 600; font-size: 14px; color: #1E40AF;">Igangværende</div>';
     }
     return getStatusBadge(order.status);
+}
+
+// v106.6k: genrender stepper + status-badge live naar fakturaen godkendes/sendes
+// (uden at genindlaese hele workspacet) - saa "Afsluttet" skifter til "Faktureret" med det samme.
+function refreshWorkspaceStepper() {
+    if (!currentWorkspaceOrder) return;
+    currentWorkspaceOrder.has_approved_invoice = true;
+    const wrap = document.getElementById('wsStepperWrap');
+    if (wrap) {
+        wrap.innerHTML = renderStageStepper(currentWorkspaceOrder);
+    }
+    const badge = document.getElementById('wsStageBadge');
+    if (badge) {
+        badge.innerHTML = getStageBadge(currentWorkspaceOrder);
+    }
+    if (window.lucide) { try { lucide.createIcons(); } catch (e) { /* ignore */ } }
 }
 
 // Helper function to get status badge HTML
@@ -2790,6 +2812,7 @@ window.refreshWorkspaceInvoicePreview = refreshWorkspaceInvoicePreview;
 window.refreshWorkspaceInvoicesFromServer = refreshWorkspaceInvoicesFromServer;
 window.toggleWorkspaceInvoices = toggleWorkspaceInvoices;
 window.viewOriginalQuote = viewOriginalQuote;
+window.refreshWorkspaceStepper = refreshWorkspaceStepper;
 window.showAddExpense = showAddExpense;
 window.closeExpenseModal = closeExpenseModal;
 window.saveExpense = saveExpense;

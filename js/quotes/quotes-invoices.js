@@ -616,6 +616,8 @@ function sendInvoice(invoiceId) {
             
             alert('Faktura sendt til kunde');
             loadInvoiced();
+            // v106.6k: opdater stepper/badge live ("Afsluttet" -> "Faktureret")
+            if (typeof refreshWorkspaceStepper === 'function') refreshWorkspaceStepper();
             // v106.4o: opdater workspace-preview hvis sendt derfra
             if (currentWorkspaceOrder && typeof refreshWorkspaceInvoicePreview === 'function') {
                 refreshWorkspaceInvoicePreview(invoiceId);
@@ -645,6 +647,8 @@ function approveInvoiceWithoutSending(invoiceId) {
             }
             alert('Faktura godkendt (ikke sendt til kunde)');
             loadInvoiced();
+            // v106.6k: opdater stepper/badge live ("Afsluttet" -> "Faktureret")
+            if (typeof refreshWorkspaceStepper === 'function') refreshWorkspaceStepper();
             if (typeof loadOrderTabCounts === 'function') loadOrderTabCounts();
             if (currentWorkspaceOrder && typeof refreshWorkspaceInvoicePreview === 'function') {
                 refreshWorkspaceInvoicePreview(invoiceId);
