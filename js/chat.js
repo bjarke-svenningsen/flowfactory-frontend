@@ -141,6 +141,15 @@ async function initChat() {
     }
 }
 
+// v106.6e: initChat koerer foer chat-siden findes i DOM (guard _chatInited
+// saetter aldrig re-render). Derfor kaldes denne hver gang Chat & Video-siden
+// loades - den henter friske data og render listen i det nu eksisterende DOM.
+async function refreshChatPage() {
+    await loadPresence();
+    await loadConversations();
+}
+window.refreshChatPage = refreshChatPage;
+
 // --- Presence ---
 async function loadPresence() {
     try {

@@ -242,6 +242,9 @@ async function showPage(pageName, updateHash = true) {
         initQuotesPage();
     } else if (pageName === 'chat') {
         initChat();
+        // v106.6e: render medarbejderlisten i det nyindlaeste DOM (initChat
+        // alene skipper hvis allerede initieret ved login).
+        if (typeof refreshChatPage === 'function') refreshChatPage();
     } else if (pageName === 'email') {
         // Email page initializes itself via js/email.js
         if (window.emailClient) {
