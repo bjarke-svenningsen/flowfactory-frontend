@@ -946,7 +946,9 @@ function renderQuotePreview(targetBox) {
 }
 
 // v106.6r: aegte PDF-download via html2pdf.js (html2canvas + jsPDF).
-// Fanger det synlige .quote-sheet (tilbud/faktura/kreditnota) og gemmer direkte som fil.
+// v107: render en KLON af sheet'et i en fastbredde-container (794px = A4 ved 96dpi) -
+// direkte rendering af elementet i dets egen kontekst ga blank/hvid PDF (procentbredde
+// + foraedre-layout odelaegger html2canvas-malet).
 async function downloadSheetAsPDF(filename) {
     // Find det SYNLIGE sheet (der kan vaere flere previews i DOM'et)
     const sheets = Array.from(document.querySelectorAll('.quote-sheet-wrap .quote-sheet'))
@@ -957,18 +959,30 @@ async function downloadSheetAsPDF(filename) {
         alert('PDF-bibliotek er ikke indlaest - brug Print / PDF i stedet.');
         return;
     }
+    // Klon ind i en off-screen container med fast A4-bredde og hvid baggrund
+    const holder = document.createElement('div');
+    holder.style.cssText = 'position:fixed;left:0;top:0;width:794px;background:#ffffff;z-index:-1;';
+    const clone = sheet.cloneNode(true);
+    clone.style.width = '794px';
+    holder.appendChild(clone);
+    document.body.appendChild(holder);
     try {
+        // Vent paa at klonen er stylet og fonts er klar
+        await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+        if (document.fonts && document.fonts.ready) { try { await document.fonts.ready; } catch { /* ignore */ } }
         await html2pdf().set({
             margin: [8, 8, 8, 8],
             filename,
             image: { type: 'jpeg', quality: 0.95 },
-            html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff' },
+            html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff', windowWidth: 794, logging: false },
             jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
             pagebreak: { mode: ['css', 'legacy'] }
-        }).from(sheet).save();
+        }).from(holder).save();
     } catch (err) {
         console.error('PDF-download fejlede:', err);
         alert('Kunne ikke generere PDF - brug Print / PDF i stedet.');
+    } finally {
+        holder.remove();
     }
 }
 
