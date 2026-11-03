@@ -196,6 +196,19 @@ async function ensureQuotesOrderTypeColumn() {
 }
 ensureQuotesOrderTypeColumn().catch(err => console.error('Fejl ved tilføjelse af quotes-kolonner:', err));
 
+// v106.6g: order_documents.visibility ('all'|'admin') - idempotent migration.
+// 'all' = alle (inkl. montorer), 'admin' = kun ledelsen (skjules for montorer
+// i workspace-endpoint, documents-liste og content-download).
+async function ensureDocumentVisibilityColumn() {
+  let has = true;
+  try { await db.get('SELECT visibility FROM order_documents LIMIT 1'); } catch { has = false; }
+  if (!has) {
+    await db.run("ALTER TABLE order_documents ADD COLUMN visibility TEXT DEFAULT 'all'");
+    console.log('   Kolonne visibility tilføjet til order_documents');
+  }
+}
+ensureDocumentVisibilityColumn().catch(err => console.error('Fejl ved tilføjelse af visibility-kolonnen:', err));
+
 // MIME-fallback: kendte filtyper browsers ellers fejlfortolker
 const MIME_FALLBACKS = { jfif: 'image/jpeg', pjpeg: 'image/jpeg', pjp: 'image/jpeg' };
 // JPEG-varianter der ofte gemmes med en forkert/generisk mime_type - endelsen vinder altid
@@ -3988,6 +4001,7 @@ app.delete('/api/orders/:orderId/expenses/:expenseId', auth, async (req, res) =>
 // --- ORDER DOCUMENTS ENDPOINTS ---
 
 // Get all documents for an order
+// v106.6g: montorer (ikke-admin) ser KUN dokumenter med visibility 'all'
 app.get('/api/orders/:orderId/documents', auth, async (req, res) => {
   const orderId = Number(req.params.orderId);
   
@@ -3999,7 +4013,8 @@ app.get('/api/orders/:orderId/documents', auth, async (req, res) => {
     ORDER BY d.created_at DESC
   `, [orderId]);
   
-  res.json(documents);
+  const isAdmin = !!req.user.is_admin;
+  res.json(isAdmin ? documents : documents.filter(d => (d.visibility || 'all') !== 'admin'));
 });
 
 // Upload document to order
@@ -4012,13 +4027,16 @@ app.post('/api/orders/:orderId/documents', auth, upload.single('file'), async (r
   
   const { document_type } = req.body;
 
+  // v106.6g: synlighed - 'admin' kan KUN vaelges af ledelsen; montorer uploader altid 'all'
+  const visibility = (req.user.is_admin && req.body.visibility === 'admin') ? 'admin' : 'all';
+
   // Upload til R2 hvis aktiveret - ellers disk som hidtil
   const storage = await maybeStoreInR2(req.file, 'orders');
 
   const info = await db.run(`
-    INSERT INTO order_documents (order_id, filename, original_name, file_path, file_size, document_type, uploaded_by, storage_provider, storage_key)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `, [orderId, req.file.filename, req.file.originalname, `/uploads/${req.file.filename}`, req.file.size, document_type || 'general', req.user.id, storage.storage_provider, storage.storage_key]);
+    INSERT INTO order_documents (order_id, filename, original_name, file_path, file_size, document_type, uploaded_by, storage_provider, storage_key, visibility)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `, [orderId, req.file.filename, req.file.originalname, `/uploads/${req.file.filename}`, req.file.size, document_type || 'general', req.user.id, storage.storage_provider, storage.storage_key, visibility]);
   
   // Log activity
   await db.run(`
@@ -4059,6 +4077,24 @@ app.delete('/api/orders/:orderId/documents/:documentId', auth, async (req, res) 
   res.json({ success: true });
 });
 
+// v106.6g: skift dokumentsynlighed ('all' = alle inkl. montorer, 'admin' = kun ledelsen)
+app.patch('/api/orders/:orderId/documents/:documentId/visibility', auth, async (req, res) => {
+  if (!req.user.is_admin) {
+    return res.status(403).json({ error: 'Kun ledelsen kan aendre dokumentsynlighed' });
+  }
+  const documentId = Number(req.params.documentId);
+  const { visibility } = req.body;
+  if (visibility !== 'all' && visibility !== 'admin') {
+    return res.status(400).json({ error: 'visibility skal vaere "all" eller "admin"' });
+  }
+  const document = await db.get('SELECT * FROM order_documents WHERE id = ?', [documentId]);
+  if (!document) {
+    return res.status(404).json({ error: 'Document not found' });
+  }
+  await db.run('UPDATE order_documents SET visibility = ? WHERE id = ?', [visibility, documentId]);
+  res.json({ success: true, visibility });
+});
+
 // Ordre-dokumentindhold (inline til preview, attachment til download) - disk eller R2
 app.get('/api/orders/:orderId/documents/:documentId/content', auth, async (req, res) => {
   const documentId = Number(req.params.documentId);
@@ -4066,6 +4102,11 @@ app.get('/api/orders/:orderId/documents/:documentId/content', auth, async (req, 
 
   if (!document) {
     return res.status(404).json({ error: 'Document not found' });
+  }
+
+  // v106.6g: montorer maa ikke hente ledelse-only dokumenter (direkte URL heller ikke)
+  if ((document.visibility || 'all') === 'admin' && !req.user.is_admin) {
+    return res.status(403).json({ error: 'Dette dokument er kun for ledelsen' });
   }
 
   const disposition = req.query.disposition === 'attachment' ? 'attachment' : 'inline';
@@ -5112,13 +5153,17 @@ app.get('/api/orders/:orderId/workspace', auth, async (req, res) => {
   }
   
   // Get documents
-  const documents = await db.all(`
+  // v106.6g: montorer ser kun dokumenter med visibility 'all'
+  const allDocuments = await db.all(`
     SELECT d.*, u.name as uploaded_by_name
     FROM order_documents d
     JOIN users u ON d.uploaded_by = u.id
     WHERE d.order_id = ?
     ORDER BY d.created_at DESC
   `, [orderId]);
+  const documents = (!!req.user && req.user.is_admin)
+    ? allDocuments
+    : allDocuments.filter(d => (d.visibility || 'all') !== 'admin');
   
   // Get timeline
   const timeline = await db.all(`

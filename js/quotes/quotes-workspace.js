@@ -172,8 +172,9 @@ function renderWorkspace(data) {
             <div class="tab-underline" style="margin-bottom: 28px;">
                 <button onclick="switchWorkspaceTab('overview')" id="workspaceTabOverview" class="tab-underline-btn active">Oversigt</button>
                 <button onclick="switchWorkspaceTab('materials')" id="workspaceTabMaterials" class="tab-underline-btn">Timer & Materialer (${workspaceMaterials.length})</button>
-                ${isQuotesMontor() ? '' : `
+                <!-- v106.6g: Dokumenter vises nu for ALLE roller - montorer skal se tegninger/billeder og kan selv uploade -->
                 <button onclick="switchWorkspaceTab('documents')" id="workspaceTabDocuments" class="tab-underline-btn">Dokumenter (${workspaceDocuments.length})</button>
+                ${isQuotesMontor() ? '' : `
                 <button onclick="switchWorkspaceTab('timeline')" id="workspaceTabTimeline" class="tab-underline-btn">Timeline (${workspaceTimeline.length})</button>
                 <button onclick="switchWorkspaceTab('notes')" id="workspaceTabNotes" class="tab-underline-btn">Noter (${workspaceNotes.length})</button>
                 `}
@@ -1273,13 +1274,16 @@ function renderDocumentsList() {
                 const icon = getDocumentIcon(doc.original_name);
                 const size = formatFileSize(doc.file_size);
                 const date = new Date(doc.created_at).toLocaleDateString('da-DK');
+                const isAdminDoc = (doc.visibility || 'all') === 'admin';
+                // v106.6g: montorer maa ikke slette; ledelsen faar synligheds-knap
+                const montor = isQuotesMontor();
                 
                 return `
-                    <div style="background: var(--surface-muted); padding: 20px; border-radius: 12px; border: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; gap: 10px;">
+                    <div style="background: var(--surface-muted); padding: 20px; border-radius: 12px; border: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; gap: 10px; ${isAdminDoc ? 'border-left: 4px solid var(--color-orange, #e67e22);' : ''}">
                         <div style="display: flex; align-items: center; gap: 15px; flex: 1;">
                             <div style="font-size: 32px;">${icon}</div>
                             <div style="flex: 1;">
-                                <div style="font-weight: 600; margin-bottom: 5px;">${doc.original_name}</div>
+                                <div style="font-weight: 600; margin-bottom: 5px;">${doc.original_name} ${isAdminDoc ? '<span style="display: inline-block; vertical-align: middle; margin-left: 6px; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 600; background: rgba(230, 126, 34, 0.12); color: var(--color-orange, #e67e22); border: 1px solid var(--color-orange, #e67e22);">Kun ledelsen</span>' : ''}</div>
                                 <div style="font-size: 13px; color: var(--text-muted);">
                                     ${size} • ${doc.document_type || 'Dokument'} • Uploadet af ${doc.uploaded_by_name} • ${date}
                                 </div>
@@ -1288,7 +1292,8 @@ function renderDocumentsList() {
                         <div style="display: flex; gap: 6px; flex: 0 0 auto;">
                             ${btn('ghost', 'eye', 'Preview', { onclick: `previewDocument(${doc.id}, '${doc.original_name.replace(/'/g, "\\'")}')`, title: 'Vis dokument' })}
                             ${btn('ghost', 'download', 'Download', { onclick: `downloadDocument(${doc.id}, '${doc.original_name.replace(/'/g, "\\'")}')`, title: 'Download dokument' })}
-                            ${btn('icon', 'trash-2', 'Slet dokument', { onclick: `deleteDocument(${doc.id})`, danger: true, attrs: 'style="color: var(--danger, #c0392b);"' })}
+                            ${!montor ? btn(isAdminDoc ? 'ghost' : 'ghost', isAdminDoc ? 'users' : 'eye-off', isAdminDoc ? 'Alle' : 'Kun ledelsen', { onclick: `toggleDocumentVisibility(${doc.id})`, title: isAdminDoc ? 'Skift til: kun ledelsen kan se' : 'Skift til: alle kan se' }) : ''}
+                            ${!montor ? btn('icon', 'trash-2', 'Slet dokument', { onclick: `deleteDocument(${doc.id})`, danger: true, attrs: 'style="color: var(--danger, #c0392b);"' }) : ''}
                         </div>
                     </div>
                 `;
@@ -1296,6 +1301,30 @@ function renderDocumentsList() {
         </div>
     `;
     refreshIcons(); // v106.6c: konvertér lucide-ikoner (trash-2 var ellers usynlig)
+}
+
+// v106.6g: skift synlighed paa et dokument ('all' <-> 'admin') - kun ledelsen
+async function toggleDocumentVisibility(documentId) {
+    const doc = workspaceDocuments.find(d => d.id === documentId);
+    if (!doc || isQuotesMontor()) return;
+    const next = (doc.visibility || 'all') === 'admin' ? 'all' : 'admin';
+    try {
+        const token = sessionStorage.getItem('token');
+        const response = await fetch(`/api/orders/${doc.order_id}/documents/${documentId}/visibility`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            body: JSON.stringify({ visibility: next })
+        });
+        if (!response.ok) {
+            const e = await response.json().catch(() => ({}));
+            throw new Error(e.error || 'Kunne ikke skifte synlighed');
+        }
+        doc.visibility = next;
+        renderDocumentsList();
+    } catch (error) {
+        console.error('Toggle document visibility error:', error);
+        alert('Kunne ikke skifte synlighed: ' + error.message);
+    }
 }
 
 // Get document icon
@@ -2744,6 +2773,8 @@ window.showUploadDocument = showUploadDocument;
 window.closeDocumentModal = closeDocumentModal;
 window.uploadDocument = uploadDocument;
 window.previewDocument = previewDocument;
+// v106.6g: synligheds-knap paa dokumenter (kun ledelsen)
+window.toggleDocumentVisibility = toggleDocumentVisibility;
 window.closePreviewModal = closePreviewModal;
 window.downloadDocument = downloadDocument;
 window.deleteDocument = deleteDocument;
