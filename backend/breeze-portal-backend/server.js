@@ -4443,6 +4443,7 @@ app.get('/api/materials', auth, async (req, res) => {
       FROM materials m
       LEFT JOIN users u ON m.created_by = u.id
       WHERE m.is_active = 1
+        AND m.material_number <> 'USPEC'  -- v113: systempost til fri-tekst registreringer skjules i kataloget
       ORDER BY m.category, m.material_number
     `);
     // v83: Montorer maa se materialekataloget (for at registrere forbrug),
@@ -4527,13 +4528,19 @@ app.put('/api/materials/:id', auth, adminAuth, async (req, res) => {
 app.delete('/api/materials/:id', auth, adminAuth, async (req, res) => {
   try {
     const materialId = Number(req.params.id);
+    const existing = await db.get('SELECT * FROM materials WHERE id = ?', [materialId]);
+    if (!existing) return res.status(404).json({ error: 'Materialet findes ikke' });
 
     // Check if material is used in time_entries or order_materials
     const timeEntryCount = await db.get('SELECT COUNT(*) as count FROM time_entries WHERE material_id = ?', [materialId]);
     const orderMaterialCount = await db.get('SELECT COUNT(*) as count FROM order_materials WHERE material_id = ?', [materialId]);
 
     if (timeEntryCount.count > 0 || orderMaterialCount.count > 0) {
-      return res.status(400).json({ error: 'Cannot delete material that has been used in time entries or orders' });
+      // v113: dansk fejlbesked; systemposten USPEC kan aldrig slettes
+      if (existing.material_number === 'USPEC') {
+        return res.status(400).json({ error: 'USPEC er en systempost til fri-tekst registreringer og kan ikke slettes' });
+      }
+      return res.status(400).json({ error: 'Materialet kan ikke slettes, fordi det er brugt i tidsregistreringer eller ordrer' });
     }
 
     await db.run('DELETE FROM materials WHERE id = ?', [materialId]);
