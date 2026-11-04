@@ -302,7 +302,7 @@ Object.assign(window.calendarPage, {
   openNewDialog(dateIso, slot) {
     this.editingEvent = null;
     this.editStaffing = null;
-    this.setEditFields('task');
+    this.setEditFields('new'); // v113: 'new' = bade opgave- og bemandingsfelt synlige
     this.newSlot = slot || 0; // v113: gitter-raekke brugeren klikkede paa (0 hvis top-knappen)
     document.getElementById('cal-edit-title').textContent = 'Ny opgave';
     document.getElementById('cal-edit-id').value = '';
@@ -329,7 +329,7 @@ Object.assign(window.calendarPage, {
     const ev = this.editingEvent;
     if (!ev) return;
     this.editStaffing = null;
-    this.setEditFields('task');
+    this.setEditFields('task'); // v113: rediger opgave = skjul bemandingsfelt
     this.newSlot = ev.slot || 0; // v113: behold placering ved redigering
     this.editDay = this.infoDay || ev.start_date; // v113: dagen man klikkede paa (eller foerste dag)
     const multiDay = ev.end_date > ev.start_date;
