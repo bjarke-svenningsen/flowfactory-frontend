@@ -87,6 +87,14 @@
     <input type="text" id="cal-edit-staff" placeholder="fx Henrik, Jakob" />
     <label>Farve</label>
     <div class="cal-colors" id="cal-colors"></div>
+    <div id="cal-scope-row" style="display:none; margin-top:10px;">
+      <label>Hvad skal aendringen gaelde?</label>
+      <div class="avail-toggle" id="cal-scope-toggle" style="margin-bottom:0;">
+        <button id="cal-scope-day" onclick="calendarPage.setScope('day')">Kun denne dag</button>
+        <button id="cal-scope-following" class="active" onclick="calendarPage.setScope('following')">Denne og frem</button>
+        <button id="cal-scope-all" onclick="calendarPage.setScope('all')">Hele perioden</button>
+      </div>
+    </div>
     <div class="cal-dialog-buttons">
       <button id="cal-edit-delete" class="danger" style="display:none;" onclick="calendarPage.deleteEvent()">Slet</button>
       <button onclick="calendarPage.closeEditDialog()">Annuller</button>
@@ -103,6 +111,7 @@
     <div class="cal-dialog-buttons">
       <button id="cal-info-delete" class="danger" style="display:none;" onclick="calendarPage.deleteFromInfo()">Slet</button>
       <button id="cal-info-order" style="display:none;">Åbn ordre</button>
+      <button id="cal-info-edit-day" style="display:none;" onclick="calendarPage.editFromInfo(true)">Rediger denne dag</button>
       <button id="cal-info-edit" class="primary" style="display:none;" onclick="calendarPage.editFromInfo()">Rediger</button>
       <button onclick="calendarPage.closeOverlay('cal-info-overlay')">Luk</button>
     </div>

@@ -165,7 +165,7 @@ window.calendarPage = {
       emp.textContent = ev.employee_names;
       wrap.appendChild(emp);
     }
-    const open = (e) => { e.stopPropagation(); this.showInfo(ev); };
+    const open = (e) => { e.stopPropagation(); this.showInfo(ev, iso); };
     bar.addEventListener('click', open);
     if (emp) emp.addEventListener('click', open);
     if (this.isAdmin) {
@@ -296,12 +296,23 @@ Object.assign(window.calendarPage, {
     this.openOverlay('cal-edit-overlay');
   },
 
-  editFromInfo() {
+  // v113: scope-vaelger i rediger-dialogen (kun ved "Rediger denne dag")
+  setScope(scope) {
+    this.editScope = scope;
+    ['day', 'following', 'all'].forEach(s => {
+      document.getElementById('cal-scope-' + s).classList.toggle('active', s === scope);
+    });
+  },
+
+  editFromInfo(dayScoped) {
     const ev = this.editingEvent;
     if (!ev) return;
     this.newSlot = ev.slot || 0; // v113: behold placering ved redigering
+    this.editDay = dayScoped ? this.infoDay : null;
+    this.editScope = 'following';
+    const day = this.editDay;
     this.closeOverlay('cal-info-overlay');
-    document.getElementById('cal-edit-title').textContent = 'Rediger opgave';
+    document.getElementById('cal-edit-title').textContent = day ? 'Rediger fra ' + new Date(day + 'T12:00:00').toLocaleDateString('da-DK') : 'Rediger opgave';
     document.getElementById('cal-edit-id').value = ev.id;
     document.getElementById('cal-edit-order').value = ev.order_number || '';
     document.getElementById('cal-edit-desc').value = ev.title || '';
@@ -311,6 +322,8 @@ Object.assign(window.calendarPage, {
     document.getElementById('cal-edit-repeat').value = Math.max(1, days);
     this.renderColorPicker(ev.color);
     document.getElementById('cal-edit-delete').style.display = '';
+    document.getElementById('cal-scope-row').style.display = day ? '' : 'none';
+    if (day) this.setScope('following');
     this.openOverlay('cal-edit-overlay');
   },
 
@@ -342,7 +355,40 @@ Object.assign(window.calendarPage, {
     }
     try {
       if (id) {
-        await apiCall('/api/calendar/' + id, { method: 'PUT', body: JSON.stringify(payload) });
+        // v113: scope-redigering a la Google - "kun denne dag" / "denne og frem" deler opgaven op
+        const orig = this.editingEvent || this.events.find(e => String(e.id) === String(id));
+        const day = this.editDay;
+        if (orig && day && day > orig.start_date && day <= orig.end_date) {
+          const scope = this.editScope || 'following';
+          // 1) forkort originalen til dagen foer
+          const prevEnd = this.isoDate(this.addDays(new Date(day + 'T12:00:00'), -1));
+          await apiCall('/api/calendar/' + id, {
+            method: 'PUT',
+            body: JSON.stringify({
+              order_number: orig.order_number, title: orig.title, start_date: orig.start_date,
+              end_date: prevEnd, color: orig.color, employee_names: orig.employee_names, slot: orig.slot || 0,
+            })
+          });
+          // 2) ny del med de aendrede vaerdier
+          const partEnd = scope === 'day' ? day : endIso;
+          await apiCall('/api/calendar', {
+            method: 'POST',
+            body: JSON.stringify({ ...payload, start_date: day, end_date: partEnd, slot: orig.slot || 0 })
+          });
+          // 3) "kun denne dag": hale med de GAMLE vaerdier efter den aendrede dag
+          if (scope === 'day' && day < orig.end_date) {
+            const tailStart = this.isoDate(this.addDays(new Date(day + 'T12:00:00'), 1));
+            await apiCall('/api/calendar', {
+              method: 'POST',
+              body: JSON.stringify({
+                order_number: orig.order_number, title: orig.title, start_date: tailStart,
+                end_date: orig.end_date, color: orig.color, employee_names: orig.employee_names, slot: orig.slot || 0,
+              })
+            });
+          }
+        } else {
+          await apiCall('/api/calendar/' + id, { method: 'PUT', body: JSON.stringify(payload) });
+        }
       } else {
         await apiCall('/api/calendar', { method: 'POST', body: JSON.stringify(payload) });
       }
@@ -354,8 +400,9 @@ Object.assign(window.calendarPage, {
     }
   },
 
-  showInfo(ev) {
+  showInfo(ev, iso) {
     this.editingEvent = ev;
+    this.infoDay = iso || null; // v113: hvilken dag bjaelken blev klikket paa (til scope-redigering)
     document.getElementById('cal-info-title').textContent =
       (ev.order_number ? ev.order_number + ' - ' : '') + ev.title;
     const d = (iso) => iso ? new Date(iso + 'T12:00:00').toLocaleDateString('da-DK', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }) : '';
@@ -373,6 +420,9 @@ Object.assign(window.calendarPage, {
       `Sidst redigeret af ${this.esc(ev.updated_by_name || '?')}${up ? ' - ' + up : ''}`;
     document.getElementById('cal-info-edit').style.display = this.isAdmin ? '' : 'none';
     document.getElementById('cal-info-delete').style.display = this.isAdmin ? '' : 'none';
+    // v113: "Rediger denne dag" tilbydes naar opgaven spaender over flere dage
+    const multiDay = ev.end_date > ev.start_date;
+    document.getElementById('cal-info-edit-day').style.display = (this.isAdmin && multiDay && iso) ? '' : 'none';
     const orderBtn = document.getElementById('cal-info-order');
     orderBtn.style.display = ev.order_number ? '' : 'none';
     orderBtn.onclick = () => this.openOrder(ev.order_number);
