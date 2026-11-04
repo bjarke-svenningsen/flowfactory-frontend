@@ -369,7 +369,24 @@ export async function initializeDatabase() {
       created_at ${db._isProduction ? 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP' : "TEXT DEFAULT (datetime('now'))"}${db._isProduction ? '' : ',\n  FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE,\n  FOREIGN KEY(parent_folder) REFERENCES email_folders(id) ON DELETE CASCADE'}
     )`);
     
-    // Add missing columns if they don't exist (migration for existing databases)
+    // v112: Microsoft Graph (Office 365/Outlook) kolonner pa email_accounts
+    for (const [col, def] of [
+      ['auth_type', "TEXT DEFAULT 'imap'"],
+      ['oauth_access_token', 'TEXT'],
+      ['oauth_refresh_token', 'TEXT'],
+      ['oauth_expires_at', 'TEXT'],
+    ]) {
+      try {
+        await db.run(`ALTER TABLE email_accounts ADD COLUMN ${col} ${def}`);
+        console.log(`✅ Added ${col} column to email_accounts table`);
+      } catch (error) {
+        if (error.message.includes('duplicate column') || error.message.includes('already exists')) {
+          console.log(`ℹ️  ${col} column already exists in email_accounts table`);
+        }
+        // Ignore other errors - column might already exist
+      }
+    }
+    
     try {
       // Try to add folder_id to emails table
       await db.run(`ALTER TABLE emails ADD COLUMN folder_id INTEGER`);

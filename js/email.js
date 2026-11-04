@@ -66,6 +66,16 @@ const emailClient = {
     } catch (e) { /* fortsaet hvis sessionStorage ikke kan laeses */ }
     console.log('Initializing Windows 95 email client...');
     
+    // v112: Vis fejl fra Microsoft OAuth-callback (redirect med #email?graphError=...)
+    try {
+      const hash = window.location.hash || '';
+      const m = hash.match(/graphError=([^&]+)/);
+      if (m) {
+        alert('Microsoft-login fejlede: ' + decodeURIComponent(m[1]));
+        history.replaceState(null, '', 'dashboard.html#email');
+      }
+    } catch (e) { /* ignorér */ }
+    
     // Load email accounts
     await this.loadEmailAccounts();
     
@@ -1041,6 +1051,17 @@ const emailClient = {
       console.error('Error linking email to order:', error);
       this.showNotification('Kunne ikke linke email til ordre: ' + error.message, 'error');
     }
+  },
+
+  // v112: Start Microsoft OAuth-login (Office 365 / Exchange) - redirect til backend
+  startMicrosoftLogin() {
+    const token = sessionStorage.getItem('token') || '';
+    if (!token) {
+      alert('Fejl: Du er ikke logget ind - log ind i portalen igen.');
+      return;
+    }
+    this.closeAddAccountModal();
+    window.location.href = '/api/email/oauth/start?t=' + encodeURIComponent(token);
   },
 
   // Show add account modal

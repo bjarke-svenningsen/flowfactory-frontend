@@ -189,11 +189,19 @@ export async function syncEmails(accountId) {
   }
 }
 
+// v112: Microsoft Graph support (Office 365/Outlook) - graph-konti delegeres til graph-email-service.js
+import { syncEmailsGraph, sendEmailGraph } from './graph-email-service.js';
+
 // Send email via SMTP
 export async function sendEmail(accountId, emailData) {
   try {
     const account = await db.get('SELECT * FROM email_accounts WHERE id = ?', [accountId]);
     if (!account) throw new Error('Account not found');
+
+    // v112: Graph-konto (Office 365) -> Microsoft Graph /me/sendMail
+    if ((account.auth_type || 'imap') === 'graph') {
+      return await sendEmailGraph(accountId, emailData);
+    }
 
     const transporter = buildSmtpTransporter(account);
 
@@ -305,6 +313,13 @@ export async function syncNewEmails(accountId) {
   let connection = null;
   
   try {
+    // v112: Graph-konto (Office 365) -> Microsoft Graph sync
+    const acct = await db.get('SELECT auth_type FROM email_accounts WHERE id = ?', [accountId]);
+    if (acct && (acct.auth_type || 'imap') === 'graph') {
+      const g = await syncEmailsGraph(accountId);
+      return { success: true, synced: g.synced, new: g.new };
+    }
+
     console.log(`📧 Starting auto-sync for new emails only...`);
     
     // Get account details
@@ -487,6 +502,13 @@ export async function syncEmailsPaginated(accountId, offset = 0, limit = 10) {
   let connection = null;
   
   try {
+    // v112: Graph-konto (Office 365) -> Microsoft Graph sync (paginering ignoreres - top 15 hentes)
+    const acct = await db.get('SELECT auth_type FROM email_accounts WHERE id = ?', [accountId]);
+    if (acct && (acct.auth_type || 'imap') === 'graph') {
+      const g = await syncEmailsGraph(accountId);
+      return { success: true, synced: g.synced, new: g.new };
+    }
+
     console.log(`📧 Starting paginated sync: offset=${offset}, limit=${limit}`);
     
     // Get account details

@@ -5340,13 +5340,72 @@ app.get('/api/orders/:orderId/workspace', auth, async (req, res) => {
 // --- EMAIL INTEGRATION API ---
 // LIGHTWEIGHT PAGINATION SYSTEM - Memory-safe email sync
 import { syncEmailsPaginated, syncNewEmails, sendEmail, testImapConnection, testSmtpConnection } from './email-service.js';
+// v112: Microsoft Graph (Office 365 / Outlook) support
+import {
+  ensureGraphColumns, getGraphAuthUrl, exchangeGraphCode, getGraphProfile,
+  getGraphRedirectUri, isGraphConfigured, syncEmailsGraph, sendEmailGraph,
+} from './graph-email-service.js';
 
 // --- EMAIL ROUTES - LIGHTWEIGHT PAGINATION SYSTEM ---
 // Memory-safe email sync with pagination
 
+// v112: OAuth - start Microsoft login (token sendes som query-param, da browser-redirect ikke kan saette Bearer-header)
+app.get('/api/email/oauth/start', async (req, res) => {
+  if (!isGraphConfigured()) {
+    return res.status(501).send('Microsoft-email er ikke konfigureret pa serveren (MS_CLIENT_ID / MS_TENANT_ID / MS_CLIENT_SECRET mangler)');
+  }
+  await ensureGraphColumns();
+  let userId = null;
+  try {
+    const payload = jwt.verify(String(req.query.t || ''), JWT_SECRET);
+    userId = payload.id;
+  } catch {
+    return res.status(401).send('Ugyldigt eller manglende login - log ind i portalen igen');
+  }
+  res.redirect(getGraphAuthUrl(userId));
+});
+
+// v112: OAuth callback - Microsoft redirecter hertil efter login; opretter graph-konto og sender brugeren tilbage
+app.get('/api/email/oauth/callback', async (req, res) => {
+  const FRONTEND = process.env.BASE_URL || 'https://flowfactory-frontend-20zs.onrender.com';
+  if (req.query.error) {
+    console.error('❌ Graph OAuth error:', req.query.error_description);
+    return res.redirect(FRONTEND + '/dashboard.html#email?graphError=' + encodeURIComponent(String(req.query.error_description || req.query.error)));
+  }
+  try {
+    await ensureGraphColumns();
+    const state = JSON.parse(Buffer.from(String(req.query.state || ''), 'base64url').toString());
+    const userId = state.uid;
+    const tokens = await exchangeGraphCode(String(req.query.code || ''));
+    const profile = await getGraphProfile(tokens.access_token);
+    const expiresAt = new Date(Date.now() + ((tokens.expires_in || 3600) - 120) * 1000).toISOString();
+
+    // Undga duplicates: genbrug eksisterende graph-konto for samme bruger + email
+    const existing = await db.get("SELECT id FROM email_accounts WHERE user_id = ? AND auth_type = 'graph' AND email = ?", [userId, profile.email]);
+    let accountId;
+    if (existing) {
+      accountId = existing.id;
+      await db.run('UPDATE email_accounts SET oauth_access_token = ?, oauth_refresh_token = ?, oauth_expires_at = ?, is_active = 1 WHERE id = ?', [tokens.access_token, tokens.refresh_token, expiresAt, accountId]);
+    } else {
+      const info = await db.run(
+        `INSERT INTO email_accounts (user_id, email, display_name, imap_host, imap_port, imap_username, imap_password, smtp_host, smtp_port, smtp_username, smtp_password, auth_type, oauth_access_token, oauth_refresh_token, oauth_expires_at)
+         VALUES (?, ?, ?, 'outlook.office365.com', 993, '', '', 'smtp.office365.com', 587, '', '', 'graph', ?, ?, ?)`,
+        [userId, profile.email, profile.name || null, tokens.access_token, tokens.refresh_token, expiresAt]
+      );
+      accountId = info.lastInsertRowid;
+    }
+    console.log(`✅ Graph-konto tilfoejet: ${profile.email} (user ${userId}, konto ${accountId})`);
+    res.redirect(FRONTEND + '/dashboard.html#email');
+  } catch (error) {
+    console.error('❌ Graph OAuth callback fejl:', error.message);
+    res.redirect(FRONTEND + '/dashboard.html#email?graphError=' + encodeURIComponent(error.message));
+  }
+});
+
 // Get user's email accounts
 app.get('/api/email/accounts', auth, async (req, res) => {
-  const accounts = await db.all('SELECT id, email, display_name, imap_host, smtp_host, is_active, last_sync FROM email_accounts WHERE user_id = ?', [req.user.id]);
+  await ensureGraphColumns();
+  const accounts = await db.all('SELECT id, email, display_name, imap_host, smtp_host, is_active, last_sync, auth_type FROM email_accounts WHERE user_id = ?', [req.user.id]);
   res.json(accounts);
 });
 
