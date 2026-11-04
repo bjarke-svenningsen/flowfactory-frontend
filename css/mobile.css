@@ -90,14 +90,7 @@
     width: 150px;
   }
   
-  /* Email Mode */
-  .main-content.email-mode {
-    max-width: 100%;
-  }
-  
-  .main-content.email-mode .sidebar {
-    margin-left: 0;
-  }
+  /* v111: email-mode fjernet */
 }
 
 /* ===== MOBILE (Under 480px) ===== */

@@ -190,14 +190,7 @@ async function showPage(pageName, updateHash = true) {
         history.replaceState(null, '', '#' + pageName);
     }
     
-    // Toggle email-mode class for wider layout on email page
-    const mainContent = document.querySelector('.main-content');
-    if (pageName === 'email') {
-        mainContent.classList.add('email-mode');
-    } else {
-        mainContent.classList.remove('email-mode');
-    }
-    
+    // v111: email-mode fjernet — layout er nu ens på alle sider
     // Update menu active state
     document.querySelectorAll('.menu-item').forEach(item => {
         item.classList.remove('active');
