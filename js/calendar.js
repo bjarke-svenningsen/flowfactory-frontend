@@ -18,6 +18,8 @@ window.calendarPage = {
   availMode: 'day',
   selectedDate: null,     // valgt dag (til "Ikke bemandet")
   editingEvent: null,     // event i info-dialog (til rediger/slet)
+  staffing: [],           // v113: bemandinger (rode bjaelker) - separate enheder koblet til opgaver
+  editStaffing: null,     // v113: bemanding der redigeres i dialogen (roed bjaelke)
   COLORS: ['#34a853', '#1a73e8', '#fbbc04', '#8d6e63', '#f28b82', '#ff8f00', '#7b1fa2', '#00897b', '#c5221f', '#9aa0a6'],
 
   async init() {
@@ -59,6 +61,11 @@ window.calendarPage = {
     const to = this.isoDate(this.addDays(this.weekStart, 14));
     const rows = await apiCall(`/api/calendar?from=${from}&to=${to}`);
     this.events = Array.isArray(rows) ? rows : [];
+    // v113: bemanding (rode bjaelker) er nu separate enheder koblet til opgaverne
+    try {
+      const sf = await apiCall(`/api/calendar-staffing?from=${from}&to=${to}`);
+      this.staffing = Array.isArray(sf) ? sf : [];
+    } catch (e) { this.staffing = []; }
   },
 
   async refresh() { await this.loadEvents(); this.render(); },
@@ -159,10 +166,14 @@ window.calendarPage = {
     bar.title = label + (ev.employee_names ? '\n' + ev.employee_names : '');
     wrap.appendChild(bar);
     let emp = null;
-    if (ev.employee_names) {
+    // v113: bemanding kommer nu fra calendar_staffing (separate enheder) - roed bjaelke(r) UNDER farve-bjaelken
+    const staffForDay = (this.staffing || []).filter(sf => String(sf.event_id) === String(ev.id) && sf.start_date <= iso && sf.end_date >= iso);
+    for (const sf of staffForDay) {
+      if (!sf.employee_names) continue;
       emp = document.createElement('div');
       emp.className = 'cal-emp';
-      emp.textContent = ev.employee_names;
+      emp.textContent = sf.employee_names;
+      emp.addEventListener('click', (e) => { e.stopPropagation(); this.showStaffingInfo(sf, iso); });
       wrap.appendChild(emp);
     }
     const open = (e) => { e.stopPropagation(); this.showInfo(ev, iso); };
@@ -189,9 +200,9 @@ window.calendarPage = {
   // Navne i bemandings-fritekst matches paa fornavn (case-insensitive)
   staffedFirstNames(fromIso, toIso) {
     const names = new Set();
-    for (const ev of this.events) {
-      if (ev.start_date > toIso || ev.end_date < fromIso) continue;
-      (ev.employee_names || '').split(',').forEach(n => {
+    for (const sf of (this.staffing || [])) {
+      if (sf.start_date > toIso || sf.end_date < fromIso) continue;
+      (sf.employee_names || '').split(',').forEach(n => {
         const f = n.trim().split(/\s+/)[0].toLowerCase();
         if (f) names.add(f);
       });
@@ -280,8 +291,19 @@ Object.assign(window.calendarPage, {
     return sel ? sel.style.background : '#34a853';
   },
 
+  // v113: vis/skjul felter i rediger-dialogen afhaengig af om man redigerer opgave eller bemanding
+  setEditFields(mode) {
+    const show = (id, on) => { const el = document.getElementById(id); if (el) el.style.display = on ? '' : 'none'; };
+    show('cal-label-order', mode !== 'staff');   show('cal-edit-order', mode !== 'staff');
+    show('cal-label-desc', mode !== 'staff');    show('cal-edit-desc', mode !== 'staff');
+    show('cal-label-color', mode !== 'staff');   show('cal-colors', mode !== 'staff');
+    show('cal-label-staff', mode !== 'task');    show('cal-edit-staff', mode !== 'task');
+  },
+
   openNewDialog(dateIso, slot) {
     this.editingEvent = null;
+    this.editStaffing = null;
+    this.setEditFields('task');
     this.newSlot = slot || 0; // v113: gitter-raekke brugeren klikkede paa (0 hvis top-knappen)
     document.getElementById('cal-edit-title').textContent = 'Ny opgave';
     document.getElementById('cal-edit-id').value = '';
@@ -307,31 +329,87 @@ Object.assign(window.calendarPage, {
   editFromInfo() {
     const ev = this.editingEvent;
     if (!ev) return;
+    this.editStaffing = null;
+    this.setEditFields('task');
     this.newSlot = ev.slot || 0; // v113: behold placering ved redigering
     this.editDay = this.infoDay || ev.start_date; // v113: dagen man klikkede paa (eller foerste dag)
-    const day = this.editDay;
     const multiDay = ev.end_date > ev.start_date;
     this.editScope = multiDay ? 'following' : 'all';
     this.closeOverlay('cal-info-overlay');
-    const dayName = day ? new Date(day + 'T12:00:00').toLocaleDateString('da-DK', { weekday: 'short', day: 'numeric', month: 'short' }) : '';
     document.getElementById('cal-edit-title').textContent = 'Rediger opgave';
     document.getElementById('cal-edit-id').value = ev.id;
     document.getElementById('cal-edit-order').value = ev.order_number || '';
     document.getElementById('cal-edit-desc').value = ev.title || '';
-    document.getElementById('cal-edit-staff').value = ev.employee_names || '';
+    document.getElementById('cal-edit-staff').value = '';
     document.getElementById('cal-edit-start').value = ev.start_date;
     const days = Math.round((new Date(ev.end_date + 'T12:00:00') - new Date(ev.start_date + 'T12:00:00')) / 86400000) + 1;
     document.getElementById('cal-edit-repeat').value = Math.max(1, days);
     this.renderColorPicker(ev.color);
     document.getElementById('cal-edit-delete').style.display = '';
-    // v113: scope-knapper vises ALTID for Ledelsen - teksten siger bare "denne dag"
+    // v113: scope-knapper vises ALTID for Ledelsen (teksterne star i HTML'en)
     if (this.isAdmin) {
       document.getElementById('cal-scope-row').style.display = '';
-      document.getElementById('cal-scope-day').textContent = 'Denne dag';
-      document.getElementById('cal-scope-following').textContent = 'Denne dag og frem';
       this.setScope('following');
     }
     this.openOverlay('cal-edit-overlay');
+  },
+
+  // ===== v113: BEMANDING (roed bjaelke) - separate enheder adskilt fra opgaven =====
+  showStaffingInfo(sf, iso) {
+    this.editingStaffing = sf;
+    this.infoDay = iso || null;
+    document.getElementById('cal-info-title').textContent = 'Bemanding: ' + (sf.employee_names || '');
+    const d = (x) => x ? new Date(x + 'T12:00:00').toLocaleDateString('da-DK', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }) : '';
+    const period = sf.start_date === sf.end_date ? d(sf.start_date) : `${d(sf.start_date)} til ${d(sf.end_date)}`;
+    document.getElementById('cal-info-body').innerHTML =
+      `<div style="font-size:13px; line-height:1.8;">` +
+      `<div><b>Periode:</b> ${this.esc(period)}</div>` +
+      `<div><b>Bemanding:</b> ${this.esc(sf.employee_names)}</div>` +
+      `</div>`;
+    const cr = sf.created_at ? new Date(sf.created_at).toLocaleString('da-DK') : '';
+    document.getElementById('cal-info-meta').innerHTML = cr ? 'Oprettet ' + cr : '';
+    document.getElementById('cal-info-edit').style.display = this.isAdmin ? '' : 'none';
+    document.getElementById('cal-info-delete').style.display = this.isAdmin ? '' : 'none';
+    document.getElementById('cal-info-order').style.display = 'none';
+    document.getElementById('cal-info-edit').onclick = () => this.editStaffingFromInfo();
+    document.getElementById('cal-info-delete').onclick = () => this.deleteStaffingFromInfo();
+    this.openOverlay('cal-info-overlay');
+  },
+
+  editStaffingFromInfo() {
+    const sf = this.editingStaffing;
+    if (!sf) return;
+    this.editStaffing = sf;
+    this.setEditFields('staff');
+    this.editDay = this.infoDay || sf.start_date;
+    const multiDay = sf.end_date > sf.start_date;
+    this.editScope = multiDay ? 'following' : 'all';
+    this.closeOverlay('cal-info-overlay');
+    document.getElementById('cal-edit-title').textContent = 'Rediger bemanding';
+    document.getElementById('cal-edit-id').value = sf.id;
+    document.getElementById('cal-edit-staff').value = sf.employee_names || '';
+    document.getElementById('cal-edit-start').value = sf.start_date;
+    const days = Math.round((new Date(sf.end_date + 'T12:00:00') - new Date(sf.start_date + 'T12:00:00')) / 86400000) + 1;
+    document.getElementById('cal-edit-repeat').value = Math.max(1, days);
+    document.getElementById('cal-edit-delete').style.display = '';
+    if (this.isAdmin) {
+      document.getElementById('cal-scope-row').style.display = '';
+      this.setScope('following');
+    }
+    this.openOverlay('cal-edit-overlay');
+  },
+
+  async deleteStaffingFromInfo() {
+    const sf = this.editingStaffing;
+    if (!sf) return;
+    if (!confirm('Fjern bemandingen "' + sf.employee_names + '" fra kalenderen?')) return;
+    try {
+      await apiCall('/api/calendar-staffing/' + sf.id, { method: 'DELETE' });
+      this.closeOverlay('cal-info-overlay');
+      await this.refresh();
+    } catch (err) {
+      alert('Kunne ikke slette bemandingen: ' + (err.message || err));
+    }
   },
 
   closeEditDialog() { this.closeOverlay('cal-edit-overlay'); },
@@ -347,21 +425,68 @@ Object.assign(window.calendarPage, {
     const repeats = Math.max(1, Math.min(31, parseInt(document.getElementById('cal-edit-repeat').value, 10) || 1));
     // v113: gentagelser - slutdato beregnes ud fra antal dage
     const endIso = this.isoDate(this.addDays(new Date(start + 'T12:00:00'), repeats - 1));
-    const payload = {
-      order_number: document.getElementById('cal-edit-order').value.trim(),
-      title: document.getElementById('cal-edit-desc').value.trim(),
-      start_date: start,
-      end_date: endIso,
-      color: this.getSelectedColor(),
-      employee_names: document.getElementById('cal-edit-staff').value.trim(),
-      slot: this.newSlot || 0, // v113: klik-placering / auto-raekke
-    };
+    const staffVal = document.getElementById('cal-edit-staff').value.trim();
+    try {
+      // v113: bemanding redigeres som SEPARAT enhed (roed bjaelke) - opgavens datoer/tekst roeres IKKE
+      if (this.editStaffing) {
+        const sf = this.editStaffing;
+        const day = this.editDay || sf.start_date;
+        const scope = this.editScope || 'all';
+        const single = sf.start_date === sf.end_date;
+        if (!single && scope !== 'all' && day >= sf.start_date && day <= sf.end_date) {
+          // 1) tilpas original-bemandingen saa den ikke laengere daekker dagen
+          if (day > sf.start_date) {
+            const prevEnd = this.isoDate(this.addDays(new Date(day + 'T12:00:00'), -1));
+            await apiCall('/api/calendar-staffing/' + sf.id, {
+              method: 'PUT',
+              body: JSON.stringify({ start_date: sf.start_date, end_date: prevEnd, employee_names: sf.employee_names })
+            });
+          } else if (sf.end_date > day) {
+            // dagen er foerste dag: ryk bemandingens start til dagen efter
+            const nextStart = this.isoDate(this.addDays(new Date(day + 'T12:00:00'), 1));
+            await apiCall('/api/calendar-staffing/' + sf.id, {
+              method: 'PUT',
+              body: JSON.stringify({ start_date: nextStart, end_date: sf.end_date, employee_names: sf.employee_names })
+            });
+          }
+          // 2) ny bemandings-del med de aendrede navne
+          const partEnd = scope === 'day' ? day : endIso;
+          await apiCall('/api/calendar-staffing', {
+            method: 'POST',
+            body: JSON.stringify({ event_id: sf.event_id, start_date: day, end_date: partEnd, employee_names: staffVal })
+          });
+          // 3) "denne begivenhed": hale med de GAMLE navne efter den aendrede dag
+          if (scope === 'day' && day < sf.end_date) {
+            const tailStart = this.isoDate(this.addDays(new Date(day + 'T12:00:00'), 1));
+            await apiCall('/api/calendar-staffing', {
+              method: 'POST',
+              body: JSON.stringify({ event_id: sf.event_id, start_date: tailStart, end_date: sf.end_date, employee_names: sf.employee_names })
+            });
+          }
+        } else {
+          await apiCall('/api/calendar-staffing/' + sf.id, {
+            method: 'PUT',
+            body: JSON.stringify({ start_date: start, end_date: endIso, employee_names: staffVal })
+          });
+        }
+        this.closeEditDialog();
+        await this.refresh();
+        return;
+      }
+      const payload = {
+        order_number: document.getElementById('cal-edit-order').value.trim(),
+        title: document.getElementById('cal-edit-desc').value.trim(),
+        start_date: start,
+        end_date: endIso,
+        color: this.getSelectedColor(),
+        employee_names: '', // v113: bemanding gemmes nu som separate enheder (calendar_staffing)
+        slot: this.newSlot || 0, // v113: klik-placering / auto-raekke
+      };
     if (!payload.title || !start) {
       alert('Udfyld beskrivelse og startdato.');
       return;
     }
-    try {
-      if (id) {
+    if (id) {
         // v113: scope-redigering a la Google - "kun denne dag" / "denne og frem" / "hele perioden"
         const orig = this.editingEvent || this.events.find(e => String(e.id) === String(id));
         const day = this.editDay;
@@ -411,7 +536,14 @@ Object.assign(window.calendarPage, {
           await apiCall('/api/calendar/' + id, { method: 'PUT', body: JSON.stringify(payload) });
         }
       } else {
-        await apiCall('/api/calendar', { method: 'POST', body: JSON.stringify(payload) });
+        // v113: ny opgave - bemanding oprettes som separat enhed koblet til opgaven
+        const created = await apiCall('/api/calendar', { method: 'POST', body: JSON.stringify(payload) });
+        if (created && created.id && staffVal) {
+          await apiCall('/api/calendar-staffing', {
+            method: 'POST',
+            body: JSON.stringify({ event_id: created.id, start_date: payload.start_date, end_date: payload.end_date, employee_names: staffVal })
+          });
+        }
       }
       localStorage.setItem('calLastColor', payload.color);
       this.closeEditDialog();
@@ -441,6 +573,8 @@ Object.assign(window.calendarPage, {
       `Sidst redigeret af ${this.esc(ev.updated_by_name || '?')}${up ? ' - ' + up : ''}`;
     document.getElementById('cal-info-edit').style.display = this.isAdmin ? '' : 'none';
     document.getElementById('cal-info-delete').style.display = this.isAdmin ? '' : 'none';
+    document.getElementById('cal-info-edit').onclick = () => this.editFromInfo();
+    document.getElementById('cal-info-delete').onclick = () => this.deleteFromInfo();
     const orderBtn = document.getElementById('cal-info-order');
     orderBtn.style.display = ev.order_number ? '' : 'none';
     orderBtn.onclick = () => this.openOrder(ev.order_number);
@@ -486,6 +620,19 @@ Object.assign(window.calendarPage, {
   async deleteEvent() {
     const id = document.getElementById('cal-edit-id').value;
     if (!id) return;
+    // v113: slet-knappen i rediger-dialogen virker paa bemanding ELLER opgave afhaengig af modus
+    if (this.editStaffing) {
+      const sf = this.editStaffing;
+      if (!confirm('Fjern bemandingen "' + sf.employee_names + '" fra kalenderen?')) return;
+      try {
+        await apiCall('/api/calendar-staffing/' + sf.id, { method: 'DELETE' });
+        this.closeEditDialog();
+        await this.refresh();
+      } catch (err) {
+        alert('Kunne ikke slette bemandingen: ' + (err.message || err));
+      }
+      return;
+    }
     if (!confirm('Slet denne opgave fra kalenderen?')) return;
     try {
       await apiCall('/api/calendar/' + id, { method: 'DELETE' });

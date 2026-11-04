@@ -5920,6 +5920,48 @@ async function ensureCalendarTable() {
     }
   }
   calendarTableEnsured = true;
+  // v113: bemanding er nu ENHEDER adskilt fra opgaven (rode bjaelker kan redigeres uden at splitte opgaven)
+  const staffingSql = calIsPg ? `
+    CREATE TABLE IF NOT EXISTS calendar_staffing (
+      id SERIAL PRIMARY KEY,
+      event_id INTEGER NOT NULL,
+      start_date DATE NOT NULL,
+      end_date DATE NOT NULL,
+      employee_names TEXT NOT NULL DEFAULT '',
+      created_by INTEGER,
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      updated_at TIMESTAMPTZ DEFAULT NOW()
+    )
+  ` : `
+    CREATE TABLE IF NOT EXISTS calendar_staffing (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      event_id INTEGER NOT NULL,
+      start_date TEXT NOT NULL,
+      end_date TEXT NOT NULL,
+      employee_names TEXT NOT NULL DEFAULT '',
+      created_by INTEGER,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `;
+  try {
+    await db.run(staffingSql);
+    // engangs-migration: flyt bemanding fra calendar_events til calendar_staffing
+    const sfRows = await db.all('SELECT id FROM calendar_staffing LIMIT 1');
+    if (!Array.isArray(sfRows) || sfRows.length === 0) {
+      const withEmp = await db.all("SELECT id, start_date, end_date, employee_names, created_by FROM calendar_events WHERE employee_names IS NOT NULL AND employee_names <> ''");
+      if (Array.isArray(withEmp)) {
+        for (const ev of withEmp) {
+          await db.run('INSERT INTO calendar_staffing (event_id, start_date, end_date, employee_names, created_by) VALUES (?,?,?,?,?)',
+            [ev.id, ev.start_date, ev.end_date, ev.employee_names, ev.created_by]);
+        }
+        await db.run("UPDATE calendar_events SET employee_names = NULL WHERE employee_names IS NOT NULL AND employee_names <> ''");
+        if (withEmp.length) console.log(`✅ calendar_staffing: migrerede bemanding fra ${withEmp.length} opgaver`);
+      }
+    }
+  } catch (e) {
+    console.error('calendar_staffing ensure/migrate:', e.message);
+  }
 }
 
 function requireAdminUser(req, res) {
@@ -6062,10 +6104,102 @@ app.delete('/api/calendar/:id', auth, async (req, res) => {
     const id = Number(req.params.id);
     const result = await db.run('DELETE FROM calendar_events WHERE id = ?', [id]);
     if (!result || !result.changes) return res.status(404).json({ error: 'Opgaven findes ikke' });
+    // v113: slet ogsaa tilhoerende bemandinger (rode bjaelker)
+    try { await db.run('DELETE FROM calendar_staffing WHERE event_id = ?', [id]); } catch (e) { /* tabel kan mangle */ }
     res.json({ success: true });
   } catch (error) {
     console.error('Kalender DELETE fejl:', error.message);
     res.status(500).json({ error: 'Kunne ikke slette opgaven: ' + error.message });
+  }
+});
+
+// --- v113: BEMANDING (rode bjaelker) - separate enheder koblet til en opgave ---
+// Alle kan laese (montorer skal se ugeplanen); kun Ledelsen kan redigere.
+app.get('/api/calendar-staffing', auth, async (req, res) => {
+  try {
+    await ensureCalendarTable();
+    const { from, to } = req.query;
+    let rows;
+    if (from && to) {
+      rows = await db.all(
+        `SELECT sf.*, e.title AS event_title, e.color AS event_color, e.slot AS event_slot
+         FROM calendar_staffing sf
+         JOIN calendar_events e ON e.id = sf.event_id
+         WHERE sf.end_date >= ? AND sf.start_date <= ?
+         ORDER BY sf.start_date ASC, sf.id ASC`,
+        [String(from), String(to)]
+      );
+    } else {
+      rows = await db.all(
+        `SELECT sf.*, e.title AS event_title, e.color AS event_color, e.slot AS event_slot
+         FROM calendar_staffing sf
+         JOIN calendar_events e ON e.id = sf.event_id
+         ORDER BY sf.start_date ASC, sf.id ASC`
+      );
+    }
+    res.json(rows);
+  } catch (error) {
+    console.error('Bemanding GET fejl:', error.message);
+    res.status(500).json({ error: 'Kunne ikke hente bemandingen: ' + error.message });
+  }
+});
+
+app.post('/api/calendar-staffing', auth, async (req, res) => {
+  if (!requireAdminUser(req, res)) return;
+  try {
+    await ensureCalendarTable();
+    const { event_id, start_date, end_date, employee_names } = req.body || {};
+    if (!event_id || !start_date || !end_date) {
+      return res.status(400).json({ error: 'Opgave og datoer er paakraevet' });
+    }
+    const info = await db.run(
+      `INSERT INTO calendar_staffing (event_id, start_date, end_date, employee_names, created_by)
+       VALUES (?, ?, ?, ?, ?)`,
+      [Number(event_id), String(start_date), String(end_date), employee_names ? String(employee_names).trim() : '', req.user.id]
+    );
+    const created = await db.get('SELECT * FROM calendar_staffing WHERE id = ?', [info.lastInsertRowid]);
+    res.json(created);
+  } catch (error) {
+    console.error('Bemanding POST fejl:', error.message);
+    res.status(500).json({ error: 'Kunne ikke oprette bemandingen: ' + error.message });
+  }
+});
+
+app.put('/api/calendar-staffing/:id', auth, async (req, res) => {
+  if (!requireAdminUser(req, res)) return;
+  try {
+    const id = Number(req.params.id);
+    const existing = await db.get('SELECT * FROM calendar_staffing WHERE id = ?', [id]);
+    if (!existing) return res.status(404).json({ error: 'Bemandingen findes ikke' });
+    const { start_date, end_date, employee_names } = req.body || {};
+    await db.run(
+      `UPDATE calendar_staffing SET start_date = ?, end_date = ?, employee_names = ?, updated_at = ? WHERE id = ?`,
+      [
+        start_date !== undefined ? String(start_date) : existing.start_date,
+        end_date !== undefined ? String(end_date) : existing.end_date,
+        employee_names !== undefined ? String(employee_names).trim() : existing.employee_names,
+        new Date().toISOString(),
+        id,
+      ]
+    );
+    const updated = await db.get('SELECT * FROM calendar_staffing WHERE id = ?', [id]);
+    res.json(updated);
+  } catch (error) {
+    console.error('Bemanding PUT fejl:', error.message);
+    res.status(500).json({ error: 'Kunne ikke gemme bemandingen: ' + error.message });
+  }
+});
+
+app.delete('/api/calendar-staffing/:id', auth, async (req, res) => {
+  if (!requireAdminUser(req, res)) return;
+  try {
+    const id = Number(req.params.id);
+    const result = await db.run('DELETE FROM calendar_staffing WHERE id = ?', [id]);
+    if (!result || !result.changes) return res.status(404).json({ error: 'Bemandingen findes ikke' });
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Bemanding DELETE fejl:', error.message);
+    res.status(500).json({ error: 'Kunne ikke slette bemandingen: ' + error.message });
   }
 });
 

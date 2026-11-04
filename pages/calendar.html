@@ -75,24 +75,24 @@
   <div class="cal-dialog">
     <h3 id="cal-edit-title">Ny opgave</h3>
     <input type="hidden" id="cal-edit-id" />
-    <label>Ordrenummer (fx 3429)</label>
+    <label id="cal-label-order">Ordrenummer (fx 3429)</label>
     <input type="text" id="cal-edit-order" placeholder="fx 3429" />
-    <label>Kort beskrivelse *</label>
+    <label id="cal-label-desc">Kort beskrivelse *</label>
     <input type="text" id="cal-edit-desc" placeholder="fx Autocentrum - Revne" />
     <label>Fra dato *</label>
     <input type="date" id="cal-edit-start" />
     <label>Gentagelser (antal dage) *</label>
     <input type="number" id="cal-edit-repeat" min="1" max="31" value="1" />
-    <label>Bemanding (rød bjælke)</label>
+    <label id="cal-label-staff">Bemanding (rød bjælke)</label>
     <input type="text" id="cal-edit-staff" placeholder="fx Henrik, Jakob" />
-    <label>Farve</label>
+    <label id="cal-label-color">Farve</label>
     <div class="cal-colors" id="cal-colors"></div>
     <div id="cal-scope-row" style="display:none; margin-top:10px;">
       <label id="cal-scope-label">Hvad skal ændringen gælde?</label>
-      <div class="avail-toggle" id="cal-scope-toggle" style="margin-bottom:0;">
-        <button id="cal-scope-day" onclick="calendarPage.setScope('day')">Denne dag</button>
-        <button id="cal-scope-following" onclick="calendarPage.setScope('following')">Denne dag og frem</button>
-        <button id="cal-scope-all" class="active" onclick="calendarPage.setScope('all')">Hele perioden</button>
+      <div id="cal-scope-toggle" style="display:flex; flex-direction:column; gap:4px; margin-bottom:0;">
+        <button id="cal-scope-day" onclick="calendarPage.setScope('day')">Denne begivenhed</button>
+        <button id="cal-scope-following" onclick="calendarPage.setScope('following')">Denne og følgende begivenheder</button>
+        <button id="cal-scope-all" class="active" onclick="calendarPage.setScope('all')">Alle begivenheder</button>
       </div>
     </div>
     <div class="cal-dialog-buttons">
