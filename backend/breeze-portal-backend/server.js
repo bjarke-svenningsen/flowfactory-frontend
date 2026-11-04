@@ -5880,6 +5880,7 @@ async function ensureCalendarTable() {
       end_date DATE NOT NULL,
       color VARCHAR(20) NOT NULL DEFAULT '#34a853',
       employee_names TEXT,
+      slot INTEGER NOT NULL DEFAULT 0,
       created_by INTEGER,
       created_at TIMESTAMPTZ DEFAULT NOW(),
       updated_by INTEGER,
@@ -5894,6 +5895,7 @@ async function ensureCalendarTable() {
       end_date TEXT NOT NULL,
       color TEXT NOT NULL DEFAULT '#34a853',
       employee_names TEXT,
+      slot INTEGER NOT NULL DEFAULT 0,
       created_by INTEGER,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       updated_by INTEGER,
@@ -5901,6 +5903,15 @@ async function ensureCalendarTable() {
     )
   `;
   await db.run(createSql);
+  // v113: eksisterende tabeller faar slot-kolonnen via idempotent ALTER
+  try {
+    await db.run('ALTER TABLE calendar_events ADD COLUMN slot INTEGER NOT NULL DEFAULT 0');
+    console.log('✅ calendar_events: slot column added');
+  } catch (e) {
+    if (!/duplicate column|already exists/i.test(e.message)) {
+      console.error('calendar_events ALTER slot:', e.message);
+    }
+  }
   calendarTableEnsured = true;
 }
 
@@ -6001,10 +6012,11 @@ app.put('/api/calendar/:id', auth, async (req, res) => {
     const existing = await db.get('SELECT * FROM calendar_events WHERE id = ?', [id]);
     if (!existing) return res.status(404).json({ error: 'Opgaven findes ikke' });
     const { order_number, title, start_date, end_date, color, employee_names } = req.body || {};
+    const slot = req.body && req.body.slot !== undefined ? Number(req.body.slot) || 0 : (existing.slot || 0);
     await db.run(
       `UPDATE calendar_events SET
         order_number = ?, title = ?, start_date = ?, end_date = ?, color = ?, employee_names = ?,
-        updated_by = ?, updated_at = ?
+        slot = ?, updated_by = ?, updated_at = ?
        WHERE id = ?`,
       [
         order_number !== undefined ? (order_number ? String(order_number).trim() : null) : existing.order_number,
@@ -6013,6 +6025,7 @@ app.put('/api/calendar/:id', auth, async (req, res) => {
         end_date !== undefined ? String(end_date) : existing.end_date,
         color !== undefined ? String(color) : existing.color,
         employee_names !== undefined ? (employee_names ? String(employee_names).trim() : null) : existing.employee_names,
+        slot,
         req.user.id,
         new Date().toISOString(),
         id,

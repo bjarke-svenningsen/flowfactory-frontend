@@ -120,27 +120,35 @@ window.calendarPage = {
   },
 
   buildEventBar(ev, iso) {
+    // v113: bjaelker laegges i et vertikalt gitter (slot) - roed bjaelke (bemanding) UNDER farve-bjaelken
+    const SLOT_H = 28;
+    const wrap = document.createElement('div');
+    wrap.className = 'cal-event-wrap';
+    wrap.style.top = ((ev.slot || 0) * SLOT_H + 2) + 'px';
     const bar = document.createElement('button');
     bar.className = 'cal-event' + (this.isAdmin ? ' draggable' : '');
     bar.style.background = ev.color || '#34a853';
     const label = (ev.order_number ? ev.order_number + ' - ' : '') + ev.title;
     bar.textContent = label;
     bar.title = label + (ev.employee_names ? '\n' + ev.employee_names : '');
+    wrap.appendChild(bar);
     if (ev.employee_names) {
-      const emp = document.createElement('span');
+      const emp = document.createElement('div');
       emp.className = 'cal-emp';
       emp.textContent = ev.employee_names;
-      bar.appendChild(emp);
+      wrap.appendChild(emp);
     }
-    bar.addEventListener('click', (e) => { e.stopPropagation(); this.showInfo(ev); });
+    const open = (e) => { e.stopPropagation(); this.showInfo(ev); };
+    bar.addEventListener('click', open);
+    if (emp) emp.addEventListener('click', open);
     if (this.isAdmin) {
-      bar.draggable = true;
-      bar.addEventListener('dragstart', (e) => {
+      wrap.draggable = true;
+      wrap.addEventListener('dragstart', (e) => {
         e.dataTransfer.setData('text/plain', String(ev.id));
         e.dataTransfer.effectAllowed = 'move';
       });
     }
-    return bar;
+    return wrap;
   },
 
   // ===== IKKE BEMANDET =====
@@ -199,13 +207,20 @@ Object.assign(window.calendarPage, {
     const id = Number(e.dataTransfer.getData('text/plain'));
     const ev = this.events.find(x => x.id === id);
     if (!ev) return;
+    // v113: vertikal placering (slot) ud fra drop-y i dag-kolonnen
+    const rect = e.currentTarget.getBoundingClientRect();
+    const SLOT_H = 28;
+    const slot = Math.max(0, Math.floor((e.clientY - rect.top) / SLOT_H));
     const oldStart = new Date(ev.start_date + 'T12:00:00');
     const newStart = new Date(newStartIso + 'T12:00:00');
     const delta = Math.round((newStart - oldStart) / 86400000);
-    if (!delta) return;
-    const newEnd = this.isoDate(this.addDays(new Date(ev.end_date + 'T12:00:00'), delta));
+    const body = { slot };
+    if (delta) {
+      body.start_date = newStartIso;
+      body.end_date = this.isoDate(this.addDays(new Date(ev.end_date + 'T12:00:00'), delta));
+    }
     try {
-      await apiCall('/api/calendar/' + id, { method: 'PUT', body: JSON.stringify({ start_date: newStartIso, end_date: newEnd }) });
+      await apiCall('/api/calendar/' + id, { method: 'PUT', body: JSON.stringify(body) });
       await this.refresh();
     } catch (err) {
       alert('Kunne ikke flytte opgaven: ' + (err.message || err));
@@ -335,19 +350,25 @@ Object.assign(window.calendarPage, {
   },
 
   async openOrder(orderNumber) {
+    // v113: ordrer er tilbud med status accepted - find match i /api/quotes og aaben workspace
     try {
-      const orders = await apiCall('/api/orders');
-      const list = Array.isArray(orders) ? orders : (orders.orders || []);
-      const match = list.find(o => String(o.order_number).replace(/\s/g, '') === String(orderNumber).replace(/\s/g, ''));
+      const quotes = await apiCall('/api/quotes');
+      const list = Array.isArray(quotes) ? quotes : (quotes.quotes || []);
+      const clean = (s) => String(s || '').replace(/\s/g, '');
+      const match = list.find(q =>
+        clean(q.order_number) === clean(orderNumber) ||
+        clean(q.full_order_number).endsWith(clean(orderNumber)) ||
+        clean(q.quote_number) === clean(orderNumber)
+      );
       if (match && typeof showPage === 'function') {
         this.closeOverlay('cal-info-overlay');
         showPage('quotes');
-        setTimeout(() => { if (window.quotesPage && quotesPage.openOrder) quotesPage.openOrder(match.id); }, 400);
+        setTimeout(() => { if (typeof openOrderWorkspace === 'function') openOrderWorkspace(match.id); }, 500);
       } else {
-        alert('Ingen ordre med nummer ' + orderNumber + ' fundet i portalen.');
+        alert('Ingen ordre med nummer ' + orderNumber + ' fundet i portalen.\n(Bem: ordren skal vaere oprettet som ordre i Ordrestyring)');
       }
     } catch (e) {
-      alert('Kunne ikke sla ordren op: ' + (e.message || e));
+      alert('Kunne ikke slå ordren op: ' + (e.message || e));
     }
   },
 
