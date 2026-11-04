@@ -18,7 +18,7 @@ window.calendarPage = {
   availMode: 'day',
   selectedDate: null,     // valgt dag (til "Ikke bemandet")
   editingEvent: null,     // event i info-dialog (til rediger/slet)
-  COLORS: ['#34a853', '#1a73e8', '#fbbc04', '#8d6e63', '#f28b82', '#ff8f00', '#7b1fa2', '#00897b'],
+  COLORS: ['#34a853', '#1a73e8', '#fbbc04', '#8d6e63', '#f28b82', '#ff8f00', '#7b1fa2', '#00897b', '#c5221f', '#9aa0a6'],
 
   async init() {
     if (!this.weekStart) this.weekStart = this.mondayOf(new Date());
@@ -324,11 +324,11 @@ Object.assign(window.calendarPage, {
     document.getElementById('cal-edit-repeat').value = Math.max(1, days);
     this.renderColorPicker(ev.color);
     document.getElementById('cal-edit-delete').style.display = '';
-    // v113: scope-knapper vises kun naar opgaven varer flere dage - navnet paa den klikkede dag skrives paa knapperne
-    document.getElementById('cal-scope-row').style.display = (this.isAdmin && multiDay) ? '' : 'none';
-    if (multiDay) {
-      document.getElementById('cal-scope-day').textContent = 'Kun ' + dayName;
-      document.getElementById('cal-scope-following').textContent = dayName + ' og frem';
+    // v113: scope-knapper vises ALTID for Ledelsen - teksten siger bare "denne dag"
+    if (this.isAdmin) {
+      document.getElementById('cal-scope-row').style.display = '';
+      document.getElementById('cal-scope-day').textContent = 'Denne dag';
+      document.getElementById('cal-scope-following').textContent = 'Denne dag og frem';
       this.setScope('following');
     }
     this.openOverlay('cal-edit-overlay');
