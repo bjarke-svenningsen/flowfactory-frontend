@@ -26,12 +26,14 @@
   .cal-day-col:last-child { border-right: none; }
   .cal-day-col.today { background-color: rgba(26,115,232,0.04); }
   .cal-event-wrap { position: absolute; left: 2px; right: 2px; z-index: 2; }
-  .cal-event { display: block; border-radius: 6px; padding: 6px 8px; font-size: 12.5px; color: #fff; cursor: pointer; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; border: none; text-align: left; width: 100%; }
-  .cal-emp { margin-top: 2px; background: #c5221f; color: #fff; border-radius: 4px; padding: 0 7px; font-size: 9.5px; line-height: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; }
+  .cal-event { display: block; border-radius: 6px; padding: 6px 8px; font-size: 12.5px; color: #3c4043; cursor: pointer; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; border: none; text-align: left; width: 100%; }
+  .cal-emp { margin-top: 2px; background: #c5221f; color: #3c4043; border-radius: 4px; padding: 0 7px; font-size: 9.5px; line-height: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; }
+  #cal-scope-toggle button.active { background: #1a73e8; color: #fff; border-color: #1a73e8; }
   .cal-empty-hint { font-size: 11px; color: var(--text-muted); padding: 6px; }
   .cal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.4); display: none; align-items: center; justify-content: center; z-index: 500; }
   .cal-overlay.open { display: flex; }
-  .cal-dialog { background: var(--surface); border-radius: 12px; padding: 20px; width: 420px; min-height: 520px; max-width: 92vw; max-height: 88vh; overflow-y: auto; box-shadow: 0 10px 40px rgba(0,0,0,0.25); display: flex; flex-direction: column; }
+  .cal-dialog { background: var(--surface); border-radius: 12px; padding: 20px; width: 420px; max-width: 92vw; max-height: 88vh; overflow-y: auto; box-shadow: 0 10px 40px rgba(0,0,0,0.25); display: flex; flex-direction: column; }
+  .cal-dialog-edit { min-height: 520px; }
   .cal-dialog h3 { margin: 0 0 14px; font-size: 16px; }
   .cal-dialog label { display: block; font-size: 12px; font-weight: 600; margin: 10px 0 4px; color: var(--text); }
   .cal-dialog input[type="text"], .cal-dialog input[type="date"] { width: 100%; padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px; font-size: 13px; box-sizing: border-box; }
@@ -72,7 +74,7 @@
 
 <!-- Ny / rediger opgave -->
 <div class="cal-overlay" id="cal-edit-overlay">
-  <div class="cal-dialog">
+  <div class="cal-dialog cal-dialog-edit">
     <h3 id="cal-edit-title">Ny opgave</h3>
     <input type="hidden" id="cal-edit-id" />
     <label id="cal-label-order">Ordrenummer (fx 3429)</label>

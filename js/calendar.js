@@ -178,7 +178,6 @@ window.calendarPage = {
     }
     const open = (e) => { e.stopPropagation(); this.showInfo(ev, iso); };
     bar.addEventListener('click', open);
-    if (emp) emp.addEventListener('click', open);
     if (this.isAdmin) {
       wrap.draggable = true;
       wrap.addEventListener('dragstart', (e) => {
