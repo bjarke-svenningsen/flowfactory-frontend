@@ -5347,7 +5347,7 @@ app.get('/api/orders/:orderId/workspace', auth, async (req, res) => {
 import { syncEmailsPaginated, syncNewEmails, sendEmail, testImapConnection, testSmtpConnection } from './email-service.js';
 // v112: Microsoft Graph (Office 365 / Outlook) support
 import {
-  ensureGraphColumns, getGraphAuthUrl, exchangeGraphCode, getGraphProfile,
+  ensureGraphColumns, getGraphAuthUrl, getGraphAdminConsentUrl, exchangeGraphCode, getGraphProfile,
   getGraphRedirectUri, isGraphConfigured, syncEmailsGraph, sendEmailGraph,
 } from './graph-email-service.js';
 
@@ -5373,6 +5373,11 @@ app.get('/api/email/oauth/start', async (req, res) => {
 // v112: OAuth callback - Microsoft redirecter hertil efter login; opretter graph-konto og sender brugeren tilbage
 app.get('/api/email/oauth/callback', async (req, res) => {
   const FRONTEND = process.env.BASE_URL || 'https://flowfactory-frontend-20zs.onrender.com';
+  // v112: Admin-consent flow - Microsoft returnerer admin_consent=True uden state/code
+  if (req.query.admin_consent === 'True' || req.query.admin_consent === 'true' || req.query.tenant) {
+    console.log('✅ Graph admin-consent givet af tenant-admin');
+    return res.redirect(FRONTEND + '/dashboard.html#email?graphError=' + encodeURIComponent('Admin-godkendelse gennemført - prøv "Log ind med Microsoft" igen'));
+  }
   if (req.query.error) {
     console.error('❌ Graph OAuth error:', req.query.error_description);
     return res.redirect(FRONTEND + '/dashboard.html#email?graphError=' + encodeURIComponent(String(req.query.error_description || req.query.error)));

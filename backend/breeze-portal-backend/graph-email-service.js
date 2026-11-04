@@ -55,8 +55,19 @@ export function getGraphAuthUrl(userId) {
     response_mode: 'query',
     scope: SCOPES,
     state,
+    // v112: prompt=consent sikrer at consent-skaermen altid vises (admin-consent looper ellers i nogle tenants)
+    prompt: 'consent',
   });
   return `${AUTH_BASE}/${MS_TENANT_ID}/oauth2/v2.0/authorize?${params.toString()}`;
+}
+
+// v112: Direkte admin-consent URL - bruges engang af tenant-admin hvis bruger-consent er blokeret
+export function getGraphAdminConsentUrl() {
+  const params = new URLSearchParams({
+    client_id: MS_CLIENT_ID,
+    redirect_uri: MS_REDIRECT_URI,
+  });
+  return `${AUTH_BASE}/${MS_TENANT_ID}/adminconsent?${params.toString()}`;
 }
 
 async function tokenRequest(body) {
