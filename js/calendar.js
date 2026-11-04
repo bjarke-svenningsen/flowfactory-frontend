@@ -29,7 +29,7 @@ window.calendarPage = {
     if (this.isAdmin) document.getElementById('avail-toggle').style.display = 'flex';
     await this.loadUsers();
     try { await this.loadEvents(); } catch (e) { console.warn('calendar loadEvents fejlede:', e); }
-    this.render();
+    try { this.render(); } catch (e) { console.error('calendar render fejlede:', e); }
   },
 
   mondayOf(d) {
