@@ -2,7 +2,7 @@
 async function apiCall(path, options = {}) {
   const res = await fetch(path, {
     ...options,
-    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token(), ...(options.headers || {}) },
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (sessionStorage.getItem('token') || ''), ...(options.headers || {}) },
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(data.error || 'Fejl');
@@ -28,7 +28,7 @@ window.calendarPage = {
     // Toggle til dag/uge vises kun for Ledelsen (redigerings-brugere)
     if (this.isAdmin) document.getElementById('avail-toggle').style.display = 'flex';
     await this.loadUsers();
-    await this.loadEvents();
+    try { await this.loadEvents(); } catch (e) { console.warn('calendar loadEvents fejlede:', e); }
     this.render();
   },
 
