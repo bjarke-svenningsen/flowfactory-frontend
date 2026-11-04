@@ -5867,9 +5867,11 @@ app.get('/api/orders/:orderId/emails', auth, async (req, res) => {
 // --- v113: KALENDER (planlagte opgaver, hel-dags bjaelker) ---
 // Alle kan laese (gulvlaeggere/Montoerer skal se ugeplanen); kun Ledelsen (is_admin) kan redigere.
 let calendarTableEnsured = false;
+// v113: prod kan kore baade PostgreSQL og SQLite - CREATE TABLE skal vaere dual-kompatibel
+const calIsPg = (process.env.DATABASE_URL || '').trim().startsWith('postgresql://');
 async function ensureCalendarTable() {
   if (calendarTableEnsured) return;
-  await db.run(`
+  const createSql = calIsPg ? `
     CREATE TABLE IF NOT EXISTS calendar_events (
       id SERIAL PRIMARY KEY,
       order_number VARCHAR(50),
@@ -5883,7 +5885,22 @@ async function ensureCalendarTable() {
       updated_by INTEGER,
       updated_at TIMESTAMPTZ DEFAULT NOW()
     )
-  `);
+  ` : `
+    CREATE TABLE IF NOT EXISTS calendar_events (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      order_number TEXT,
+      title TEXT NOT NULL,
+      start_date TEXT NOT NULL,
+      end_date TEXT NOT NULL,
+      color TEXT NOT NULL DEFAULT '#34a853',
+      employee_names TEXT,
+      created_by INTEGER,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_by INTEGER,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `;
+  await db.run(createSql);
   calendarTableEnsured = true;
 }
 
@@ -5976,9 +5993,7 @@ app.post('/api/calendar', auth, async (req, res) => {
   }
 });
 
-// v113: Update calendar event
-
-// Update calendar event (Ledelsen kun) - bruges ogsaa til drag-and-drop flytning
+// v113: Update calendar event (Ledelsen kun) - bruges ogsaa til drag-and-drop flytning
 app.put('/api/calendar/:id', auth, async (req, res) => {
   if (!requireAdminUser(req, res)) return;
   try {
@@ -5989,7 +6004,7 @@ app.put('/api/calendar/:id', auth, async (req, res) => {
     await db.run(
       `UPDATE calendar_events SET
         order_number = ?, title = ?, start_date = ?, end_date = ?, color = ?, employee_names = ?,
-        updated_by = ?, updated_at = NOW()
+        updated_by = ?, updated_at = ?
        WHERE id = ?`,
       [
         order_number !== undefined ? (order_number ? String(order_number).trim() : null) : existing.order_number,
@@ -5999,6 +6014,7 @@ app.put('/api/calendar/:id', auth, async (req, res) => {
         color !== undefined ? String(color) : existing.color,
         employee_names !== undefined ? (employee_names ? String(employee_names).trim() : null) : existing.employee_names,
         req.user.id,
+        new Date().toISOString(),
         id,
       ]
     );
