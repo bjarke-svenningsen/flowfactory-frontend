@@ -196,27 +196,10 @@ async function showPage(pageName, updateHash = true) {
         item.classList.remove('active');
     });
     
-    // Map menu items to page names
-    const pageMapping = {
-        'feed': 0,
-        'profile': 1,
-        'files': 2,
-        'chat': 3,
-        'colleagues': 4,
-        'quotes': 5,
-        'email': 6,
-        'time': 7,
-        'materials': 8,
-        'settings': 9,
-        'admin': 10
-    };
-    
-    const menuIndex = pageMapping[pageName];
-    if (menuIndex !== undefined) {
-        const menuItems = document.querySelectorAll('.menu-item');
-        if (menuItems[menuIndex]) {
-            menuItems[menuIndex].classList.add('active');
-        }
+    // v113: Markér aktivt menupunkt via data-page (robust - ikke index-baseret)
+    const activeItem = document.querySelector('.menu-item[data-page="' + pageName + '"]');
+    if (activeItem) {
+        activeItem.classList.add('active');
     }
     
     // Load the page
