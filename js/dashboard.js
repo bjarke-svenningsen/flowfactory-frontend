@@ -243,6 +243,11 @@ async function showPage(pageName, updateHash = true) {
         if (window.emailClient) {
             window.emailClient.init();
         }
+    } else if (pageName === 'calendar') {
+        // v113: Portal-kalender via js/calendar.js
+        if (window.calendarPage) {
+            window.calendarPage.init();
+        }
     } else if (pageName === 'time') {
         // Time page will initialize itself via js/time.js
     } else if (pageName === 'materials') {

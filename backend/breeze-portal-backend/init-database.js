@@ -450,6 +450,30 @@ export async function initializeDatabase() {
       }
     }
 
+    // v113: Kalender-tabel (planlaegte opgaver uden tidspunkter - hel-dags bjaelker)
+    try {
+      await db.run(`
+        CREATE TABLE IF NOT EXISTS calendar_events (
+          id SERIAL PRIMARY KEY,
+          order_number VARCHAR(50),
+          title TEXT NOT NULL,
+          start_date DATE NOT NULL,
+          end_date DATE NOT NULL,
+          color VARCHAR(20) NOT NULL DEFAULT '#34a853',
+          employee_names TEXT,
+          created_by INTEGER,
+          created_at TIMESTAMPTZ DEFAULT NOW(),
+          updated_by INTEGER,
+          updated_at TIMESTAMPTZ DEFAULT NOW()
+        )
+      `);
+      console.log('✅ calendar_events table ready');
+    } catch (error) {
+      if (!error.message.includes('already exists')) {
+        console.log('ℹ️ calendar_events:', error.message);
+      }
+    }
+
     // Arbejdsstatus for ordrer (fase 2: Igangværende) — 'approved' | 'in_progress'
     try {
       await db.run(`ALTER TABLE quotes ADD COLUMN order_stage TEXT DEFAULT NULL`);

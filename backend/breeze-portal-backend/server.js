@@ -5864,6 +5864,160 @@ app.get('/api/orders/:orderId/emails', auth, async (req, res) => {
   res.json(emails);
 });
 
+// --- v113: KALENDER (planlagte opgaver, hel-dags bjaelker) ---
+// Alle kan laese (gulvlaeggere/Montoerer skal se ugeplanen); kun Ledelsen (is_admin) kan redigere.
+let calendarTableEnsured = false;
+async function ensureCalendarTable() {
+  if (calendarTableEnsured) return;
+  await db.run(`
+    CREATE TABLE IF NOT EXISTS calendar_events (
+      id SERIAL PRIMARY KEY,
+      order_number VARCHAR(50),
+      title TEXT NOT NULL,
+      start_date DATE NOT NULL,
+      end_date DATE NOT NULL,
+      color VARCHAR(20) NOT NULL DEFAULT '#34a853',
+      employee_names TEXT,
+      created_by INTEGER,
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      updated_by INTEGER,
+      updated_at TIMESTAMPTZ DEFAULT NOW()
+    )
+  `);
+  calendarTableEnsured = true;
+}
+
+function requireAdminUser(req, res) {
+  if (!req.user || !req.user.is_admin) {
+    res.status(403).json({ error: 'Kun Ledelsen kan redigere kalenderen' });
+    return false;
+  }
+  return true;
+}
+
+// Get calendar events in date range (inclusive)
+app.get('/api/calendar', auth, async (req, res) => {
+  try {
+    await ensureCalendarTable();
+    const { from, to } = req.query;
+    let rows;
+    if (from && to) {
+      rows = await db.all(
+        `SELECT ce.*, cu.name AS created_by_name, uu.name AS updated_by_name
+         FROM calendar_events ce
+         LEFT JOIN users cu ON cu.id = ce.created_by
+         LEFT JOIN users uu ON uu.id = ce.updated_by
+         WHERE ce.end_date >= ? AND ce.start_date <= ?
+         ORDER BY ce.start_date ASC, ce.id ASC`,
+        [String(from), String(to)]
+      );
+    } else {
+      rows = await db.all(
+        `SELECT ce.*, cu.name AS created_by_name, uu.name AS updated_by_name
+         FROM calendar_events ce
+         LEFT JOIN users cu ON cu.id = ce.created_by
+         LEFT JOIN users uu ON uu.id = ce.updated_by
+         ORDER BY ce.start_date ASC, ce.id ASC`
+      );
+    }
+    res.json(rows);
+  } catch (error) {
+    console.error('Kalender GET fejl:', error.message);
+    res.status(500).json({ error: 'Kunne ikke hente kalenderen' });
+  }
+});
+
+// Create calendar event (Ledelsen kun)
+app.post('/api/calendar', auth, async (req, res) => {
+  if (!requireAdminUser(req, res)) return;
+  try {
+    await ensureCalendarTable();
+    const { order_number, title, start_date, end_date, color, employee_names } = req.body || {};
+    if (!title || !start_date || !end_date) {
+      return res.status(400).json({ error: 'Titel og datoer er paakraevet' });
+    }
+    const info = await db.run(
+      `INSERT INTO calendar_events (order_number, title, start_date, end_date, color, employee_names, created_by, updated_by)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        order_number ? String(order_number).trim() : null,
+        String(title).trim(),
+        String(start_date),
+        String(end_date),
+        color ? String(color) : '#34a853',
+        employee_names ? String(employee_names).trim() : null,
+        req.user.id,
+        req.user.id,
+      ]
+    );
+    const created = await db.get(
+      `SELECT ce.*, cu.name AS created_by_name, uu.name AS updated_by_name
+       FROM calendar_events ce
+       LEFT JOIN users cu ON cu.id = ce.created_by
+       LEFT JOIN users uu ON uu.id = ce.updated_by
+       WHERE ce.id = ?`,
+      [info.lastInsertRowid]
+    );
+    res.json(created);
+  } catch (error) {
+    console.error('Kalender POST fejl:', error.message);
+    res.status(500).json({ error: 'Kunne ikke oprette opgaven' });
+  }
+});
+
+// Update calendar event (Ledelsen kun) - bruges ogsaa til drag-and-drop flytning
+app.put('/api/calendar/:id', auth, async (req, res) => {
+  if (!requireAdminUser(req, res)) return;
+  try {
+    const id = Number(req.params.id);
+    const existing = await db.get('SELECT * FROM calendar_events WHERE id = ?', [id]);
+    if (!existing) return res.status(404).json({ error: 'Opgaven findes ikke' });
+    const { order_number, title, start_date, end_date, color, employee_names } = req.body || {};
+    await db.run(
+      `UPDATE calendar_events SET
+        order_number = ?, title = ?, start_date = ?, end_date = ?, color = ?, employee_names = ?,
+        updated_by = ?, updated_at = NOW()
+       WHERE id = ?`,
+      [
+        order_number !== undefined ? (order_number ? String(order_number).trim() : null) : existing.order_number,
+        title !== undefined ? String(title).trim() : existing.title,
+        start_date !== undefined ? String(start_date) : existing.start_date,
+        end_date !== undefined ? String(end_date) : existing.end_date,
+        color !== undefined ? String(color) : existing.color,
+        employee_names !== undefined ? (employee_names ? String(employee_names).trim() : null) : existing.employee_names,
+        req.user.id,
+        id,
+      ]
+    );
+    const updated = await db.get(
+      `SELECT ce.*, cu.name AS created_by_name, uu.name AS updated_by_name
+       FROM calendar_events ce
+       LEFT JOIN users cu ON cu.id = ce.created_by
+       LEFT JOIN users uu ON uu.id = ce.updated_by
+       WHERE ce.id = ?`,
+      [id]
+    );
+    res.json(updated);
+  } catch (error) {
+    console.error('Kalender PUT fejl:', error.message);
+    res.status(500).json({ error: 'Kunne ikke opdatere opgaven' });
+  }
+});
+
+// Delete calendar event (Ledelsen kun)
+app.delete('/api/calendar/:id', auth, async (req, res) => {
+  if (!requireAdminUser(req, res)) return;
+  try {
+    const id = Number(req.params.id);
+    const result = await db.run('DELETE FROM calendar_events WHERE id = ?', [id]);
+    if (!result || !result.changes) return res.status(404).json({ error: 'Opgaven findes ikke' });
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Kalender DELETE fejl:', error.message);
+    res.status(500).json({ error: 'Kunne ikke slette opgaven' });
+  }
+});
+
 // --- OLD DISABLED ROUTES (kept for reference) ---
 /*
 // ADMIN: Migrate old emails to lowercase folder names (ONE TIME)
