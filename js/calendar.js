@@ -95,6 +95,8 @@ window.calendarPage = {
     const names = ['MAN.', 'TIRS.', 'ONS.', 'TORS.', 'FRE.', 'LOR.', 'SON.'];
     header.innerHTML = '';
     grid.innerHTML = '';
+    this._rows = {};        // v113: nulstil auto-placering ved hver render
+    this._rowsDone = new Set();
     for (let i = 0; i < 7; i++) {
       const day = this.addDays(this.weekStart, i);
       const iso = this.isoDate(day);
@@ -113,18 +115,37 @@ window.calendarPage = {
       // Events der daekker denne dag
       const dayEvents = this.events.filter(ev => ev.start_date <= iso && ev.end_date >= iso);
       for (const ev of dayEvents) {
-        col.appendChild(this.buildEventBar(ev, iso));
+        col.appendChild(this.buildEventBar(ev, iso, this.rowFor(ev)));
       }
       grid.appendChild(col);
     }
   },
 
-  buildEventBar(ev, iso) {
+  // v113: auto-placering - find foerste ledige raekke (slot) som opgaven kan ligge i paa ALLE dens dage
+  rowFor(ev) {
+    if (!this._rows) this._rows = {}; // iso-date -> Set(rækkeer brugt)
+    const evs = [...this.events].sort((a, b) => (a.slot || 0) - (b.slot || 0) || String(a.start_date).localeCompare(String(b.start_date)));
+    for (const e of evs) {
+      const key = e.id;
+      if (this._rowsDone && this._rowsDone.has(key)) continue;
+      if (!this._rowsDone) this._rowsDone = new Set();
+      this._rowsDone.add(key);
+      let row = e.slot || 0;
+      const dayIso = [];
+      for (let d = new Date(e.start_date + 'T12:00:00'); d <= new Date(e.end_date + 'T12:00:00'); d.setDate(d.getDate() + 1)) dayIso.push(this.isoDate(d));
+      while (dayIso.some(iso => this._rows[iso] && this._rows[iso].has(row))) row++;
+      dayIso.forEach(iso => { if (!this._rows[iso]) this._rows[iso] = new Set(); this._rows[iso].add(row); });
+      if (e.id === ev.id) return row;
+    }
+    return ev.slot || 0;
+  },
+
+  buildEventBar(ev, iso, row) {
     // v113: bjaelker laegges i et vertikalt gitter (slot) - roed bjaelke (bemanding) UNDER farve-bjaelken
     const SLOT_H = 28;
     const wrap = document.createElement('div');
     wrap.className = 'cal-event-wrap';
-    wrap.style.top = ((ev.slot || 0) * SLOT_H + 2) + 'px';
+    wrap.style.top = ((row != null ? row : (ev.slot || 0)) * SLOT_H + 2) + 'px';
     const bar = document.createElement('button');
     bar.className = 'cal-event' + (this.isAdmin ? ' draggable' : '');
     bar.style.background = ev.color || '#34a853';
