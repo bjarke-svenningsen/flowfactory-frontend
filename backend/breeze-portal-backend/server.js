@@ -601,7 +601,12 @@ function montorGuard(req, res, next) {
 
 app.use('/api/files', montorGuard);
 app.use('/api/folders', montorGuard);
-app.use('/api/email', montorGuard);
+// v112: OAuth-ruter (/api/email/oauth/*) validerer selv token via ?t= query-param
+// (browser-redirect kan ikke saette Bearer-header) og skal ikke gennem montorGuard.
+app.use('/api/email', (req, res, next) => {
+  if (req.path.startsWith('/oauth/')) return next();
+  montorGuard(req, res, next);
+});
 // BEMAEK (v83): /api/materials er IKKE blokeret laengere - montorer skal kunne
 // vaælge materialer (inkl. "Koersel/kilometer") naar de registrerer forbrug paa en sag.
 // GET returnerer uden priser til montor (se route nedenfor); skrive-endpoints har adminAuth.
@@ -5878,11 +5883,7 @@ app.post('/api/admin/migrate-email-folders', auth, adminAuth, async (req, res) =
   }
 });
 
-// Get user's email accounts
-app.get('/api/email/accounts', auth, async (req, res) => {
-  const accounts = await db.all('SELECT id, email, display_name, imap_host, smtp_host, is_active, last_sync FROM email_accounts WHERE user_id = ?', [req.user.id]);
-  res.json(accounts);
-});
+// v112: (dubleret GET /api/email/accounts fjernet - route i email-sektionen returnerer nu auth_type)
 
 // Add email account
 app.post('/api/email/accounts', auth, async (req, res) => {

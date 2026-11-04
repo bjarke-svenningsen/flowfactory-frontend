@@ -65,6 +65,7 @@
 
   .email-folders-tree {
     width: 220px;
+    flex: 0 0 auto; /* v112: respekter sat width i flex-layout (resize virker) */
     background: var(--surface);
     border-right: 1px solid var(--border);
     overflow-y: auto;
@@ -96,6 +97,7 @@
 
   .email-list-panel {
     width: 450px;
+    flex: 0 0 auto; /* v112: respekter sat width i flex-layout (resize virker) */
     background: var(--surface);
     border-right: 1px solid var(--border);
     display: flex;
