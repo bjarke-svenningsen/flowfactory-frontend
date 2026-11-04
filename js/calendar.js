@@ -1,4 +1,4 @@
-﻿// v113: Kalender - API-hjaelper (samme moenster som i email.js)
+// v113: Kalender - API-hjaelper (samme moenster som i email.js)
 async function apiCall(path, options = {}) {
   const res = await fetch(path, {
     ...options,
@@ -10,7 +10,7 @@ async function apiCall(path, options = {}) {
 }
 
 // v113: Portal-kalender - ugevisning med hel-dags bjaelker (ingen tidspunkter).
-// Ledelsen (is_admin) kan oprette/redigere/trÃ¦kke; alle andre har laesetilstand.
+// Ledelsen (is_admin) kan oprette/redigere/traekke; alle andre har laesetilstand.
 window.calendarPage = {
   weekStart: null,        // Date - mandag i vist uge
   events: [],
@@ -78,7 +78,7 @@ window.calendarPage = {
     const end = this.addDays(this.weekStart, 6);
     const fmt = (d) => d.toLocaleDateString('da-DK', { day: 'numeric', month: 'short' });
     document.getElementById('cal-week-label').textContent =
-      `Uge ${this.getWeekNumber(this.weekStart)} Â· ${fmt(this.weekStart)} â€“ ${fmt(end)}`;
+      `Uge ${this.getWeekNumber(this.weekStart)} - ${fmt(this.weekStart)} til ${fmt(end)}`;
   },
 
   getWeekNumber(d) {
@@ -92,7 +92,7 @@ window.calendarPage = {
     const header = document.getElementById('cal-grid-header');
     const grid = document.getElementById('cal-grid');
     const todayIso = this.isoDate(new Date());
-    const names = ['MAN.', 'TIRS.', 'ONS.', 'TORS.', 'FRE.', 'LÃ˜R.', 'SÃ˜N.'];
+    const names = ['MAN.', 'TIRS.', 'ONS.', 'TORS.', 'FRE.', 'LOR.', 'SON.'];
     header.innerHTML = '';
     grid.innerHTML = '';
     for (let i = 0; i < 7; i++) {
@@ -108,13 +108,10 @@ window.calendarPage = {
         col.addEventListener('dragover', (e) => e.preventDefault());
         col.addEventListener('drop', (e) => this.onDrop(e, iso));
       } else {
-        col.addEventListener('click', (e) => { if (e.target === col) this.selectedDate = iso; this.renderAvailability(); });
+        col.addEventListener('click', (e) => { if (e.target === col) { this.selectedDate = iso; this.renderAvailability(); } });
       }
-      // Events der dÃ¦kker denne dag
+      // Events der daekker denne dag
       const dayEvents = this.events.filter(ev => ev.start_date <= iso && ev.end_date >= iso);
-      if (dayEvents.length === 0) {
-        col.innerHTML = '<div class="cal-empty-hint"></div>';
-      }
       for (const ev of dayEvents) {
         col.appendChild(this.buildEventBar(ev, iso));
       }
@@ -126,8 +123,7 @@ window.calendarPage = {
     const bar = document.createElement('button');
     bar.className = 'cal-event' + (this.isAdmin ? ' draggable' : '');
     bar.style.background = ev.color || '#34a853';
-    const label = (ev.order_number ? ev.order_number + ' â€“ ' : '') + ev.title;
-    const dateObj = new Date(iso + 'T12:00:00');
+    const label = (ev.order_number ? ev.order_number + ' - ' : '') + ev.title;
     bar.textContent = label;
     bar.title = label + (ev.employee_names ? '\n' + ev.employee_names : '');
     if (ev.employee_names) {
@@ -146,7 +142,6 @@ window.calendarPage = {
     }
     return bar;
   },
-
 
   // ===== IKKE BEMANDET =====
   setAvailMode(mode) {
@@ -172,7 +167,6 @@ window.calendarPage = {
   renderAvailability() {
     const sub = document.getElementById('avail-sub');
     const list = document.getElementById('avail-list');
-    const weekEnd = this.addDays(this.weekStart, 6);
     const fmt = (d) => d.toLocaleDateString('da-DK', { weekday: 'short', day: 'numeric', month: 'short' });
     let fromIso, toIso;
     if (this.availMode === 'day') {
@@ -180,7 +174,7 @@ window.calendarPage = {
       sub.textContent = 'Ledige ' + fmt(new Date(fromIso + 'T12:00:00'));
     } else {
       fromIso = this.isoDate(this.weekStart);
-      toIso = this.isoDate(weekEnd);
+      toIso = this.isoDate(this.addDays(this.weekStart, 6));
       sub.textContent = 'Ledige i ugen (ikke sat paa nogen opgave)';
     }
     const staffed = this.staffedFirstNames(fromIso, toIso);
@@ -191,10 +185,14 @@ window.calendarPage = {
         chips.push(`<span class="avail-chip">${this.esc(u.name)}</span>`);
       }
     }
-    list.innerHTML = chips.length ? chips.join('') : '<div class="avail-none">Alle er bemandet ðŸŽ‰</div>';
+    list.innerHTML = chips.length ? chips.join('') : '<div class="avail-none">Alle er bemandet</div>';
   },
 
+  esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); },
+};
 
+// v113: (fortsaettelse af calendarPage - drag/drop + dialoger)
+Object.assign(window.calendarPage, {
   // ===== DRAG & DROP (flyt opgave) =====
   async onDrop(e, newStartIso) {
     e.preventDefault();
@@ -255,11 +253,6 @@ window.calendarPage = {
     this.openOverlay('cal-edit-overlay');
   },
 
-  esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); },
-};
-
-// v113: (fortsaettelse af calendarPage - rediger/info/CRUD)
-Object.assign(window.calendarPage, {
   editFromInfo() {
     const ev = this.editingEvent;
     if (!ev) return;
@@ -283,7 +276,10 @@ Object.assign(window.calendarPage, {
     const e = document.getElementById('cal-edit-end');
     if (s && e.value && e.value < s) e.value = s;
   },
+});
 
+// v113: (fortsaettelse af calendarPage - gem/info/slet)
+Object.assign(window.calendarPage, {
   async saveEvent() {
     const id = document.getElementById('cal-edit-id').value;
     const payload = {
@@ -316,9 +312,9 @@ Object.assign(window.calendarPage, {
   showInfo(ev) {
     this.editingEvent = ev;
     document.getElementById('cal-info-title').textContent =
-      (ev.order_number ? ev.order_number + ' – ' : '') + ev.title;
+      (ev.order_number ? ev.order_number + ' - ' : '') + ev.title;
     const d = (iso) => iso ? new Date(iso + 'T12:00:00').toLocaleDateString('da-DK', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }) : '';
-    const period = ev.start_date === ev.end_date ? d(ev.start_date) : `${d(ev.start_date)} → ${d(ev.end_date)}`;
+    const period = ev.start_date === ev.end_date ? d(ev.start_date) : `${d(ev.start_date)} til ${d(ev.end_date)}`;
     document.getElementById('cal-info-body').innerHTML =
       `<div style="font-size:13px; line-height:1.8;">` +
       `<div><b>Periode:</b> ${this.esc(period)}</div>` +
@@ -328,9 +324,16 @@ Object.assign(window.calendarPage, {
     const cr = ev.created_at ? new Date(ev.created_at).toLocaleString('da-DK') : '';
     const up = ev.updated_at ? new Date(ev.updated_at).toLocaleString('da-DK') : '';
     document.getElementById('cal-info-meta').innerHTML =
+      `Oprettet af ${this.esc(ev.created_by_name || '?')}${cr ? ' - ' + cr : ''}<br>` +
+      `Sidst redigeret af ${this.esc(ev.updated_by_name || '?')}${up ? ' - ' + up : ''}`;
+    document.getElementById('cal-info-edit').style.display = this.isAdmin ? '' : 'none';
+    document.getElementById('cal-info-delete').style.display = this.isAdmin ? '' : 'none';
+    const orderBtn = document.getElementById('cal-info-order');
+    orderBtn.style.display = ev.order_number ? '' : 'none';
+    orderBtn.onclick = () => this.openOrder(ev.order_number);
+    this.openOverlay('cal-info-overlay');
+  },
 
-// v113: (fortsaettelse - aabn ordre + slet)
-Object.assign(window.calendarPage, {
   async openOrder(orderNumber) {
     try {
       const orders = await apiCall('/api/orders');
@@ -344,7 +347,7 @@ Object.assign(window.calendarPage, {
         alert('Ingen ordre med nummer ' + orderNumber + ' fundet i portalen.');
       }
     } catch (e) {
-      alert('Kunne ikke slå ordren op: ' + (e.message || e));
+      alert('Kunne ikke sla ordren op: ' + (e.message || e));
     }
   },
 
@@ -375,14 +378,5 @@ Object.assign(window.calendarPage, {
   },
 });
 
-      `Oprettet af ${this.esc(ev.created_by_name || '?')}${cr ? ' · ' + cr : ''}<br>` +
-      `Sidst redigeret af ${this.esc(ev.updated_by_name || '?')}${up ? ' · ' + up : ''}`;
-    document.getElementById('cal-info-edit').style.display = this.isAdmin ? '' : 'none';
-    document.getElementById('cal-info-delete').style.display = this.isAdmin ? '' : 'none';
-    const orderBtn = document.getElementById('cal-info-order');
-    orderBtn.style.display = ev.order_number ? '' : 'none';
-    orderBtn.onclick = () => this.openOrder(ev.order_number);
-    this.openOverlay('cal-info-overlay');
-  },
-});
+
 

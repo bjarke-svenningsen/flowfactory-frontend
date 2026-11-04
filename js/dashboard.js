@@ -234,7 +234,10 @@ async function showPage(pageName, updateHash = true) {
     } else if (pageName === 'time') {
         // Time page will initialize itself via js/time.js
     } else if (pageName === 'materials') {
-        // Materials page will initialize itself via js/materials.js
+        // v113: init eksplicit ved hver aabning (materials.js' egen poll koerer kun een gang)
+        if (window.materialsPage) {
+            window.materialsPage.init();
+        }
     }
 }
 
