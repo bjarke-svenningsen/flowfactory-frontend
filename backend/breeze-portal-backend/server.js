@@ -5895,6 +5895,17 @@ function requireAdminUser(req, res) {
   return true;
 }
 
+// v113: sikrer at kalender-tabellen findes ved opstart (loggges hvis DB fejler)
+(async () => {
+  try {
+    await ensureCalendarTable();
+    console.log('✅ calendar_events table ready');
+  } catch (e) {
+    console.error('❌ calendar_events table fejl ved opstart:', e.message);
+  }
+})();
+
+
 // Get calendar events in date range (inclusive)
 app.get('/api/calendar', auth, async (req, res) => {
   try {
@@ -5923,7 +5934,7 @@ app.get('/api/calendar', auth, async (req, res) => {
     res.json(rows);
   } catch (error) {
     console.error('Kalender GET fejl:', error.message);
-    res.status(500).json({ error: 'Kunne ikke hente kalenderen' });
+    res.status(500).json({ error: 'Kunne ikke hente kalenderen: ' + error.message });
   }
 });
 
@@ -5961,9 +5972,11 @@ app.post('/api/calendar', auth, async (req, res) => {
     res.json(created);
   } catch (error) {
     console.error('Kalender POST fejl:', error.message);
-    res.status(500).json({ error: 'Kunne ikke oprette opgaven' });
+    res.status(500).json({ error: 'Kunne ikke oprette opgaven: ' + error.message });
   }
 });
+
+// v113: Update calendar event
 
 // Update calendar event (Ledelsen kun) - bruges ogsaa til drag-and-drop flytning
 app.put('/api/calendar/:id', auth, async (req, res) => {
@@ -6000,7 +6013,7 @@ app.put('/api/calendar/:id', auth, async (req, res) => {
     res.json(updated);
   } catch (error) {
     console.error('Kalender PUT fejl:', error.message);
-    res.status(500).json({ error: 'Kunne ikke opdatere opgaven' });
+    res.status(500).json({ error: 'Kunne ikke gemme opgaven: ' + error.message });
   }
 });
 
@@ -6014,7 +6027,7 @@ app.delete('/api/calendar/:id', auth, async (req, res) => {
     res.json({ success: true });
   } catch (error) {
     console.error('Kalender DELETE fejl:', error.message);
-    res.status(500).json({ error: 'Kunne ikke slette opgaven' });
+    res.status(500).json({ error: 'Kunne ikke slette opgaven: ' + error.message });
   }
 });
 

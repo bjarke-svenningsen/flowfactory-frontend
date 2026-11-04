@@ -247,7 +247,7 @@ Object.assign(window.calendarPage, {
     document.getElementById('cal-edit-staff').value = '';
     const start = dateIso || this.selectedDate || this.isoDate(new Date());
     document.getElementById('cal-edit-start').value = start;
-    document.getElementById('cal-edit-end').value = start;
+    document.getElementById('cal-edit-repeat').value = 1;
     this.renderColorPicker(localStorage.getItem('calLastColor'));
     document.getElementById('cal-edit-delete').style.display = 'none';
     this.openOverlay('cal-edit-overlay');
@@ -263,7 +263,8 @@ Object.assign(window.calendarPage, {
     document.getElementById('cal-edit-desc').value = ev.title || '';
     document.getElementById('cal-edit-staff').value = ev.employee_names || '';
     document.getElementById('cal-edit-start').value = ev.start_date;
-    document.getElementById('cal-edit-end').value = ev.end_date;
+    const days = Math.round((new Date(ev.end_date + 'T12:00:00') - new Date(ev.start_date + 'T12:00:00')) / 86400000) + 1;
+    document.getElementById('cal-edit-repeat').value = Math.max(1, days);
     this.renderColorPicker(ev.color);
     document.getElementById('cal-edit-delete').style.display = '';
     this.openOverlay('cal-edit-overlay');
@@ -271,30 +272,29 @@ Object.assign(window.calendarPage, {
 
   closeEditDialog() { this.closeOverlay('cal-edit-overlay'); },
 
-  syncEndMin() {
-    const s = document.getElementById('cal-edit-start').value;
-    const e = document.getElementById('cal-edit-end');
-    if (s && e.value && e.value < s) e.value = s;
-  },
+  syncEndMin() { /* v113: til-dato beregnes nu ud fra gentagelser */ },
 });
 
 // v113: (fortsaettelse af calendarPage - gem/info/slet)
 Object.assign(window.calendarPage, {
   async saveEvent() {
     const id = document.getElementById('cal-edit-id').value;
+    const start = document.getElementById('cal-edit-start').value;
+    const repeats = Math.max(1, Math.min(31, parseInt(document.getElementById('cal-edit-repeat').value, 10) || 1));
+    // v113: gentagelser - slutdato beregnes ud fra antal dage
+    const endIso = this.isoDate(this.addDays(new Date(start + 'T12:00:00'), repeats - 1));
     const payload = {
       order_number: document.getElementById('cal-edit-order').value.trim(),
       title: document.getElementById('cal-edit-desc').value.trim(),
-      start_date: document.getElementById('cal-edit-start').value,
-      end_date: document.getElementById('cal-edit-end').value,
+      start_date: start,
+      end_date: endIso,
       color: this.getSelectedColor(),
       employee_names: document.getElementById('cal-edit-staff').value.trim(),
     };
-    if (!payload.title || !payload.start_date || !payload.end_date) {
-      alert('Udfyld beskrivelse og datoer.');
+    if (!payload.title || !start) {
+      alert('Udfyld beskrivelse og startdato.');
       return;
     }
-    if (payload.end_date < payload.start_date) payload.end_date = payload.start_date;
     try {
       if (id) {
         await apiCall('/api/calendar/' + id, { method: 'PUT', body: JSON.stringify(payload) });
