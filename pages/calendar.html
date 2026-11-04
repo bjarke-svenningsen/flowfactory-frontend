@@ -31,15 +31,15 @@
   .cal-empty-hint { font-size: 11px; color: var(--text-muted); padding: 6px; }
   .cal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.4); display: none; align-items: center; justify-content: center; z-index: 500; }
   .cal-overlay.open { display: flex; }
-  .cal-dialog { background: var(--surface); border-radius: 12px; padding: 20px; width: 420px; max-width: 92vw; max-height: 86vh; overflow-y: auto; box-shadow: 0 10px 40px rgba(0,0,0,0.25); }
+  .cal-dialog { background: var(--surface); border-radius: 12px; padding: 20px; width: 420px; min-height: 520px; max-width: 92vw; max-height: 88vh; overflow-y: auto; box-shadow: 0 10px 40px rgba(0,0,0,0.25); display: flex; flex-direction: column; }
   .cal-dialog h3 { margin: 0 0 14px; font-size: 16px; }
   .cal-dialog label { display: block; font-size: 12px; font-weight: 600; margin: 10px 0 4px; color: var(--text); }
   .cal-dialog input[type="text"], .cal-dialog input[type="date"] { width: 100%; padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px; font-size: 13px; box-sizing: border-box; }
   .cal-colors { display: flex; gap: 8px; flex-wrap: wrap; }
   .cal-color-dot { width: 28px; height: 28px; border-radius: 50%; cursor: pointer; border: 2px solid transparent; }
   .cal-color-dot.selected { border-color: var(--text); transform: scale(1.12); }
-  .cal-dialog-buttons { display: flex; gap: 8px; justify-content: flex-end; margin-top: 18px; }
-  .cal-dialog-buttons button { padding: 8px 16px; border-radius: 8px; border: 1px solid var(--border); background: transparent; cursor: pointer; color: var(--text); font-size: 13px; }
+  .cal-dialog-buttons { display: flex; gap: 6px; justify-content: flex-end; margin-top: auto; padding-top: 18px; }
+  .cal-dialog-buttons button { padding: 5px 11px; border-radius: 7px; border: 1px solid var(--border); background: transparent; cursor: pointer; color: var(--text); font-size: 12.5px; }
   .cal-dialog-buttons button.primary { background: var(--accent); border-color: var(--accent); font-weight: 600; color: #2D3139; }
   .cal-dialog-buttons button.danger { color: #c5221f; border-color: #c5221f; margin-right: auto; }
   .cal-meta { font-size: 11.5px; color: var(--text-muted); line-height: 1.7; margin-top: 12px; border-top: 1px solid var(--border); padding-top: 10px; }
@@ -88,11 +88,11 @@
     <label>Farve</label>
     <div class="cal-colors" id="cal-colors"></div>
     <div id="cal-scope-row" style="display:none; margin-top:10px;">
-      <label>Hvad skal aendringen gaelde?</label>
+      <label id="cal-scope-label">Hvad skal ændringen gælde?</label>
       <div class="avail-toggle" id="cal-scope-toggle" style="margin-bottom:0;">
         <button id="cal-scope-day" onclick="calendarPage.setScope('day')">Kun denne dag</button>
-        <button id="cal-scope-following" class="active" onclick="calendarPage.setScope('following')">Denne og frem</button>
-        <button id="cal-scope-all" onclick="calendarPage.setScope('all')">Hele perioden</button>
+        <button id="cal-scope-following" onclick="calendarPage.setScope('following')">Denne og frem</button>
+        <button id="cal-scope-all" class="active" onclick="calendarPage.setScope('all')">Hele perioden</button>
       </div>
     </div>
     <div class="cal-dialog-buttons">
@@ -111,7 +111,6 @@
     <div class="cal-dialog-buttons">
       <button id="cal-info-delete" class="danger" style="display:none;" onclick="calendarPage.deleteFromInfo()">Slet</button>
       <button id="cal-info-order" style="display:none;">Åbn ordre</button>
-      <button id="cal-info-edit-day" style="display:none;" onclick="calendarPage.editFromInfo(true)">Rediger denne dag</button>
       <button id="cal-info-edit" class="primary" style="display:none;" onclick="calendarPage.editFromInfo()">Rediger</button>
       <button onclick="calendarPage.closeOverlay('cal-info-overlay')">Luk</button>
     </div>
