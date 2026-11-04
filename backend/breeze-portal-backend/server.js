@@ -5972,12 +5972,13 @@ app.post('/api/calendar', auth, async (req, res) => {
   try {
     await ensureCalendarTable();
     const { order_number, title, start_date, end_date, color, employee_names } = req.body || {};
+    const slot = req.body && req.body.slot !== undefined ? (Number(req.body.slot) || 0) : 0;
     if (!title || !start_date || !end_date) {
       return res.status(400).json({ error: 'Titel og datoer er paakraevet' });
     }
     const info = await db.run(
-      `INSERT INTO calendar_events (order_number, title, start_date, end_date, color, employee_names, created_by, updated_by)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO calendar_events (order_number, title, start_date, end_date, color, employee_names, slot, created_by, updated_by)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         order_number ? String(order_number).trim() : null,
         String(title).trim(),
@@ -5985,6 +5986,7 @@ app.post('/api/calendar', auth, async (req, res) => {
         String(end_date),
         color ? String(color) : '#34a853',
         employee_names ? String(employee_names).trim() : null,
+        slot,
         req.user.id,
         req.user.id,
       ]

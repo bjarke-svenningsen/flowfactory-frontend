@@ -96,7 +96,7 @@ window.calendarPage = {
     header.innerHTML = '';
     grid.innerHTML = '';
     this._rows = {};        // v113: nulstil auto-placering ved hver render
-    this._rowsDone = new Set();
+    this._rowById = {};
     for (let i = 0; i < 7; i++) {
       const day = this.addDays(this.weekStart, i);
       const iso = this.isoDate(day);
@@ -106,7 +106,14 @@ window.calendarPage = {
       col.className = 'cal-day-col' + (isToday ? ' today' : '');
       col.dataset.date = iso;
       if (this.isAdmin) {
-        col.addEventListener('click', (e) => { if (e.target === col) this.openNewDialog(iso); });
+        col.addEventListener('click', (e) => {
+          if (e.target === col) {
+            // v113: ny opgave placeres i det gitter-felt brugeren klikker paa
+            const rect = col.getBoundingClientRect();
+            const slot = Math.max(0, Math.floor((e.clientY - rect.top) / 28));
+            this.openNewDialog(iso, slot);
+          }
+        });
         col.addEventListener('dragover', (e) => e.preventDefault());
         col.addEventListener('drop', (e) => this.onDrop(e, iso));
       } else {
@@ -123,21 +130,19 @@ window.calendarPage = {
 
   // v113: auto-placering - find foerste ledige raekke (slot) som opgaven kan ligge i paa ALLE dens dage
   rowFor(ev) {
-    if (!this._rows) this._rows = {}; // iso-date -> Set(rækkeer brugt)
+    if (!this._rows) this._rows = {};     // iso-date -> Set(brugte raekker)
+    if (!this._rowById) this._rowById = {}; // ev-id -> beregnet raekke (samme paa alle dage)
     const evs = [...this.events].sort((a, b) => (a.slot || 0) - (b.slot || 0) || String(a.start_date).localeCompare(String(b.start_date)));
     for (const e of evs) {
-      const key = e.id;
-      if (this._rowsDone && this._rowsDone.has(key)) continue;
-      if (!this._rowsDone) this._rowsDone = new Set();
-      this._rowsDone.add(key);
+      if (this._rowById[e.id] !== undefined) continue;
       let row = e.slot || 0;
       const dayIso = [];
       for (let d = new Date(e.start_date + 'T12:00:00'); d <= new Date(e.end_date + 'T12:00:00'); d.setDate(d.getDate() + 1)) dayIso.push(this.isoDate(d));
       while (dayIso.some(iso => this._rows[iso] && this._rows[iso].has(row))) row++;
       dayIso.forEach(iso => { if (!this._rows[iso]) this._rows[iso] = new Set(); this._rows[iso].add(row); });
-      if (e.id === ev.id) return row;
+      this._rowById[e.id] = row;
     }
-    return ev.slot || 0;
+    return this._rowById[ev.id] !== undefined ? this._rowById[ev.id] : (ev.slot || 0);
   },
 
   buildEventBar(ev, iso, row) {
@@ -275,8 +280,9 @@ Object.assign(window.calendarPage, {
     return sel ? sel.style.background : '#34a853';
   },
 
-  openNewDialog(dateIso) {
+  openNewDialog(dateIso, slot) {
     this.editingEvent = null;
+    this.newSlot = slot || 0; // v113: gitter-raekke brugeren klikkede paa (0 hvis top-knappen)
     document.getElementById('cal-edit-title').textContent = 'Ny opgave';
     document.getElementById('cal-edit-id').value = '';
     document.getElementById('cal-edit-order').value = '';
@@ -293,6 +299,7 @@ Object.assign(window.calendarPage, {
   editFromInfo() {
     const ev = this.editingEvent;
     if (!ev) return;
+    this.newSlot = ev.slot || 0; // v113: behold placering ved redigering
     this.closeOverlay('cal-info-overlay');
     document.getElementById('cal-edit-title').textContent = 'Rediger opgave';
     document.getElementById('cal-edit-id').value = ev.id;
@@ -327,6 +334,7 @@ Object.assign(window.calendarPage, {
       end_date: endIso,
       color: this.getSelectedColor(),
       employee_names: document.getElementById('cal-edit-staff').value.trim(),
+      slot: this.newSlot || 0, // v113: klik-placering / auto-raekke
     };
     if (!payload.title || !start) {
       alert('Udfyld beskrivelse og startdato.');
