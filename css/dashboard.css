@@ -87,9 +87,9 @@ body {
 
 .main-content {
     display: flex;
-    max-width: 1600px;
-    margin: 30px auto;
-    padding: 0 20px;
+    max-width: none;
+    margin: 16px auto;
+    padding: 0 16px;
     gap: 20px;
 }
 

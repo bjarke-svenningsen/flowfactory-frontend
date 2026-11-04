@@ -117,7 +117,7 @@ window.calendarPage = {
           if (e.target === col) {
             // v113: ny opgave placeres i det gitter-felt brugeren klikker paa
             const rect = col.getBoundingClientRect();
-            const slot = Math.max(0, Math.floor((e.clientY - rect.top) / 28));
+            const slot = Math.max(0, Math.floor((e.clientY - rect.top) / 32));
             this.openNewDialog(iso, slot);
           }
         });
@@ -154,7 +154,7 @@ window.calendarPage = {
 
   buildEventBar(ev, iso, row) {
     // v113: bjaelker laegges i et vertikalt gitter (slot) - roed bjaelke (bemanding) UNDER farve-bjaelken
-    const SLOT_H = 28;
+    const SLOT_H = 32;
     const wrap = document.createElement('div');
     wrap.className = 'cal-event-wrap';
     wrap.style.top = ((row != null ? row : (ev.slot || 0)) * SLOT_H + 2) + 'px';
@@ -246,7 +246,7 @@ Object.assign(window.calendarPage, {
     if (!ev) return;
     // v113: vertikal placering (slot) ud fra drop-y i dag-kolonnen
     const rect = e.currentTarget.getBoundingClientRect();
-    const SLOT_H = 28;
+    const SLOT_H = 32;
     const slot = Math.max(0, Math.floor((e.clientY - rect.top) / SLOT_H));
     const oldStart = new Date(ev.start_date + 'T12:00:00');
     const newStart = new Date(newStartIso + 'T12:00:00');
