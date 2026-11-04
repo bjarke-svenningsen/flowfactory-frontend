@@ -132,8 +132,9 @@ window.calendarPage = {
     bar.textContent = label;
     bar.title = label + (ev.employee_names ? '\n' + ev.employee_names : '');
     wrap.appendChild(bar);
+    let emp = null;
     if (ev.employee_names) {
-      const emp = document.createElement('div');
+      emp = document.createElement('div');
       emp.className = 'cal-emp';
       emp.textContent = ev.employee_names;
       wrap.appendChild(emp);
