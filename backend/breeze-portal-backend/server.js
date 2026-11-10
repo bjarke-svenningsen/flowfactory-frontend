@@ -5889,6 +5889,7 @@ async function ensureCalendarTable() {
       employee_names TEXT,
       slot INTEGER NOT NULL DEFAULT 0,
       private_owner INTEGER,
+      is_ferie INTEGER NOT NULL DEFAULT 0,
       created_by INTEGER,
       created_at TIMESTAMPTZ DEFAULT NOW(),
       updated_by INTEGER,
@@ -5905,6 +5906,7 @@ async function ensureCalendarTable() {
       employee_names TEXT,
       slot INTEGER NOT NULL DEFAULT 0,
       private_owner INTEGER,
+      is_ferie INTEGER NOT NULL DEFAULT 0,
       created_by INTEGER,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       updated_by INTEGER,
@@ -5921,13 +5923,22 @@ async function ensureCalendarTable() {
       console.error('calendar_events ALTER slot:', e.message);
     }
   }
-  // v113: private aftaler (kun ejeren + Ledelsen-ejer kan se dem - montoerer ser dem aldrig)
+  // v113: private aftaler (kun Ledelsen kan se dem - montoerer ser dem aldrig)
   try {
     await db.run('ALTER TABLE calendar_events ADD COLUMN private_owner INTEGER');
     console.log('✅ calendar_events: private_owner column added');
   } catch (e) {
     if (!/duplicate column|already exists/i.test(e.message)) {
       console.error('calendar_events ALTER private_owner:', e.message);
+    }
+  }
+  // v113: ferie-opgaver renderes som roede halv-hoejde bjaelker i ferie-banerne
+  try {
+    await db.run('ALTER TABLE calendar_events ADD COLUMN is_ferie INTEGER NOT NULL DEFAULT 0');
+    console.log('✅ calendar_events: is_ferie column added');
+  } catch (e) {
+    if (!/duplicate column|already exists/i.test(e.message)) {
+      console.error('calendar_events ALTER is_ferie:', e.message);
     }
   }
   calendarTableEnsured = true;
@@ -6050,12 +6061,13 @@ app.post('/api/calendar', auth, async (req, res) => {
     // v113: private aftaler - body.private saetter ejeren til indlogget bruger (Ledelsen)
     const isPrivate = !!(req.body && req.body.private);
     const private_owner = isPrivate ? req.user.id : (req.body && req.body.private_owner ? Number(req.body.private_owner) : null);
+    const is_ferie = req.body && req.body.is_ferie ? 1 : 0;
     if (!title || !start_date || !end_date) {
       return res.status(400).json({ error: 'Titel og datoer er paakraevet' });
     }
     const info = await db.run(
-      `INSERT INTO calendar_events (order_number, title, start_date, end_date, color, employee_names, slot, private_owner, created_by, updated_by)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO calendar_events (order_number, title, start_date, end_date, color, employee_names, slot, private_owner, is_ferie, created_by, updated_by)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         order_number ? String(order_number).trim() : null,
         String(title).trim(),
@@ -6065,6 +6077,7 @@ app.post('/api/calendar', auth, async (req, res) => {
         employee_names ? String(employee_names).trim() : null,
         slot,
         private_owner,
+        is_ferie,
         req.user.id,
         req.user.id,
       ]
@@ -6095,10 +6108,11 @@ app.put('/api/calendar/:id', auth, async (req, res) => {
     const slot = req.body && req.body.slot !== undefined ? Number(req.body.slot) || 0 : (existing.slot || 0);
     // v113: private_owner kan opdateres; ellers bevares eksisterende ejer
     const private_owner = req.body.private_owner !== undefined ? (req.body.private_owner ? Number(req.body.private_owner) : null) : existing.private_owner;
+    const is_ferie = req.body.is_ferie !== undefined ? (req.body.is_ferie ? 1 : 0) : (existing.is_ferie ? 1 : 0);
     await db.run(
       `UPDATE calendar_events SET
         order_number = ?, title = ?, start_date = ?, end_date = ?, color = ?, employee_names = ?,
-        slot = ?, private_owner = ?, updated_by = ?, updated_at = ?
+        slot = ?, private_owner = ?, is_ferie = ?, updated_by = ?, updated_at = ?
        WHERE id = ?`,
       [
         order_number !== undefined ? (order_number ? String(order_number).trim() : null) : existing.order_number,
@@ -6109,6 +6123,7 @@ app.put('/api/calendar/:id', auth, async (req, res) => {
         employee_names !== undefined ? (employee_names ? String(employee_names).trim() : null) : existing.employee_names,
         slot,
         private_owner,
+        is_ferie,
         req.user.id,
         new Date().toISOString(),
         id,
