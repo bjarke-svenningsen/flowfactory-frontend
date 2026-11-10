@@ -432,8 +432,8 @@ Object.assign(window.calendarPage, {
         const day = this.editDay || sf.start_date;
         const scope = this.editScope || 'all';
         const single = sf.start_date === sf.end_date;
-        if (!single && scope !== 'all' && day >= sf.start_date && day <= sf.end_date) {
-          // 1) tilpas original-bemandingen saa den ikke laengere daekker dagen
+        if (scope === 'day' && !single && day >= sf.start_date && day <= sf.end_date) {
+          // KUN DENNE DAG: gamle navne foer/efter, nye navne paa dagen
           if (day > sf.start_date) {
             const prevEnd = this.isoDate(this.addDays(new Date(day + 'T12:00:00'), -1));
             await apiCall('/api/calendar-staffing/' + sf.id, {
@@ -441,34 +441,49 @@ Object.assign(window.calendarPage, {
               body: JSON.stringify({ start_date: sf.start_date, end_date: prevEnd, employee_names: sf.employee_names })
             });
           } else if (sf.end_date > day) {
-            // dagen er foerste dag: ryk bemandingens start til dagen efter
             const nextStart = this.isoDate(this.addDays(new Date(day + 'T12:00:00'), 1));
             await apiCall('/api/calendar-staffing/' + sf.id, {
               method: 'PUT',
               body: JSON.stringify({ start_date: nextStart, end_date: sf.end_date, employee_names: sf.employee_names })
             });
           }
-          // 2) ny bemandings-del med de aendrede navne
-          const partEnd = scope === 'day' ? day : endIso;
           await apiCall('/api/calendar-staffing', {
             method: 'POST',
-            body: JSON.stringify({ event_id: sf.event_id, start_date: day, end_date: partEnd, employee_names: staffVal })
+            body: JSON.stringify({ event_id: sf.event_id, start_date: day, end_date: day, employee_names: staffVal })
           });
-          // 3) "denne begivenhed": hale med de GAMLE navne efter den aendrede dag
-          if (scope === 'day' && day < sf.end_date) {
+          if (day < sf.end_date) {
             const tailStart = this.isoDate(this.addDays(new Date(day + 'T12:00:00'), 1));
             await apiCall('/api/calendar-staffing', {
               method: 'POST',
               body: JSON.stringify({ event_id: sf.event_id, start_date: tailStart, end_date: sf.end_date, employee_names: sf.employee_names })
             });
           }
+        } else if (scope === 'following' && !single && day >= sf.start_date && day <= sf.end_date) {
+          // DENNE OG FOELGENDE: gamle navne foer dagen - nye navne fra dagen til slut (erstatter originalen frem)
+          if (day > sf.start_date) {
+            const prevEnd = this.isoDate(this.addDays(new Date(day + 'T12:00:00'), -1));
+            await apiCall('/api/calendar-staffing/' + sf.id, {
+              method: 'PUT',
+              body: JSON.stringify({ start_date: sf.start_date, end_date: prevEnd, employee_names: sf.employee_names })
+            });
+            await apiCall('/api/calendar-staffing', {
+              method: 'POST',
+              body: JSON.stringify({ event_id: sf.event_id, start_date: day, end_date: sf.end_date, employee_names: staffVal })
+            });
+          } else {
+            await apiCall('/api/calendar-staffing/' + sf.id, {
+              method: 'PUT',
+              body: JSON.stringify({ start_date: sf.start_date, end_date: sf.end_date, employee_names: staffVal })
+            });
+          }
         } else {
+          // ALLE (eller 1-dags): opdater originalen direkte
           await apiCall('/api/calendar-staffing/' + sf.id, {
             method: 'PUT',
             body: JSON.stringify({ start_date: start, end_date: endIso, employee_names: staffVal })
           });
         }
-        this.closeEditDialog();
+      this.closeEditDialog();
         await this.refresh();
         return;
       }
