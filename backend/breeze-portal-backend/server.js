@@ -5941,6 +5941,16 @@ async function ensureCalendarTable() {
       console.error('calendar_events ALTER is_ferie:', e.message);
     }
   }
+  // v113: en-gangs migration - gamle "ferie"-opgaver/bemandinger (oprettet foer flaget) markeres automatisk
+  try {
+    const evUpd = await db.run("UPDATE calendar_events SET is_ferie = 1 WHERE is_ferie = 0 AND LOWER(title) LIKE '%ferie%'");
+    const sfUpd = await db.run("UPDATE calendar_staffing SET is_ferie = 1 WHERE is_ferie = 0 AND LOWER(employee_names) LIKE '%ferie%'");
+    if ((evUpd && evUpd.changes) || (sfUpd && sfUpd.changes)) {
+      console.log(`✅ ferie-migration: ${(evUpd && evUpd.changes) || 0} opgaver + ${(sfUpd && sfUpd.changes) || 0} bemandinger markeret som ferie`);
+    }
+  } catch (e) {
+    console.error('ferie-migration:', e.message);
+  }
   calendarTableEnsured = true;
   // v113: bemanding er nu ENHEDER adskilt fra opgaven (rode bjaelker kan redigeres uden at splitte opgaven)
   const staffingSql = calIsPg ? `
