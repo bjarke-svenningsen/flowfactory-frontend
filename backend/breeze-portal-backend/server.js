@@ -6018,9 +6018,9 @@ app.get('/api/calendar', auth, async (req, res) => {
          LEFT JOIN users cu ON cu.id = ce.created_by
          LEFT JOIN users uu ON uu.id = ce.updated_by
          WHERE ce.end_date >= ? AND ce.start_date <= ?
-           AND (ce.private_owner IS NULL OR ce.private_owner = ?)
+           AND (ce.private_owner IS NULL OR ? = 1)
          ORDER BY ce.start_date ASC, ce.id ASC`,
-        [String(from), String(to), req.user.id]
+        [String(from), String(to), req.user.is_admin ? 1 : 0]
       );
     } else {
       rows = await db.all(
@@ -6028,9 +6028,9 @@ app.get('/api/calendar', auth, async (req, res) => {
          FROM calendar_events ce
          LEFT JOIN users cu ON cu.id = ce.created_by
          LEFT JOIN users uu ON uu.id = ce.updated_by
-         WHERE (ce.private_owner IS NULL OR ce.private_owner = ?)
+         WHERE (ce.private_owner IS NULL OR ? = 1)
          ORDER BY ce.start_date ASC, ce.id ASC`,
-        [req.user.id]
+        [req.user.is_admin ? 1 : 0]
       );
     }
     res.json(rows);
@@ -6158,18 +6158,18 @@ app.get('/api/calendar-staffing', auth, async (req, res) => {
          FROM calendar_staffing sf
          JOIN calendar_events e ON e.id = sf.event_id
          WHERE sf.end_date >= ? AND sf.start_date <= ?
-           AND (e.private_owner IS NULL OR e.private_owner = ?)
+           AND (e.private_owner IS NULL OR ? = 1)
          ORDER BY sf.start_date ASC, sf.id ASC`,
-        [String(from), String(to), req.user.id]
+        [String(from), String(to), req.user.is_admin ? 1 : 0]
       );
     } else {
       rows = await db.all(
         `SELECT sf.*, e.title AS event_title, e.color AS event_color, e.slot AS event_slot
          FROM calendar_staffing sf
          JOIN calendar_events e ON e.id = sf.event_id
-         WHERE (e.private_owner IS NULL OR e.private_owner = ?)
+         WHERE (e.private_owner IS NULL OR ? = 1)
          ORDER BY sf.start_date ASC, sf.id ASC`,
-        [req.user.id]
+        [req.user.is_admin ? 1 : 0]
       );
     }
     res.json(rows);

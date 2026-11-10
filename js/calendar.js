@@ -317,12 +317,13 @@ Object.assign(window.calendarPage, {
   // v113: vis/skjul felter i rediger-dialogen afhaengig af om man redigerer opgave eller bemanding
   setEditFields(mode) {
     const show = (id, on) => { const el = document.getElementById(id); if (el) el.style.display = on ? '' : 'none'; };
+    const showFlex = (id, on) => { const el = document.getElementById(id); if (el) el.style.display = on ? 'flex' : 'none'; };
     show('cal-label-order', mode !== 'staff');   show('cal-edit-order', mode !== 'staff');
     show('cal-label-desc', mode !== 'staff');    show('cal-edit-desc', mode !== 'staff');
     show('cal-label-color', mode !== 'staff');   show('cal-colors', mode !== 'staff');
     show('cal-label-staff', mode !== 'task');    show('cal-edit-staff', mode !== 'task');
-    show('cal-ferie-row', mode !== 'task');
-    show('cal-private-row', mode !== 'staff');
+    showFlex('cal-ferie-row', mode !== 'task');
+    showFlex('cal-private-row', mode !== 'staff');
   },
 
   // v113: private aftaler - fast farve pr. person (Ledelsen)
@@ -338,10 +339,11 @@ Object.assign(window.calendarPage, {
     // privat aftale: ordre/farve/bemanding skjules - farve saettes automatisk pr. person
     const priv = this.isPrivateChecked();
     const show = (id, on) => { const el = document.getElementById(id); if (el) el.style.display = on ? '' : 'none'; };
+    const showFlex = (id, on) => { const el = document.getElementById(id); if (el) el.style.display = on ? 'flex' : 'none'; };
     show('cal-label-order', !priv);   show('cal-edit-order', !priv);
     show('cal-label-color', !priv);   show('cal-colors', !priv);
     show('cal-label-staff', !priv);   show('cal-edit-staff', !priv);
-    show('cal-ferie-row', !priv);
+    showFlex('cal-ferie-row', !priv);
   },
 
   openNewDialog(dateIso, slot) {
