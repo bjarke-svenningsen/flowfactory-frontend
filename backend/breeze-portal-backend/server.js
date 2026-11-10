@@ -5888,6 +5888,7 @@ async function ensureCalendarTable() {
       color VARCHAR(20) NOT NULL DEFAULT '#34a853',
       employee_names TEXT,
       slot INTEGER NOT NULL DEFAULT 0,
+      private_owner INTEGER,
       created_by INTEGER,
       created_at TIMESTAMPTZ DEFAULT NOW(),
       updated_by INTEGER,
@@ -5903,6 +5904,7 @@ async function ensureCalendarTable() {
       color TEXT NOT NULL DEFAULT '#34a853',
       employee_names TEXT,
       slot INTEGER NOT NULL DEFAULT 0,
+      private_owner INTEGER,
       created_by INTEGER,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       updated_by INTEGER,
@@ -5919,6 +5921,15 @@ async function ensureCalendarTable() {
       console.error('calendar_events ALTER slot:', e.message);
     }
   }
+  // v113: private aftaler (kun ejeren + Ledelsen-ejer kan se dem - montoerer ser dem aldrig)
+  try {
+    await db.run('ALTER TABLE calendar_events ADD COLUMN private_owner INTEGER');
+    console.log('✅ calendar_events: private_owner column added');
+  } catch (e) {
+    if (!/duplicate column|already exists/i.test(e.message)) {
+      console.error('calendar_events ALTER private_owner:', e.message);
+    }
+  }
   calendarTableEnsured = true;
   // v113: bemanding er nu ENHEDER adskilt fra opgaven (rode bjaelker kan redigeres uden at splitte opgaven)
   const staffingSql = calIsPg ? `
@@ -5928,6 +5939,7 @@ async function ensureCalendarTable() {
       start_date DATE NOT NULL,
       end_date DATE NOT NULL,
       employee_names TEXT NOT NULL DEFAULT '',
+      is_ferie INTEGER NOT NULL DEFAULT 0,
       created_by INTEGER,
       created_at TIMESTAMPTZ DEFAULT NOW(),
       updated_at TIMESTAMPTZ DEFAULT NOW()
@@ -5939,6 +5951,7 @@ async function ensureCalendarTable() {
       start_date TEXT NOT NULL,
       end_date TEXT NOT NULL,
       employee_names TEXT NOT NULL DEFAULT '',
+      is_ferie INTEGER NOT NULL DEFAULT 0,
       created_by INTEGER,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
@@ -5946,6 +5959,15 @@ async function ensureCalendarTable() {
   `;
   try {
     await db.run(staffingSql);
+    // v113: ferie-flag paa bemandinger (roede bjaelker med halv hoejde, 2 pr. raekke)
+    try {
+      await db.run('ALTER TABLE calendar_staffing ADD COLUMN is_ferie INTEGER NOT NULL DEFAULT 0');
+      console.log('✅ calendar_staffing: is_ferie column added');
+    } catch (e) {
+      if (!/duplicate column|already exists/i.test(e.message)) {
+        console.error('calendar_staffing ALTER is_ferie:', e.message);
+      }
+    }
     // engangs-migration: flyt bemanding fra calendar_events til calendar_staffing
     const sfRows = await db.all('SELECT id FROM calendar_staffing LIMIT 1');
     if (!Array.isArray(sfRows) || sfRows.length === 0) {
@@ -5996,8 +6018,9 @@ app.get('/api/calendar', auth, async (req, res) => {
          LEFT JOIN users cu ON cu.id = ce.created_by
          LEFT JOIN users uu ON uu.id = ce.updated_by
          WHERE ce.end_date >= ? AND ce.start_date <= ?
+           AND (ce.private_owner IS NULL OR ce.private_owner = ?)
          ORDER BY ce.start_date ASC, ce.id ASC`,
-        [String(from), String(to)]
+        [String(from), String(to), req.user.id]
       );
     } else {
       rows = await db.all(
@@ -6005,7 +6028,9 @@ app.get('/api/calendar', auth, async (req, res) => {
          FROM calendar_events ce
          LEFT JOIN users cu ON cu.id = ce.created_by
          LEFT JOIN users uu ON uu.id = ce.updated_by
-         ORDER BY ce.start_date ASC, ce.id ASC`
+         WHERE (ce.private_owner IS NULL OR ce.private_owner = ?)
+         ORDER BY ce.start_date ASC, ce.id ASC`,
+        [req.user.id]
       );
     }
     res.json(rows);
@@ -6022,12 +6047,15 @@ app.post('/api/calendar', auth, async (req, res) => {
     await ensureCalendarTable();
     const { order_number, title, start_date, end_date, color, employee_names } = req.body || {};
     const slot = req.body && req.body.slot !== undefined ? (Number(req.body.slot) || 0) : 0;
+    // v113: private aftaler - body.private saetter ejeren til indlogget bruger (Ledelsen)
+    const isPrivate = !!(req.body && req.body.private);
+    const private_owner = isPrivate ? req.user.id : (req.body && req.body.private_owner ? Number(req.body.private_owner) : null);
     if (!title || !start_date || !end_date) {
       return res.status(400).json({ error: 'Titel og datoer er paakraevet' });
     }
     const info = await db.run(
-      `INSERT INTO calendar_events (order_number, title, start_date, end_date, color, employee_names, slot, created_by, updated_by)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO calendar_events (order_number, title, start_date, end_date, color, employee_names, slot, private_owner, created_by, updated_by)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         order_number ? String(order_number).trim() : null,
         String(title).trim(),
@@ -6036,6 +6064,7 @@ app.post('/api/calendar', auth, async (req, res) => {
         color ? String(color) : '#34a853',
         employee_names ? String(employee_names).trim() : null,
         slot,
+        private_owner,
         req.user.id,
         req.user.id,
       ]
@@ -6064,10 +6093,12 @@ app.put('/api/calendar/:id', auth, async (req, res) => {
     if (!existing) return res.status(404).json({ error: 'Opgaven findes ikke' });
     const { order_number, title, start_date, end_date, color, employee_names } = req.body || {};
     const slot = req.body && req.body.slot !== undefined ? Number(req.body.slot) || 0 : (existing.slot || 0);
+    // v113: private_owner kan opdateres; ellers bevares eksisterende ejer
+    const private_owner = req.body.private_owner !== undefined ? (req.body.private_owner ? Number(req.body.private_owner) : null) : existing.private_owner;
     await db.run(
       `UPDATE calendar_events SET
         order_number = ?, title = ?, start_date = ?, end_date = ?, color = ?, employee_names = ?,
-        slot = ?, updated_by = ?, updated_at = ?
+        slot = ?, private_owner = ?, updated_by = ?, updated_at = ?
        WHERE id = ?`,
       [
         order_number !== undefined ? (order_number ? String(order_number).trim() : null) : existing.order_number,
@@ -6077,6 +6108,7 @@ app.put('/api/calendar/:id', auth, async (req, res) => {
         color !== undefined ? String(color) : existing.color,
         employee_names !== undefined ? (employee_names ? String(employee_names).trim() : null) : existing.employee_names,
         slot,
+        private_owner,
         req.user.id,
         new Date().toISOString(),
         id,
@@ -6126,15 +6158,18 @@ app.get('/api/calendar-staffing', auth, async (req, res) => {
          FROM calendar_staffing sf
          JOIN calendar_events e ON e.id = sf.event_id
          WHERE sf.end_date >= ? AND sf.start_date <= ?
+           AND (e.private_owner IS NULL OR e.private_owner = ?)
          ORDER BY sf.start_date ASC, sf.id ASC`,
-        [String(from), String(to)]
+        [String(from), String(to), req.user.id]
       );
     } else {
       rows = await db.all(
         `SELECT sf.*, e.title AS event_title, e.color AS event_color, e.slot AS event_slot
          FROM calendar_staffing sf
          JOIN calendar_events e ON e.id = sf.event_id
-         ORDER BY sf.start_date ASC, sf.id ASC`
+         WHERE (e.private_owner IS NULL OR e.private_owner = ?)
+         ORDER BY sf.start_date ASC, sf.id ASC`,
+        [req.user.id]
       );
     }
     res.json(rows);
@@ -6152,10 +6187,11 @@ app.post('/api/calendar-staffing', auth, async (req, res) => {
     if (!event_id || !start_date || !end_date) {
       return res.status(400).json({ error: 'Opgave og datoer er paakraevet' });
     }
+    const is_ferie = req.body && req.body.is_ferie ? 1 : 0;
     const info = await db.run(
-      `INSERT INTO calendar_staffing (event_id, start_date, end_date, employee_names, created_by)
-       VALUES (?, ?, ?, ?, ?)`,
-      [Number(event_id), String(start_date), String(end_date), employee_names ? String(employee_names).trim() : '', req.user.id]
+      `INSERT INTO calendar_staffing (event_id, start_date, end_date, employee_names, is_ferie, created_by)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+      [Number(event_id), String(start_date), String(end_date), employee_names ? String(employee_names).trim() : '', is_ferie, req.user.id]
     );
     const created = await db.get('SELECT * FROM calendar_staffing WHERE id = ?', [info.lastInsertRowid]);
     res.json(created);
@@ -6172,12 +6208,14 @@ app.put('/api/calendar-staffing/:id', auth, async (req, res) => {
     const existing = await db.get('SELECT * FROM calendar_staffing WHERE id = ?', [id]);
     if (!existing) return res.status(404).json({ error: 'Bemandingen findes ikke' });
     const { start_date, end_date, employee_names } = req.body || {};
+    const is_ferie = req.body && req.body.is_ferie !== undefined ? (req.body.is_ferie ? 1 : 0) : (existing.is_ferie ? 1 : 0);
     await db.run(
-      `UPDATE calendar_staffing SET start_date = ?, end_date = ?, employee_names = ?, updated_at = ? WHERE id = ?`,
+      `UPDATE calendar_staffing SET start_date = ?, end_date = ?, employee_names = ?, is_ferie = ?, updated_at = ? WHERE id = ?`,
       [
         start_date !== undefined ? String(start_date) : existing.start_date,
         end_date !== undefined ? String(end_date) : existing.end_date,
         employee_names !== undefined ? String(employee_names).trim() : existing.employee_names,
+        is_ferie,
         new Date().toISOString(),
         id,
       ]

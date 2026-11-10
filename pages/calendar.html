@@ -28,6 +28,8 @@
   .cal-event-wrap { position: absolute; left: 2px; right: 2px; z-index: 2; }
   .cal-event { display: block; border-radius: 6px; padding: 5px 8px; font-size: 14px; font-weight: 600; color: #fff; cursor: pointer; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; border: none; text-align: left; width: 100%; }
   .cal-emp { margin-top: 2px; background: #c5221f; color: #fff; border-radius: 4px; padding: 0 7px; font-size: 11px; font-weight: 600; line-height: 17px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; }
+  /* v113: ferie-bjaelker - halv hoejde saa 2 kan ligge pr. gitter-raekke */
+  .cal-emp.ferie { margin-top: 0; font-size: 9px; font-weight: 600; line-height: 13px; border-radius: 3px; }
   #cal-scope-toggle button.active { background: #1a73e8; color: #fff; border-color: #1a73e8; }
   .cal-empty-hint { font-size: 11px; color: var(--text-muted); padding: 6px; }
   .cal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.4); display: none; align-items: center; justify-content: center; z-index: 500; }
@@ -87,6 +89,14 @@
     <input type="number" id="cal-edit-repeat" min="1" max="31" value="1" />
     <label id="cal-label-staff">Bemanding (rød bjælke)</label>
     <input type="text" id="cal-edit-staff" placeholder="fx Henrik, Jakob" />
+    <div id="cal-ferie-row" style="display:flex; align-items:center; gap:8px; margin:4px 0;">
+      <input type="checkbox" id="cal-edit-ferie" style="width:16px; height:16px;" />
+      <label for="cal-edit-ferie" style="margin:0; cursor:pointer; font-weight:600;">Ferie (halv højde)</label>
+    </div>
+    <div id="cal-private-row" style="display:flex; align-items:center; gap:8px; margin:4px 0;">
+      <input type="checkbox" id="cal-edit-private" style="width:16px; height:16px;" onchange="calendarPage.onPrivateToggle()" />
+      <label for="cal-edit-private" style="margin:0; cursor:pointer; font-weight:600;">Privat aftale (kun synlig for mig)</label>
+    </div>
     <label id="cal-label-color">Farve</label>
     <div class="cal-colors" id="cal-colors"></div>
     <div id="cal-scope-row" style="display:none; margin-top:10px;">

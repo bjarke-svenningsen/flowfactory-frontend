@@ -131,6 +131,16 @@ window.calendarPage = {
       for (const ev of dayEvents) {
         col.appendChild(this.buildEventBar(ev, iso, this.rowFor(ev)));
       }
+      // v113: ferie-bjaelker (halv hoejde) laegges i egne baner nederst - 2 pr. gitter-raekke
+      const ferieSF = (this.staffing || []).filter(sf => sf.is_ferie && sf.start_date <= iso && sf.end_date >= iso)
+        .sort((a, b) => (a.id || 0) - (b.id || 0));
+      if (ferieSF.length) {
+        let baseRow = 0;
+        if (this._rows[iso] && this._rows[iso].size) baseRow = Math.max(...this._rows[iso]) + 1;
+        ferieSF.forEach((sf, idx) => col.appendChild(this.buildFerieBar(sf, iso, baseRow + Math.floor(idx / 2), idx % 2)));
+        if (!this._rows[iso]) this._rows[iso] = new Set();
+        for (let l = 0; l < Math.ceil(ferieSF.length / 2); l++) this._rows[iso].add(baseRow + l);
+      }
       grid.appendChild(col);
     }
   },
@@ -167,7 +177,7 @@ window.calendarPage = {
     wrap.appendChild(bar);
     let emp = null;
     // v113: bemanding kommer nu fra calendar_staffing (separate enheder) - roed bjaelke(r) UNDER farve-bjaelken
-    const staffForDay = (this.staffing || []).filter(sf => String(sf.event_id) === String(ev.id) && sf.start_date <= iso && sf.end_date >= iso);
+    const staffForDay = (this.staffing || []).filter(sf => String(sf.event_id) === String(ev.id) && sf.start_date <= iso && sf.end_date >= iso && !sf.is_ferie);
     for (const sf of staffForDay) {
       if (!sf.employee_names) continue;
       emp = document.createElement('div');
@@ -185,6 +195,20 @@ window.calendarPage = {
         e.dataTransfer.effectAllowed = 'move';
       });
     }
+    return wrap;
+  },
+
+  // v113: ferie-bjaelke - halv hoejde, 2 stk. pr. gitter-raekke (sub = 0 oevers / 1 nederste halvdel)
+  buildFerieBar(sf, iso, row, sub) {
+    const SLOT_H = 32;
+    const wrap = document.createElement('div');
+    wrap.className = 'cal-event-wrap';
+    wrap.style.top = (row * SLOT_H + 2 + sub * 14) + 'px';
+    const bar = document.createElement('div');
+    bar.className = 'cal-emp ferie';
+    bar.textContent = sf.employee_names;
+    bar.addEventListener('click', (e) => { e.stopPropagation(); this.showStaffingInfo(sf, iso); });
+    wrap.appendChild(bar);
     return wrap;
   },
 
@@ -297,6 +321,27 @@ Object.assign(window.calendarPage, {
     show('cal-label-desc', mode !== 'staff');    show('cal-edit-desc', mode !== 'staff');
     show('cal-label-color', mode !== 'staff');   show('cal-colors', mode !== 'staff');
     show('cal-label-staff', mode !== 'task');    show('cal-edit-staff', mode !== 'task');
+    show('cal-ferie-row', mode !== 'task');
+    show('cal-private-row', mode !== 'staff');
+  },
+
+  // v113: private aftaler - fast farve pr. person (Ledelsen)
+  PRIV_COLORS: { bjarke: '#fbbc04', 'søren': '#1a73e8', thorben: '#8d6e63' },
+  privColorFor() {
+    const me = (window.currentUser && window.currentUser.name) || '';
+    const f = me.trim().split(/\s+/)[0].toLowerCase();
+    return this.PRIV_COLORS[f] || '#fbbc04';
+  },
+  ferieChecked() { const el = document.getElementById('cal-edit-ferie'); return !!(el && el.checked); },
+  isPrivateChecked() { const el = document.getElementById('cal-edit-private'); return !!(el && el.checked); },
+  onPrivateToggle() {
+    // privat aftale: ordre/farve/bemanding skjules - farve saettes automatisk pr. person
+    const priv = this.isPrivateChecked();
+    const show = (id, on) => { const el = document.getElementById(id); if (el) el.style.display = on ? '' : 'none'; };
+    show('cal-label-order', !priv);   show('cal-edit-order', !priv);
+    show('cal-label-color', !priv);   show('cal-colors', !priv);
+    show('cal-label-staff', !priv);   show('cal-edit-staff', !priv);
+    show('cal-ferie-row', !priv);
   },
 
   openNewDialog(dateIso, slot) {
@@ -309,6 +354,9 @@ Object.assign(window.calendarPage, {
     document.getElementById('cal-edit-order').value = '';
     document.getElementById('cal-edit-desc').value = '';
     document.getElementById('cal-edit-staff').value = '';
+    document.getElementById('cal-edit-ferie').checked = false;
+    document.getElementById('cal-edit-private').checked = false;
+    this.onPrivateToggle();
     const start = dateIso || this.selectedDate || this.isoDate(new Date());
     document.getElementById('cal-edit-start').value = start;
     document.getElementById('cal-edit-repeat').value = 1;
@@ -340,6 +388,9 @@ Object.assign(window.calendarPage, {
     document.getElementById('cal-edit-order').value = ev.order_number || '';
     document.getElementById('cal-edit-desc').value = ev.title || '';
     document.getElementById('cal-edit-staff').value = '';
+    document.getElementById('cal-edit-ferie').checked = false;
+    document.getElementById('cal-edit-private').checked = !!ev.private_owner;
+    this.onPrivateToggle();
     document.getElementById('cal-edit-start').value = ev.start_date;
     const days = Math.round((new Date(ev.end_date + 'T12:00:00') - new Date(ev.start_date + 'T12:00:00')) / 86400000) + 1;
     document.getElementById('cal-edit-repeat').value = Math.max(1, days);
@@ -387,6 +438,7 @@ Object.assign(window.calendarPage, {
     document.getElementById('cal-edit-title').textContent = 'Rediger bemanding';
     document.getElementById('cal-edit-id').value = sf.id;
     document.getElementById('cal-edit-staff').value = sf.employee_names || '';
+    document.getElementById('cal-edit-ferie').checked = !!sf.is_ferie;
     document.getElementById('cal-edit-start').value = sf.start_date;
     const days = Math.round((new Date(sf.end_date + 'T12:00:00') - new Date(sf.start_date + 'T12:00:00')) / 86400000) + 1;
     document.getElementById('cal-edit-repeat').value = Math.max(1, days);
@@ -438,24 +490,24 @@ Object.assign(window.calendarPage, {
             const prevEnd = this.isoDate(this.addDays(new Date(day + 'T12:00:00'), -1));
             await apiCall('/api/calendar-staffing/' + sf.id, {
               method: 'PUT',
-              body: JSON.stringify({ start_date: sf.start_date, end_date: prevEnd, employee_names: sf.employee_names })
+              body: JSON.stringify({ start_date: sf.start_date, end_date: prevEnd, employee_names: sf.employee_names, is_ferie: sf.is_ferie ? 1 : 0 })
             });
           } else if (sf.end_date > day) {
             const nextStart = this.isoDate(this.addDays(new Date(day + 'T12:00:00'), 1));
             await apiCall('/api/calendar-staffing/' + sf.id, {
               method: 'PUT',
-              body: JSON.stringify({ start_date: nextStart, end_date: sf.end_date, employee_names: sf.employee_names })
+              body: JSON.stringify({ start_date: nextStart, end_date: sf.end_date, employee_names: sf.employee_names, is_ferie: sf.is_ferie ? 1 : 0 })
             });
           }
           await apiCall('/api/calendar-staffing', {
             method: 'POST',
-            body: JSON.stringify({ event_id: sf.event_id, start_date: day, end_date: day, employee_names: staffVal })
+            body: JSON.stringify({ event_id: sf.event_id, start_date: day, end_date: day, employee_names: staffVal, is_ferie: this.ferieChecked() ? 1 : 0 })
           });
           if (day < sf.end_date) {
             const tailStart = this.isoDate(this.addDays(new Date(day + 'T12:00:00'), 1));
             await apiCall('/api/calendar-staffing', {
               method: 'POST',
-              body: JSON.stringify({ event_id: sf.event_id, start_date: tailStart, end_date: sf.end_date, employee_names: sf.employee_names })
+              body: JSON.stringify({ event_id: sf.event_id, start_date: tailStart, end_date: sf.end_date, employee_names: sf.employee_names, is_ferie: sf.is_ferie ? 1 : 0 })
             });
           }
         } else if (scope === 'following' && !single && day >= sf.start_date && day <= sf.end_date) {
@@ -464,37 +516,40 @@ Object.assign(window.calendarPage, {
             const prevEnd = this.isoDate(this.addDays(new Date(day + 'T12:00:00'), -1));
             await apiCall('/api/calendar-staffing/' + sf.id, {
               method: 'PUT',
-              body: JSON.stringify({ start_date: sf.start_date, end_date: prevEnd, employee_names: sf.employee_names })
+              body: JSON.stringify({ start_date: sf.start_date, end_date: prevEnd, employee_names: sf.employee_names, is_ferie: sf.is_ferie ? 1 : 0 })
             });
             await apiCall('/api/calendar-staffing', {
               method: 'POST',
-              body: JSON.stringify({ event_id: sf.event_id, start_date: day, end_date: sf.end_date, employee_names: staffVal })
+              body: JSON.stringify({ event_id: sf.event_id, start_date: day, end_date: sf.end_date, employee_names: staffVal, is_ferie: this.ferieChecked() ? 1 : 0 })
             });
           } else {
             await apiCall('/api/calendar-staffing/' + sf.id, {
               method: 'PUT',
-              body: JSON.stringify({ start_date: sf.start_date, end_date: sf.end_date, employee_names: staffVal })
+              body: JSON.stringify({ start_date: sf.start_date, end_date: sf.end_date, employee_names: staffVal, is_ferie: this.ferieChecked() ? 1 : 0 })
             });
           }
         } else {
           // ALLE (eller 1-dags): opdater originalen direkte
           await apiCall('/api/calendar-staffing/' + sf.id, {
             method: 'PUT',
-            body: JSON.stringify({ start_date: start, end_date: endIso, employee_names: staffVal })
+            body: JSON.stringify({ start_date: start, end_date: endIso, employee_names: staffVal, is_ferie: this.ferieChecked() ? 1 : 0 })
           });
         }
       this.closeEditDialog();
         await this.refresh();
         return;
       }
+      // v113: privat aftale (kun Ledelsen) - ordre/farve/bemanding overstyreres
+      const isPriv = this.isPrivateChecked();
       const payload = {
-        order_number: document.getElementById('cal-edit-order').value.trim(),
+        order_number: isPriv ? '' : document.getElementById('cal-edit-order').value.trim(),
         title: document.getElementById('cal-edit-desc').value.trim(),
         start_date: start,
         end_date: endIso,
-        color: this.getSelectedColor(),
+        color: isPriv ? this.privColorFor() : this.getSelectedColor(),
         employee_names: '', // v113: bemanding gemmes nu som separate enheder (calendar_staffing)
         slot: this.newSlot || 0, // v113: klik-placering / auto-raekke
+        private: isPriv, // v113: backend saetter private_owner = indlogget bruger
       };
     if (!payload.title || !start) {
       alert('Udfyld beskrivelse og startdato.');
@@ -552,10 +607,10 @@ Object.assign(window.calendarPage, {
       } else {
         // v113: ny opgave - bemanding oprettes som separat enhed koblet til opgaven
         const created = await apiCall('/api/calendar', { method: 'POST', body: JSON.stringify(payload) });
-        if (created && created.id && staffVal) {
+        if (created && created.id && staffVal && !isPriv) {
           await apiCall('/api/calendar-staffing', {
             method: 'POST',
-            body: JSON.stringify({ event_id: created.id, start_date: payload.start_date, end_date: payload.end_date, employee_names: staffVal })
+            body: JSON.stringify({ event_id: created.id, start_date: payload.start_date, end_date: payload.end_date, employee_names: staffVal, is_ferie: this.ferieChecked() ? 1 : 0 })
           });
         }
       }
