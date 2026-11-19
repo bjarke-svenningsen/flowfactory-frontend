@@ -104,6 +104,8 @@ window.calendarPage = {
     grid.innerHTML = '';
     this._rows = {};        // v113: nulstil auto-placering ved hver render
     this._rowById = {};
+    const cols = [];       // v113: kolonner bygges i pass 1, ferie-baner i pass 2
+    const dayIsos = [];
     for (let i = 0; i < 7; i++) {
       const day = this.addDays(this.weekStart, i);
       const iso = this.isoDate(day);
@@ -131,8 +133,18 @@ window.calendarPage = {
       for (const ev of dayEvents) {
         col.appendChild(this.buildEventBar(ev, iso, this.rowFor(ev)));
       }
-      // v113: ferie-bjaelker (halv hoejde) laegges i egne baner nederst - 2 pr. gitter-raekke
-      // Kilder: bemandinger med is_ferie + opgaver med is_ferie (navn = titel)
+      cols.push(col);
+      dayIsos.push(iso);
+    }
+    // v113: ferie-bjaelker (halv hoejde) laegges i egne baner - SAMME raekke alle 7 dage saa blokken ikke rykker
+    // Kilder: bemandinger med is_ferie + opgaver med is_ferie (navn = titel)
+    let ferieBase = 0;
+    for (const iso of dayIsos) {
+      if (this._rows[iso] && this._rows[iso].size) ferieBase = Math.max(ferieBase, Math.max(...this._rows[iso]) + 1);
+    }
+    for (let i = 0; i < 7; i++) {
+      const iso = dayIsos[i];
+      const col = cols[i];
       const ferieEntries = [];
       for (const sf of (this.staffing || [])) {
         if (sf.is_ferie && sf.start_date <= iso && sf.end_date >= iso) ferieEntries.push({ key: 'sf' + sf.id, name: sf.employee_names, sf, ev: null });
@@ -140,12 +152,10 @@ window.calendarPage = {
       for (const ev of this.events) {
         if (ev.is_ferie && ev.start_date <= iso && ev.end_date >= iso) ferieEntries.push({ key: 'ev' + ev.id, name: ev.title, sf: null, ev });
       }
-      if (ferieEntries.length) {
-        let baseRow = 0;
-        if (this._rows[iso] && this._rows[iso].size) baseRow = Math.max(...this._rows[iso]) + 1;
-        ferieEntries.forEach((entry, idx) => col.appendChild(this.buildFerieBar(entry, iso, baseRow + Math.floor(idx / 2), idx % 2)));
+      ferieEntries.forEach((entry, idx) => col.appendChild(this.buildFerieBar(entry, iso, ferieBase + Math.floor(idx / 2), idx % 2)));
+      for (let l = 0; l < Math.ceil(ferieEntries.length / 2); l++) {
         if (!this._rows[iso]) this._rows[iso] = new Set();
-        for (let l = 0; l < Math.ceil(ferieEntries.length / 2); l++) this._rows[iso].add(baseRow + l);
+        this._rows[iso].add(ferieBase + l);
       }
       grid.appendChild(col);
     }
@@ -217,6 +227,14 @@ window.calendarPage = {
       bar.addEventListener('click', (e) => { e.stopPropagation(); this.showStaffingInfo(entry.sf, iso); });
     } else {
       bar.addEventListener('click', (e) => { e.stopPropagation(); this.showInfo(entry.ev, iso); });
+      // v113: ferie-opgaver kan dragges ligesom almindelige opgaver (samme drop-logik)
+      if (this.isAdmin) {
+        wrap.draggable = true;
+        wrap.addEventListener('dragstart', (e) => {
+          e.dataTransfer.setData('text/plain', String(entry.ev.id));
+          e.dataTransfer.effectAllowed = 'move';
+        });
+      }
     }
     wrap.appendChild(bar);
     return wrap;
